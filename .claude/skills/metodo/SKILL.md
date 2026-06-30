@@ -3,7 +3,9 @@ name: metodo
 description: Explica o método do cérebro (os 4 movimentos — organizar, capturar, conectar, buscar — e o que é um átomo) e ajuda a pessoa a aplicar no contexto dela. Use quando ela pergunta "como funciona", "qual o método", "como organizo", "como guardo", ou quer entender como construir o cérebro dela.
 ---
 
-# O método do cérebro — explique e aplique
+# Engenharia de Contexto — o método do cérebro (explique e aplique)
+
+> O método tem nome: **engenharia de contexto** (o Karpathy, da OpenAI, popularizou — na era da IA o jogo é montar o contexto certo, não o prompt). Mencione isso pra dar lastro, mas vá direto ao prático.
 
 Objetivo: a pessoa entender o método em 2 minutos e **aplicar em algo real dela já**. Sem jargão. Explique curto e, no fim, ofereça rodar num exemplo dela.
 

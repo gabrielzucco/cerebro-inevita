@@ -1,6 +1,6 @@
-# O método do teu cérebro
+# Engenharia de Contexto — o método do teu cérebro
 
-Teu cérebro não é um drive — ele tem um **método**, validado, em 4 movimentos. Você não precisa decorar: as skills conduzem. Mas é bom saber o que está rodando por baixo. *(Quer aplicar num caso teu agora? Roda `/metodo` no Claude Code.)*
+Na era da IA o jogo virou: não é mais escrever o prompt perfeito, é montar o **contexto** certo. Isso tem nome — **engenharia de contexto** (termo que o Andrej Karpathy, cofundador da OpenAI, ajudou a popularizar). Teu cérebro é essa engenharia de contexto **operacionalizada**, em 4 movimentos. Você não precisa decorar — as skills conduzem. Mas é bom saber o que roda por baixo. *(Quer aplicar num caso teu agora? Roda `/metodo` no Claude Code.)*
 
 ## A unidade: o átomo
 Cada coisa que importa vira uma **nota de uma ideia**, com 4 partes:

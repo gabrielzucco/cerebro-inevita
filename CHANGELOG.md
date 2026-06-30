@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.3 — 2026-06-30
+- O método agora tem nome: **Engenharia de Contexto** (ancorado no termo do Karpathy/OpenAI) — na era da IA, o que vence não é o prompt, é o contexto certo.
+
 ## 1.2.2 — 2026-06-30
 - `/comecar`: quando o site vem raso (SPA/Framer, o caso mais comum), pede proativamente uma **call ou anúncio** — fonte mais rica. Validado num teste real (viverdeia.ai).
 

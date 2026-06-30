@@ -29,7 +29,8 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 ---
 
-## O método (4 movimentos)
+## Engenharia de Contexto — o método (4 movimentos)
+> Na era da IA, o que vence não é o prompt, é o **contexto** certo (engenharia de contexto). Este cérebro a operacionaliza:
 1. **Organizar por uso** — cada átomo vai pro **horizonte** certo (agora / áreas / referências / arquivo), nunca por tema solto.
 2. **Capturar em átomos** — o bruto entra em `capturas/`; você destila em átomos. **Nem tudo vira átomo** — só o que tem sinal (dor, decisão, número, objeção, padrão). O resto fica no bruto.
 3. **Conectar leve** — linke o óbvio (`[[ ]]`) e **sugira** o resto; o dono cura. Linkar é pensar.
