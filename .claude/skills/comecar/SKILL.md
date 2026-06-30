@@ -30,6 +30,7 @@ Peça **só o site**: *"Qual o endereço do teu site ou landing page?"* → leia
 5. **Confirme antes de gravar:** mostre o destilado em bullets curtos e pergunte *"é isso? guardo?"*. A pessoa é a curadora.
 
 ### Passo 4 — a vitória (assim que tiver oferta + ICP)
+> Se **metade ou mais** dos campos de `meu-negocio/` ainda está `(não consta)`, **não force a vitória** — peça uma 2ª fonte (um anúncio que converteu, ou o texto completo da home) antes. Diagnóstico com contexto raso sai fraco e queima o aha.
 1. **CONTEXT-MAP:** resuma em 3 linhas *"isto é o que teu cérebro já sabe de você"* (oferta · pra quem · posicionamento).
 2. **O exercício do aha** — convide: *"cola aqui uma copy tua que converteu (ou uma decisão real) e eu te mostro o que a IA genérica faria **vs.** o que ela faz sabendo do teu negócio de [nicho]."* Mostre os dois lado a lado — esse contraste é a sacada (veja `vale/dor-operando-na-media.md`).
 3. **Cruze com o Vale** (`vale/`): pegue uma tensão real que você notou e conecte a uma sacada aplicável.
