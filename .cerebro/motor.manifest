@@ -7,6 +7,7 @@ VERSION
 CHANGELOG.md
 .cerebro/source
 .cerebro/motor.manifest
+.cerebro/acesso.yaml
 .claude/settings.json
 .claude/skills/comecar
 .claude/skills/atualizar

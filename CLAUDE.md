@@ -17,6 +17,7 @@ O valor não está em nenhuma nota isolada — está no **cruzamento**: o teu co
 - `conhecimento/` — as **camadas de conteúdo, por tier**:
   - `conhecimento/vale/` — o **Vale do Silício** (Stanford + PayPal: destilados + íntegras anonimizadas). Camada **free**, todos têm.
   - `conhecimento/society/` e `conhecimento/clube/` — encontros dos tiers pagos. Se a pessoa não tem acesso, só o `_catalogo.md` (🔒) aparece — é o convite.
+  - O **tier de cada coleção** vem de `.cerebro/acesso.yaml` (configurável a qualquer momento; suporta *free por tempo limitado*). Respeite sempre o que está lá — não deduza pela pasta. Se um conteúdo está `free_ate` uma data, trate como grátis até lá e mostre a data como urgência.
 - `privado/` — fora do git. O **único** lugar onde dado pessoal (PII) pode existir localmente.
 
 ## Como você opera

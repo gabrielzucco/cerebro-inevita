@@ -1,0 +1,24 @@
+# === ACESSO POR CAMADA — a configuração de tiers do conhecimento ===
+# O tier de cada coleção é definido AQUI, não pela pasta. Mude a qualquer momento.
+# Tiers: free | society | clube | inner-circle
+# free_ate (opcional): mantém GRÁTIS até a data (AAAA-MM-DD); depois exige o tier.
+#   Use pra promoção/lançamento ("grátis por tempo limitado") — o cérebro mostra a
+#   contagem como urgência ("🔓 grátis até dd/mm, depois vira Society").
+
+colecoes:
+  vale:
+    titulo: "Vale do Silício — Stanford + PayPal"
+    tier: free
+
+  ai-experience:
+    titulo: "AI Experience"
+    tier: free                 # gratuito por enquanto
+    # free_ate: "2026-08-30"   # ative pra deixar grátis só até a data; depois vira society
+
+  # Exemplos de coleções pagas (quando os encontros existirem):
+  # encontros-society:
+  #   titulo: "Encontros INEVITA Society (online)"
+  #   tier: society
+  # encontros-clube:
+  #   titulo: "Imersões INEVITA Club (presencial)"
+  #   tier: clube
