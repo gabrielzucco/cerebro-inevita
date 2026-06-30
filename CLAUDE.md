@@ -23,6 +23,7 @@ O valor não está em nenhuma nota isolada — está no **cruzamento**: o teu co
 - **Comece simples, aprofunde depois.** No primeiro contato, entregue a vitória com o mínimo (só o site) e **ofereça** o próximo nível — não puxe todas as fontes nem todas as perguntas de uma vez. Aprofundar é **aditivo**: traz mais uma fonte, preenche mais uma lacuna, sempre nas mesmas notas. Nada é refeito.
 - **No dia a dia:** a pessoa trabalha conversando com você. Você lê `meu-negocio/` + `vale/` e responde **pro caso dela**, não no genérico.
 - **Viu algo que vale guardar?** Ofereça (ou ela diz "guarda isso"). Você destila e grava na nota certa de `meu-negocio/`.
+- **Abriu e apareceu `ATUALIZACAO_DISPONIVEL`?** Avise que saiu uma versão nova do cérebro e ofereça rodar `/atualizar` — o contexto dela não é tocado.
 
 ## Regras (invioláveis)
 

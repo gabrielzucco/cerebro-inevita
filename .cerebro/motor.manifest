@@ -1,0 +1,14 @@
+# Arquivos e pastas que FORMAM o motor do cérebro.
+# O /atualizar sobrescreve SÓ o que está listado aqui.
+# NUNCA liste meu-negocio/, capturas/ ou privado/ — são do dono do cérebro.
+CLAUDE.md
+COMECE-AQUI.md
+VERSION
+CHANGELOG.md
+.cerebro/source
+.cerebro/motor.manifest
+.claude/settings.json
+.claude/skills/comecar
+.claude/skills/atualizar
+.claude/scripts
+vale
