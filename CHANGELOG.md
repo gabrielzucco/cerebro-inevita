@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.1 — 2026-06-30
+- `METODO.md` visível na raiz — o método (4 movimentos + átomo) virou documento legível, não só o que a IA usa por baixo.
+
 ## 1.2.0 — 2026-06-30
 - **Atualização automática:** o cérebro se atualiza sozinho ao abrir (motor + conhecimento da comunidade) — teu contexto nunca é tocado.
 - **Teu contexto começa vazio:** o `meu-negocio/` é template em branco; o `/comecar` preenche com o TEU negócio. O cérebro é só teu.
