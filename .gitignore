@@ -1,0 +1,10 @@
+# PII e material BRUTO nunca entram no git — ficam só na tua máquina.
+# As pastas existem no pacote (com _LEIA.md), mas o que VOCÊ colocar nelas fica de fora do git.
+privado/*
+!privado/_LEIA.md
+capturas/*
+!capturas/_LEIA.md
+
+# ruído de SO / editor
+.DS_Store
+.obsidian/workspace.json
