@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.4 — 2026-06-30
+- Mecanismo de atualização revisado (auto-update validado de ponta a ponta).
+
 ## 1.2.3 — 2026-06-30
 - O método agora tem nome: **Engenharia de Contexto** (ancorado no termo do Karpathy/OpenAI) — na era da IA, o que vence não é o prompt, é o contexto certo.
 
