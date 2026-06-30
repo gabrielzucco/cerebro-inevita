@@ -1,0 +1,19 @@
+---
+name: guardar
+description: Captura e transforma algo (uma call, decisão, número, objeção, anúncio, ou o que a pessoa colar) num ÁTOMO do cérebro — você propõe, ela aprova. Use quando ela diz "guarda isso", cola um conteúdo, ou termina algo que vale registrar.
+---
+
+# Guardar — transformar em átomo (tratamento assistido)
+
+A captura é fácil; o valor está em **tratar**. Você faz o trabalho pesado, a pessoa só aprova.
+
+1. **Receba** o material (colado ou apontado). Se for bruto longo (call, transcrição), salve primeiro em `capturas/<fonte>-AAAA-MM-DD.md` com cabeçalho de origem.
+2. **Sanitize PII** antes de qualquer coisa: e-mail, telefone, nome de cliente, @, CPF/CNPJ → vão pra `privado/` ou ficam de fora. Nunca em `capturas/` nem `meu-negocio/`.
+3. **Destile em átomo(s)** — cada UMA ideia com sinal vira uma nota (veja o formato no `CLAUDE.md`):
+   - **afirmação** (título-frase) · **citação literal** + origem · **por quê** (1-2 linhas) · **elos** (`[[ ]]`)
+   - **Nem tudo vira átomo** — descarte ruído (saudação, off-topic). Sinal = dor, decisão, número, objeção, padrão, copy que funcionou.
+4. **Roteie** pro horizonte: `fios/` (quente agora) · áreas (`oferta`/`icp`/`posicionamento`/`o-que-funciona`/`decisoes/`) · `arquivo/` (esfriou). Campo sem evidência → `(não consta na fonte)`.
+5. **Mostre o(s) átomo(s) e confirme** — *"guardo assim?"*. Só grava após o ok. A pessoa é a curadora.
+6. **Sugira 1-2 elos** com o que já existe: *"isso reforça tua [[oferta]] — linko?"*. Você sugere, ela decide.
+
+Regras: evidência **literal** sempre · zero invenção · proveniência sempre · você **amplifica, não substitui**.

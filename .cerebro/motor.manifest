@@ -11,5 +11,7 @@ CHANGELOG.md
 .claude/settings.json
 .claude/skills/comecar
 .claude/skills/atualizar
+.claude/skills/metodo
+.claude/skills/guardar
 .claude/scripts
 conhecimento
