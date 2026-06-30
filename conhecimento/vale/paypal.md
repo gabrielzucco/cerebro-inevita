@@ -18,3 +18,5 @@ pode-ir-comunidade: true
 
 ## O que prova pra INEVITA
 A IA é commodity; o que diferencia é o **teu contexto**. E o contexto que você não tem sozinho — o "last mile" — vem da **guild**: a comunidade.
+
+**Íntegra (transcrição anonimizada):** [[paypal-completo]]

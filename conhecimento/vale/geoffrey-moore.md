@@ -17,3 +17,5 @@ pode-ir-comunidade: true
 
 ## O que prova pra INEVITA
 Você não precisa correr atrás da próxima ferramenta (inovação) — precisa **adotar com contexto**. E o pragmático (a maioria) só avança dentro de um **grupo social** onde vê gente como ele acertando. Esse grupo é a comunidade.
+
+**Íntegra (transcrição anonimizada):** [[geoffrey-moore-completo]]

@@ -9,7 +9,7 @@ pode-ir-comunidade: true
 > A dor: você usa IA todo dia, mas o que sai parece de qualquer concorrente. Sem diferenciação, você vira commodity junto com a ferramenta.
 
 ## A virada (o que o Vale prova)
-A IA que você usa é a mesma do teu concorrente — ela virou commodity e te **igualou ao mercado**. O PayPal cravou: *"quando o modelo vira commodity, o contexto é a vantagem comparativa"* ([[vale/paypal|PayPal · 11:53]]).
+A IA que você usa é a mesma do teu concorrente — ela virou commodity e te **igualou ao mercado**. O PayPal cravou: *"quando o modelo vira commodity, o contexto é a vantagem comparativa"* ([[paypal|PayPal · 11:53]]).
 
 A diferenciação não vem do modelo (todo mundo tem o mesmo) — vem do **contexto** que só você tem: teu negócio, teus números, as copys que converteram, as objeções reais do teu cliente. Sem isso, a IA te entrega a **média da internet**. Com isso, ela vira teu braço direito.
 
@@ -25,4 +25,4 @@ Cola aqui uma copy tua que converteu, ou uma decisão real. Em 30 segundos você
 Sozinho, você faz isso uma vez e cansa. Com o teu contexto rodando o tempo todo + a comunidade apontando o caminho, isso vira teu dia. **É isso que é a INEVITA.**
 
 ## O acervo que sustenta isso
-[[vale/paypal]] · [[vale/geoffrey-moore]]
+[[paypal]] · [[geoffrey-moore]] · íntegras: [[paypal-completo]] · [[geoffrey-moore-completo]]

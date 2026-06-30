@@ -32,9 +32,9 @@ Peça **só o site**: *"Qual o endereço do teu site ou landing page?"* → leia
 ### Passo 4 — a vitória (assim que tiver oferta + ICP)
 > Se **metade ou mais** dos campos de `meu-negocio/` ainda está `(não consta)`, **não force a vitória** — peça uma 2ª fonte (um anúncio que converteu, ou o texto completo da home) antes. Diagnóstico com contexto raso sai fraco e queima o aha.
 1. **CONTEXT-MAP:** resuma em 3 linhas *"isto é o que teu cérebro já sabe de você"* (oferta · pra quem · posicionamento).
-2. **O exercício do aha** — convide: *"cola aqui uma copy tua que converteu (ou uma decisão real) e eu te mostro o que a IA genérica faria **vs.** o que ela faz sabendo do teu negócio de [nicho]."* Mostre os dois lado a lado — esse contraste é a sacada (veja `vale/dor-operando-na-media.md`).
-3. **Cruze com o Vale** (`vale/`): pegue uma tensão real que você notou e conecte a uma sacada aplicável.
-   - **Ao citar o Vale, copie a frase literal entre aspas, com o timestamp do arquivo — nunca reescreva nem invente quote/minuto.** Cite `[[vale/paypal]]` ou `[[vale/geoffrey-moore]]`.
+2. **O exercício do aha** — convide: *"cola aqui uma copy tua que converteu (ou uma decisão real) e eu te mostro o que a IA genérica faria **vs.** o que ela faz sabendo do teu negócio de [nicho]."* Mostre os dois lado a lado — esse contraste é a sacada (veja `conhecimento/vale/dor-operando-na-media.md`).
+3. **Cruze com o Vale** (`conhecimento/vale/`): pegue uma tensão real que você notou e conecte a uma sacada aplicável.
+   - **Ao citar o Vale, copie a frase literal entre aspas, com o timestamp do arquivo — nunca reescreva nem invente quote/minuto.** Cite `[[conhecimento/vale/paypal]]` ou `[[conhecimento/vale/geoffrey-moore]]`.
 4. Termine com **1 próximo passo** acionável (um só, o de maior retorno).
 
 > **Pare aqui na primeira vez.** Entregue a vitória e ofereça o próximo nível — não puxe tudo de uma vez.
