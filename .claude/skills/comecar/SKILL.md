@@ -12,7 +12,7 @@ Pergunte, curto e humano: *"Qual a maior dor ou decisão do teu negócio agora? 
 
 ## Passo 2 — puxar o que ela JÁ tem (o combustível)
 *"Pra te ajudar de verdade, me joga uma coisa que você já tem sobre isso — teu site, um anúncio que converteu, uma call/reunião, ou só me contar."* Uma fonte de cada vez, do mais fácil ao mais rico.
-- **Site** → leia com `WebFetch`. Se falhar ou vier raso → peça o texto colado ou um print.
+- **Site** → leia com `WebFetch`. Se falhar ou vier **raso** (site SPA/Framer é o caso MAIS comum) → **não insista no site**: peça uma **call ou um anúncio que converteu** (fonte muito mais rica) — ou o texto da home colado. Site raso dá diagnóstico fraco; a call/anúncio é onde está o ouro.
 - **Call / anúncio / doc** → peça colar ou apontar o arquivo.
 - Mensagem-chave: *"você não precisa criar contexto do zero — só trazer o que já gera."*
 

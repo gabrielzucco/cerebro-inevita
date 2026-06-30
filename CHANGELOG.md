@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.2 — 2026-06-30
+- `/comecar`: quando o site vem raso (SPA/Framer, o caso mais comum), pede proativamente uma **call ou anúncio** — fonte mais rica. Validado num teste real (viverdeia.ai).
+
 ## 1.2.1 — 2026-06-30
 - `METODO.md` visível na raiz — o método (4 movimentos + átomo) virou documento legível, não só o que a IA usa por baixo.
 
