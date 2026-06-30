@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Roda no início da sessão (hook). Avisa se há versão nova do motor.
-# Silencioso e rápido: nunca trava a abertura do cérebro.
+# Roda no início da sessão (hook). Se há versão nova do MOTOR, atualiza AUTOMATICAMENTE
+# e conta o que mudou. Nunca toca o contexto (meu-negocio/capturas/privado). Silencioso se offline.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -11,6 +11,8 @@ LOCAL="$(cat "$ROOT/VERSION" 2>/dev/null || echo '0.0.0')"
 REMOTE="$(curl -fsSL --max-time 3 "https://raw.githubusercontent.com/$REPO/$BRANCH/VERSION" 2>/dev/null | tr -d '[:space:]')"
 
 if [ -n "$REMOTE" ] && [ "$REMOTE" != "$LOCAL" ]; then
-  echo "ATUALIZACAO_DISPONIVEL: saiu a versão $REMOTE do cérebro (você está na $LOCAL). Ofereça rodar /atualizar."
+  echo "🧠 Saiu a versão $REMOTE do cérebro (você está na $LOCAL). Atualizando o motor — teu contexto não é tocado…"
+  bash "$ROOT/.claude/scripts/update.sh" 2>&1 | sed 's/^/  /'
+  echo "  Veja o que mudou em CHANGELOG.md."
 fi
 exit 0

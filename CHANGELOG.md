@@ -1,5 +1,9 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.0 — 2026-06-30
+- **Atualização automática:** o cérebro se atualiza sozinho ao abrir (motor + conhecimento da comunidade) — teu contexto nunca é tocado.
+- **Teu contexto começa vazio:** o `meu-negocio/` é template em branco; o `/comecar` preenche com o TEU negócio. O cérebro é só teu.
+
 ## 1.1.0 — 2026-06-30
 - **O Método do Cérebro** (validado por pesquisa): os 4 movimentos — organizar por uso, capturar em átomos, conectar leve, buscar citando.
 - **Átomo** como unidade: afirmação + citação literal + sentido + elos. A IA opera átomos citados, nunca o bruto (anti-alucinação).
