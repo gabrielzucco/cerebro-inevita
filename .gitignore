@@ -8,3 +8,5 @@ capturas/*
 # ruído de SO / editor
 .DS_Store
 .obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
