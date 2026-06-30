@@ -1,4 +1,4 @@
 # De onde o /atualizar baixa o motor do cérebro.
 # AJUSTE estes dois valores depois de criar o repositório no GitHub.
-REPO=inevita-society/cerebro
+REPO=gabrielzucco/cerebro-inevita
 BRANCH=main
