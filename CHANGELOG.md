@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.5 — 2026-07-01
+- +5 palestras do AI Experience: **Kyle Mistele** (Loop Engineering), **Dex Horthy** (Harness não basta), **Vaibhav Gupta** (Fighting slop), **Niels Rogge** (automatizar o próprio trabalho), **Kieran Klaassen** (Compound Engineering). Destilado + íntegra cada.
+
 ## 1.2.4 — 2026-06-30
 - Mecanismo de atualização revisado (auto-update validado de ponta a ponta).
 
