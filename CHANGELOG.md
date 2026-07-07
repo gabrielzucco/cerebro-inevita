@@ -1,5 +1,9 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.6 — 2026-07-07
+- **Workshops do expo** (9 gravações de sala): skills como conhecimento executável, "Claude Beige"/anti-slop, "julgamento é o ativo caro", thinking in public (YC/PG), agent experience (Stripe/Metronome), sites generativos, design ops com agentes.
+- **🗺️ O mapa da conversa do evento** — a síntese: as 6 camadas em volta do modelo (contexto, skills, agentes, curadoria, eficiência, pessoa).
+
 ## 1.2.5 — 2026-07-01
 - +5 palestras do AI Experience: **Kyle Mistele** (Loop Engineering), **Dex Horthy** (Harness não basta), **Vaibhav Gupta** (Fighting slop), **Niels Rogge** (automatizar o próprio trabalho), **Kieran Klaassen** (Compound Engineering). Destilado + íntegra cada.
 

@@ -24,4 +24,10 @@ Sessões do **AI Engineer World's Fair** (junho/2026), transcritas e anonimizada
 - **The Era of Compound Engineering** — Kieran Klaassen (Every / Cora, GM)
   → [[kieran-klaassen]] · íntegra [[kieran-klaassen-completo]]
 
+**Workshops e sessões do expo** (gravações parciais de sala, 9 fragmentos): skills como conhecimento executável · "Claude Beige"/anti-slop · julgamento como ativo · thinking in public (YC/PG) · agent experience (Stripe/Metronome) · sites generativos · design ops com agentes
+  → [[workshops-expo]] · íntegras [[workshops-expo-completo]]
+
+**🗺️ O mapa da conversa do evento** — síntese transversal: as 6 camadas em volta do modelo
+  → [[mapa-da-conversa]]
+
 > ⏳ Faltando: *From Vibes to Production* (Laurie Voss, Arize AI — sem áudio); + 2 keynotes sem card (treino de modelo; história da Anthropic).
