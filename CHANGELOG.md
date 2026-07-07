@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## 1.2.7 — 2026-07-07
+- **Expo vol. 2**: GEPA — o sistema que otimiza o próprio contexto ("quanto melhor o modelo, mais vale o teu contexto"); Aiden, o agente que venceu o desafio da OpenAI ("o humano sobe na stack, não sai dela"); ACP — o padrão pra comandar agentes; MCP Tasks; Deasy ("30% de arquivos ruins contaminam 80% do contexto — limpar dobra o recall"); knowledge graphs; MCP Apps (separe dados de UI).
+
 ## 1.2.6 — 2026-07-07
 - **Workshops do expo** (9 gravações de sala): skills como conhecimento executável, "Claude Beige"/anti-slop, "julgamento é o ativo caro", thinking in public (YC/PG), agent experience (Stripe/Metronome), sites generativos, design ops com agentes.
 - **🗺️ O mapa da conversa do evento** — a síntese: as 6 camadas em volta do modelo (contexto, skills, agentes, curadoria, eficiência, pessoa).

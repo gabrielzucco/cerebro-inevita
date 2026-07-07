@@ -30,4 +30,7 @@ Sessões do **AI Engineer World's Fair** (junho/2026), transcritas e anonimizada
 **🗺️ O mapa da conversa do evento** — síntese transversal: as 6 camadas em volta do modelo
   → [[mapa-da-conversa]]
 
+**Expo vol. 2** (4 palestras identificadas + 3 estandes): GEPA/auto-otimização de contexto (Lakshya Agrawal) · o agente que venceu o desafio da OpenAI (Weco) · ACP, o padrão pra comandar agentes (Alex Hancock/Block) · MCP Tasks (Cornelia Davis/Temporal) · Deasy: "30% de arquivos ruins contaminam 80% do contexto" · knowledge graphs · MCP Apps
+  → [[workshops-expo-2]] · íntegras [[workshops-expo-2-completo]]
+
 > ⏳ Faltando: *From Vibes to Production* (Laurie Voss, Arize AI — sem áudio); + 2 keynotes sem card (treino de modelo; história da Anthropic).
