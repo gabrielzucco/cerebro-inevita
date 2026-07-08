@@ -20,7 +20,7 @@ Pergunte, curto e humano: *"Qual a maior dor ou decisão do teu negócio agora? 
 1. **Sanitize PII** antes de gravar (→ `privado/` ou fora).
 2. **Salve o bruto** em `capturas/` (com origem).
 3. **Destile em ÁTOMOS** — só o que tem sinal: afirmação + citação literal + por quê + elos (ver `CLAUDE.md` / `/guardar`).
-4. **Roteie** pros horizontes (`oferta`/`icp`/`posicionamento`/`o-que-funciona`/`fios`). Campo sem evidência → `(não consta na fonte)`.
+4. **Roteie** pros horizontes (`oferta`/`icp`/`posicionamento`/`o-que-funciona`/`fios`) — e se a fonte citar uma pessoa/empresa-chave (cliente, parceiro), crie a página dela em `gente/`. Campo sem evidência → `(não consta na fonte)`.
 5. **Confirme antes de gravar.**
 
 ## Passo 4 — a vitória (diagnóstico cruzado)
@@ -29,7 +29,7 @@ Quando tiver o mínimo (a dor + 1 fonte tratada):
 2. **Cruze com `conhecimento/`** (Vale etc.): pegue uma tensão real e conecte a uma sacada aplicável — **citação literal + timestamp**. É o "relatório absurdo": o que a IA genérica diria **×** o que ela diz **sabendo do teu negócio**.
 3. **Um próximo passo** acionável (um só, o de maior retorno).
 
-> Se metade dos campos está `(não consta)`, peça mais uma fonte antes de forçar a vitória — diagnóstico raso queima o aha.
+> **Mínimo pra vitória: a dor + 1 fonte RICA (call ou anúncio que converteu) — ou 2 fontes rasas.** Se metade dos campos está `(não consta)`, peça mais uma fonte antes de forçar — diagnóstico raso queima o aha. Melhor 10 min a mais de coleta do que um primeiro output medíocre.
 
 ## Passo 5 — o mapa e a régua (fecham o onboarding)
 1. **O Mapa** (`meu-negocio/mapa.md`): com o que já aprendeu + 2-3 perguntas diretas, preencha: como o dinheiro entra (funil em 5 linhas), **a métrica principal (UMA — insista: uma)**, processos-chave, prioridade do trimestre. *"Mapeamento + uma métrica resolve 90% da ansiedade de 'o que fazer com IA'"* — é o conselho nº 1 de quem constrói no Vale.

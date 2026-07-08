@@ -1,6 +1,6 @@
 ---
 name: metodo
-description: Explica o método do cérebro (os 4 movimentos — organizar, capturar, conectar, buscar — e o que é um átomo) e ajuda a pessoa a aplicar no contexto dela. Use quando ela pergunta "como funciona", "qual o método", "como organizo", "como guardo", ou quer entender como construir o cérebro dela.
+description: Explica o método do cérebro (os 4 movimentos, o átomo e os relógios — dia, semana, mês) e ajuda a pessoa a aplicar no contexto dela. Use quando ela pergunta "como funciona", "qual o método", "como organizo", "como guardo", ou quer entender como construir o cérebro dela.
 ---
 
 # Engenharia de Contexto — o método do cérebro (explique e aplique)
@@ -15,8 +15,15 @@ Objetivo: a pessoa entender o método em 2 minutos e **aplicar em algo real dela
 3. **Conectar leve.** Você linka o óbvio; o cérebro **sugere** o resto. A IA amplia teu pensamento — não pensa por você.
 4. **Buscar citando.** Você pergunta em linguagem normal; o cérebro traz os **trechos citados** das tuas notas — nunca um amontoado, nunca invenção.
 
+## Os relógios (quando cada coisa acontece)
+Contexto tem cadência — e cada relógio tem uma skill:
+- **Todo dia (10 min):** `/daily` — o dia vira contexto com a memória quente (teu julgamento sobre o que importou expira em ~48h).
+- **Saiu de call:** `/call` em até 48h.
+- **Toda semana (30-45 min):** `/reindex` — bandeja zerada, fios revisados, o resumo da semana (que nasce das dailies, nunca de reler tudo).
+- **Todo mês:** `/revisar` (a verdade muda — nota velha se confirma, atualiza ou marca `superado`) e `/teste` (as tuas 5 perguntas-canário: a resposta evolui de **em branco → estagiário → sócio**).
+
 ## A regra de ouro
-O cérebro **opera os átomos** (trechos citados), **não engole o bruto**. É isso que separa um cérebro de um "drive morto que faz a IA alucinar".
+O cérebro **opera os átomos** (trechos citados), **não engole o bruto**. É isso que separa um cérebro de um "drive morto que faz a IA alucinar". E a irmã dela: **guardar tudo ≠ dar tudo pra IA** — o bruto fica em `capturas/` (arquivo frio); a IA opera o destilado.
 
 ## Depois de explicar
 Ofereça: *"quer que eu pegue uma coisa tua de verdade — uma call, uma decisão, um anúncio — e transforme num átomo agora, pra você ver o método rodando?"* Se sim, conduza com `/guardar`.

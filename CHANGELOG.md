@@ -1,5 +1,9 @@
 # Mudanças do cérebro INEVITA
 
+## 1.3.1 — 2026-07-07
+- `/metodo` agora ensina os relógios (dia/semana/mês) e a regra "guardar tudo ≠ dar tudo pra IA".
+- `/comecar`: mínimo pra vitória explícito (dor + 1 fonte rica, ou 2 rasas) e roteamento pra `gente/`.
+
 ## 1.3.0 — 2026-07-07 · "O método ganhou relógios"
 - **5 skills novas** — o ciclo completo: `/daily` (o dia em 10 min, memória quente), `/call` (reunião vira átomos em 48h), `/reindex` (o ritual da semana), `/revisar` (frescor mensal — nota morta se marca `superado`, nunca se deleta) e `/teste` (o Teste do Cérebro: tuas 5 perguntas-canário, evoluindo de **em branco → estagiário → sócio**).
 - **O Mapa do Negócio** (`meu-negocio/mapa.md`): o negócio numa página + A métrica principal — o conselho nº 1 de quem constrói no Vale ("mapeamento + uma métrica resolve 90%"). O `/comecar` agora o preenche.
