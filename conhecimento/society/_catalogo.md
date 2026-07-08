@@ -14,3 +14,6 @@ Quando for membro, rode `/sincronizar` e os encontros entram no teu cérebro —
 
 ---
 **Desbloquear:** entre na INEVITA Society.
+
+---
+> 🔑 **Como entrar:** essas camadas abrem com a INEVITA Society. Quando a porta estiver aberta, o convite chega por aqui mesmo (o cérebro avisa) — e pra quem já está na lista, pelo e-mail/grupo.

@@ -7,8 +7,14 @@ description: Onboarding do cérebro. Use quando a pessoa começa, abre o cofre p
 
 Princípio: **entra pela dor, não pelo cadastro.** A pessoa já produz contexto (calls, decisões, anúncios) — você ajuda a coletar, tratar e cruzar. Vitória já na 1ª sessão. Sem pedir pra ela "aprender a ferramenta" antes de ver valor.
 
+## Passo 0 — as duas portas (pergunte ANTES de tudo)
+*"Por onde quer começar? **(a) Montar teu contexto** — eu te conheço e o acervo passa a responder PRO TEU caso — ou **(b) explorar o acervo primeiro** — te mostro o índice do que tem aqui dentro."*
+- Escolheu (b) → mostre os `_catalogo.md` de `conhecimento/` como um índice convidativo, deixe explorar, e ao final ofereça a porta (a): *"quando quiser que isso tudo responda pro TEU negócio, me diz que a gente monta teu contexto em 10 min."*
+- Escolheu (a) → siga o Passo 1.
+
 ## Passo 1 — a dor (a porta)
 Pergunte, curto e humano: *"Qual a maior dor ou decisão do teu negócio agora? Onde você está esbarrando?"*. Tudo ancora aqui.
+> **Diga explicitamente, logo na 1ª pergunta:** *"cada resposta tua aqui já está virando contexto gravado — nada se perde, tudo acumula pro teu cérebro."* (Sem isso, as perguntas parecem custo; com isso, parecem construção.)
 
 ## Passo 2 — puxar o que ela JÁ tem (o combustível)
 *"Pra te ajudar de verdade, me joga uma coisa que você já tem sobre isso — teu site, um anúncio que converteu, uma call/reunião, ou só me contar."* Uma fonte de cada vez, do mais fácil ao mais rico.

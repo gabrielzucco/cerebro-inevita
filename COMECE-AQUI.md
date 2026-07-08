@@ -13,6 +13,8 @@ Você precisa de uma conta **Claude Pro ou Max** (claude.ai).
 **Windows:** instale o **Node.js** ("LTS" em [nodejs.org](https://nodejs.org)). Abra o **PowerShell** e cole: `npm install -g @anthropic-ai/claude-code`.
 **Abrir esta pasta:** no terminal digite `cd ` (com espaço), **arraste esta pasta** pra cima da janela, Enter. Rode `claude` e logue.
 
+> ⚠️ **Importante:** as skills (`/comecar` etc.) só carregam quando o Claude Code **abre já dentro desta pasta**. Se você acabou de clonar o cérebro numa conversa, **feche e abra de novo dentro da pasta** — é uma vez só.
+
 > Travou? Manda no grupo dizendo onde parou — a gente destrava.
 
 ---

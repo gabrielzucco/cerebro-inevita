@@ -1,5 +1,11 @@
 # Mudanças do cérebro INEVITA
 
+## 1.3.2 — 2026-07-08 (fricções do teste real de onboarding)
+- `/comecar` agora tem DUAS portas: montar teu contexto ou explorar o acervo primeiro (índice).
+- A skill avisa logo de cara: cada resposta já vira contexto gravado (as perguntas são construção, não custo).
+- Catálogos trancados mostram como entrar.
+- COMECE-AQUI: aviso pra reabrir o Claude Code dentro da pasta (skills carregam na abertura).
+
 ## 1.3.1 — 2026-07-07
 - `/metodo` agora ensina os relógios (dia/semana/mês) e a regra "guardar tudo ≠ dar tudo pra IA".
 - `/comecar`: mínimo pra vitória explícito (dor + 1 fonte rica, ou 2 rasas) e roteamento pra `gente/`.
