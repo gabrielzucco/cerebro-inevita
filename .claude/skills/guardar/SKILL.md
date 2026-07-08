@@ -12,6 +12,7 @@ A captura é fácil; o valor está em **tratar**. Você faz o trabalho pesado, a
 3. **Destile em átomo(s)** — cada UMA ideia com sinal vira uma nota (veja o formato no `CLAUDE.md`):
    - **afirmação** (título-frase) · **citação literal** + origem · **por quê** (1-2 linhas) · **elos** (`[[ ]]`)
    - **Nem tudo vira átomo** — descarte ruído (saudação, off-topic). Sinal = dor, decisão, número, objeção, padrão, copy que funcionou.
+   - **⚠️ Regra da sequência (antes de julgar "sem sinal"):** a unidade de sentido é a PEÇA, não o arquivo. Material que começa no meio (*"é a continuação..."*), só CTA repetido, ou arquivos do mesmo dia/pasta com numeração próxima → são PARTES de uma coisa só (hooks alternativos + corpo + takes de CTA). Pergunte: *"isso faz parte de uma sequência? me aponta os irmãos"* — e destile o CONJUNTO. Fragmento sozinho parece lixo; junto é a peça inteira.
 4. **Roteie** pro horizonte: `fios/` (quente agora) · áreas (`oferta`/`icp`/`posicionamento`/`o-que-funciona`/`decisoes/`) · `arquivo/` (esfriou). Campo sem evidência → `(não consta na fonte)`.
 5. **Mostre o(s) átomo(s) e confirme** — *"guardo assim?"*. Só grava após o ok. A pessoa é a curadora.
 6. **Sugira 1-2 elos** com o que já existe: *"isso reforça tua [[oferta]] — linko?"*. Você sugere, ela decide.

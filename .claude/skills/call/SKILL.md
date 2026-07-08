@@ -23,3 +23,9 @@ Uma call de 1h tem 3-6 átomos escondidos em 8.000 palavras de ruído. Seu traba
 7. **Atualize o eixo pessoa**: a call foi com alguém que importa (cliente-chave, parceiro, concorrente)? Atualize/crie a página em `gente/` — estado atual + link pra esta call. (Pessoa privada = papel, nunca nome+dados.)
 
 Regras: **citação literal com timestamp, sempre** — sem prova, não é átomo · call sem sinal existe (registre só o bruto e diga isso) · nunca despeje a transcrição inteira no raciocínio das respostas futuras — os átomos são o caminho; o bruto fica pra drill-down.
+
+Armadilhas de transcrição automática (não caia):
+- **Citação ≠ endosso.** Se a pessoa cita algo PRA DISCORDAR (*"tem gente que fala X — isso é mentira"*), o átomo registra a POSIÇÃO dela, nunca o X solto como se fosse afirmação.
+- **Números de transcrição automática são suspeitos** até confirmação ("oitenta e seis" vs "86… 8?"). Número ambíguo no verbatim → pergunte antes de gravar; nunca vire átomo no chute.
+- **Nomes próprios erram muito** (whisper troca nome de gente/empresa). Nome estranho no contexto → sinalize *"confirma esse nome?"* em vez de propagar.
+- **Compromisso condicional ≠ compromisso.** *"Se der, a gente faz"* registra como possibilidade, não como promessa com dono e prazo.

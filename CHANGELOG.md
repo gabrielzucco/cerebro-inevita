@@ -1,5 +1,9 @@
 # Mudanças do cérebro INEVITA
 
+## 1.3.4 — 2026-07-08 (armadilhas de material bruto)
+- Regra da sequência no `/guardar` e no `/call`: a unidade de sentido é a PEÇA, não o arquivo — fragmento/CTA solto puxa os irmãos antes de julgar.
+- `/call` blindado contra 4 armadilhas de transcrição automática: citação-refutação, número ambíguo, nome trocado pelo whisper, compromisso condicional.
+
 ## 1.3.3 — 2026-07-08 (bateria de QA com material real + glossário)
 - `/call` em call longa (60+ min): oferece segunda passada — átomos principais + reserva de candidatos (a cauda tem ouro).
 - `/call` detecta formato aula/live: rota dupla — átomos operacionais + destilado-nota no topo do bruto.
