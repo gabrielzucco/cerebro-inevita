@@ -1,5 +1,9 @@
 # Mudanças do cérebro INEVITA
 
+## 1.3.5 — 2026-07-08 (setup sem fricção — extraído da call de teste)
+- COMECE-AQUI: bloco "o que você precisa / NÃO precisa" — mata o medo de API/chave (só precisa da conta Claude). Nasceu do Vini batendo no paywall do Groq no teste.
+- Porta "explorar o acervo" do `/comecar` agora leva a um índice de topo real (`conhecimento/_INDICE.md`), não a catálogos espalhados — o corredor tinha 4 portas sem mapa.
+
 ## 1.3.4 — 2026-07-08 (armadilhas de material bruto)
 - Regra da sequência no `/guardar` e no `/call`: a unidade de sentido é a PEÇA, não o arquivo — fragmento/CTA solto puxa os irmãos antes de julgar.
 - `/call` blindado contra 4 armadilhas de transcrição automática: citação-refutação, número ambíguo, nome trocado pelo whisper, compromisso condicional.

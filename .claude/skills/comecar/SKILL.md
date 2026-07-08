@@ -9,7 +9,7 @@ Princípio: **entra pela dor, não pelo cadastro.** A pessoa já produz contexto
 
 ## Passo 0 — as duas portas (pergunte ANTES de tudo)
 *"Por onde quer começar? **(a) Montar teu contexto** — eu te conheço e o acervo passa a responder PRO TEU caso — ou **(b) explorar o acervo primeiro** — te mostro o índice do que tem aqui dentro."*
-- Escolheu (b) → mostre os `_catalogo.md` de `conhecimento/` como um índice convidativo, deixe explorar, e ao final ofereça a porta (a): *"quando quiser que isso tudo responda pro TEU negócio, me diz que a gente monta teu contexto em 10 min."*
+- Escolheu (b) → abra `conhecimento/_INDICE.md` (o mapa de topo do acervo) e apresente-o em voz de guia: o que tem em cada coleção e por onde começar. Se a pessoa se interessar por uma coleção, aí sim abra o `_catalogo.md` dela. Deixe explorar, e ao final ofereça a porta (a): *"quando quiser que isso tudo responda pro TEU negócio, me diz que a gente monta teu contexto em 10 min."*
 - Escolheu (a) → siga o Passo 1.
 
 ## Passo 1 — a dor (a porta)

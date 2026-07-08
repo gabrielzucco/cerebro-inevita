@@ -6,6 +6,12 @@ Roda dentro do **Claude Code** (o assistente da Anthropic no terminal). Se nunca
 
 ---
 
+## O que você precisa (e o que NÃO precisa)
+**Precisa:** uma conta **Claude** (Pro ou Max) — é a única coisa paga, e é a mesma que roda o Claude Code.
+**NÃO precisa:** nenhuma **chave de API**, nenhum serviço de transcrição, nenhum cartão além do Claude, nenhuma ferramenta extra. O cérebro é markdown + as skills; quem faz o trabalho é a tua conta Claude. Se em algum momento parecer que você precisa "pegar uma chave" de algo, **pare — não precisa**. Manda no grupo.
+
+---
+
 ## Passo 0 — instalar e abrir o Claude Code (uma vez)
 Você precisa de uma conta **Claude Pro ou Max** (claude.ai).
 
