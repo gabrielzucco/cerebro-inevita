@@ -20,8 +20,30 @@ Cada coisa que importa vira uma **nota de uma ideia**, com 4 partes:
 ## A regra de ouro
 O cérebro **opera os átomos citados — nunca engole o bruto inteiro.** É isso que separa um cérebro de um "drive que faz a IA alucinar".
 
+## Os relógios (quando fazer o quê)
+Contexto não se acumula "quando der" — tem cadência:
+- **Sempre** — call importante com transcrição ligada; decisão tomada vira áudio de 2 min ou "guarda isso".
+- **Todo dia (10 min)** — `/daily`: o dia vira contexto **com a memória quente** (teu julgamento sobre o que importou expira em ~48h).
+- **Toda semana (30-45 min)** — `/reindex`: bandeja zerada, fios revisados, o resumo da semana.
+- **Todo mês (40 min)** — `/revisar` (isso ainda vale?) + `/teste` (o cérebro melhorou?).
+
+## Quando tratar o que capturei?
+- **Decisão** → na hora (é o que mais evapora).
+- **O dia** → na `/daily`, no fim do dia.
+- **Call** → `/call` em até 48h.
+- **Artigo, palestra, referência** → junta e trata em lote no `/reindex`.
+- Regra de bolso: **guardar tudo ≠ dar tudo pra IA.** O bruto fica em `capturas/` (arquivo frio); a IA opera os átomos. E o resumo da semana nasce das dailies — nunca de reler tudo.
+
+## A saúde do cérebro
+- **Frescor:** a verdade muda. Nota velha fingindo estar viva envenena as respostas — o `/revisar` marca o que morreu como `superado` (nada se deleta).
+- **Medição:** o `/teste` roda tuas 5 perguntas-canário todo mês. A resposta evolui de **em branco → estagiário → sócio**. É assim que você VÊ o cérebro virando sócio.
+
 ## Os comandos (no Claude Code)
-- **`/comecar`** — monta teu contexto (a dor → o que você já tem → diagnóstico).
+- **`/comecar`** — monta teu contexto (a dor → o mapa do negócio → diagnóstico → tuas perguntas-canário).
 - **`/guardar`** — transforma algo num átomo (você aprova).
+- **`/daily`** — o fechamento do dia (10 min).
+- **`/call`** — trata uma reunião em átomos (até 48h).
+- **`/reindex`** — o ritual da semana.
+- **`/revisar`** + **`/teste`** — a manutenção e a régua mensais.
 - **`/metodo`** — o cérebro te ensina e aplica num caso teu.
 - **`/atualizar`** — traz melhorias; o teu contexto **nunca** é tocado.

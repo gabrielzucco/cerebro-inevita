@@ -31,6 +31,10 @@ Quando tiver o mínimo (a dor + 1 fonte tratada):
 
 > Se metade dos campos está `(não consta)`, peça mais uma fonte antes de forçar a vitória — diagnóstico raso queima o aha.
 
+## Passo 5 — o mapa e a régua (fecham o onboarding)
+1. **O Mapa** (`meu-negocio/mapa.md`): com o que já aprendeu + 2-3 perguntas diretas, preencha: como o dinheiro entra (funil em 5 linhas), **a métrica principal (UMA — insista: uma)**, processos-chave, prioridade do trimestre. *"Mapeamento + uma métrica resolve 90% da ansiedade de 'o que fazer com IA'"* — é o conselho nº 1 de quem constrói no Vale.
+2. **As perguntas-canário**: crie `meu-negocio/teste-do-cerebro.md` com a pessoa (5 perguntas que um sócio de anos saberia — ver `/teste`) e **rode a 1ª rodada agora**. As respostas vão ser fracas — diga isso com honestidade: *"esse é o marco zero; no mês que vem a gente roda de novo e tu VÊ a diferença."*
+
 ## Quando quiser mais
 Ofereça trazer outra fonte (anúncio, call) ou ligar a captura contínua. **Aditivo**, sempre nas mesmas notas, nada refeito.
 

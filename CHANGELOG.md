@@ -1,5 +1,13 @@
 # Mudanças do cérebro INEVITA
 
+## 1.3.0 — 2026-07-07 · "O método ganhou relógios"
+- **5 skills novas** — o ciclo completo: `/daily` (o dia em 10 min, memória quente), `/call` (reunião vira átomos em 48h), `/reindex` (o ritual da semana), `/revisar` (frescor mensal — nota morta se marca `superado`, nunca se deleta) e `/teste` (o Teste do Cérebro: tuas 5 perguntas-canário, evoluindo de **em branco → estagiário → sócio**).
+- **O Mapa do Negócio** (`meu-negocio/mapa.md`): o negócio numa página + A métrica principal — o conselho nº 1 de quem constrói no Vale ("mapeamento + uma métrica resolve 90%"). O `/comecar` agora o preenche.
+- **O eixo pessoa** (`meu-negocio/gente/`): uma página por cliente/parceiro/concorrente-chave — `/call` e `/daily` alimentam.
+- **O eixo tempo** (`meu-negocio/dailies/`): rollup diário + resumo da semana (que nasce das dailies, nunca de reler tudo).
+- **Frescor**: notas ganham `confirmado:` e `status: superado` — porque a verdade muda, e nota velha fingindo estar viva envenena resposta (30% de notas ruins contaminam até 80% do contexto — dado do Vale).
+- METODO.md: os relógios (dia/semana/mês), quando tratar o quê, e a saúde do cérebro.
+
 ## 1.2.7 — 2026-07-07
 - **Expo vol. 2**: GEPA — o sistema que otimiza o próprio contexto ("quanto melhor o modelo, mais vale o teu contexto"); Aiden, o agente que venceu o desafio da OpenAI ("o humano sobe na stack, não sai dela"); ACP — o padrão pra comandar agentes; MCP Tasks; Deasy ("30% de arquivos ruins contaminam 80% do contexto — limpar dobra o recall"); knowledge graphs; MCP Apps (separe dados de UI).
 

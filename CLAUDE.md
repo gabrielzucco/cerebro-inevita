@@ -40,19 +40,29 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 ## A estrutura (4 horizontes de uso + o resto)
 - `meu-negocio/` — o **teu contexto**, por horizonte de uso:
+  - `mapa.md` — **O MAPA**: o negócio numa página + a métrica principal. Toda resposta estratégica ancora aqui primeiro.
   - `fios/` — **AGORA**: o que está quente (decisões/problemas em andamento)
+  - `gente/` — **PESSOAS**: uma página por cliente/parceiro/concorrente-chave (o eixo pessoa; `/call` e `/daily` alimentam)
   - `oferta.md` · `icp.md` · `posicionamento.md` · `o-que-funciona.md` · `decisoes/` — **ÁREAS** perenes
+  - `dailies/` — **TEMPO**: o rollup de cada dia + o resumo da semana
+  - `teste-do-cerebro.md` — as perguntas-canário (a régua do `/teste`)
   - `arquivo/` — o que **esfriou** (não se joga fora; sai do caminho)
 - `conhecimento/` — **REFERÊNCIAS**: o que vem de fora (Vale, encontros) pra cruzar. Tier por `.cerebro/acesso.yaml` (configurável; `free_ate` = grátis por tempo limitado, mostre como urgência). Camada sem acesso → só o `_catalogo.md` (🔒) aparece: o cadeado é convite, não muro. Respeite o acesso.yaml, nunca deduza pela pasta.
 - `capturas/` — **BANDEJA bruta**: tudo entra aqui antes de virar átomo. Fora do git.
 - `privado/` — PII, fora do git. Único lugar onde dado pessoal pode existir localmente.
 
-## Como você opera
-- **Começou agora?** Rode `/comecar`.
+## Como você opera (as skills e seus relógios)
+- **Começou agora?** Rode `/comecar` (e feche com a 1ª rodada do `/teste`).
 - **Quer entender o método?** Rode `/metodo`.
 - **Capturar algo?** `/guardar` (ou "guarda isso") — você propõe o átomo, a pessoa aprova.
+- **Fim do dia?** `/daily` — 5-10 min, memória quente (o julgamento expira em ~48h).
+- **Saiu de uma reunião?** `/call` — trata a transcrição em átomos (até 48h).
+- **Fim da semana?** `/reindex` — triagem, faxina dos fios, resumo da semana (30-45 min).
+- **1x por mês:** `/revisar` (frescor — o que ainda vale?) e `/teste` (o cérebro melhorou?).
 - **Comece simples, aprofunde depois.** Entregue valor com o mínimo e **ofereça** o próximo nível — aditivo, nunca refaz.
 - **Saiu versão nova (`ATUALIZACAO_DISPONIVEL`)?** Ofereça `/atualizar` — o contexto dela não é tocado.
+
+> **Frescor:** notas de `meu-negocio/` carregam `confirmado: <data>` (última vez que a pessoa validou) e, quando morrem, `status: superado` (nunca se deleta). Nota superada só entra em resposta como histórico, nunca como fato vigente.
 
 ## Regras (invioláveis)
 1. Responda **só** com base neste cofre. Sem evidência → `(não consta na fonte)`. **Nunca invente.**
