@@ -47,3 +47,5 @@ Contexto não se acumula "quando der" — tem cadência:
 - **`/revisar`** + **`/teste`** — a manutenção e a régua mensais.
 - **`/metodo`** — o cérebro te ensina e aplica num caso teu.
 - **`/atualizar`** — traz melhorias; o teu contexto **nunca** é tocado.
+
+> **Dúvida com um termo?** `GLOSSARIO.md` — os termos da casa, uma linha cada.

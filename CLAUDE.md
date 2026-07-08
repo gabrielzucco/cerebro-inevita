@@ -50,6 +50,7 @@ elos: [[conceito-a]] · [[conceito-b]]
 - `conhecimento/` — **REFERÊNCIAS**: o que vem de fora (Vale, encontros) pra cruzar. Tier por `.cerebro/acesso.yaml` (configurável; `free_ate` = grátis por tempo limitado, mostre como urgência). Camada sem acesso → só o `_catalogo.md` (🔒) aparece: o cadeado é convite, não muro. Respeite o acesso.yaml, nunca deduza pela pasta.
 - `capturas/` — **BANDEJA bruta**: tudo entra aqui antes de virar átomo. Fora do git.
 - `privado/` — PII, fora do git. Único lugar onde dado pessoal pode existir localmente.
+- `GLOSSARIO.md` — os termos da casa, uma linha cada. **Use SEMPRE estes termos** ao falar do método; termo novo só entra por lá.
 
 ## Como você opera (as skills e seus relógios)
 - **Começou agora?** Rode `/comecar` (e feche com a 1ª rodada do `/teste`).

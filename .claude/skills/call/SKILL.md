@@ -17,6 +17,8 @@ Uma call de 1h tem 3-6 átomos escondidos em 8.000 palavras de ruído. Seu traba
    - **Números** (preço citado, prazo, métrica)
    - **Frases que funcionaram** (o que destravou a conversa)
 5. **Apresente os átomos de uma vez e confirme** — *"achei estes N; guardo assim?"*. Ela corta/ajusta; só grave após o ok.
+   - **Call longa (60+ min):** o teto de átomos protege o foco mas esconde a cauda. Garimpe normal e ofereça a segunda passada: *"achei N átomos principais; ficaram M candidatos na reserva"* — liste os reservas em 1 linha cada e ela escolhe quais promover.
+   - **Aula/live/palestra (formato didático — uma pessoa expondo, com frameworks e passos):** ofereça a rota dupla: além dos átomos operacionais, grave um **destilado-nota** estruturado (o esqueleto da aula: tese, passos, exemplos) numa seção `## Destilado` no TOPO do próprio arquivo do bruto. Átomo serve à operação; destilado serve ao estudo.
 6. **Roteie**: decisões → `decisoes/` · objeções e frases → `o-que-funciona.md` ou `icp.md` · assunto em andamento → `fios/`. No fio correspondente, acrescente uma linha linkando a call.
 7. **Atualize o eixo pessoa**: a call foi com alguém que importa (cliente-chave, parceiro, concorrente)? Atualize/crie a página em `gente/` — estado atual + link pra esta call. (Pessoa privada = papel, nunca nome+dados.)
 

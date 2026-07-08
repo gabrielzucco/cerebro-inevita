@@ -1,5 +1,10 @@
 # Mudanças do cérebro INEVITA
 
+## 1.3.3 — 2026-07-08 (bateria de QA com material real + glossário)
+- `/call` em call longa (60+ min): oferece segunda passada — átomos principais + reserva de candidatos (a cauda tem ouro).
+- `/call` detecta formato aula/live: rota dupla — átomos operacionais + destilado-nota no topo do bruto.
+- `GLOSSARIO.md` novo: os 17 termos da casa, uma linha cada, com o termo do Vale que ancora. Termo novo só entra por lá.
+
 ## 1.3.2 — 2026-07-08 (fricções do teste real de onboarding)
 - `/comecar` agora tem DUAS portas: montar teu contexto ou explorar o acervo primeiro (índice).
 - A skill avisa logo de cara: cada resposta já vira contexto gravado (as perguntas são construção, não custo).
