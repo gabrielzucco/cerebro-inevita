@@ -12,6 +12,9 @@ Cada coisa que importa vira uma **nota de uma ideia**, com 4 partes:
 > Sem a citação, não é átomo — é palpite. **O cérebro nunca inventa.**
 
 ## Os 4 movimentos
+
+> **A ponte com o [METODO-COMPLETO](METODO-COMPLETO.md):** o ciclo completo do método são **5 verbos** — capturar → destilar → estruturar → operar → medir. Os 4 movimentos abaixo são como o cérebro EXECUTA esses verbos no dia a dia: "capturar em átomos" = capturar+destilar · "organizar por uso"+"conectar leve" = estruturar · "buscar citando" = operar · e **medir** são os relógios (`/teste`, `/revisar`). Mesmo método, dois zooms.
+
 1. **Organizar por uso** — agora (`fios/`) · áreas do negócio · referências (`conhecimento/`) · arquivo. Você nunca decide "onde guardar".
 2. **Capturar em átomos** — joga o bruto em `capturas/`; o cérebro destila **só o que tem sinal**. Nem tudo vira átomo.
 3. **Conectar leve** — você linka o óbvio; o cérebro **sugere** o resto. Ele **amplifica teu pensamento, não substitui**.

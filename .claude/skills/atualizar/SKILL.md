@@ -19,3 +19,5 @@ Traz as últimas melhorias do **motor** (skills novas, gabaritos melhores, mais 
 - **Nunca** edite à mão `meu-negocio/`, `capturas/` ou `privado/` durante a atualização — o script já é blindado pra não tocar nelas.
 - Skills que a própria pessoa criou (fora da lista do motor) **são preservadas**.
 - Se ela perguntar "o que vem por aí", aponte o `CHANGELOG.md`.
+
+> **Por que isso importa (a lei da portabilidade):** o motor (o *harness* — skills, gabaritos) é nosso e atualiza; **o teu contexto vive em arquivo aberto, é teu, e nenhuma atualização toca nele**. Ferramenta se troca; capital não se abandona. No Vale: *"if you don't own your harness, you don't own your memory."*

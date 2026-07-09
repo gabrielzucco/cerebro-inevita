@@ -1,5 +1,11 @@
 # Mudanças do cérebro INEVITA
 
+## v1.5.1 — 2026-07-09
+- **Vocabulário v2 chegou na operação**: motor ancora em [harness], frescor em [context rot], perguntas-canário em [evals/golden patterns]; citação-bandeira do PayPal corrigida pro verbatim real ("competitive advantage"); estatística da Deasy agora com fonte e minutagem (demo no expo `[13:24]`).
+- **Ponte 4 movimentos ↔ 5 verbos** no METODO.md e no `/metodo` (mesmo método, dois zooms).
+- **`/reindex` ganhou o passo 50/50** (ensinar o sistema toda semana) e **`/atualizar` declara a portabilidade** (teu contexto em arquivo aberto, nunca refém).
+- **Conserto do motor.manifest**: as 5 skills dos relógios, o GLOSSARIO e o METODO-COMPLETO agora chegam a todo mundo via atualização automática (antes, quem já tinha clonado não recebia).
+
 ## v1.5.0 — 2026-07-09
 - **METODO-COMPLETO.md**: o método inteiro num documento só — fundamentos → mapa → ciclo → contrato → melhores práticas → resultados → pra onde vai. Condensado das palestras do AI Engineer World's Fair 2026, toda citação com fonte e minutagem. Comece por ele; o `/metodo` aplica.
 
@@ -38,7 +44,7 @@
 - **O Mapa do Negócio** (`meu-negocio/mapa.md`): o negócio numa página + A métrica principal — o conselho nº 1 de quem constrói no Vale ("mapeamento + uma métrica resolve 90%"). O `/comecar` agora o preenche.
 - **O eixo pessoa** (`meu-negocio/gente/`): uma página por cliente/parceiro/concorrente-chave — `/call` e `/daily` alimentam.
 - **O eixo tempo** (`meu-negocio/dailies/`): rollup diário + resumo da semana (que nasce das dailies, nunca de reler tudo).
-- **Frescor**: notas ganham `confirmado:` e `status: superado` — porque a verdade muda, e nota velha fingindo estar viva envenena resposta (30% de notas ruins contaminam até 80% do contexto — dado do Vale).
+- **Frescor**: notas ganham `confirmado:` e `status: superado` — porque a verdade muda, e nota velha fingindo estar viva envenena resposta (30% de notas velhas ou duplicadas contaminam até 80% do contexto — demo da Deasy no expo `[13:24]`, que mediu: limpar dobrou o recall).
 - METODO.md: os relógios (dia/semana/mês), quando tratar o quê, e a saúde do cérebro.
 
 ## 1.2.7 — 2026-07-07

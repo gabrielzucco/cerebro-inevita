@@ -9,7 +9,7 @@ pode-ir-comunidade: true
 > Sessão do PayPal no Vale (engenheiro + product manager). Tese: na era em que o modelo de IA virou commodity, o contexto é a vantagem. Minutagem do vídeo pra clipar/verificar.
 
 ## As sacadas
-- **Contexto é a vantagem comparativa.** *"When the model becomes commodity, context is the comparative advantage. Go grab it before your competitors."* `[11:53]`
+- **Contexto é a vantagem competitiva.** *"When the model becomes commodity, context is the **competitive** advantage. Go grab this advantage before your competitors."* `[11:53–12:02]` *(verbatim conferido no transcript completo — a versão antiga tinha "comparative")*
 - **Sem contexto, a IA chuta.** *"In the absence of context, all the options have equal probability."* `[01:48]`
 - **A conversa é a expertise.** *"The context is not just the docs. It's the conversation. It's the expertise. It's the opinion."* `[26:43]`
 - **Conserte o sistema, não o prompt.** *"Fix your harness, don't reprompt the agent… the compounding effect over time is tremendous."* `[58:10]`

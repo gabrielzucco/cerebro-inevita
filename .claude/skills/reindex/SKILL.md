@@ -5,7 +5,7 @@ description: O ritual semanal (30-45 min) que mantém o cérebro afiado — tria
 
 # Reindex — a semana vira estrutura (ritual semanal, 30-45 min)
 
-Cérebro sem manutenção apodrece: 30% de notas velhas contaminam até 80% do que a IA responde. O reindex é a academia semanal — sempre na mesma ordem, sempre com a pessoa no comando.
+Cérebro sem manutenção apodrece — o Vale chama de **context rot**: com ~30% de notas velhas ou duplicadas, até 80% do contexto que a IA usa fica contaminado — e limpar **dobrou o recall** `[demo Deasy no expo @ 13:24–14:15]`. Noutra base, curadoria levou 7.000→1.000 blocos: 1/7 do contexto, com MAIS precisão. O reindex é a academia semanal — sempre na mesma ordem, sempre com a pessoa no comando.
 
 1. **Triagem da bandeja** (`capturas/`): liste o que entrou na semana e não virou átomo. Pra cada item, UMA pergunta: *"isso vira átomo ou arquiva?"* — destile os que valem (como no `/guardar`), mova o resto pra `capturas/` mesmo com marcação `triado: arquivado`. Bandeja termina **zerada**.
 2. **Faxina dos fios** (`fios/`): pra cada fio, *"isso ainda está quente?"*
@@ -17,3 +17,5 @@ Cérebro sem manutenção apodrece: 30% de notas velhas contaminam até 80% do q
 5. **Feche com o espelho** (3 linhas): estado do cérebro — quantos átomos novos, o fio mais quente, a pendência mais velha. A pessoa sai sabendo onde o negócio dela está.
 
 Regras: **a ordem importa** (triagem → fios → resumo → elos) · resumo vem SÓ das dailies — reler bruto é retrabalho com julgamento pior · nada se deleta, se arquiva ou se marca · se a semana não teve dailies, o reindex vira uma daily estendida da semana — e você sugere criar o hábito.
+
+5. **A regra 50/50 (fecho):** o reindex é a metade "ensinar o sistema" da semana — *"50% construindo, 50% ensinando o sistema"* (compound engineering, direto do palco). Antes de fechar, UMA pergunta: *"o que o cérebro errou ou não soube esta semana — e qual nota/skill conserta isso?"* Grava a correção. É assim que ele fica melhor toda semana, não só maior.
