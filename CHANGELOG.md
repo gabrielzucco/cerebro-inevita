@@ -1,5 +1,12 @@
 # Mudanças do cérebro INEVITA
 
+## 1.4.0 — 2026-07-09 · "Expo completo — a trilha do contexto"
+- **Expo vol. 3** (7 palestras inéditas + íntegras): WTF Is the Context Layer ("context is also IP"), Agent Memory vs Learning (promoção supervisionada, 7000→1000 chunks), AI in GTM at Notion (63% uplift, "own the context layer, rent everything else"), Prompt/Memory/Weights ("the model is the easy part"), LLM Knowledge Bases ("the daily paper but your own"), GTM Orchestration, Why We Killed Our Multi-Agent Pipeline — + ecos de 5 sessões parciais.
+- **Resgates do expo**: workshop completo de product discovery (54 min, Mom Test na prática), a imersão numa big tech de pagamentos (context plugin: 91% menos erros), compound engineering (regra 50/50) e por que o Claude Code explodiu.
+- `/reindex` agora entrega **o jornal da tua semana** (manchete, o que andou, o que travou, a pergunta aberta) — o entregável visível do ritual.
+- `/guardar` com **freio de rótulos**: tag/tema novo só com tua aprovação (vocabulário sem freio vira ruído).
+- METODO: **as 4 memórias** (trabalho/episódica/semântica/procedural — por que a estrutura é assim) e a **regra da mesa** (uma janela = um trabalho; o chat é mesa, não memória).
+
 ## 1.3.5 — 2026-07-08 (setup sem fricção — extraído da call de teste)
 - COMECE-AQUI: bloco "o que você precisa / NÃO precisa" — mata o medo de API/chave (só precisa da conta Claude). Nasceu do Vini batendo no paywall do Groq no teste.
 - Porta "explorar o acervo" do `/comecar` agora leva a um índice de topo real (`conhecimento/_INDICE.md`), não a catálogos espalhados — o corredor tinha 4 portas sem mapa.

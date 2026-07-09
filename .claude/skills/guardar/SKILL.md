@@ -17,4 +17,4 @@ A captura é fácil; o valor está em **tratar**. Você faz o trabalho pesado, a
 5. **Mostre o(s) átomo(s) e confirme** — *"guardo assim?"*. Só grava após o ok. A pessoa é a curadora.
 6. **Sugira 1-2 elos** com o que já existe: *"isso reforça tua [[oferta]] — linko?"*. Você sugere, ela decide.
 
-Regras: evidência **literal** sempre · zero invenção · proveniência sempre · você **amplifica, não substitui**.
+Regras: evidência **literal** sempre · zero invenção · proveniência sempre · você **amplifica, não substitui** · **relutância a rótulos novos**: antes de criar tema/tag/conceito novo, procure um existente que sirva — vocabulário que cresce sem freio vira ruído (*"instruct the agent to be reluctant to add new tags"* — regra de quem opera knowledge base em produção). Rótulo novo só com aprovação explícita da pessoa.

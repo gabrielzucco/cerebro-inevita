@@ -20,6 +20,19 @@ Cada coisa que importa vira uma **nota de uma ideia**, com 4 partes:
 ## A regra de ouro
 O cérebro **opera os átomos citados — nunca engole o bruto inteiro.** É isso que separa um cérebro de um "drive que faz a IA alucinar".
 
+## As 4 memórias (por que a estrutura é assim)
+Todo sistema de IA tem 4 memórias — e cada uma tem UMA casa no teu cérebro:
+
+| Memória | O que é | A casa | Regra |
+|---|---|---|---|
+| **De trabalho** | a janela de contexto — a MESA desta conversa | a sessão (descartável) | entra pouco, sai gravado, morre em paz |
+| **Episódica** | o que aconteceu (brutos) | `capturas/` | imutável — é a prova |
+| **Semântica** | o que você sabe (fatos citáveis) | os átomos em `meu-negocio/` | com evidência e frescor |
+| **Procedural** | como se faz (know-how) | as skills | atualiza via `/atualizar`, teu contexto intocado |
+
+## A regra da mesa (higiene de sessão)
+**Uma janela = um trabalho.** O chat é mesa, não memória: assunto novo → conversa nova, sem medo — o que persiste é o que foi GRAVADO no cofre, nunca o que ficou na tela. Guardar as coisas "no chat" é anotar o negócio em post-it que se autodestrói. Feche com recibo (o que mudou, onde ficou) e abra sessões limpas: a IA responde melhor com mesa limpa + átomos certos do que com uma mesa lotada de assuntos misturados.
+
 ## Os relógios (quando fazer o quê)
 Contexto não se acumula "quando der" — tem cadência:
 - **Sempre** — call importante com transcrição ligada; decisão tomada vira áudio de 2 min ou "guarda isso".
