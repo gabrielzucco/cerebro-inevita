@@ -2,6 +2,8 @@
 
 Este é o **cérebro do teu negócio**. Em ~10 minutos, partindo da **tua maior dor** e do que você já tem, ele monta teu contexto — e já te devolve uma sacada aplicada ao teu caso.
 
+> 📕 **Quer entender o método inteiro antes (ou depois) de rodar?** Leia o **[METODO-COMPLETO.md](METODO-COMPLETO.md)** — fundamentos, estrutura, melhores práticas e resultados, condensados das palestras do maior evento de IA do mundo, com fonte e minutagem em cada citação. Este cérebro já vem com esse método embutido: as skills executam ele por você.
+
 Roda dentro do **Claude Code** (o assistente da Anthropic no terminal). Se nunca usou, faça o **Passo 0** — é uma vez só.
 
 ---

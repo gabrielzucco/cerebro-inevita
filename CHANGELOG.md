@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## v1.5.0 — 2026-07-09
+- **METODO-COMPLETO.md**: o método inteiro num documento só — fundamentos → mapa → ciclo → contrato → melhores práticas → resultados → pra onde vai. Condensado das palestras do AI Engineer World's Fair 2026, toda citação com fonte e minutagem. Comece por ele; o `/metodo` aplica.
+
 ## 1.4.0 — 2026-07-09 · "Expo completo — a trilha do contexto"
 - **Expo vol. 3** (7 palestras inéditas + íntegras): WTF Is the Context Layer ("context is also IP"), Agent Memory vs Learning (promoção supervisionada, 7000→1000 chunks), AI in GTM at Notion (63% uplift, "own the context layer, rent everything else"), Prompt/Memory/Weights ("the model is the easy part"), LLM Knowledge Bases ("the daily paper but your own"), GTM Orchestration, Why We Killed Our Multi-Agent Pipeline — + ecos de 5 sessões parciais.
 - **Resgates do expo**: workshop completo de product discovery (54 min, Mom Test na prática), a imersão numa big tech de pagamentos (context plugin: 91% menos erros), compound engineering (regra 50/50) e por que o Claude Code explodiu.
