@@ -1,5 +1,8 @@
 # Mudanças do cérebro INEVITA
 
+## v1.6.1 — 2026-07-15
+- **E-mail de resgate (opcional)**: o `/comecar` pergunta uma vez qual e-mail você usou pra resgatar o cérebro e guarda em `.cerebro/acesso-email` (só na tua máquina) — é como tua instalação fica ligada ao teu acesso e às futuras atualizações/benefícios. Não quer? É só não informar, ou apagar o arquivo.
+
 ## v1.6.0 — 2026-07-14 · "teu conhecimento vira visual"
 - **Skill nova: `frameworks-visuais`** — transforma qualquer nota do teu cérebro num framework visual (Excalidraw dark e clean). Nota rica vira história em atos com pictogramas; conceito pontual usa arquétipos prontos (pipeline, curva, matriz, funil, pirâmide, ciclo, anatomia, contraste). É só pedir "gera um framework visual da nota X". Precisa do plugin Excalidraw no Obsidian (Community plugins).
 - A skill **estrutura o que a nota diz, nunca inventa** — todo texto do canvas é rastreável à fonte.

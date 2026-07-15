@@ -14,3 +14,4 @@ capturas/*
 # telemetria anônima — o id desta instalação e o opt-out ficam SÓ na tua máquina
 .cerebro/id
 .cerebro/sem-telemetria
+.cerebro/acesso-email

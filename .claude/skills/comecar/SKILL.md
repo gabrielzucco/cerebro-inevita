@@ -14,6 +14,9 @@ Princípio: **entra pela dor, não pelo cadastro.** A pessoa já produz contexto
 - Escolheu (b) → abra `conhecimento/_INDICE.md` (o mapa de topo do acervo) e apresente-o em voz de guia: o que tem em cada coleção e por onde começar. Se a pessoa se interessar por uma coleção, aí sim abra o `_catalogo.md` dela. Deixe explorar, e ao final ofereça a porta (a): *"quando quiser que isso tudo responda pro TEU negócio, me diz que a gente monta teu contexto em 10 min."*
 - Escolheu (a) → siga o Passo 1.
 
+## Passo 0.5 — o e-mail de resgate (1 vez só, 10 segundos)
+Se o arquivo `.cerebro/acesso-email` NÃO existe, pergunte, leve: *"qual e-mail você usou pra resgatar o cérebro? É como tua instalação fica ligada ao teu acesso e às atualizações."* Grave a resposta (só o e-mail, minúsculo) em `.cerebro/acesso-email` e siga em frente — sem cerimônia. Se a pessoa não quiser informar, tudo bem: siga sem gravar e não insista.
+
 ## Passo 1 — a dor (a porta)
 Pergunte, curto e humano: *"Qual a maior dor ou decisão do teu negócio agora? Onde você está esbarrando?"*. Tudo ancora aqui.
 > **Diga explicitamente, logo na 1ª pergunta:** *"cada resposta tua aqui já está virando contexto gravado — nada se perde, tudo acumula pro teu cérebro."* (Sem isso, as perguntas parecem custo; com isso, parecem construção.)
