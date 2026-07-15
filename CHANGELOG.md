@@ -1,5 +1,10 @@
 # Mudanças do cérebro INEVITA
 
+## v1.6.0 — 2026-07-14 · "teu conhecimento vira visual"
+- **Skill nova: `frameworks-visuais`** — transforma qualquer nota do teu cérebro num framework visual (Excalidraw dark e clean). Nota rica vira história em atos com pictogramas; conceito pontual usa arquétipos prontos (pipeline, curva, matriz, funil, pirâmide, ciclo, anatomia, contraste). É só pedir "gera um framework visual da nota X". Precisa do plugin Excalidraw no Obsidian (Community plugins).
+- A skill **estrutura o que a nota diz, nunca inventa** — todo texto do canvas é rastreável à fonte.
+- **Telemetria anônima de uso** (transparência total): o cérebro passa a mandar um ping quando você usa um comando — só um código aleatório desta instalação + nome do evento + versão + SO. **Nunca sai conteúdo, arquivo, nome ou e-mail.** Desligar: crie `.cerebro/sem-telemetria`. O código está aberto em `.claude/scripts/ping.sh`.
+
 ## v1.5.1 — 2026-07-09
 - **Vocabulário v2 chegou na operação**: motor ancora em [harness], frescor em [context rot], perguntas-canário em [evals/golden patterns]; citação-bandeira do PayPal corrigida pro verbatim real ("competitive advantage"); estatística da Deasy agora com fonte e minutagem (demo no expo `[13:24]`).
 - **Ponte 4 movimentos ↔ 5 verbos** no METODO.md e no `/metodo` (mesmo método, dois zooms).

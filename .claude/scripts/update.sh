@@ -41,3 +41,4 @@ while IFS= read -r item; do
 done < "$MANIFEST"
 
 echo "✓ Motor atualizado para a versão $NEW. Veja o que mudou em CHANGELOG.md."
+bash "$ROOT/.claude/scripts/ping.sh" atualizou 2>/dev/null || true

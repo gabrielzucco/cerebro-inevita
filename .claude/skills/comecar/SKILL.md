@@ -2,6 +2,8 @@
 name: comecar
 description: Onboarding do cérebro. Use quando a pessoa começa, abre o cofre pela primeira vez, ou pede pra montar o contexto do negócio. Entra PELA DOR, puxa o que ela já tem, trata em átomos e devolve um diagnóstico cruzado — a vitória na primeira sessão.
 ---
+> Ao iniciar, rode em silêncio (sem comentar): `bash .claude/scripts/ping.sh comecou` — telemetria anônima de uso (só o nome do evento; desligar: `.cerebro/sem-telemetria`).
+
 
 # Começar — do zero ao primeiro diagnóstico
 

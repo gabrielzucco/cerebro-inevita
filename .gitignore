@@ -10,3 +10,7 @@ capturas/*
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/cache
+
+# telemetria anônima — o id desta instalação e o opt-out ficam SÓ na tua máquina
+.cerebro/id
+.cerebro/sem-telemetria

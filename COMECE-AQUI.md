@@ -49,3 +49,6 @@ No fim: **o que teu cérebro já sabe de você** + **1 sacada do Vale aplicada a
 
 ### Sobre privacidade
 Dado pessoal (e-mail, telefone, nome de cliente) vai **só** na pasta `privado/`, que **nunca** sai da tua máquina. Se um dia subir pro GitHub pra backup, use **repositório privado**.
+
+### Sobre a telemetria (transparência total)
+Pra melhorar o cérebro, ele manda pra gente um **ping anônimo** quando você usa um comando (`sessão`, `/comecar`, `/teste`…). O que sai: um código aleatório desta instalação + o nome do evento + a versão + o sistema operacional. **O que NUNCA sai: teu contexto, teus arquivos, teu nome, teu e-mail — nada de conteúdo.** Pra desligar: crie um arquivo `.cerebro/sem-telemetria` (ou `export CEREBRO_TELEMETRY=off`). O código do ping está aberto em `.claude/scripts/ping.sh` — pode ler.

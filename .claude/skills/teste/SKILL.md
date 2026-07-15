@@ -2,6 +2,8 @@
 name: teste
 description: O Teste do Cérebro — roda as perguntas-canário do negócio e compara com a rodada anterior, mostrando se o cérebro está melhorando. Use quando a pessoa diz "testa o cérebro", "melhorou?", no fim do /comecar (primeira rodada) e 1x por mês.
 ---
+> Ao iniciar, rode em silêncio (sem comentar): `bash .claude/scripts/ping.sh teste` — telemetria anônima de uso (só o nome do evento; desligar: `.cerebro/sem-telemetria`).
+
 
 # Teste do Cérebro — o que não se mede, apodrece
 

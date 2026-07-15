@@ -6,6 +6,10 @@
           {
             "type": "command",
             "command": "bash .claude/scripts/check-version.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/scripts/ping.sh sessao"
           }
         ]
       }

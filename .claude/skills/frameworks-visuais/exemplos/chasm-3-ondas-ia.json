@@ -1,0 +1,100 @@
+{
+  "arquetipo": "historia",
+  "titulo": "ONDE CADA IA ESTÁ NA CURVA DE ADOÇÃO",
+  "subtitulo": "Geoffrey Moore — autor de \"Crossing the Chasm\", o livro-referência sobre por que produtos de tecnologia vingam ou morrem — ao vivo no Vale, 2026",
+  "gancho": "Todo produto de tecnologia — inclusive o seu — morre ou decola no mesmo ponto desta curva. Saber onde a IA está nela muda o que você constrói agora.",
+  "como_ler": "leia de cima pra baixo: ① o mapa → ② o buraco do meio → ③ as 3 IAs hoje → ④ a conclusão",
+  "atos": [
+    {
+      "titulo": "O mapa — quem compra tecnologia, e em que ordem",
+      "texto": "Todo produto novo é comprado nessa ordem: primeiro os curiosos, depois a maioria, por último quem resiste. O rasgo vermelho é onde quase todo produto trava.",
+      "visual": {
+        "tipo": "curva-abismo-mini",
+        "abismo": { "pos": 0.281 },
+        "rotulo_abismo": "o abismo",
+        "segmentos": [
+          { "nome": "Inovadores", "pos": 0.066 },
+          { "nome": "Visionários", "pos": 0.176 },
+          { "nome": "Maioria pragmática", "pos": 0.441, "explicacao": "só compra com prova" },
+          { "nome": "Maioria conservadora", "pos": 0.676 },
+          { "nome": "Céticos", "pos": 0.912 }
+        ],
+        "zonas": [
+          { "nome": "◄ TORNADO ►", "cor": "azul", "pos": 0.419, "explicacao": "a fase em que todo mundo quer ao mesmo tempo" },
+          { "nome": "◄ MAIN STREET ►", "cor": "cinza", "pos": 0.676, "explicacao": "virou rotina, ninguém mais nota" }
+        ]
+      }
+    },
+    {
+      "titulo": "O abismo — onde quase todo produto morre",
+      "cor": "vermelho",
+      "texto": "Quem compra primeiro, compra pela promessa. A maioria só compra depois de ver prova. Entre um e outro tem um buraco — e é ali que os produtos morrem. Atravessar = construir a ponte.",
+      "visual": {
+        "tipo": "precipicio-ponte",
+        "rotulo_esq": "os primeiros\ncompram a PROMESSA",
+        "rotulo_dir": "a maioria\ncompra a PROVA",
+        "legenda_ponte": "a travessia"
+      }
+    },
+    {
+      "titulo": "As 3 IAs — onde cada uma tá hoje",
+      "visual": {
+        "tipo": "vinhetas",
+        "itens": [
+          {
+            "titulo": "1ª onda · IA PREDITIVA",
+            "cor": "cinza",
+            "definicao": "a IA que PREVÊ: calcula a próxima escolha — ex.: qual anúncio te mostrar",
+            "texto": "Tá em tudo faz 25 anos: anúncio, hospital, justiça. Ninguém nem percebe mais que é IA.",
+            "pict": { "tipo": "rua" }
+          },
+          {
+            "titulo": "2ª onda · IA GENERATIVA",
+            "cor": "azul",
+            "definicao": "a IA que CRIA: você pede em texto, ela escreve a resposta na hora",
+            "texto": "ChatGPT (2022): nunca mais ler manual — é só perguntar. O mundo inteiro querendo usar ao mesmo tempo — por isso \"tornado\".",
+            "pict": { "tipo": "botao-tornado", "label": "pergunte-me qualquer coisa" }
+          },
+          {
+            "titulo": "3ª onda · IA AGÊNTICA",
+            "cor": "laranja",
+            "definicao": "a IA que AGE: executa a tarefa inteira sozinha, sem humano no circuito",
+            "texto": "Até agora só provou valor em código — ~80% do código da NVIDIA já sai de IA (com revisão humana).",
+            "pict": { "tipo": "ponte-mini", "tag": "</>" }
+          }
+        ]
+      }
+    },
+    {
+      "titulo": "A conclusão — inovação corre, adoção engatinha",
+      "cor": "dourado",
+      "visual": {
+        "tipo": "setas-tensao",
+        "maior": "velocidade da INOVAÇÃO",
+        "menor": "velocidade da ADOÇÃO",
+        "nota": "← o problema (e a oportunidade) tá aqui"
+      }
+    }
+  ],
+  "citacao": {
+    "texto": "\"A velocidade da INOVAÇÃO excede em muito a velocidade da ADOÇÃO. É a adoção que precisa do maior foco.\"",
+    "autor": "Geoffrey Moore (tradução livre)",
+    "ref": "geoffrey-moore-full @ 09:35"
+  },
+  "takeaway": {
+    "titulo": "E AGORA? → o que fazer com isso",
+    "bullets": [
+      "Não compita em ter a IA mais nova — a corrida da inovação já acontece sozinha (e não vai parar).",
+      "Compita em ADOÇÃO: prova, caso real, confiança — é isso que atravessa o abismo.",
+      "Produto com IA agêntica (fora de código) ainda está ANTES do abismo: venda prova, não promessa."
+    ]
+  },
+  "proveniencia": "Vista derivada (proposta IA — validar) · Fonte: palestra Geoffrey Moore + panel, Vale 2026 (25/06) · transcrição: [[geoffrey-moore-full]]",
+  "frontmatter": {
+    "fonte": "aula-externa",
+    "tema": "aquisicao",
+    "pode-ir-comunidade": false,
+    "criado": "2026-07-10",
+    "origem": "[[geoffrey-moore-full]]"
+  }
+}
