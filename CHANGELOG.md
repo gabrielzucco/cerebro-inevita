@@ -1,5 +1,9 @@
 # Mudanças do cérebro INEVITA
 
+## v1.6.2 — 2026-07-16 · "ninguém trava no meio"
+- **`/comecar` sem pergunta aberta**: toda pergunta agora vem com opções numeradas (responde 1, 2, 3…), "não sei" é resposta válida (a IA assume o caminho provável e segue), uma pergunta por vez, e você pode parar quando quiser — o progresso fica salvo e o `/comecar` continua de onde parou.
+- **Sem troca de ambiente no meio**: se a IA que te atende já lê a pasta (Claude/ChatGPT/Gemini, app ou desktop), ela conduz o onboarding ali mesmo — ninguém mais é mandado pro terminal no meio do caminho. O Claude Code segue sendo o modo turbo, não um pré-requisito.
+
 ## v1.6.1 — 2026-07-15
 - **E-mail de resgate (opcional)**: o `/comecar` pergunta uma vez qual e-mail você usou pra resgatar o cérebro e guarda em `.cerebro/acesso-email` (só na tua máquina) — é como tua instalação fica ligada ao teu acesso e às futuras atualizações/benefícios. Não quer? É só não informar, ou apagar o arquivo.
 

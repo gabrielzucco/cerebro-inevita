@@ -6,6 +6,8 @@ Este é o **cérebro do teu negócio**. Em ~10 minutos, partindo da **tua maior 
 
 Roda dentro do **Claude Code** (o assistente da Anthropic no terminal). Se nunca usou, faça o **Passo 0** — é uma vez só.
 
+> 🤖 **Instrução pra IA que está lendo isto agora** (Claude, ChatGPT, Gemini — app ou desktop): se você **já consegue ler os arquivos desta pasta**, NÃO mande a pessoa pro terminal. Conduza você mesma, aqui nesta conversa: abra `.claude/skills/comecar/SKILL.md` e siga o roteiro dele passo a passo (uma pergunta por vez, com as opções numeradas). O terminal/Claude Code é o caminho TURBO (skills automáticas), não um pré-requisito — a pior coisa é a pessoa trocar de ambiente no meio e se perder. Se você NÃO consegue ler a pasta (ela só subiu os arquivos como base de conhecimento), mesma coisa: conduza o onboarding pelo conteúdo que você tem, sem mandar ninguém pra lugar nenhum.
+
 ---
 
 ## O que você precisa (e o que NÃO precisa)
