@@ -15,3 +15,5 @@ capturas/*
 .cerebro/id
 .cerebro/sem-telemetria
 .cerebro/acesso-email
+.cerebro/member-id
+.cerebro/runtime

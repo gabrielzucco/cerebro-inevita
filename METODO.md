@@ -1,6 +1,6 @@
 # Engenharia de Contexto — o método do teu cérebro
 
-Na era da IA o jogo virou: não é mais escrever o prompt perfeito, é montar o **contexto** certo. Isso tem nome — **engenharia de contexto** (termo que o Andrej Karpathy, cofundador da OpenAI, ajudou a popularizar). Teu cérebro é essa engenharia de contexto **operacionalizada**, em 4 movimentos. Você não precisa decorar — as skills conduzem. Mas é bom saber o que roda por baixo. *(Quer aplicar num caso teu agora? Roda `/metodo` no Claude Code.)*
+Na era da IA o jogo virou: não é mais escrever o prompt perfeito, é montar o **contexto** certo. Isso tem nome — **engenharia de contexto** (termo que o Andrej Karpathy, cofundador da OpenAI, ajudou a popularizar). Teu cérebro é essa engenharia de contexto **operacionalizada**, em 4 movimentos. Você não precisa decorar — as skills conduzem. Mas é bom saber o que roda por baixo. *(Quer aplicar num caso teu agora? Ativa a skill `metodo` no teu agente.)*
 
 ## A unidade: o átomo
 Cada coisa que importa vira uma **nota de uma ideia**, com 4 partes:
@@ -54,7 +54,7 @@ Contexto não se acumula "quando der" — tem cadência:
 - **Frescor:** a verdade muda. Nota velha fingindo estar viva envenena as respostas — o `/revisar` marca o que morreu como `superado` (nada se deleta).
 - **Medição:** o `/teste` roda tuas 5 perguntas-canário todo mês. A resposta evolui de **em branco → estagiário → sócio**. É assim que você VÊ o cérebro virando sócio.
 
-## Os comandos (no Claude Code)
+## As skills (em qualquer agente compatível)
 - **`/comecar`** — monta teu contexto (a dor → o mapa do negócio → diagnóstico → tuas perguntas-canário).
 - **`/guardar`** — transforma algo num átomo (você aprova).
 - **`/daily`** — o fechamento do dia (10 min).

@@ -2,6 +2,8 @@
 # O /atualizar sobrescreve SÓ o que está listado aqui.
 # NUNCA liste meu-negocio/, capturas/ ou privado/ — são do dono do cérebro.
 CLAUDE.md
+AGENTS.md
+GEMINI.md
 COMECE-AQUI.md
 METODO.md
 METODO-COMPLETO.md
@@ -23,4 +25,6 @@ CHANGELOG.md
 .claude/skills/teste
 .claude/skills/frameworks-visuais
 .claude/scripts
+.agents/skills
+.agents/scripts
 conhecimento

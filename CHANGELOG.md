@@ -1,5 +1,16 @@
 # Mudanças do cérebro INEVITA
 
+## v1.8.0 — 2026-07-17 · “um cérebro, vários agentes”
+- **O cérebro não exige mais Claude Pro/Max:** Claude Code, Codex, Gemini CLI e Antigravity operam o mesmo cofre; quem não usa nenhum começa pelo caminho gratuito.
+- **Agent Skills portáveis:** `.agents/skills` segue o padrão aberto e é gerado deterministicamente a partir das skills da casa; `AGENTS.md` e `GEMINI.md` adaptam a entrada sem duplicar o método.
+- **Telemetria multiplataforma:** `ping.mjs` substitui a dependência de Bash, registra o runtime sem enviar conteúdo e preserva o opt-out.
+- **Primeira vitória coerente:** a pessoa pergunta ao acervo com fonte e minutagem antes de entregar contexto próprio; os nomes de ferramenta ficam na instalação, não na promessa.
+
+## v1.7.0 — 2026-07-16 · "o Vale primeiro"
+- **O `/comecar` agora entrega o que você veio buscar, na hora**: o cérebro do Vale responde de primeira (com fonte e minutagem), sem entrevista, sem cadastro do teu negócio. Você levou duas coisas — o cérebro do Vale (pronto) e o cérebro do TEU negócio (nasce vazio) — e a comunicação agora deixa isso claro desde o oi.
+- **O teu contexto entra quando VOCÊ quiser**: quando uma pergunta tocar o teu caso, o cérebro oferece o contraste ("te respondo genérico, ou me conta em 3 linhas e respondo pro TEU caso"). Nada de menu de dor genérica — o teu negócio nas tuas palavras, sempre.
+- **Passe de acesso (opcional)**: quem instala pelo link da área Cérebro na INEVITA ganha um `.cerebro/member-id` (código opaco — não é nome nem e-mail) que liga a instalação ao teu acesso e **desliga os lembretes de ativação pra quem já ativou**. Fica só na tua máquina; desfazer = apagar o arquivo. Transparência no COMECE-AQUI.
+
 ## v1.6.2 — 2026-07-16 · "ninguém trava no meio"
 - **`/comecar` sem pergunta aberta**: toda pergunta agora vem com opções numeradas (responde 1, 2, 3…), "não sei" é resposta válida (a IA assume o caminho provável e segue), uma pergunta por vez, e você pode parar quando quiser — o progresso fica salvo e o `/comecar` continua de onde parou.
 - **Sem troca de ambiente no meio**: se a IA que te atende já lê a pasta (Claude/ChatGPT/Gemini, app ou desktop), ela conduz o onboarding ali mesmo — ninguém mais é mandado pro terminal no meio do caminho. O Claude Code segue sendo o modo turbo, não um pré-requisito.

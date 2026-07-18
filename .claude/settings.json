@@ -9,7 +9,7 @@
           },
           {
             "type": "command",
-            "command": "bash .claude/scripts/ping.sh sessao"
+            "command": "node .agents/scripts/ping.mjs sessao"
           }
         ]
       }
