@@ -12,6 +12,15 @@
 | **Destilar** | Extrair do bruto só o que tem sinal e virar átomo. [“curate before you compute” — Deasy] |
 | **Motor vs contexto** | Motor = skills e gabaritos (nossos, atualizam via `/atualizar`). Contexto = tuas notas (nunca tocadas por atualização). [harness — o termo do Vale: "fix your harness, don't reprompt"] |
 | **Skill** | Know-how executável: um comando que sabe fazer UMA coisa, com as regras embutidas. [skills — workshop AIEWF] |
+| **Sistema** | Pacote de um resultado completo: manifest + pipeline + rotinas + skill + eval + feedback + versão. |
+| **Pipeline** | Estados pelos quais uma entrada vira uma saída verificável. |
+| **Rotina** | Gatilho por evento ou cadência que inicia ou revisa um pipeline. |
+| **Conexão** | Interface fina para uma fonte ou ferramenta; não contém o processo inteiro. [MCP/CLI] |
+| **Eval** | Régua que compara a saída real com o resultado esperado; existe por execução e no cérebro inteiro. |
+| **Feedback** | Correção humana ligada a uma execução e versão, usada para mudar a próxima tentativa. |
+| **Self Improvement** | Loop versionado de feedback → mudança pequena → teste → gate humano → nova medição; nunca autoedição cega. |
+| **Primeira vitória (A2)** | Artefato de fonte real, aprovado, que o dono confirma ajudar a decidir ou agir. Instalação é A0; começo é A1. |
+| **Contribuição** | Payload anonimizado que o dono prepara, aprova e decide enviar à comunidade em passos separados. |
 | **Fios** | Os assuntos quentes em andamento (`fios/`) — o horizonte AGORA do negócio. |
 | **Gente** | O eixo pessoa (`gente/`): uma página por cliente/parceiro/concorrente-chave. |
 | **Mapa** | O negócio numa página (`mapa.md`) + a métrica principal. Toda resposta estratégica ancora aqui. |
@@ -19,4 +28,4 @@
 | **Perguntas-canário** | As 5 perguntas fixas do TEU negócio que medem se o cérebro está aprendendo (`teste-do-cerebro.md`). [evals / golden patterns — os termos do Vale; "canário" é metáfora nossa] |
 | **Régua** | A escala do `/teste`: **em branco → estagiário → sócio**. |
 | **Frescor** | A validade da nota: `confirmado:` (data da última validação) e `status: superado` (morreu — nada se deleta). É o antídoto do [context rot — "your context rots"]. |
-| **Diagnóstico cruzado** | A vitória do `/comecar`: o teu negócio × o que o campo já provou, com citação dos dois lados. |
+| **Diagnóstico cruzado** | Um resultado possível: o teu negócio × o que o campo já provou, com citação dos dois lados. |

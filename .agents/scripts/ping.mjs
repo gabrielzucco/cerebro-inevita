@@ -6,10 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { platform } from 'node:os';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const EVENTOS = new Set(['instalou', 'sessao', 'comecou', 'teste', 'atualizou', 'guardou', 'daily']);
+const EVENTOS = new Set([
+  'instalou', 'sessao', 'comecou', 'teste', 'atualizou', 'guardou', 'daily',
+  'operou', 'first_value_confirmed', 'contribution_prepared', 'contribution_approved',
+]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RUNTIMES = new Set(['claude-code', 'codex', 'gemini-cli', 'antigravity', 'outro']);
+const SYSTEM_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 function read(relative) {
   try {
@@ -25,6 +29,7 @@ async function main() {
 
   let event = process.argv[2] || 'sessao';
   if (!EVENTOS.has(event)) return;
+  const systemId = String(process.argv[3] || '').toLowerCase();
 
   const idFile = join(ROOT, '.cerebro', 'id');
   let installId = read('.cerebro/id').toLowerCase();
@@ -46,6 +51,7 @@ async function main() {
     ...(EMAIL_RE.test(email) ? { email } : {}),
     ...(UUID_RE.test(memberId) ? { member_id: memberId } : {}),
     ...(RUNTIMES.has(runtime) ? { runtime } : {}),
+    ...(SYSTEM_ID_RE.test(systemId) ? { system_id: systemId } : {}),
   };
 
   const controller = new AbortController();

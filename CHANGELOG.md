@@ -1,5 +1,14 @@
 # Mudanças do cérebro INEVITA
 
+## v1.9.0 — 2026-07-18 · “fonte real vira resultado”
+- **Um protocolo nos dois cérebros:** negócio, sistemas, skills, conexões, operação e comunidade agora têm responsabilidades explícitas; profundidade muda, arquitetura não.
+- **Primeiro sistema instalado:** Calls em Decisões traz manifest, pipeline, rotinas, evals, feedback e changelog — a primeira vitória termina em artefato aprovado que ajuda a agir.
+- **`/comecar` redesenhado:** call real é o caminho recomendado; o acervo continua acessível, mas abrir e consultar não fingem A2.
+- **`/operar`:** execução por sistema, recibo privado, eval por run e feedback versionado. Três erros comparáveis candidatam mudança; nada se autoedita escondido.
+- **Rede com consentimento:** `comunidade/inevita/` recebe; `comunidade/minhas-contribuicoes/` prepara, aprova e registra envio em passos separados. Marketplace e rede seguem honestamente em construção.
+- **Telemetria sem contexto:** novos eventos de operação, primeira vitória e contribuição carregam só metadados técnicos e `system_id`; conteúdo nunca sai.
+- **Atualização não destrutiva:** seed cria a nova estrutura para instalações antigas apenas quando falta; contexto, operação, feedback, conexões e contribuições nunca são sobrescritos.
+
 ## v1.8.0 — 2026-07-17 · “um cérebro, vários agentes”
 - **O cérebro não exige mais Claude Pro/Max:** Claude Code, Codex, Gemini CLI e Antigravity operam o mesmo cofre; quem não usa nenhum começa pelo caminho gratuito.
 - **Agent Skills portáveis:** `.agents/skills` segue o padrão aberto e é gerado deterministicamente a partir das skills da casa; `AGENTS.md` e `GEMINI.md` adaptam a entrada sem duplicar o método.

@@ -23,6 +23,22 @@ Cada coisa que importa vira uma **nota de uma ideia**, com 4 partes:
 ## A regra de ouro
 O cérebro **opera os átomos citados — nunca engole o bruto inteiro.** É isso que separa um cérebro de um "drive que faz a IA alucinar".
 
+## Do contexto ao sistema
+
+Átomos tornam o conhecimento verificável. Sistemas tornam o resultado repetível:
+
+`fonte real → sistema → output → eval → feedback → mudança pequena → gate humano → nova medição`
+
+- **Pipeline** são os estados da transformação.
+- **Rotina** decide quando rodar.
+- **Skill** carrega o julgamento reutilizável.
+- **Conexão** aproxima uma fonte ou ferramenta.
+- **Eval** compara output e régua.
+- **Self Improvement** é feedback mudando a próxima execução com versão e medição — não uma IA se reescrevendo sozinha.
+
+O mesmo protocolo existe no cérebro da empresa e no teu. O da empresa tem mais sistemas e conexões;
+o teu começa guiado, com contexto privado e o primeiro sistema instalado.
+
 ## As 4 memórias (por que a estrutura é assim)
 Todo sistema de IA tem 4 memórias — e cada uma tem UMA casa no teu cérebro:
 
@@ -55,7 +71,8 @@ Contexto não se acumula "quando der" — tem cadência:
 - **Medição:** o `/teste` roda tuas 5 perguntas-canário todo mês. A resposta evolui de **em branco → estagiário → sócio**. É assim que você VÊ o cérebro virando sócio.
 
 ## As skills (em qualquer agente compatível)
-- **`/comecar`** — monta teu contexto (a dor → o mapa do negócio → diagnóstico → tuas perguntas-canário).
+- **`/comecar`** — leva uma fonte real até a primeira vitória confirmada.
+- **`/operar`** — roda um sistema, aplica a régua e deixa recibo.
 - **`/guardar`** — transforma algo num átomo (você aprova).
 - **`/daily`** — o fechamento do dia (10 min).
 - **`/call`** — trata uma reunião em átomos (até 48h).
@@ -63,5 +80,11 @@ Contexto não se acumula "quando der" — tem cadência:
 - **`/revisar`** + **`/teste`** — a manutenção e a régua mensais.
 - **`/metodo`** — o cérebro te ensina e aplica num caso teu.
 - **`/atualizar`** — traz melhorias; o teu contexto **nunca** é tocado.
+
+## A rede sem abrir teu cérebro
+
+A INEVITA pode entregar sistemas e contexto em `comunidade/inevita/`. No sentido contrário, o
+cérebro apenas sugere uma contribuição local anonimizada. Preparar, aprovar e enviar são estados
+diferentes; o dono vê o payload e controla cada travessia.
 
 > **Dúvida com um termo?** `GLOSSARIO.md` — os termos da casa, uma linha cada.

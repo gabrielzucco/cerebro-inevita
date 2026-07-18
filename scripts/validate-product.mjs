@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
+const ROOT = resolve(process.cwd());
+const errors = [];
+const required = [
+  'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
+  'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
+  'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest',
+  'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
+  'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
+  '.claude/skills/operar/SKILL.md',
+];
+
+for (const item of required) {
+  if (!existsSync(join(ROOT, item))) errors.push(`faltando: ${item}`);
+}
+function files(root, base = root) {
+  if (!existsSync(root)) return [];
+  return readdirSync(root).flatMap((name) => {
+    const path = join(root, name);
+    return statSync(path).isDirectory() ? files(path, base) : [path.slice(base.length + 1)];
+  }).sort();
+}
+
+const claudeFiles = files(join(ROOT, '.claude', 'skills'));
+const agentFiles = files(join(ROOT, '.agents', 'skills'));
+if (JSON.stringify(claudeFiles) !== JSON.stringify(agentFiles)) {
+  errors.push('listas de skills .claude e .agents divergem');
+} else {
+  for (const file of claudeFiles) {
+    const a = readFileSync(join(ROOT, '.claude', 'skills', file));
+    const b = readFileSync(join(ROOT, '.agents', 'skills', file));
+    if (!a.equals(b)) errors.push(`skill fora de sincronia: ${file}`);
+  }
+}
+
+for (const file of claudeFiles.filter((name) => name.endsWith('SKILL.md'))) {
+  const content = readFileSync(join(ROOT, '.claude', 'skills', file), 'utf8');
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) {
+    errors.push(`skill sem frontmatter: ${file}`);
+    continue;
+  }
+  const lines = match[1].split('\n').filter(Boolean);
+  const keys = lines.map((line) => line.split(':', 1)[0].trim());
+  if (keys.join(',') !== 'name,description') errors.push(`frontmatter inválido em ${file}`);
+  const name = lines.find((line) => line.startsWith('name:'))?.slice(5).trim() ?? '';
+  if (!/^[a-z0-9-]+$/.test(name)) errors.push(`nome de skill inválido em ${file}`);
+  const description = lines.find((line) => line.startsWith('description:'))?.slice(12).trim() ?? '';
+  if (!description) errors.push(`descrição vazia em ${file}`);
+}
+
+const motor = readFileSync(join(ROOT, '.cerebro', 'motor.manifest'), 'utf8');
+for (const forbidden of ['meu-negocio/', 'operacao/', 'sistemas/calls/feedback.md', 'comunidade/minhas-contribuicoes/']) {
+  if (motor.split('\n').some((line) => line.trim().startsWith(forbidden))) {
+    errors.push(`motor tenta sobrescrever caminho do dono: ${forbidden}`);
+  }
+}
+
+const update = readFileSync(join(ROOT, '.claude', 'scripts', 'update.sh'), 'utf8');
+for (const guard of ['operacao*', 'sistemas/*/feedback.md', 'comunidade/minhas-contribuicoes*', 'SEED_MANIFEST']) {
+  if (!update.includes(guard)) errors.push(`update sem guarda: ${guard}`);
+}
+
+const ping = readFileSync(join(ROOT, '.agents', 'scripts', 'ping.mjs'), 'utf8');
+for (const event of ['first_value_confirmed', 'contribution_prepared', 'contribution_approved']) {
+  if (!ping.includes(event)) errors.push(`ping sem evento: ${event}`);
+}
+
+if (errors.length) {
+  console.error(errors.map((e) => `✗ ${e}`).join('\n'));
+  process.exit(1);
+}
+console.log(`✓ protocolo válido · 6 superfícies · 1 sistema · ${claudeFiles.length} arquivos de skills sincronizados`);
