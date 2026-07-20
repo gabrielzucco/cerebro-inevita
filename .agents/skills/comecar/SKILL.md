@@ -1,102 +1,133 @@
 ---
 name: comecar
-description: Conduz a primeira sessão do cérebro até um resultado útil no negócio. Use quando a pessoa abre o cofre pela primeira vez, pede para começar ou ainda não confirmou a primeira vitória. Recomenda uma call real, executa um sistema, pede confirmação de valor e só depois oferece aprofundamento.
+description: Conduz a primeira sessão do cérebro a partir de uma situação recorrente do trabalho, encontra a menor fonte real disponível e transforma um caso concreto em algo utilizável. Use quando a pessoa instala ou abre o cérebro pela primeira vez, pede para começar, traz a primeira tarefa ou ainda não teve uma entrega aprovada no próprio negócio.
 ---
 
 > Ao iniciar, rode em silêncio SOMENTE: `node .agents/scripts/ping.mjs comecou`. Não concatene o
-> ping com `cat`, `ls` ou leitura de arquivos opcionais; telemetria nunca bloqueia a ativação.
+> ping com `cat`, `ls` ou arquivos opcionais. Falha de telemetria nunca interrompe a conversa.
 
-# Começar — uma coisa real vira resultado
+# Começar — entender uma situação, usar uma fonte, entregar algo real
 
-A pessoa não precisa entender Obsidian, MCP, skill ou arquitetura. Ela precisa sair com algo que
-ajude a decidir ou agir. Instalação é A0; abriu e começou é A1; **artefato aprovado que ela confirma
-como útil é A2**.
+A pessoa não precisa aprender a administrar um cérebro. Ela precisa perceber que uma situação que
+sempre dependia dela pode deixar contexto e melhorar na próxima execução.
 
-## Voz e conversa
+Internamente, instalação é A0, início é A1 e artefato aprovado é A2. **Nunca exponha A0, A1, A2,
+eval, telemetria, prova, sistema, skill ou arquitetura durante a primeira experiência.**
 
-Fale como operador, em `tu/teu`, curto e concreto. Uma pergunta por mensagem. Opções numeradas são
-só navegação; o conteúdo do negócio vem das palavras da pessoa. “Não sei” faz você escolher o
-caminho recomendado e seguir. Nunca transforme onboarding em entrevista.
+## Voz e continuidade
+
+- Use sempre `você`, `seu` e `sua`. Nunca use `tu`, `teu` ou `tua`.
+- Converse como alguém que está entendendo o trabalho junto, não aplicando um formulário.
+- Faça uma pergunta por mensagem e explique naturalmente por que ela vem agora.
+- Antes da próxima pergunta, reconheça em uma frase o que a pessoa acabou de dizer.
+- Reutilize as palavras da pessoa. Não troque o vocabulário dela por termos do método.
+- Pergunte por comportamentos observáveis: o que ela abre, lê, escuta, compara ou procura. Evite
+  abstrações como “fonte”, “material”, “rastro”, “processo” e “resultado” na conversa.
+- Não siga frases-modelo mecanicamente. Adapte a transição ao caso concreto.
+- Não abra com menu, arquitetura, lista de fontes ou escolha de sistema.
+- “Não sei” não trava: ofereça dois exemplos relacionados ao que já apareceu e peça o mais próximo.
 
 ## -1. Retomar antes de perguntar
 
-A intenção que já veio com a instalação é a entrada desta skill. Antes de mostrar qualquer menu:
+1. Procure uma tarefa concreta na mensagem atual, no prompt de instalação ou em
+   `operacao/decisoes-pendentes/onboarding.md`.
+2. A instrução mais recente da pessoa sempre vence o handoff.
+3. Se já existe uma fonte ou tarefa real do negócio, não mostre opções e não peça para repetir.
+   Diga em uma frase o que entendeu e execute a rota adequada.
+4. Se a tarefa é a pergunta padrão sobre “empresas do Vale” e respostas genéricas, trate-a como
+   demonstração curta do acervo e, depois da resposta, siga para a descoberta do trabalho real.
+5. Se não existe tarefa, comece pelo passo 1.
 
-1. Procure uma tarefa concreta na mensagem atual ou no prompt que iniciou a instalação.
-2. Se existe `operacao/decisoes-pendentes/onboarding.md`, leia o handoff local e retome o primeiro
-   trabalho e o estágio registrados. A instrução mais recente da pessoa sempre vence o handoff.
-3. Se já existe tarefa, **não mostre as três opções e não peça para colar de novo**. Classifique a
-   rota (call · outra fonte · acervo), diga em uma linha o que vai entregar e siga direto ao passo 2.
-4. Só use o menu do passo 1 quando realmente não houver uma tarefa escolhida.
+Continue no agente e na conversa atuais. Ler esta skill diretamente já basta. Nunca peça reinício,
+troca de sessão, reabertura da pasta ou execução manual de `/comecar`.
 
-Continue na conversa e no agente atuais. A descoberta do slash `/comecar` é conveniência, não
-requisito: se esta skill foi lida diretamente, execute-a diretamente. Nunca peça reinício, troca de
-sessão ou reabertura da pasta para concluir o primeiro trabalho.
+## 0. Reconhecer o acesso sem interromper
 
-## 0. Reconhecer o acesso
+Se `.cerebro/member-id` contém um UUID, siga sem pedir e-mail. Na ausência de identificação, não
+transforme cadastro em pedágio da primeira entrega; ofereça vincular o acesso somente depois.
 
-Se `.cerebro/member-id` existe e é UUID, não peça e-mail. Se não existe nem
-`.cerebro/acesso-email`, pode perguntar uma vez qual e-mail ela usou no resgate; explique que é
-opcional e serve para ligar instalação e acesso. Não insistir.
+## 1. Entender onde o trabalho ainda depende da pessoa
 
-## 1. Abrir pela vitória, não pela arquitetura — somente sem tarefa pendente
+Quando não há uma tarefa real, contextualize antes de perguntar. Use este sentido, adaptando a voz:
 
-Diga:
+> “Antes de organizar qualquer coisa, quero entender onde isso pode aliviar seu trabalho de
+> verdade. Pensando na sua rotina, o que mais toma seu tempo ou sempre volta para suas mãos porque
+> depende da sua decisão, aprovação ou jeito de fazer?”
 
-> “Teu cérebro já veio com conhecimento e com um primeiro sistema instalado. Pra sentir a
-> diferença, vamos fazer uma coisa real sair pronta agora. Tu quer: 1) trazer uma call/reunião e
-> sair com decisões e ações — recomendado; 2) trazer um documento, anúncio ou problema real; ou
-> 3) explorar primeiro o acervo do AI Engineer World's Fair?”
+Não pergunte apenas “o que você faz no dia a dia?”. Procure uma situação recorrente e sentida.
 
-Se ela não escolher, siga por **Calls em Decisões**. Se não tem transcrição agora, aceite texto,
-áudio já transcrito ou uma reunião antiga. Se não tem fonte nenhuma, use o acervo para uma prova
-rápida, mas diga que isso ainda não é a primeira vitória no negócio.
+Depois da resposta:
 
-## 2. Executar um sistema
+1. Espelhe o caso: “Entendi. Então [situação nas palavras da pessoa] ainda depende de você para
+   [consequência que ela descreveu].” Não invente consequência.
+2. Só então descubra o que ela consulta quando faz aquele trabalho. A pergunta precisa nascer da
+   situação. Exemplo para conteúdo: “Quando você vai revisar uma peça, o que costuma olhar para
+   saber se ela ficou boa — briefing, exemplos antigos, conversas com o time ou só o que está na
+   sua cabeça?” Não reutilize esse exemplo em outro contexto.
+3. Dê alternativas concretas apenas para facilitar e relacionadas ao que ela contou. Não presuma
+   que uma ferramenta ou documento existe.
 
-- **Call:** invoque `operar` com `calls-decisoes`.
-- **Outra fonte real:** use `guardar` para produzir um artefato aprovado e registre a execução como
-  `fonte-em-artefato`; não finja que existe um sistema publicado para isso.
-- **Acervo:** responda com citação literal + fonte + minutagem, rode em silêncio
-  `node .agents/scripts/ping.mjs proof_delivered` e então ofereça uma fonte real. Prova do acervo
-  não é A2.
+## 2. Começar por uma amostra, não pela empresa inteira
 
-Não explique as seis pastas antes do resultado. Mostre a arquitetura apenas quando ela ajudar a
-entender o que acabou de acontecer.
+Depois de localizar a fonte, peça o menor caso recente que represente o problema. Explique o passo:
 
-## 3. Confirmar valor
+> “Vamos começar por um caso recente, sem conectar tudo de uma vez. Me envie um exemplo disso e eu
+> organizo o que importa, o que ainda depende de você e o que pode virar padrão.”
 
-Depois do output aprovado, pergunte exatamente uma coisa:
+Aceite arquivo, texto colado, transcrição, mensagem, pasta local ou relato ditado. Se a fonte já
+está acessível, use-a. Não peça Drive inteiro, histórico completo, OAuth ou integração antes da
+primeira entrega. Nunca finja que um conector existe.
 
-> “Isso te ajuda a decidir ou agir agora?”
+## 3. Transformar a fonte em algo utilizável
 
-- **Sim:** grave o recibo local, atualize `operacao/_HOJE.md` e rode em silêncio
+- **Call ou reunião:** use `operar` com `calls-decisoes`.
+- **Outra fonte real:** use `guardar`, produza um artefato adequado ao caso e registre a execução
+  como `fonte-em-artefato`.
+- **Relato sem arquivo:** preserve as palavras da pessoa como fonte primária antes de estruturar.
+- **Acervo:** entregue uma demonstração curta e imediatamente volte ao passo 1.
+
+O formato do artefato nasce da situação: decisão, mensagem, briefing, processo, análise, copy,
+ações com responsável ou regra reutilizável. Não force toda entrada a virar resumo.
+
+### Formato da demonstração do acervo
+
+- No máximo três conclusões, em português e ligadas a uma implicação prática.
+- Traduza a ideia principal; não abra com blocos em inglês.
+- Coloque as referências no final como `Nome humano da palestra — minuto 11:53`.
+- Nunca mostre caminho de arquivo, `[01:48]` solto ou mais de duas fontes por conclusão.
+- Rode em silêncio `node .agents/scripts/ping.mjs proof_delivered`.
+- Não diga que “isso não é A2”, não faça “notas de honestidade” e não mencione o ping.
+- Termine a demonstração com uma transição natural para o passo 1, não com uma pesquisa de valor.
+
+## 4. Ajustar até ficar pronto para uso
+
+Depois do artefato, pergunte de forma natural:
+
+> “Você usaria isso do jeito que está ou mudaria alguma coisa antes?”
+
+- Se mudaria, pergunte apenas o que ficou fora do jeito ou da realidade dela, aplique a correção e
+  mostre novamente.
+- Se usaria, grave o recibo local, atualize `operacao/_HOJE.md` e rode em silêncio
   `node .agents/scripts/ping.mjs first_value_confirmed <system_id>`.
-- **Parcial/não:** pergunte qual correção concreta faria diferença, aplique uma vez, registre o
-  feedback e rode a régua novamente. Não dispare A2 se continuar sem valor.
+- Se houve handoff, marque-o como `concluido` somente depois da entrega.
 
-Se um handoff local foi usado, atualize seu estado para `concluido` depois da entrega. Não apague o
-arquivo antes de a pessoa confirmar que recebeu o resultado.
+Não diga “isso ajuda você a decidir ou agir?”, não explique a régua e não transforme aprovação em
+pesquisa de satisfação.
 
-## 4. Só então mostrar o que acumula
+## 5. Mostrar o que começa a melhorar
 
-Depois de A2, mostre em poucas linhas:
+Depois da aprovação, explique em linguagem comum e somente se o salvamento aconteceu:
 
-- a fonte ficou em `capturas/`;
-- decisões e contexto aprovado alimentaram `meu-negocio/`;
-- o sistema e sua régua estão em `sistemas/`;
-- o recibo está em `operacao/`;
-- nada privado foi enviado.
+> “Perfeito. Vou guardar o que funcionou aqui para a próxima vez não começar do zero.”
 
-Ofereça **um** próximo passo: completar `meu-negocio/mapa.md` ou tratar outra fonte. O `/teste` é
-mensal e não é pedágio da primeira sessão.
+Se esse tipo de material nasce sempre na mesma fonte, ofereça torná-la recorrente apenas agora. Se
+há conector real, explique escopo e consentimento. Se não há, proponha a menor rotina manual sem
+prometer automação.
 
-## 5. Detectar contribuição sem invadir
+Só mostre pastas, método, privacidade técnica ou arquitetura quando a pessoa perguntar.
 
-Se a execução revelar um padrão que parece útil fora daquele caso, pergunte:
+## 6. Contribuição vem depois e com consentimento
 
-> “Isso aqui parece um aprendizado que outros operadores poderiam usar. Quer que eu prepare uma
-> versão anonimizada pra tu revisar? Nada é enviado.”
-
-Se sim, siga a skill `operar`, seção “Contribuição”. Preparar, aprovar e enviar são três estados
-diferentes. O cérebro nunca pula nenhum deles.
+Se a execução revelar um padrão útil para outros operadores, pergunte em linguagem comum se a
+pessoa quer preparar uma versão sem dados do negócio para revisar. Preparar, aprovar e enviar são
+estados diferentes; nada é compartilhado automaticamente.

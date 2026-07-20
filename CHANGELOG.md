@@ -1,5 +1,13 @@
 # Mudanças do cérebro INEVITA
 
+## v1.9.2 — 2026-07-20 · “uma conversa que entende antes de perguntar”
+- **Voz da casa:** a primeira experiência usa `você/seu`, abandona `tu/teu` e deixa de soar como formulário ou roteiro traduzido.
+- **Perguntas com continuidade:** cada pergunta reconhece a resposta anterior, reutiliza as palavras da pessoa e explica naturalmente por que o próximo passo importa.
+- **Rotina antes da fonte:** o cérebro identifica onde o trabalho ainda depende da pessoa; depois descobre onde esse trabalho deixa rastros e pede somente um caso recente.
+- **Amostra antes do conector:** nada de Drive inteiro, OAuth ou integração antes de provar valor com uma fonte pequena e concreta.
+- **Acervo como apoio:** a pergunta do Vale vira demonstração curta em português, com fontes nomeadas e “minuto 11:53”; sem inglês cru, paths, timestamps soltos ou linguagem interna.
+- **Produto invisível:** A2, telemetria, eval, arquitetura e “notas de honestidade” continuam no motor, nunca na conversa com quem está começando.
+
 ## v1.9.1 — 2026-07-19 · “uma conversa até a primeira resposta”
 - **Sem reinício obrigatório:** o agente que instala continua na mesma conversa, lê `CLAUDE.md`/`AGENTS.md` e a skill diretamente e entrega o primeiro trabalho antes de ensinar como voltar depois.
 - **Intenção não se perde:** `/comecar` usa a tarefa que já veio no instalador e pula o menu genérico; handoff local em `operacao/decisoes-pendentes/onboarding.md` existe só para o fallback real de troca de sessão.

@@ -1,6 +1,6 @@
 # Comece aqui
 
-Este é o **cérebro operacional do teu negócio**. Ele cruza teu contexto com referências de campo e,
+Este é o **cérebro operacional do seu negócio**. Ele cruza seu contexto com referências de campo e,
 principalmente, transforma fonte real em resultado por sistemas que deixam rastro e melhoram.
 
 ## Se uma IA já está lendo esta pasta
@@ -34,35 +34,37 @@ alterar ou apagar nenhuma instalação existente.
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não
 exige uma assinatura específica e o primeiro sistema opera com arquivos locais.
 
-## A primeira vitória
+## A primeira experiência
 
-O caminho recomendado é trazer a transcrição de uma reunião. O sistema **Calls em Decisões** faz:
+O cérebro começa entendendo uma situação recorrente do seu trabalho: o que ocupa tempo, volta para
+suas mãos ou ainda depende da sua decisão. Depois localiza onde esse trabalho deixa rastros e pede
+somente um caso recente — uma reunião, conversa, mensagem, documento ou outro material real.
 
-`transcrição → decisões + ações + evidências → tua aprovação → eval → recibo`
+`situação recorrente → menor fonte real → algo pronto para usar → ajuste → contexto para a próxima`
 
-Só conta como primeira vitória quando tu confirma: **“isso me ajuda a decidir ou agir agora”**.
-Instalar, abrir a pasta e explorar o acervo são passos úteis, mas não fingem resultado no negócio.
+Uma reunião pode virar decisões e ações; um briefing, uma mensagem ou uma proposta pedem outro
+tipo de entrega. O cérebro escolhe o formato pelo trabalho, não força todo material a virar resumo.
 
-Se não tiver uma call, traz um anúncio, documento ou problema real. Se não tiver fonte agora, o
-cérebro também consulta o acervo dos engenheiros do AI Engineer World's Fair com fonte e minutagem.
+O acervo do AI Engineer World's Fair continua disponível com fonte e minuto do vídeo, mas funciona
+como referência para melhorar uma decisão. Ele não substitui o contexto do seu negócio.
 
 ## O mapa
 
-- `meu-negocio/` — teu contexto privado.
+- `meu-negocio/` — seu contexto privado.
 - `sistemas/` — resultados instalados e suas réguas.
 - `skills/` — julgamentos reutilizáveis do motor.
 - `conexoes/` — arquivos e integrações opcionais.
 - `operacao/` — o que rodou, falhou, escalou e melhorou.
 - `comunidade/inevita/` — o que recebemos da INEVITA.
-- `comunidade/minhas-contribuicoes/` — o que tu pode decidir compartilhar.
+- `comunidade/minhas-contribuicoes/` — o que você pode decidir compartilhar.
 - `conhecimento/` — referências externas; `capturas/` — bruto; `privado/` — PII local.
 
 ## Privacidade, ping e comunidade
 
-Teu contexto fica local. Para medir ativação, o cérebro envia ping mínimo: código aleatório da
+Seu contexto fica local. Para medir ativação, o cérebro envia ping mínimo: código aleatório da
 instalação, evento, versão, sistema operacional, runtime e, quando existe, `system_id`. Nunca envia
 fonte, output, decisão, erro ou texto. Desligar: crie `.cerebro/sem-telemetria`.
 
-Quando encontra um padrão útil, o cérebro pode perguntar se tu quer **preparar** uma contribuição
+Quando encontra um padrão útil, o cérebro pode perguntar se você quer **preparar** uma contribuição
 anonimizada. Ele mostra o payload exato. Aprovar não envia; enviar pede outro “sim”. A rede e o
 marketplace ainda estão em construção — o cérebro não simula um envio que não existe.

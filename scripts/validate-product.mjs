@@ -72,12 +72,24 @@ for (const event of ['proof_delivered', 'first_value_confirmed', 'contribution_p
 const comecar = readFileSync(join(ROOT, '.claude', 'skills', 'comecar', 'SKILL.md'), 'utf8');
 for (const contract of [
   'Retomar antes de perguntar',
-  'não mostre as três opções',
+  'Use sempre `você`, `seu` e `sua`',
+  'Reutilize as palavras da pessoa',
+  'Pergunte por comportamentos observáveis',
+  'Começar por uma amostra',
+  'Nome humano da palestra — minuto 11:53',
+  'Você usaria isso do jeito que está ou mudaria alguma coisa antes?',
   'operacao/decisoes-pendentes/onboarding.md',
   'Nunca peça reinício',
   'proof_delivered',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
+}
+for (const regression of [
+  'Fale como operador, em `tu/teu`',
+  'Isso te ajuda a decidir ou agir agora?',
+  'Duas notas de honestidade',
+]) {
+  if (comecar.includes(regression)) errors.push(`comecar regrediu para linguagem antiga: ${regression}`);
 }
 
 const start = readFileSync(join(ROOT, 'COMECE-AQUI.md'), 'utf8');
