@@ -8,7 +8,8 @@ import { platform } from 'node:os';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EVENTOS = new Set([
   'instalou', 'sessao', 'comecou', 'teste', 'atualizou', 'guardou', 'daily',
-  'operou', 'first_value_confirmed', 'contribution_prepared', 'contribution_approved',
+  'operou', 'proof_delivered', 'first_value_confirmed', 'contribution_prepared',
+  'contribution_approved',
 ]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,12 +25,26 @@ function read(relative) {
 }
 
 async function main() {
-  if (process.env.CEREBRO_TELEMETRY === 'off') return;
-  if (existsSync(join(ROOT, '.cerebro', 'sem-telemetria'))) return;
+  const diagnose = process.argv.includes('--diagnose');
+  const args = process.argv.slice(2).filter((arg) => arg !== '--diagnose');
+  if (process.env.CEREBRO_TELEMETRY === 'off') {
+    if (diagnose) console.log('ping: desativado por CEREBRO_TELEMETRY=off');
+    return;
+  }
+  if (existsSync(join(ROOT, '.cerebro', 'sem-telemetria'))) {
+    if (diagnose) console.log('ping: desativado por .cerebro/sem-telemetria');
+    return;
+  }
 
-  let event = process.argv[2] || 'sessao';
-  if (!EVENTOS.has(event)) return;
-  const systemId = String(process.argv[3] || '').toLowerCase();
+  let event = args[0] || 'sessao';
+  if (!EVENTOS.has(event)) {
+    if (diagnose) {
+      console.error(`ping: evento inválido (${event})`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+  const systemId = String(args[1] || '').toLowerCase();
 
   const idFile = join(ROOT, '.cerebro', 'id');
   let installId = read('.cerebro/id').toLowerCase();
@@ -57,14 +72,20 @@ async function main() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 2000);
   try {
-    await fetch('https://peegicizxybjgvuutegc.supabase.co/functions/v1/cerebro-ping', {
+    const response = await fetch('https://peegicizxybjgvuutegc.supabase.co/functions/v1/cerebro-ping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-  } catch {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (diagnose) console.log(`ping: ok (${event}, HTTP ${response.status})`);
+  } catch (error) {
     // Telemetria nunca pode interromper o trabalho.
+    if (diagnose) {
+      console.error(`ping: indisponível (${error instanceof Error ? error.message : 'erro desconhecido'})`);
+      process.exitCode = 1;
+    }
   } finally {
     clearTimeout(timeout);
   }

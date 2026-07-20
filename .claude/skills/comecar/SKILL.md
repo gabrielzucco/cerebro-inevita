@@ -3,7 +3,8 @@ name: comecar
 description: Conduz a primeira sessão do cérebro até um resultado útil no negócio. Use quando a pessoa abre o cofre pela primeira vez, pede para começar ou ainda não confirmou a primeira vitória. Recomenda uma call real, executa um sistema, pede confirmação de valor e só depois oferece aprofundamento.
 ---
 
-> Ao iniciar, rode em silêncio: `node .agents/scripts/ping.mjs comecou`.
+> Ao iniciar, rode em silêncio SOMENTE: `node .agents/scripts/ping.mjs comecou`. Não concatene o
+> ping com `cat`, `ls` ou leitura de arquivos opcionais; telemetria nunca bloqueia a ativação.
 
 # Começar — uma coisa real vira resultado
 
@@ -17,13 +18,28 @@ Fale como operador, em `tu/teu`, curto e concreto. Uma pergunta por mensagem. Op
 só navegação; o conteúdo do negócio vem das palavras da pessoa. “Não sei” faz você escolher o
 caminho recomendado e seguir. Nunca transforme onboarding em entrevista.
 
+## -1. Retomar antes de perguntar
+
+A intenção que já veio com a instalação é a entrada desta skill. Antes de mostrar qualquer menu:
+
+1. Procure uma tarefa concreta na mensagem atual ou no prompt que iniciou a instalação.
+2. Se existe `operacao/decisoes-pendentes/onboarding.md`, leia o handoff local e retome o primeiro
+   trabalho e o estágio registrados. A instrução mais recente da pessoa sempre vence o handoff.
+3. Se já existe tarefa, **não mostre as três opções e não peça para colar de novo**. Classifique a
+   rota (call · outra fonte · acervo), diga em uma linha o que vai entregar e siga direto ao passo 2.
+4. Só use o menu do passo 1 quando realmente não houver uma tarefa escolhida.
+
+Continue na conversa e no agente atuais. A descoberta do slash `/comecar` é conveniência, não
+requisito: se esta skill foi lida diretamente, execute-a diretamente. Nunca peça reinício, troca de
+sessão ou reabertura da pasta para concluir o primeiro trabalho.
+
 ## 0. Reconhecer o acesso
 
 Se `.cerebro/member-id` existe e é UUID, não peça e-mail. Se não existe nem
 `.cerebro/acesso-email`, pode perguntar uma vez qual e-mail ela usou no resgate; explique que é
 opcional e serve para ligar instalação e acesso. Não insistir.
 
-## 1. Abrir pela vitória, não pela arquitetura
+## 1. Abrir pela vitória, não pela arquitetura — somente sem tarefa pendente
 
 Diga:
 
@@ -41,7 +57,9 @@ rápida, mas diga que isso ainda não é a primeira vitória no negócio.
 - **Call:** invoque `operar` com `calls-decisoes`.
 - **Outra fonte real:** use `guardar` para produzir um artefato aprovado e registre a execução como
   `fonte-em-artefato`; não finja que existe um sistema publicado para isso.
-- **Acervo:** responda com citação literal + fonte + minutagem e então ofereça uma fonte real.
+- **Acervo:** responda com citação literal + fonte + minutagem, rode em silêncio
+  `node .agents/scripts/ping.mjs proof_delivered` e então ofereça uma fonte real. Prova do acervo
+  não é A2.
 
 Não explique as seis pastas antes do resultado. Mostre a arquitetura apenas quando ela ajudar a
 entender o que acabou de acontecer.
@@ -56,6 +74,9 @@ Depois do output aprovado, pergunte exatamente uma coisa:
   `node .agents/scripts/ping.mjs first_value_confirmed <system_id>`.
 - **Parcial/não:** pergunte qual correção concreta faria diferença, aplique uma vez, registre o
   feedback e rode a régua novamente. Não dispare A2 se continuar sem valor.
+
+Se um handoff local foi usado, atualize seu estado para `concluido` depois da entrega. Não apague o
+arquivo antes de a pessoa confirmar que recebeu o resultado.
 
 ## 4. Só então mostrar o que acumula
 

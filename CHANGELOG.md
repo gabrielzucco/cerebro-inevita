@@ -1,5 +1,12 @@
 # Mudanças do cérebro INEVITA
 
+## v1.9.1 — 2026-07-19 · “uma conversa até a primeira resposta”
+- **Sem reinício obrigatório:** o agente que instala continua na mesma conversa, lê `CLAUDE.md`/`AGENTS.md` e a skill diretamente e entrega o primeiro trabalho antes de ensinar como voltar depois.
+- **Intenção não se perde:** `/comecar` usa a tarefa que já veio no instalador e pula o menu genérico; handoff local em `operacao/decisoes-pendentes/onboarding.md` existe só para o fallback real de troca de sessão.
+- **Prova ≠ A2:** consulta ao acervo registra `proof_delivered`; `first_value_confirmed` continua reservado ao artefato do próprio negócio aprovado pela pessoa.
+- **Ping diagnosticável:** execução normal continua silenciosa e não bloqueante; `--diagnose` separa telemetria indisponível de falha da ativação.
+- **Contrato validado:** o gate do produto bloqueia regressão para menu repetido, reinício obrigatório ou skill sem retomada.
+
 ## v1.9.0 — 2026-07-18 · “fonte real vira resultado”
 - **Um protocolo nos dois cérebros:** negócio, sistemas, skills, conexões, operação e comunidade agora têm responsabilidades explícitas; profundidade muda, arquitetura não.
 - **Primeiro sistema instalado:** Calls em Decisões traz manifest, pipeline, rotinas, evals, feedback e changelog — a primeira vitória termina em artefato aprovado que ajuda a agir.

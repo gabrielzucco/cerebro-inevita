@@ -5,8 +5,9 @@ principalmente, transforma fonte real em resultado por sistemas que deixam rastr
 
 ## Se uma IA já está lendo esta pasta
 
-Não troque de ferramenta. Peça **“quero começar”**. O agente carrega a skill `comecar` e conduz a
-primeira sessão no ambiente atual.
+Não troque de ferramenta nem de sessão. O agente que instalou ou encontrou esta pasta deve ler este
+arquivo e a skill `comecar` diretamente, e conduzir a primeira entrega na conversa atual. O comando
+de slash é um atalho, não um requisito.
 
 | Ambiente | Skills | Entrada |
 |---|---|---|
@@ -18,6 +19,15 @@ primeira sessão no ambiente atual.
 
 O agente precisa abrir esta pasta, ler e editar arquivos e executar scripts. Se ele só recebe
 arquivos como base de conhecimento, consulta o acervo, mas não mantém o cérebro acumulando contexto.
+
+Se a instalação começou fora desta pasta, o agente pode usar o caminho absoluto como diretório de
+trabalho. Só peça para abrir uma nova sessão quando o ambiente realmente não conseguir ler, escrever
+ou executar aqui. Antes disso, grave a primeira tarefa e o estágio em
+`operacao/decisoes-pendentes/onboarding.md`; a sessão seguinte retoma sem repetir perguntas.
+
+Quando houver mais de um Cérebro no computador, o agente mostra as opções e a pessoa escolhe. Ele
+nunca decide sozinho qual é o “real” ou “de teste”. “Novo e limpo” significa criar outra pasta sem
+alterar ou apagar nenhuma instalação existente.
 
 ## Não usa nenhum agente pago?
 

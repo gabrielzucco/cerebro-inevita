@@ -65,8 +65,24 @@ for (const guard of ['operacao*', 'sistemas/*/feedback.md', 'comunidade/minhas-c
 }
 
 const ping = readFileSync(join(ROOT, '.agents', 'scripts', 'ping.mjs'), 'utf8');
-for (const event of ['first_value_confirmed', 'contribution_prepared', 'contribution_approved']) {
+for (const event of ['proof_delivered', 'first_value_confirmed', 'contribution_prepared', 'contribution_approved']) {
   if (!ping.includes(event)) errors.push(`ping sem evento: ${event}`);
+}
+
+const comecar = readFileSync(join(ROOT, '.claude', 'skills', 'comecar', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'Retomar antes de perguntar',
+  'não mostre as três opções',
+  'operacao/decisoes-pendentes/onboarding.md',
+  'Nunca peça reinício',
+  'proof_delivered',
+]) {
+  if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
+}
+
+const start = readFileSync(join(ROOT, 'COMECE-AQUI.md'), 'utf8');
+for (const contract of ['Não troque de ferramenta nem de sessão', 'atalho, não um requisito', 'nunca decide sozinho']) {
+  if (!start.includes(contract)) errors.push(`COMECE-AQUI sem ativação na mesma sessão: ${contract}`);
 }
 
 if (errors.length) {
