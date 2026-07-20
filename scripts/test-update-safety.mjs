@@ -13,6 +13,7 @@ const protectedFiles = [
   'operacao/_HOJE.md',
   'sistemas/calls/feedback.md',
   'conexoes/configuradas/minha-conexao.md',
+  'conexoes/configuradas/fontes.json',
   'comunidade/minhas-contribuicoes/aprovadas/minha-contribuicao.md',
 ];
 
@@ -38,8 +39,10 @@ try {
   for (const seeded of ['operacao/execucoes/_LEIA.md', 'meu-negocio/fontes/_LEIA.md']) {
     if (!existsSync(join(old, seeded))) throw new Error(`seed não chegou: ${seeded}`);
   }
-  if (!existsSync(join(old, 'sistemas', '_CATALOGO.md'))) throw new Error('motor novo não chegou');
-  console.log('✓ update real preservou 5 sentinelas, instalou seeds ausentes e atualizou o motor');
+  for (const motorFile of ['sistemas/_CATALOGO.md', 'scripts/discover-context.mjs', 'scripts/register-source.mjs']) {
+    if (!existsSync(join(old, motorFile))) throw new Error(`motor novo não chegou: ${motorFile}`);
+  }
+  console.log('✓ update real preservou 6 sentinelas, instalou seeds ausentes e atualizou o motor');
 } finally {
   rmSync(sandbox, { recursive: true, force: true });
 }

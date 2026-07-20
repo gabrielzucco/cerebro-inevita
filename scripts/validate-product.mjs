@@ -11,6 +11,8 @@ const required = [
   'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
   'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
   '.claude/skills/operar/SKILL.md',
+  'scripts/discover-context.mjs', 'scripts/register-source.mjs',
+  'scripts/test-context-discovery.mjs',
 ];
 
 for (const item of required) {
@@ -81,6 +83,10 @@ for (const contract of [
   'operacao/decisoes-pendentes/onboarding.md',
   'Nunca peça reinício',
   'proof_delivered',
+  'Descobrir sem invadir',
+  'discover-context.mjs',
+  'register-source.mjs',
+  'não é uma conexão automática',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
 }
@@ -93,8 +99,35 @@ for (const regression of [
 }
 
 const start = readFileSync(join(ROOT, 'COMECE-AQUI.md'), 'utf8');
-for (const contract of ['Não troque de ferramenta nem de sessão', 'atalho, não um requisito', 'nunca decide sozinho']) {
+for (const contract of [
+  'Não troque de ferramenta nem de sessão',
+  'atalho, não um requisito',
+  'nunca decide sozinho',
+  'Cérebro existente não é a mesma coisa que contexto existente',
+  'sem cópia, mudança ou sync automático',
+]) {
   if (!start.includes(contract)) errors.push(`COMECE-AQUI sem ativação na mesma sessão: ${contract}`);
+}
+
+const discovery = readFileSync(join(ROOT, 'scripts', 'discover-context.mjs'), 'utf8');
+for (const contract of ['readOnly: true', 'nenhum conteúdo de arquivo', 'lstatSync', 'realpathSync']) {
+  if (!discovery.includes(contract)) errors.push(`descoberta sem guarda: ${contract}`);
+}
+
+const register = readFileSync(join(ROOT, 'scripts', 'register-source.mjs'), 'utf8');
+for (const contract of [
+  "access: 'read-only'",
+  'sourceOfTruth: true',
+  "refresh: 'manual'",
+  'copied: false',
+  '!options.confirm',
+]) {
+  if (!register.includes(contract)) errors.push(`registro de fonte sem guarda: ${contract}`);
+}
+
+const ignore = readFileSync(join(ROOT, '.gitignore'), 'utf8');
+if (!ignore.includes('conexoes/configuradas/*')) {
+  errors.push('registro local de fontes não está protegido pelo .gitignore');
 }
 
 if (errors.length) {

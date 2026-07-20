@@ -29,6 +29,22 @@ Quando houver mais de um Cérebro no computador, o agente mostra as opções e a
 nunca decide sozinho qual é o “real” ou “de teste”. “Novo e limpo” significa criar outra pasta sem
 alterar ou apagar nenhuma instalação existente.
 
+### Cérebro existente não é a mesma coisa que contexto existente
+
+Uma instalação do Cérebro INEVITA tem `COMECE-AQUI.md`, `VERSION` e `.cerebro/`. É nela que o motor,
+os sistemas e o contexto acumulado trabalham juntos. Se houver mais de uma instalação, você escolhe
+qual quer abrir ou pode pedir uma nova e limpa.
+
+Obsidian, repositório de código, pasta de reuniões, documentos e outros espaços de trabalho são
+fontes do seu negócio — não são “outro Cérebro”. Eles não precisam ser migrados para funcionar. O
+agente pode fazer uma descoberta limitada olhando apenas nomes de pastas e marcadores técnicos,
+mostrar o que parece relevante e pedir sua autorização antes de abrir qualquer conteúdo.
+
+Quando você aprova uma fonte local recorrente, o Cérebro guarda apenas uma referência privada ao
+caminho original. A fonte continua onde está, como fonte de verdade: sem cópia, mudança ou sync automático.
+A primeira experiência começa por uma amostra pequena; conexão contínua só existe quando houver um
+conector real e consentimento específico.
+
 ## Não usa nenhum agente pago?
 
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não

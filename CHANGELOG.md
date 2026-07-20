@@ -1,5 +1,18 @@
 # Mudanças do cérebro INEVITA
 
+## v1.10.0 — 2026-07-20 · “o contexto continua onde já vive”
+- **Descoberta sem invasão:** o Cérebro reconhece instalações INEVITA, Obsidian, repositórios,
+  pastas de reuniões e workspaces próximos olhando apenas estrutura e marcadores, nunca conteúdo.
+- **Escolha antes de escrita:** mais de uma instalação INEVITA exige decisão da pessoa; uma
+  instrução explícita de “novo e limpo” continua sendo respeitada sem apagar ou misturar históricos.
+- **Fonte não é Cérebro:** Obsidian, repositório e pasta de reuniões entram como fontes do negócio,
+  continuam no lugar e só são lidos depois de autorização ligada ao trabalho real.
+- **Registro privado e honesto:** fontes aprovadas ficam em catálogo local ignorado pelo Git,
+  somente leitura e atualização manual; nenhuma cópia, migração, indexação contínua ou sync é
+  prometida.
+- **Amostra antes da infraestrutura:** o `/comecar` entende o trabalho, sugere um candidato concreto
+  quando ele for relevante e prova valor com um caso pequeno antes de oferecer recorrência.
+
 ## v1.9.2 — 2026-07-20 · “uma conversa que entende antes de perguntar”
 - **Voz da casa:** a primeira experiência usa `você/seu`, abandona `tu/teu` e deixa de soar como formulário ou roteiro traduzido.
 - **Perguntas com continuidade:** cada pergunta reconhece a resposta anterior, reutiliza as palavras da pessoa e explica naturalmente por que o próximo passo importa.

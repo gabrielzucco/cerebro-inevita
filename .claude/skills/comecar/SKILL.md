@@ -46,6 +46,27 @@ troca de sessão, reabertura da pasta ou execução manual de `/comecar`.
 Se `.cerebro/member-id` contém um UUID, siga sem pedir e-mail. Na ausência de identificação, não
 transforme cadastro em pedágio da primeira entrega; ofereça vincular o acesso somente depois.
 
+## 0.5 Descobrir sem invadir
+
+Antes de perguntar onde o contexto está, faça uma descoberta limitada e somente leitura:
+
+```bash
+node scripts/discover-context.mjs --root . --root .. --max-depth 2 --json
+```
+
+- A descoberta olha apenas nomes de pastas e marcadores técnicos. Ela não abre documentos, notas,
+  reuniões ou arquivos do negócio.
+- `inevita-brain` é outra instalação do Cérebro. Se aparecer mais de uma, não escolha pela pessoa e
+  não grave contexto: mostre os caminhos concretos e pergunte em qual ela quer continuar. Se a
+  instrução mais recente já diz explicitamente “novo e limpo”, continue na instalação nova.
+- Obsidian, repositório Git, pasta de reuniões e workspace de conhecimento são **fontes que podem
+  continuar onde estão**. Nunca apresente essas fontes como se fossem outro Cérebro.
+- Não despeje um inventário de pastas nem abra um menu técnico. Guarde os candidatos e use apenas o
+  que ficar relevante depois de entender o trabalho da pessoa.
+- Não leia o conteúdo de uma fonte externa antes da pessoa autorizar seu uso no caso atual.
+- Se a pessoa demonstrar receio de cópia, mudança ou acesso, diga já na primeira resposta que a
+  checagem olha somente nomes e marcadores técnicos, sem abrir conteúdo nem alterar nada.
+
 ## 1. Entender onde o trabalho ainda depende da pessoa
 
 Quando não há uma tarefa real, contextualize antes de perguntar. Use este sentido, adaptando a voz:
@@ -66,6 +87,10 @@ Depois da resposta:
    sua cabeça?” Não reutilize esse exemplo em outro contexto.
 3. Dê alternativas concretas apenas para facilitar e relacionadas ao que ela contou. Não presuma
    que uma ferramenta ou documento existe.
+4. Se a descoberta encontrou um candidato coerente com a resposta, cite-o em linguagem comum e
+   peça autorização para olhar apenas o menor exemplo necessário. Exemplo: “Encontrei uma pasta de
+   reuniões chamada `Calls`. É daí que costuma vir esse contexto? Se você quiser, posso começar por
+   uma reunião recente sem copiar nem mover a pasta.” Não registre a fonte só porque foi encontrada.
 
 ## 2. Começar por uma amostra, não pela empresa inteira
 
@@ -77,6 +102,18 @@ Depois de localizar a fonte, peça o menor caso recente que represente o problem
 Aceite arquivo, texto colado, transcrição, mensagem, pasta local ou relato ditado. Se a fonte já
 está acessível, use-a. Não peça Drive inteiro, histórico completo, OAuth ou integração antes da
 primeira entrega. Nunca finja que um conector existe.
+
+Se a pessoa aprovar uma pasta externa como fonte recorrente, registre somente a referência local:
+
+```bash
+node scripts/register-source.mjs --path "<caminho absoluto>" --type <tipo> \
+  --label "<nome reconhecível>" --scope "<para qual trabalho será usada>" --confirm
+```
+
+Explique somente se necessário: o registro é privado, somente leitura e de atualização manual. Ele
+não copia, move ou altera a fonte e não é uma conexão automática. A primeira entrega usa uma
+amostra; sincronização, indexação contínua ou conector são etapas futuras e só podem ser oferecidas
+quando realmente existirem.
 
 ## 3. Transformar a fonte em algo utilizável
 
