@@ -11,6 +11,7 @@ const sentinel = 'CONTEXTO-DO-DONO-NAO-TOCAR\n';
 const protectedFiles = [
   'meu-negocio/mapa.md',
   'operacao/_HOJE.md',
+  'sistemas/cerebro-base/feedback.md',
   'sistemas/calls/feedback.md',
   'conexoes/configuradas/minha-conexao.md',
   'conexoes/configuradas/fontes.json',
@@ -39,10 +40,17 @@ try {
   for (const seeded of ['operacao/execucoes/_LEIA.md', 'meu-negocio/fontes/_LEIA.md']) {
     if (!existsSync(join(old, seeded))) throw new Error(`seed não chegou: ${seeded}`);
   }
-  for (const motorFile of ['sistemas/_CATALOGO.md', 'scripts/discover-context.mjs', 'scripts/register-source.mjs']) {
+  for (const motorFile of [
+    'sistemas/_CATALOGO.md',
+    'sistemas/cerebro-base/manifest.md',
+    'sistemas/cerebro-base/pipeline.md',
+    'scripts/concierge-run.mjs',
+    'scripts/discover-context.mjs',
+    'scripts/register-source.mjs',
+  ]) {
     if (!existsSync(join(old, motorFile))) throw new Error(`motor novo não chegou: ${motorFile}`);
   }
-  console.log('✓ update real preservou 6 sentinelas, instalou seeds ausentes e atualizou o motor');
+  console.log(`✓ update real preservou ${protectedFiles.length} sentinelas, instalou seeds ausentes e atualizou o motor`);
 } finally {
   rmSync(sandbox, { recursive: true, force: true });
 }

@@ -33,6 +33,11 @@ scripts
 skills/_CATALOGO.md
 conexoes/_CATALOGO.md
 sistemas/_CATALOGO.md
+sistemas/cerebro-base/manifest.md
+sistemas/cerebro-base/pipeline.md
+sistemas/cerebro-base/rotinas.md
+sistemas/cerebro-base/evals.md
+sistemas/cerebro-base/changelog.md
 sistemas/calls/manifest.md
 sistemas/calls/pipeline.md
 sistemas/calls/rotinas.md

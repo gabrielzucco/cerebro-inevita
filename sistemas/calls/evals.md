@@ -11,14 +11,14 @@
 
 ## Régua humana
 
-Pergunte uma vez: **“Isso te ajuda a decidir ou agir agora?”**
+Pergunte uma vez, em linguagem de uso: **“Você usaria isso do jeito que está ou mudaria alguma
+coisa antes?”**
 
-- **sim:** A2 = `first_value_confirmed`.
-- **parcial:** peça uma correção concreta, aplique e pergunte de novo.
-- **não:** registre o motivo; não maquie a execução como sucesso.
+- **usaria:** A2 = `first_value_confirmed` depois do salvamento.
+- **mudaria:** peça uma correção concreta, aplique e mostre novamente.
+- **não usaria:** registre o motivo; não maquie a execução como sucesso.
 
 ## Qualidade do sistema
 
 O sistema sai de beta depois de pelo menos três fontes reais com A2 confirmado, zero vazamento de
 privacidade e correções incorporadas de forma versionada. Volume sozinho não promove maturidade.
-

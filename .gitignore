@@ -17,6 +17,7 @@ capturas/*
 .cerebro/acesso-email
 .cerebro/member-id
 .cerebro/runtime
+.cerebro/concierge-runs/
 
 # rastros privados de operação e contribuição — templates ficam no pacote
 operacao/execucoes/*

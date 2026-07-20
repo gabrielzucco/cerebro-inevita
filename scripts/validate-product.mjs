@@ -10,8 +10,12 @@ const required = [
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest',
   'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
   'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
+  'sistemas/cerebro-base/manifest.md', 'sistemas/cerebro-base/pipeline.md',
+  'sistemas/cerebro-base/rotinas.md', 'sistemas/cerebro-base/evals.md',
+  'sistemas/cerebro-base/feedback.md', 'sistemas/cerebro-base/changelog.md',
   '.claude/skills/operar/SKILL.md',
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
+  'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
 ];
 
@@ -55,7 +59,13 @@ for (const file of claudeFiles.filter((name) => name.endsWith('SKILL.md'))) {
 }
 
 const motor = readFileSync(join(ROOT, '.cerebro', 'motor.manifest'), 'utf8');
-for (const forbidden of ['meu-negocio/', 'operacao/', 'sistemas/calls/feedback.md', 'comunidade/minhas-contribuicoes/']) {
+for (const forbidden of [
+  'meu-negocio/',
+  'operacao/',
+  'sistemas/cerebro-base/feedback.md',
+  'sistemas/calls/feedback.md',
+  'comunidade/minhas-contribuicoes/',
+]) {
   if (motor.split('\n').some((line) => line.trim().startsWith(forbidden))) {
     errors.push(`motor tenta sobrescrever caminho do dono: ${forbidden}`);
   }
@@ -87,6 +97,13 @@ for (const contract of [
   'discover-context.mjs',
   'register-source.mjs',
   'não é uma conexão automática',
+  'concierge-run.mjs start',
+  '--milestone T1',
+  '--milestone T2',
+  '--milestone T3',
+  '--milestone T4',
+  'Não releia a fonte bruta',
+  'Isso aproveitou o que acabamos de organizar',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
 }
@@ -129,9 +146,27 @@ const ignore = readFileSync(join(ROOT, '.gitignore'), 'utf8');
 if (!ignore.includes('conexoes/configuradas/*')) {
   errors.push('registro local de fontes não está protegido pelo .gitignore');
 }
+if (!ignore.includes('.cerebro/concierge-runs/')) {
+  errors.push('relógios privados do concierge não estão protegidos pelo .gitignore');
+}
+
+const baseManifest = readFileSync(join(ROOT, 'sistemas', 'cerebro-base', 'manifest.md'), 'utf8');
+for (const contract of ['fonte real', 'artefato aprovado', 'T0', 'T4', 'segunda utilização']) {
+  if (!baseManifest.includes(contract)) errors.push(`cerebro-base sem contrato: ${contract}`);
+}
+
+const clock = readFileSync(join(ROOT, 'scripts', 'concierge-run.mjs'), 'utf8');
+for (const contract of [
+  "const MILESTONES = ['T0', 'T1', 'T2', 'T3', 'T4']",
+  'registre ${previous} antes',
+  "join(root, '.cerebro', 'concierge-runs'",
+  'withinContract',
+]) {
+  if (!clock.includes(contract)) errors.push(`relógio do concierge sem guarda: ${contract}`);
+}
 
 if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 6 superfícies · 1 sistema · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 6 superfícies · 2 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

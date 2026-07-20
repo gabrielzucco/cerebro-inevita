@@ -1,6 +1,7 @@
 # Estrutura inicial que o /atualizar copia SOMENTE se o caminho não existir.
 # Depois da primeira cópia, tudo abaixo pertence ao dono e nunca é sobrescrito.
 meu-negocio/fontes/_LEIA.md
+sistemas/cerebro-base/feedback.md
 sistemas/calls/feedback.md
 sistemas/outros-instalados/_LEIA.md
 conexoes/configuradas/_LEIA.md
@@ -15,4 +16,3 @@ comunidade/minhas-contribuicoes/_LEIA.md
 comunidade/minhas-contribuicoes/propostas/_LEIA.md
 comunidade/minhas-contribuicoes/aprovadas/_LEIA.md
 comunidade/minhas-contribuicoes/enviadas/_LEIA.md
-

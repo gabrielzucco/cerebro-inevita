@@ -1,5 +1,16 @@
 # Mudanças do cérebro INEVITA
 
+## v1.10.1 — 2026-07-20 · “o contexto volta a trabalhar”
+- **Primeiro ciclo completo:** o Cérebro Base transforma uma fonte real em artefato aprovado,
+  salva apenas depois do consentimento e usa esse contexto numa segunda tarefa sem reler o bruto.
+- **Relógios privados T0–T4:** o produto mede fonte legível, primeira entrega, aprovação e
+  reutilização em recibo local versionado, sem conteúdo ou PII.
+- **Concierge auditável:** intervenções têm categorias fechadas; ajuda fora do contrato fica
+  visível como falha do produto.
+- **Régua humana natural:** a pessoa diz se usaria o artefato e se precisou explicar tudo de novo;
+  linguagem interna de eval não aparece no onboarding.
+- **Atualização segura:** o novo harness chega pelo motor e o feedback local do dono é preservado.
+
 ## v1.10.0 — 2026-07-20 · “o contexto continua onde já vive”
 - **Descoberta sem invasão:** o Cérebro reconhece instalações INEVITA, Obsidian, repositórios,
   pastas de reuniões e workspaces próximos olhando apenas estrutura e marcadores, nunca conteúdo.

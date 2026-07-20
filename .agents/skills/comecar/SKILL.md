@@ -6,6 +6,15 @@ description: Conduz a primeira sessão do cérebro a partir de uma situação re
 > Ao iniciar, rode em silêncio SOMENTE: `node .agents/scripts/ping.mjs comecou`. Não concatene o
 > ping com `cat`, `ls` ou arquivos opcionais. Falha de telemetria nunca interrompe a conversa.
 
+Depois do ping, leia `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. Crie um
+`run-id` local no formato `AAAA-MM-DD-HHMM-cerebro-base` e inicie o relógio em silêncio:
+
+```bash
+node scripts/concierge-run.mjs start --run-id <run-id> --system cerebro-base
+```
+
+Falha do relógio não bloqueia a pessoa: preserve o erro no recibo da execução e continue.
+
 # Começar — entender uma situação, usar uma fonte, entregar algo real
 
 A pessoa não precisa aprender a administrar um cérebro. Ela precisa perceber que uma situação que
@@ -115,6 +124,12 @@ não copia, move ou altera a fonte e não é uma conexão automática. A primeir
 amostra; sincronização, indexação contínua ou conector são etapas futuras e só podem ser oferecidas
 quando realmente existirem.
 
+Quando a menor fonte estiver autorizada, acessível e legível, marque T1 em silêncio:
+
+```bash
+node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T1
+```
+
 ## 3. Transformar a fonte em algo utilizável
 
 - **Call ou reunião:** use `operar` com `calls-decisoes`.
@@ -125,6 +140,12 @@ quando realmente existirem.
 
 O formato do artefato nasce da situação: decisão, mensagem, briefing, processo, análise, copy,
 ações com responsável ou regra reutilizável. Não force toda entrada a virar resumo.
+
+Imediatamente antes de mostrar o primeiro artefato, marque T2 em silêncio:
+
+```bash
+node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T2
+```
 
 ### Formato da demonstração do acervo
 
@@ -146,16 +167,39 @@ Depois do artefato, pergunte de forma natural:
   mostre novamente.
 - Se usaria, grave o recibo local, atualize `operacao/_HOJE.md` e rode em silêncio
   `node .agents/scripts/ping.mjs first_value_confirmed <system_id>`.
+- Depois que o contexto aprovado estiver salvo, marque T3 em silêncio:
+  `node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T3`.
 - Se houve handoff, marque-o como `concluido` somente depois da entrega.
 
 Não diga “isso ajuda você a decidir ou agir?”, não explique a régua e não transforme aprovação em
 pesquisa de satisfação.
 
-## 5. Mostrar o que começa a melhorar
+## 5. Fazer o contexto trabalhar uma segunda vez
 
 Depois da aprovação, explique em linguagem comum e somente se o salvamento aconteceu:
 
 > “Perfeito. Vou guardar o que funcionou aqui para a próxima vez não começar do zero.”
+
+Não encerre a primeira experiência no salvamento. Leia `sistemas/cerebro-base/pipeline.md` e use
+somente as decisões, ações, pendências ou átomos aprovados para produzir uma segunda saída pequena.
+Escolha a que exige menos informação adicional: pauta da próxima reunião, mensagem de follow-up ou
+briefing de execução. **Não releia a fonte bruta.** Se precisar reabrir o bruto, deixe a falha
+visível e não marque T4.
+
+Mostre a segunda saída e pergunte de forma natural:
+
+> “Isso aproveitou o que acabamos de organizar ou você precisou explicar tudo de novo?”
+
+Depois da confirmação de reutilização, marque T4 em silêncio:
+
+```bash
+node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T4
+```
+
+Consulte o recibo com `node scripts/concierge-run.mjs status --run-id <run-id> --json` e leve apenas
+tempos e categorias de intervenção para o recibo operacional. Nunca copie conteúdo para o relógio.
+
+## 6. Mostrar o que começa a melhorar
 
 Se esse tipo de material nasce sempre na mesma fonte, ofereça torná-la recorrente apenas agora. Se
 há conector real, explique escopo e consentimento. Se não há, proponha a menor rotina manual sem
@@ -163,7 +207,7 @@ prometer automação.
 
 Só mostre pastas, método, privacidade técnica ou arquitetura quando a pessoa perguntar.
 
-## 6. Contribuição vem depois e com consentimento
+## 7. Contribuição vem depois e com consentimento
 
 Se a execução revelar um padrão útil para outros operadores, pergunte em linguagem comum se a
 pessoa quer preparar uma versão sem dados do negócio para revisar. Preparar, aprovar e enviar são

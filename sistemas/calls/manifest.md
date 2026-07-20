@@ -3,14 +3,14 @@
 ```yaml
 system_id: calls-decisoes
 name: Calls em Decisões
-version: 0.1.0
+version: 0.1.1
 status: beta
 owner: dono-do-cerebro
 result: reunião deixa decisões, ações, evidências e pendências aprovadas
 input: transcrição real
 output: bruto preservado + átomos aprovados + recibo da execução
 skill: call
-setpoint: uma fonte vira trabalho acionável e memória citável em até 10 minutos após a entrada
+setpoint: uma fonte vira trabalho acionável e memória citável em até 10 minutos após ficar legível
 first_value_event: first_value_confirmed
 privacy: local-first
 ```
@@ -31,4 +31,3 @@ instalação, abertura da pasta ou uma nota não aprovada não contam.
 O bruto, os outputs e as decisões ficam locais. O ping leva apenas evento, versão, runtime,
 `system_id` e IDs opacos já consentidos. Contribuição à comunidade é outro pipeline, com
 anonimização e dois consentimentos: aprovar o payload e enviar.
-
