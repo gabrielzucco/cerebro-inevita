@@ -3,7 +3,7 @@
 ```yaml
 system_id: briefing-comercial-inteligente
 name: Briefing Comercial Inteligente
-version: 0.1.0
+version: 0.1.1
 status: piloto-visivel-no-laboratorio
 programa: briefing-comercial-v1
 owner: dono-do-cerebro
@@ -32,6 +32,18 @@ obrigatório passando, zero escrita indevida e pelo menos uma segunda utilizaç�
 
 Antes da call, a pessoa confirma que usaria o briefing. Depois, confirma que o fechamento representa
 o que aconteceu e aprova o próximo passo. Instalação, conexão e resumo genérico não contam.
+
+## Contrato de avaliação
+
+O pacote separa quatro coisas que não podem ser maquiadas como uma só:
+
+1. **qualidade do contexto:** fatos sustentados, fontes autorizadas, lacunas explícitas;
+2. **qualidade do trabalho:** briefing utilizável e fechamento fiel à conversa;
+3. **segurança:** nenhum write externo antes da aprovação;
+4. **valor operacional:** menos preparo manual e repetição sem reconstruir o contexto.
+
+Uma execução pode passar segurança e falhar valor. Pode ser útil e falhar groundedness. O recibo
+registra cada dimensão separadamente.
 
 ## Dependências
 

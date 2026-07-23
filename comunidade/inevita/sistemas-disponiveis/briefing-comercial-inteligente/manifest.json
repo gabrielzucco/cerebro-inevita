@@ -3,7 +3,7 @@
   "system_id": "briefing-comercial-inteligente",
   "name": "Briefing Comercial Inteligente",
   "release": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "channel": "pilot",
     "minimum_brain_version": "1.11.0"
   },
@@ -29,6 +29,7 @@
   },
   "result": "reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados",
   "setpoint": "reduzir busca manual sem inventar contexto nem atualizar o CRM silenciosamente",
+  "first_value": "o operador confirma que usaria o briefing em uma reunião real",
   "privacy": "local-first",
   "permissions": {
     "connects_sources_automatically": false,
