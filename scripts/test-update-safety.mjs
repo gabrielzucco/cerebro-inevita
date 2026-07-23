@@ -13,6 +13,8 @@ const protectedFiles = [
   'operacao/_HOJE.md',
   'sistemas/cerebro-base/feedback.md',
   'sistemas/calls/feedback.md',
+  'sistemas/outros-instalados/briefing-comercial-inteligente/configuracao.md',
+  'sistemas/outros-instalados/briefing-comercial-inteligente/feedback.md',
   'conexoes/configuradas/minha-conexao.md',
   'conexoes/configuradas/fontes.json',
   'comunidade/minhas-contribuicoes/aprovadas/minha-contribuicao.md',
@@ -47,6 +49,9 @@ try {
     'scripts/concierge-run.mjs',
     'scripts/discover-context.mjs',
     'scripts/register-source.mjs',
+    'scripts/install-system.mjs',
+    'scripts/system-state.mjs',
+    'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   ]) {
     if (!existsSync(join(old, motorFile))) throw new Error(`motor novo não chegou: ${motorFile}`);
   }

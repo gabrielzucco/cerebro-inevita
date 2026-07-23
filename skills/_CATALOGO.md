@@ -6,6 +6,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 | Skill | Papel |
 |---|---|
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
+| `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |
 | `call` | transforma uma transcrição em decisões, ações e memória |
 | `guardar` | transforma fonte real em átomo aprovado |
 | `daily` | fecha o dia com julgamento ainda quente |
@@ -16,4 +17,3 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 | `atualizar` | atualiza motor sem tocar no que é privado |
 
 Skill não é sistema: ela encapsula julgamento dentro de um pipeline com resultado e régua.
-

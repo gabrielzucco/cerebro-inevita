@@ -17,6 +17,14 @@ const required = [
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
+  'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/rotinas.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/evals.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/changelog.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/feedback.template.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/configuracao.template.md',
 ];
 
 for (const item of required) {
@@ -77,7 +85,11 @@ for (const guard of ['operacao*', 'sistemas/*/feedback.md', 'comunidade/minhas-c
 }
 
 const ping = readFileSync(join(ROOT, '.agents', 'scripts', 'ping.mjs'), 'utf8');
-for (const event of ['proof_delivered', 'first_value_confirmed', 'contribution_prepared', 'contribution_approved']) {
+for (const event of [
+  'proof_delivered', 'first_value_confirmed', 'contribution_prepared', 'contribution_approved',
+  'system_installed', 'system_commissioning', 'system_first_run', 'system_activated',
+  'system_needs_attention',
+]) {
   if (!ping.includes(event)) errors.push(`ping sem evento: ${event}`);
 }
 
@@ -149,6 +161,9 @@ if (!ignore.includes('conexoes/configuradas/*')) {
 if (!ignore.includes('.cerebro/concierge-runs/')) {
   errors.push('relógios privados do concierge não estão protegidos pelo .gitignore');
 }
+if (!ignore.includes('.cerebro/sistemas/')) {
+  errors.push('estado privado dos sistemas não está protegido pelo .gitignore');
+}
 
 const baseManifest = readFileSync(join(ROOT, 'sistemas', 'cerebro-base', 'manifest.md'), 'utf8');
 for (const contract of ['fonte real', 'artefato aprovado', 'T0', 'T4', 'segunda utilização']) {
@@ -169,4 +184,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 6 superfícies · 2 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 6 superfícies · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

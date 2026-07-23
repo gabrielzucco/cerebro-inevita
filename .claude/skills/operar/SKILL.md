@@ -7,8 +7,9 @@ description: Executa um sistema instalado de ponta a ponta, aplica gates e evals
 
 ## 1. Resolver o sistema
 
-Leia `sistemas/_CATALOGO.md`. Se não veio um `system_id`, recomende `calls-decisoes`. Não anuncie
-sistema em roadmap como disponível. Leia nesta ordem:
+Leia `sistemas/_CATALOGO.md` e, quando existir, `sistemas/outros-instalados/_CATALOGO.md`. Se não
+veio um `system_id`, recomende entre os sistemas realmente instalados. Não anuncie sistema em
+roadmap como disponível. Leia nesta ordem:
 
 1. `manifest.md` — resultado, versão e fronteira;
 2. `pipeline.md` — estados e gates;
@@ -66,4 +67,3 @@ Pergunte se pode **preparar**. Se sim:
 
 PII, bruto, segredo, nome de cliente, números identificáveis e decisão privada bloqueiam a
 contribuição. Na dúvida, não preparar.
-

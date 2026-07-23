@@ -1,0 +1,4 @@
+interface:
+  display_name: "Briefing Comercial"
+  short_description: "Prepara e fecha reuniões comerciais com contexto citável"
+  default_prompt: "Prepare minha próxima reunião comercial usando apenas as fontes que eu aprovar."

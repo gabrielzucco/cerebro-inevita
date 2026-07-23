@@ -9,7 +9,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EVENTOS = new Set([
   'instalou', 'sessao', 'comecou', 'teste', 'atualizou', 'guardou', 'daily',
   'operou', 'proof_delivered', 'first_value_confirmed', 'contribution_prepared',
-  'contribution_approved',
+  'contribution_approved', 'system_installed', 'system_commissioning', 'system_activated',
+  'system_first_run', 'system_needs_attention',
 ]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

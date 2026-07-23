@@ -18,6 +18,7 @@ capturas/*
 .cerebro/member-id
 .cerebro/runtime
 .cerebro/concierge-runs/
+.cerebro/sistemas/
 
 # rastros privados de operação e contribuição — templates ficam no pacote
 operacao/execucoes/*
@@ -32,6 +33,8 @@ operacao/o-que-melhorou/*
 !operacao/o-que-melhorou/_LEIA.md
 conexoes/configuradas/*
 !conexoes/configuradas/_LEIA.md
+sistemas/outros-instalados/*/configuracao.md
+sistemas/outros-instalados/*/feedback.md
 comunidade/minhas-contribuicoes/propostas/*
 !comunidade/minhas-contribuicoes/propostas/_LEIA.md
 comunidade/minhas-contribuicoes/aprovadas/*

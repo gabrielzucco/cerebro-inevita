@@ -1,5 +1,15 @@
 # Mudanças do cérebro INEVITA
 
+## v1.11.0 — 2026-07-22 · “sistema instalado é sistema provado”
+- **Primeiro pacote instalável:** Briefing Comercial Inteligente entra por um instalador determinístico,
+  com manifest, pipeline, rotina, skill, evals, feedback e changelog.
+- **Bootstrap não finge ativação:** os estados distinguem pacote adicionado, configuração, primeiro run,
+  ativo e atenção; só um caso real aprovado ativa o sistema.
+- **Adaptação ao negócio:** configuração privada registra entidades, fontes de verdade, vocabulário,
+  gates, responsáveis e régua local sem enviar conteúdo para a INEVITA.
+- **Multi-runtime:** Claude Code, Codex, Gemini CLI e Antigravity operam o mesmo pacote e a mesma skill.
+- **Atualização segura:** reinstalar atualiza o motor do sistema e preserva configuração e feedback privados.
+
 ## v1.10.1 — 2026-07-20 · “o contexto volta a trabalhar”
 - **Primeiro ciclo completo:** o Cérebro Base transforma uma fonte real em artefato aprovado,
   salva apenas depois do consentimento e usa esse contexto numa segunda tarefa sem reler o bruto.
