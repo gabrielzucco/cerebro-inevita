@@ -9,6 +9,8 @@
   permissões e telemetria permitida em formato verificável.
 - **Runs verificáveis:** cada execução ganha `run-id`, eval agregado, decisão humana e recibo local,
   sem transmitir conteúdo.
+- **Laboratório ≠ prateleira:** o piloto pode ser descoberto e recrutar validadores numa seção
+  separada, mas só a evidência de casos reais permite sua promoção ao catálogo validado.
 
 ## v1.11.0 — 2026-07-22 · “sistema instalado é sistema provado”
 - **Primeiro pacote instalável:** Briefing Comercial Inteligente entra por um instalador determinístico,

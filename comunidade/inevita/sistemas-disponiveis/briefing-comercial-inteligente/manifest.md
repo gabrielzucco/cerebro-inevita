@@ -4,7 +4,8 @@
 system_id: briefing-comercial-inteligente
 name: Briefing Comercial Inteligente
 version: 0.1.0
-status: piloto-nao-listado
+status: piloto-visivel-no-laboratorio
+programa: briefing-comercial-v1
 owner: dono-do-cerebro
 result: reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados
 input: reunião identificada + fontes comerciais autorizadas
@@ -17,8 +18,12 @@ privacy: local-first
 
 ## Gate de publicação
 
-Este pacote é piloto e **não entra no catálogo público**. Referência externa e teste técnico não
-contam como validação do produto para o membro.
+Este pacote é piloto e **não entra na prateleira de sistemas validados**. Ele pode aparecer na
+seção separada “Em validação” para recrutar participantes, explicitar o gate e acompanhar a prova.
+Referência externa e teste técnico não contam como validação do produto para o membro.
+
+A candidatura não transforma o sistema em produto validado nem concede execução acompanhada
+automaticamente. A equipe seleciona lotes pequenos e libera o fluxo oficial por participante.
 
 Para publicar: três ciclos reais aprovados, em pelo menos dois cérebros de membros, com eval
 obrigatório passando, zero escrita indevida e pelo menos uma segunda utilização.

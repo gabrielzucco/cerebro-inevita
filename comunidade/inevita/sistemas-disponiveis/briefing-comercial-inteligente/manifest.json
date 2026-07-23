@@ -8,8 +8,12 @@
     "minimum_brain_version": "1.11.0"
   },
   "validation": {
+    "program_key": "briefing-comercial-v1",
     "stage": "pilot",
     "listed": false,
+    "validation_lab_visible": true,
+    "application_required": true,
+    "access_mode": "approved_participants",
     "required_real_cycles": 3,
     "required_distinct_member_brains": 2,
     "requires_repeat_use": true,
@@ -20,7 +24,8 @@
   },
   "publication": {
     "status": "pilot",
-    "public_catalog": false
+    "public_catalog": false,
+    "validation_lab": true
   },
   "result": "reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados",
   "setpoint": "reduzir busca manual sem inventar contexto nem atualizar o CRM silenciosamente",
