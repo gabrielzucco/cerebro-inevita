@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "system_id": "briefing-comercial-inteligente",
+  "name": "Briefing Comercial Inteligente",
+  "release": {
+    "version": "0.1.0",
+    "channel": "pilot",
+    "minimum_brain_version": "1.11.0"
+  },
+  "validation": {
+    "stage": "pilot",
+    "listed": false,
+    "required_real_cycles": 3,
+    "required_distinct_member_brains": 2,
+    "requires_repeat_use": true,
+    "requires_eval_pass": true,
+    "requires_human_approval": true,
+    "verified_real_cycles": 0,
+    "verified_distinct_member_brains": 0
+  },
+  "publication": {
+    "status": "pilot",
+    "public_catalog": false
+  },
+  "result": "reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados",
+  "setpoint": "reduzir busca manual sem inventar contexto nem atualizar o CRM silenciosamente",
+  "privacy": "local-first",
+  "permissions": {
+    "connects_sources_automatically": false,
+    "writes_external_systems_automatically": false,
+    "requires_source_by_source_consent": true
+  },
+  "telemetry": {
+    "content": false,
+    "allowed": [
+      "system_id",
+      "release_version",
+      "runtime",
+      "lifecycle_state",
+      "run_id",
+      "eval_version",
+      "eval_passed",
+      "human_decision",
+      "reason_code",
+      "duration_ms"
+    ]
+  }
+}

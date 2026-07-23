@@ -10,7 +10,7 @@ const slug = String(process.argv[2] || '').trim().toLowerCase();
 const confirmed = process.argv.includes('--confirm');
 const dryRun = process.argv.includes('--dry-run');
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const PACKAGE_FILES = ['manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md'];
+const PACKAGE_FILES = ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md'];
 
 function fail(message) {
   console.error(`✗ ${message}`);
@@ -66,10 +66,13 @@ mkdirSync(stateDir, { recursive: true });
 const statePath = join(stateDir, `${slug}.json`);
 const hadState = existsSync(statePath);
 const previous = hadState ? JSON.parse(readFileSync(statePath, 'utf8')) : {};
+const packageManifest = JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8'));
 writeFileSync(statePath, `${JSON.stringify({
   ...previous,
   system_id: slug,
-  package_version: '0.1.0',
+  package_version: packageManifest.release.version,
+  release_channel: packageManifest.release.channel,
+  validation_stage: packageManifest.validation.stage,
   status: previous.status || 'package_added',
   updated_at: new Date().toISOString(),
 }, null, 2)}\n`, { mode: 0o600 });

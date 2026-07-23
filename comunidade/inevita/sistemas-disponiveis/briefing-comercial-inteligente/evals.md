@@ -18,7 +18,17 @@ Pergunte: **“Você usaria isso na reunião ou mudaria alguma coisa antes?”**
 - **mudaria:** aplicar uma correção concreta e mostrar novamente;
 - **não usaria:** registrar o motivo, sem maquiar como sucesso.
 
-## Qualidade do sistema
+## Gate de saída do piloto
 
-O sistema sai de beta depois de pelo menos três ciclos reais, com briefing usado, fechamento
-aprovado, zero alteração indevida e redução percebida no preparo manual.
+O sistema só pode entrar no catálogo público depois de:
+
+- pelo menos três ciclos reais completos;
+- pelo menos dois cérebros de membros distintos;
+- briefing usado e fechamento aprovado;
+- todos os gates obrigatórios passando;
+- zero alteração indevida;
+- redução percebida no preparo manual;
+- pelo menos uma segunda utilização sem reconstruir o contexto do zero.
+
+Referência do Vale, operação interna e teste técnico sustentam a hipótese, mas não substituem este
+gate.

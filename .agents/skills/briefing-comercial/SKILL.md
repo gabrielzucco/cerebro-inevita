@@ -52,6 +52,14 @@ Grave o recibo em `operacao/execucoes/<run-id>.md`, sem copiar segredos para o r
 correções em `feedback.md`. Três falhas comparáveis candidatam mudança versionada; nunca altere a
 skill silenciosamente.
 
-Ao começar o caso real, avance para `first_run`. Só avance para `active` depois que a pessoa confirmar
-que usaria o output e aprovar a configuração. Falha de fonte, permissão ou régua vira
-`needs_attention`; pacote copiado nunca equivale a sistema ativo.
+Ao começar o caso real, rode:
+
+`node scripts/system-run.mjs briefing-comercial-inteligente start`
+
+Depois dos gates e da resposta humana, conclua:
+
+`node scripts/system-run.mjs briefing-comercial-inteligente complete --eval=<pass|fail> --decision=<approved|changes_requested|rejected>`
+
+O script cria o `run-id`, registra o recibo local e só ativa a instalação quando eval e humano
+aprovam. Falha de fonte, permissão ou régua vira `needs_attention`; pacote copiado nunca equivale a
+sistema ativo.

@@ -28,6 +28,12 @@ if (next === 'show') {
 if (!states.includes(next) || !transitions[state.status]?.includes(next)) {
   throw new Error(`transição inválida: ${state.status} → ${next}`);
 }
+if (next === 'first_run') {
+  throw new Error(`use: node scripts/system-run.mjs ${slug} start`);
+}
+if (next === 'active' && !state.first_value_confirmed) {
+  throw new Error('active exige run com eval aprovado e confirmação humana');
+}
 mkdirSync(dirname(path), { recursive: true });
 writeFileSync(path, `${JSON.stringify({ ...state, status: next, updated_at: new Date().toISOString() }, null, 2)}\n`, { mode: 0o600 });
 const event = next === 'active'

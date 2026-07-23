@@ -1,5 +1,15 @@
 # Mudanças do cérebro INEVITA
 
+## v1.11.1 — 2026-07-23 · “piloto não é produto validado”
+- **Gate de publicação:** pacote técnico, referência externa e operação interna não bastam para
+  entrar no catálogo público.
+- **Briefing Comercial reclassificado:** continua instalável no piloto acompanhado, mas fica não
+  listado até três ciclos reais, dois cérebros distintos, evals aprovados e uma repetição de uso.
+- **Manifest estruturado:** o pacote passa a carregar versão, canal, estágio de validação,
+  permissões e telemetria permitida em formato verificável.
+- **Runs verificáveis:** cada execução ganha `run-id`, eval agregado, decisão humana e recibo local,
+  sem transmitir conteúdo.
+
 ## v1.11.0 — 2026-07-22 · “sistema instalado é sistema provado”
 - **Primeiro pacote instalável:** Briefing Comercial Inteligente entra por um instalador determinístico,
   com manifest, pipeline, rotina, skill, evals, feedback e changelog.

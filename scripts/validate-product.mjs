@@ -18,6 +18,8 @@ const required = [
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
+  'scripts/system-run.mjs',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/rotinas.md',
@@ -89,6 +91,7 @@ for (const event of [
   'proof_delivered', 'first_value_confirmed', 'contribution_prepared', 'contribution_approved',
   'system_installed', 'system_commissioning', 'system_first_run', 'system_activated',
   'system_needs_attention',
+  'system_run_started', 'system_run_completed', 'system_value_confirmed',
 ]) {
   if (!ping.includes(event)) errors.push(`ping sem evento: ${event}`);
 }

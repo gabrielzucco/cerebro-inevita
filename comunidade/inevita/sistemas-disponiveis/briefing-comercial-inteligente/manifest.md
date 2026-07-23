@@ -4,7 +4,7 @@
 system_id: briefing-comercial-inteligente
 name: Briefing Comercial Inteligente
 version: 0.1.0
-status: beta
+status: piloto-nao-listado
 owner: dono-do-cerebro
 result: reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados
 input: reunião identificada + fontes comerciais autorizadas
@@ -14,6 +14,14 @@ setpoint: reduzir busca manual sem inventar contexto nem atualizar o CRM silenci
 first_value_event: first_value_confirmed
 privacy: local-first
 ```
+
+## Gate de publicação
+
+Este pacote é piloto e **não entra no catálogo público**. Referência externa e teste técnico não
+contam como validação do produto para o membro.
+
+Para publicar: três ciclos reais aprovados, em pelo menos dois cérebros de membros, com eval
+obrigatório passando, zero escrita indevida e pelo menos uma segunda utilização.
 
 ## O que conta como resultado
 

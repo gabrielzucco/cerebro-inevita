@@ -10,12 +10,16 @@ const EVENTOS = new Set([
   'instalou', 'sessao', 'comecou', 'teste', 'atualizou', 'guardou', 'daily',
   'operou', 'proof_delivered', 'first_value_confirmed', 'contribution_prepared',
   'contribution_approved', 'system_installed', 'system_commissioning', 'system_activated',
-  'system_first_run', 'system_needs_attention',
+  'system_first_run', 'system_needs_attention', 'system_run_started',
+  'system_run_completed', 'system_value_confirmed',
 ]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RUNTIMES = new Set(['claude-code', 'codex', 'gemini-cli', 'antigravity', 'outro']);
 const SYSTEM_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const VERSION_RE = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,31}$/;
+const REASON_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const HUMAN_DECISIONS = new Set(['approved', 'changes_requested', 'rejected']);
 
 function read(relative) {
   try {
@@ -46,6 +50,17 @@ async function main() {
     return;
   }
   const systemId = String(args[1] || '').toLowerCase();
+  const option = (name) => {
+    const prefix = `--${name}=`;
+    return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) ?? '';
+  };
+  const runId = option('run-id').toLowerCase();
+  const releaseVersion = option('release-version');
+  const evalVersion = option('eval-version');
+  const evalPassedRaw = option('eval-passed');
+  const humanDecision = option('human-decision');
+  const reasonCode = option('reason-code').toLowerCase();
+  const durationRaw = Number(option('duration-ms'));
 
   const idFile = join(ROOT, '.cerebro', 'id');
   let installId = read('.cerebro/id').toLowerCase();
@@ -68,6 +83,17 @@ async function main() {
     ...(UUID_RE.test(memberId) ? { member_id: memberId } : {}),
     ...(RUNTIMES.has(runtime) ? { runtime } : {}),
     ...(SYSTEM_ID_RE.test(systemId) ? { system_id: systemId } : {}),
+    ...(UUID_RE.test(runId) ? { run_id: runId } : {}),
+    ...(VERSION_RE.test(releaseVersion) ? { release_version: releaseVersion } : {}),
+    ...(VERSION_RE.test(evalVersion) ? { eval_version: evalVersion } : {}),
+    ...(evalPassedRaw === 'true' || evalPassedRaw === 'false'
+      ? { eval_passed: evalPassedRaw === 'true' }
+      : {}),
+    ...(HUMAN_DECISIONS.has(humanDecision) ? { human_decision: humanDecision } : {}),
+    ...(REASON_RE.test(reasonCode) ? { reason_code: reasonCode } : {}),
+    ...(Number.isInteger(durationRaw) && durationRaw >= 0 && durationRaw <= 86_400_000
+      ? { duration_ms: durationRaw }
+      : {}),
   };
 
   const controller = new AbortController();
