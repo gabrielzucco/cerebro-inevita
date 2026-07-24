@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = process.env.CEREBRO_INSTALL_ROOT
   ? resolve(process.env.CEREBRO_INSTALL_ROOT)
   : resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const BRIEF_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'generate-operating-brief.mjs');
 const slug = String(process.argv[2] || '').trim().toLowerCase();
 const next = String(process.argv[3] || 'show').toLowerCase();
 const states = ['package_added', 'configuring', 'first_run', 'active', 'needs_attention'];
@@ -46,6 +47,12 @@ const event = next === 'active'
 spawnSync(process.execPath, [join(ROOT, '.agents', 'scripts', 'ping.mjs'), event, slug], {
   cwd: ROOT,
   env: process.env,
+  stdio: 'ignore',
+  timeout: 2500,
+});
+spawnSync(process.execPath, [BRIEF_SCRIPT], {
+  cwd: ROOT,
+  env: { ...process.env, CEREBRO_INSTALL_ROOT: ROOT },
   stdio: 'ignore',
   timeout: 2500,
 });

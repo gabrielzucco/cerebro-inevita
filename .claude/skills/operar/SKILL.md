@@ -19,7 +19,18 @@ roadmap como disponível. Leia nesta ordem:
 
 Crie um `run-id` local no formato `AAAA-MM-DD-HHMM-<system_id>`.
 
-## 2. Executar
+## 2. Recuperar caminhos que já funcionaram
+
+Antes de executar, consulte no máximo os três recibos aprovados mais recentes desse sistema,
+o `feedback.md` e `operacao/o-que-melhorou/`. Procure um caminho comparável: mesmo objetivo,
+tipo de fonte, gates e output esperado.
+
+- Reutilize somente procedimento ligado a run que passou na régua **e** foi aprovado pelo dono.
+- Trate o procedimento como ponto de partida, nunca como verdade que dispensa contexto.
+- Falha, tentativa trivial ou conversa que não chegou a executar nunca vira procedimento.
+- Não reabra conteúdo bruto só para reconstruir o caminho; use recibos, referências e decisões.
+
+## 3. Executar
 
 Conduza o pipeline com uma pergunta por mensagem. Antes de qualquer escrita derivada, mostre o que
 será gravado e peça aprovação. Fonte real continua fonte; não transforme resumo em evidência.
@@ -28,15 +39,19 @@ Ao iniciar a transformação, rode em silêncio:
 
 `node .agents/scripts/ping.mjs operou <system_id>`
 
-## 3. Avaliar
+## 4. Avaliar
 
 Aplique primeiro os gates determinísticos e deixe falhas visíveis. Depois peça a avaliação humana
 descrita em `evals.md`. Se parcial ou não, peça uma correção concreta, aplique uma vez e compare.
 
-## 4. Fechar com recibo
+## 5. Fechar com recibo
 
 Após aprovação, grave `operacao/execucoes/<run-id>.md` usando o template da pasta e atualize
-`operacao/_HOJE.md`. Referencie fonte e output; não copie conteúdo privado para o recibo.
+o brief local com:
+
+`node scripts/generate-operating-brief.mjs`
+
+Referencie fonte e output; não copie conteúdo privado para o recibo.
 
 A2 só existe quando a pessoa confirma valor. Nesse caso rode:
 
@@ -44,13 +59,29 @@ A2 só existe quando a pessoa confirma valor. Nesse caso rode:
 
 O ping nunca recebe texto, caminho de arquivo, decisão, erro ou output.
 
-## 5. Feedback e Self Improvement
+## 6. Memória procedural e Self Improvement
+
+Depois de um run que passou na régua e foi aprovado, pergunte se o dono quer guardar o caminho como
+**procedimento candidato**. Se aprovar, grave
+`operacao/o-que-melhorou/<data>-procedimento-<system_id>.md` com:
+
+- `run-id` e versão que provaram o caminho;
+- objetivo, gatilho e tipo de contexto em que ele serve;
+- passos generalizados, interfaces/ferramentas usadas e pontos de decisão;
+- gates, output esperado, eval que passou e situação em que **não** deve ser usado;
+- referência da prova, sem PII, conteúdo bruto, segredo ou caminho absoluto.
+
+Isso é memória procedural: lembrar **como um trabalho deu certo**, não só o que foi decidido.
+Falha não vira procedimento. Um procedimento candidato também não altera skill, pipeline ou eval
+sozinho.
 
 Correção humana entra no `feedback.md` do sistema com versão e `run-id`. Conte recorrências
-comparáveis; com três, proponha uma mudança pequena na skill ou na régua. Mostre diff, teste em
-casos anteriores quando possível e peça aprovação. Nunca altere o motor silenciosamente.
+comparáveis. Com três caminhos aprovados para o mesmo objetivo, proponha uma mudança pequena na
+skill, pipeline ou régua. Mostre o diff, faça replay nos casos anteriores quando possível e peça
+aprovação. Se a mudança piorar qualquer caso importante, mantenha o motor atual e registre a
+exceção. Nunca altere o motor silenciosamente.
 
-## 6. Contribuição
+## 7. Contribuição
 
 Só sugira quando houver aprendizado generalizável, fonte autorizada e baixo risco de reidentificação.
 Pergunte se pode **preparar**. Se sim:

@@ -18,4 +18,9 @@ Cérebro sem manutenção apodrece — o Vale chama de **context rot**: com ~30%
 
 Regras: **a ordem importa** (triagem → fios → resumo → elos) · resumo vem SÓ das dailies — reler bruto é retrabalho com julgamento pior · nada se deleta, se arquiva ou se marca · se a semana não teve dailies, o reindex vira uma daily estendida da semana — e você sugere criar o hábito.
 
-5. **A regra 50/50 (fecho):** o reindex é a metade "ensinar o sistema" da semana — *"50% construindo, 50% ensinando o sistema"* (compound engineering, direto do palco). Antes de fechar, UMA pergunta: *"o que o cérebro errou ou não soube esta semana — e qual nota/skill conserta isso?"* Grava a correção. É assim que ele fica melhor toda semana, não só maior.
+6. **Memória procedural:** revise `operacao/o-que-melhorou/` e agrupe candidatos do mesmo
+   sistema, objetivo, tipo de fonte e output. Só proponha promoção para skill, pipeline ou eval
+   quando houver três runs comparáveis, aprovados e replay possível. Mostre o diff e peça decisão
+   humana. Candidato isolado continua candidato; falha nunca vira procedimento.
+7. **A regra 50/50 (fecho):** o reindex é a metade "ensinar o sistema" da semana — *"50% construindo, 50% ensinando o sistema"* (compound engineering, direto do palco). Antes de fechar, UMA pergunta: *"o que o cérebro errou ou não soube esta semana — e qual nota/skill conserta isso?"* Grava a correção. É assim que ele fica melhor toda semana, não só maior.
+8. Regenere o brief local com `node scripts/generate-operating-brief.mjs`.

@@ -4,7 +4,9 @@ import {
   existsSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const options = {};
@@ -25,6 +27,7 @@ const allowedTypes = new Set([
   'local-folder', 'local-file', 'obsidian', 'git-repository', 'meetings-folder', 'knowledge-workspace',
 ]);
 const requestedBrainRoot = resolve(options.brain || process.cwd());
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 
 function fail(message) {
   console.error(message);
@@ -95,4 +98,10 @@ mkdirSync(dirname(registryPath), { recursive: true });
 const temporary = `${registryPath}.tmp`;
 writeFileSync(temporary, `${JSON.stringify(registry, null, 2)}\n`, { mode: 0o600 });
 renameSync(temporary, registryPath);
+spawnSync(process.execPath, [join(SCRIPT_DIR, 'generate-operating-brief.mjs')], {
+  cwd: brainRoot,
+  env: { ...process.env, CEREBRO_INSTALL_ROOT: brainRoot },
+  stdio: 'ignore',
+  timeout: 2500,
+});
 console.log(JSON.stringify({ registered: true, copied: false, moved: false, modifiedSource: false, source }, null, 2));

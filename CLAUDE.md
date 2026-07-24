@@ -55,7 +55,8 @@ elos: [[conceito-a]] · [[conceito-b]]
   evals, feedback e changelog. Comece por `sistemas/_CATALOGO.md`.
 - `skills/` — catálogo humano; o executável vive em `.claude/skills/` e `.agents/skills/`.
 - `conexoes/` — interfaces opcionais para fontes e ferramentas. Arquivos locais funcionam sem plano pago.
-- `operacao/` — execuções, decisões pendentes, erros, escalações e o que melhorou. É a prova do run.
+- `operacao/` — brief vivo em `_HOJE.md`, execuções, decisões pendentes, erros, escalações e
+  caminhos que melhoraram. É a prova do run e a memória de como um trabalho aprovado foi feito.
 - `comunidade/` — duas direções que nunca se misturam:
   - `inevita/` — sistemas, contexto e atualizações que a INEVITA entrega;
   - `minhas-contribuicoes/` — propostas privadas, aprovadas e enviadas pelo dono.
@@ -75,7 +76,10 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **1x por mês:** `/revisar` (frescor — o que ainda vale?) e `/teste` (o cérebro melhorou?).
 - **Comece simples, aprofunde depois.** Entregue valor com o mínimo e **ofereça** o próximo nível — aditivo, nunca refaz.
 - **Saiu versão nova (`ATUALIZACAO_DISPONIVEL`)?** Ofereça `/atualizar` — o contexto dela não é tocado.
-- **Feedback recorrente:** três falhas comparáveis candidatam mudança pequena; nunca autoedite o motor silenciosamente.
+- **Antes de operar:** recupere até três caminhos aprovados comparáveis; falha e conversa não viram procedimento.
+- **Depois de operar:** um run aprovado pode virar procedimento candidato; três casos comparáveis
+  habilitam diff e replay antes da decisão humana.
+- **Feedback recorrente:** três falhas comparáveis candidatam correção pequena; nunca autoedite o motor silenciosamente.
 
 > **Frescor:** notas de `meu-negocio/` carregam `confirmado: <data>` (última vez que a pessoa validou) e, quando morrem, `status: superado` (nunca se deleta). Nota superada só entra em resposta como histórico, nunca como fato vigente.
 

@@ -70,7 +70,7 @@ como referência para melhorar uma decisão. Ele não substitui o contexto do se
 - `sistemas/` — resultados instalados e suas réguas.
 - `skills/` — julgamentos reutilizáveis do motor.
 - `conexoes/` — arquivos e integrações opcionais.
-- `operacao/` — o que rodou, falhou, escalou e melhorou.
+- `operacao/` — seu brief vivo, o que rodou, falhou, escalou e os caminhos aprovados que podem ser reutilizados.
 - `comunidade/inevita/` — o que recebemos da INEVITA.
 - `comunidade/minhas-contribuicoes/` — o que você pode decidir compartilhar.
 - `conhecimento/` — referências externas; `capturas/` — bruto; `privado/` — PII local.

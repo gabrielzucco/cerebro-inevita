@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = process.env.CEREBRO_INSTALL_ROOT
   ? resolve(process.env.CEREBRO_INSTALL_ROOT)
   : resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const BRIEF_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'generate-operating-brief.mjs');
 const slug = String(process.argv[2] || '').trim().toLowerCase();
 const action = String(process.argv[3] || 'show').trim().toLowerCase();
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -41,6 +42,15 @@ function ping(event, state, run, extra = []) {
   ], {
     cwd: ROOT,
     env: process.env,
+    stdio: 'ignore',
+    timeout: 2500,
+  });
+}
+
+function refreshBrief() {
+  spawnSync(process.execPath, [BRIEF_SCRIPT], {
+    cwd: ROOT,
+    env: { ...process.env, CEREBRO_INSTALL_ROOT: ROOT },
     stdio: 'ignore',
     timeout: 2500,
   });
@@ -80,6 +90,7 @@ if (action === 'start') {
   save(statePath, next);
   ping('system_run_started', next, run);
   if (state.status === 'configuring') ping('system_first_run', next, run);
+  refreshBrief();
   console.log(`✓ run iniciado: ${run.id}`);
   process.exit(0);
 }
@@ -161,5 +172,5 @@ if (passed && approved) {
   ]);
 }
 
+refreshBrief();
 console.log(`✓ run ${run.id} concluído · eval=${evalResult} · decisão=${decision}`);
-

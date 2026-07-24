@@ -6,7 +6,9 @@ import {
   renameSync,
   writeFileSync,
 } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { basename, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const MILESTONES = ['T0', 'T1', 'T2', 'T3', 'T4'];
 const INTERVENTIONS = [
@@ -19,6 +21,7 @@ const INTERVENTIONS = [
   'manual-step',
   'record-event',
 ];
+const BRIEF_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'generate-operating-brief.mjs');
 
 function fail(message) {
   console.error(`Erro: ${message}`);
@@ -83,6 +86,15 @@ function writeRun(path, value) {
   renameSync(temp, path);
 }
 
+function refreshBrief(root) {
+  spawnSync(process.execPath, [BRIEF_SCRIPT], {
+    cwd: root,
+    env: { ...process.env, CEREBRO_INSTALL_ROOT: root },
+    stdio: 'ignore',
+    timeout: 2500,
+  });
+}
+
 function deltaMs(from, to) {
   if (!from || !to) return null;
   const value = new Date(to).getTime() - new Date(from).getTime();
@@ -126,6 +138,7 @@ if (options.command === 'start') {
     interventions: [],
   };
   writeRun(path, run);
+  refreshBrief(root);
   const output = publicStatus(run);
   console.log(options.json ? JSON.stringify(output) : `✓ ${runId} · T0 registrado`);
   process.exit(0);
@@ -141,6 +154,7 @@ if (options.command === 'mark') {
   if (previous && !run.milestones[previous]) fail(`registre ${previous} antes de ${milestone}`);
   run.milestones[milestone] = isoNow();
   writeRun(path, run);
+  refreshBrief(root);
   const output = publicStatus(run);
   console.log(options.json ? JSON.stringify(output) : `✓ ${runId} · ${milestone} registrado`);
   process.exit(0);
@@ -155,6 +169,7 @@ if (options.command === 'intervention') {
   if (!kind || !/^[a-z0-9-]{3,60}$/.test(kind)) fail('use --kind com uma categoria segura');
   run.interventions.push({ at: isoNow(), kind, withinContract: !outside });
   writeRun(path, run);
+  refreshBrief(root);
   const output = publicStatus(run);
   console.log(options.json ? JSON.stringify(output) : `✓ intervenção registrada: ${kind}`);
   process.exit(0);

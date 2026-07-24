@@ -18,7 +18,8 @@ const required = [
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
-  'scripts/system-run.mjs',
+  'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
+  'scripts/test-operating-brief.mjs',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
@@ -141,6 +142,38 @@ for (const contract of [
   if (!start.includes(contract)) errors.push(`COMECE-AQUI sem ativação na mesma sessão: ${contract}`);
 }
 
+const brainContract = readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8');
+for (const contract of [
+  'brief vivo em `_HOJE.md`',
+  'recupere até três caminhos aprovados comparáveis',
+  'um run aprovado pode virar procedimento candidato',
+  'diff e replay antes da decisão humana',
+]) {
+  if (!brainContract.includes(contract)) errors.push(`CLAUDE sem contrato vivo/procedural: ${contract}`);
+}
+
+const operate = readFileSync(join(ROOT, '.claude', 'skills', 'operar', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'Recuperar caminhos que já funcionaram',
+  'três recibos aprovados',
+  'Falha não vira procedimento',
+  'procedimento candidato',
+  'replay nos casos anteriores',
+  'generate-operating-brief.mjs',
+]) {
+  if (!operate.includes(contract)) errors.push(`operar sem memória procedural: ${contract}`);
+}
+
+const reindex = readFileSync(join(ROOT, '.claude', 'skills', 'reindex', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'Memória procedural',
+  'três runs comparáveis',
+  'Candidato isolado continua candidato',
+  'generate-operating-brief.mjs',
+]) {
+  if (!reindex.includes(contract)) errors.push(`reindex sem revisão procedural: ${contract}`);
+}
+
 const discovery = readFileSync(join(ROOT, 'scripts', 'discover-context.mjs'), 'utf8');
 for (const contract of ['readOnly: true', 'nenhum conteúdo de arquivo', 'lstatSync', 'realpathSync']) {
   if (!discovery.includes(contract)) errors.push(`descoberta sem guarda: ${contract}`);
@@ -181,6 +214,27 @@ for (const contract of [
   'withinContract',
 ]) {
   if (!clock.includes(contract)) errors.push(`relógio do concierge sem guarda: ${contract}`);
+}
+
+const brief = readFileSync(join(ROOT, 'scripts', 'generate-operating-brief.mjs'), 'utf8');
+for (const contract of [
+  "'operacao', '_HOJE.md'",
+  'Nenhum conteúdo foi enviado à INEVITA',
+  'Disponível” confirma somente',
+  'Caminho bem-sucedido só vira pipeline ou skill',
+]) {
+  if (!brief.includes(contract)) errors.push(`brief operacional sem contrato: ${contract}`);
+}
+for (const script of [
+  'concierge-run.mjs',
+  'register-source.mjs',
+  'system-run.mjs',
+  'system-state.mjs',
+]) {
+  const content = readFileSync(join(ROOT, 'scripts', script), 'utf8');
+  if (!content.includes('generate-operating-brief.mjs')) {
+    errors.push(`${script} não atualiza o brief operacional`);
+  }
 }
 
 if (errors.length) {

@@ -1,5 +1,17 @@
 # Mudanças do cérebro INEVITA
 
+## v1.12.0 — 2026-07-24 · “o trabalho volta como inteligência operacional”
+- **Brief operacional vivo:** `operacao/_HOJE.md` reaparece a partir dos estados locais dos
+  sistemas, fontes registradas, decisões, execuções e melhorias — sem expor conteúdo ou caminhos.
+- **Exceção no lugar de silêncio:** fonte ausente e sistema em atenção entram automaticamente no
+  brief; registrar fonte, mudar estado e concluir run atualizam a visão sem bloquear o trabalho.
+- **Memória procedural supervisionada:** antes de operar, o cérebro procura caminhos aprovados
+  comparáveis; depois de um run bem-sucedido, pode preparar um procedimento reutilizável.
+- **Falha não ensina escondido:** só run que passou no eval e recebeu aprovação humana pode virar
+  candidato. Três casos comparáveis habilitam diff e replay; nunca promoção automática.
+- **Atualização segura:** o gerador e seus testes chegam como motor, enquanto `_HOJE.md`, recibos e
+  procedimentos continuam pertencendo ao dono do cérebro.
+
 ## v1.11.1 — 2026-07-23 · “piloto não é produto validado”
 - **Gate de publicação:** pacote técnico, referência externa e operação interna não bastam para
   entrar no catálogo público.

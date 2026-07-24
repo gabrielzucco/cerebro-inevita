@@ -51,6 +51,9 @@ try {
     'scripts/register-source.mjs',
     'scripts/install-system.mjs',
     'scripts/system-state.mjs',
+    'scripts/system-run.mjs',
+    'scripts/generate-operating-brief.mjs',
+    'scripts/test-operating-brief.mjs',
     'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   ]) {
     if (!existsSync(join(old, motorFile))) throw new Error(`motor novo não chegou: ${motorFile}`);
