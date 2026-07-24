@@ -26,6 +26,7 @@ try {
   cpSync(join(SOURCE, '.claude', 'scripts', 'update.sh'), join(old, '.claude', 'scripts', 'update.sh'));
   writeFileSync(join(old, '.cerebro', 'source'), 'REPO=teste/teste\nBRANCH=main\n');
   writeFileSync(join(old, 'VERSION'), '1.8.0\n');
+  writeFileSync(join(old, '.gitignore'), '# regra do dono\n*.local-only\n');
   for (const file of protectedFiles) {
     mkdirSync(join(old, file, '..'), { recursive: true });
     writeFileSync(join(old, file), sentinel);
@@ -54,9 +55,21 @@ try {
     'scripts/system-run.mjs',
     'scripts/generate-operating-brief.mjs',
     'scripts/test-operating-brief.mjs',
+    '.claude/skills/briefing-comercial/SKILL.md',
+    '.cerebro/private-ignore.manifest',
     'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   ]) {
     if (!existsSync(join(old, motorFile))) throw new Error(`motor novo não chegou: ${motorFile}`);
+  }
+  const gitignore = readFileSync(join(old, '.gitignore'), 'utf8');
+  for (const rule of [
+    '# regra do dono',
+    '*.local-only',
+    '.cerebro/sistemas/',
+    'sistemas/outros-instalados/*/configuracao.md',
+    'sistemas/outros-instalados/*/feedback.md',
+  ]) {
+    if (!gitignore.includes(rule)) throw new Error(`proteção local ausente: ${rule}`);
   }
   console.log(`✓ update real preservou ${protectedFiles.length} sentinelas, instalou seeds ausentes e atualizou o motor`);
 } finally {

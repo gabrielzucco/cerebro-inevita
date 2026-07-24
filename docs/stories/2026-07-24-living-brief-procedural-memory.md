@@ -23,6 +23,8 @@ fronteira local-first do Cérebro INEVITA:
 - [x] `/reindex` revisa candidatos procedurais sem promover automaticamente.
 - [x] Testes cobrem geração, privacidade, estados de atenção e preservação no update.
 - [x] `validate-product.mjs`, testes e atualização segura passam.
+- [x] QA remoto parte da v1.10.1 e recebe a skill em todos os runtimes sem expor estado privado
+      novo ao Git.
 
 ## Tarefas
 
@@ -31,6 +33,7 @@ fronteira local-first do Cérebro INEVITA:
 - [x] Implementar teste determinístico do brief.
 - [x] Atualizar skills portáveis e documentação.
 - [x] Atualizar versão/changelog e gates.
+- [x] Corrigir a regressão de upgrade encontrada depois do primeiro release remoto.
 
 ## File List
 
@@ -54,3 +57,6 @@ fronteira local-first do Cérebro INEVITA:
 - `COMECE-AQUI.md`
 - `VERSION`
 - `CHANGELOG.md`
+- `.cerebro/private-ignore.manifest`
+- `.cerebro/motor.manifest`
+- `.claude/scripts/update.sh`

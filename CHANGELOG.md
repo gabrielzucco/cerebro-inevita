@@ -1,5 +1,13 @@
 # Mudanças do cérebro INEVITA
 
+## v1.12.1 — 2026-07-24 · “instalação antiga também recebe o sistema inteiro”
+- **Upgrade multi-runtime completo:** instalações anteriores agora recebem a skill do Briefing
+  Comercial tanto em `.claude` quanto em `.agents`.
+- **Proteção privada evolutiva:** o atualizador acrescenta regras novas de privacidade ao
+  `.gitignore` sem sobrescrever regras criadas pelo dono.
+- **Regressão coberta:** o teste de atualização parte de um `.gitignore` antigo, preserva regras
+  locais e exige proteção para estado de sistemas, configuração e feedback.
+
 ## v1.12.0 — 2026-07-24 · “o trabalho volta como inteligência operacional”
 - **Brief operacional vivo:** `operacao/_HOJE.md` reaparece a partir dos estados locais dos
   sistemas, fontes registradas, decisões, execuções e melhorias — sem expor conteúdo ou caminhos.

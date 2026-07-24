@@ -20,6 +20,7 @@ const required = [
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
   'scripts/test-operating-brief.mjs',
+  '.cerebro/private-ignore.manifest',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
@@ -150,6 +151,21 @@ for (const contract of [
   'diff e replay antes da decisão humana',
 ]) {
   if (!brainContract.includes(contract)) errors.push(`CLAUDE sem contrato vivo/procedural: ${contract}`);
+}
+
+const motorManifest = readFileSync(join(ROOT, '.cerebro', 'motor.manifest'), 'utf8');
+for (const contract of [
+  '.cerebro/private-ignore.manifest',
+  '.claude/skills/briefing-comercial',
+]) {
+  if (!motorManifest.includes(contract)) errors.push(`manifesto do motor sem upgrade: ${contract}`);
+}
+const updater = readFileSync(join(ROOT, '.claude', 'scripts', 'update.sh'), 'utf8');
+for (const contract of [
+  'PRIVATE_IGNORE_MANIFEST',
+  'preserva integralmente o .gitignore do dono',
+]) {
+  if (!updater.includes(contract)) errors.push(`atualizador sem proteção incremental: ${contract}`);
 }
 
 const operate = readFileSync(join(ROOT, '.claude', 'skills', 'operar', 'SKILL.md'), 'utf8');

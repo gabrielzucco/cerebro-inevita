@@ -1,0 +1,29 @@
+# Estado privado que toda instalação precisa manter fora do Git.
+# O atualizador adiciona somente regras ausentes; nunca reescreve o .gitignore do dono.
+.cerebro/id
+.cerebro/sem-telemetria
+.cerebro/acesso-email
+.cerebro/member-id
+.cerebro/runtime
+.cerebro/concierge-runs/
+.cerebro/sistemas/
+operacao/execucoes/*
+!operacao/execucoes/_LEIA.md
+operacao/decisoes-pendentes/*
+!operacao/decisoes-pendentes/_LEIA.md
+operacao/erros/*
+!operacao/erros/_LEIA.md
+operacao/escalacoes/*
+!operacao/escalacoes/_LEIA.md
+operacao/o-que-melhorou/*
+!operacao/o-que-melhorou/_LEIA.md
+conexoes/configuradas/*
+!conexoes/configuradas/_LEIA.md
+sistemas/outros-instalados/*/configuracao.md
+sistemas/outros-instalados/*/feedback.md
+comunidade/minhas-contribuicoes/propostas/*
+!comunidade/minhas-contribuicoes/propostas/_LEIA.md
+comunidade/minhas-contribuicoes/aprovadas/*
+!comunidade/minhas-contribuicoes/aprovadas/_LEIA.md
+comunidade/minhas-contribuicoes/enviadas/*
+!comunidade/minhas-contribuicoes/enviadas/_LEIA.md

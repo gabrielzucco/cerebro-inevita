@@ -13,10 +13,12 @@ CHANGELOG.md
 .cerebro/source
 .cerebro/motor.manifest
 .cerebro/seed.manifest
+.cerebro/private-ignore.manifest
 .cerebro/acesso.yaml
 .claude/settings.json
 .claude/skills/comecar
 .claude/skills/operar
+.claude/skills/briefing-comercial
 .claude/skills/atualizar
 .claude/skills/metodo
 .claude/skills/guardar

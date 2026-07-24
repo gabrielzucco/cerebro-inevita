@@ -63,5 +63,28 @@ if [ -f "$SEED_MANIFEST" ]; then
   done < "$SEED_MANIFEST"
 fi
 
+# Versões novas podem criar estado privado em caminhos que uma instalação antiga ainda
+# não conhece. Adiciona somente regras ausentes e preserva integralmente o .gitignore do dono.
+PRIVATE_IGNORE_MANIFEST="$SRC/.cerebro/private-ignore.manifest"
+if [ -f "$PRIVATE_IGNORE_MANIFEST" ]; then
+  GITIGNORE="$ROOT/.gitignore"
+  touch "$GITIGNORE"
+  while IFS= read -r rule; do
+    [ -z "$rule" ] && continue
+    case "$rule" in \#*) continue ;; esac
+    found=false
+    while IFS= read -r existing; do
+      if [ "$existing" = "$rule" ]; then
+        found=true
+        break
+      fi
+    done < "$GITIGNORE"
+    if [ "$found" = false ]; then
+      printf '%s\n' "$rule" >> "$GITIGNORE"
+      echo "  + proteção local: $rule"
+    fi
+  done < "$PRIVATE_IGNORE_MANIFEST"
+fi
+
 echo "✓ Motor atualizado para a versão $NEW. Veja o que mudou em CHANGELOG.md."
 bash "$ROOT/.claude/scripts/ping.sh" atualizou 2>/dev/null || true
