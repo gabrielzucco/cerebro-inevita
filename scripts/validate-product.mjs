@@ -21,6 +21,7 @@ const required = [
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
   'scripts/test-operating-brief.mjs',
   '.cerebro/private-ignore.manifest',
+  '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
@@ -161,11 +162,12 @@ for (const contract of [
   if (!motorManifest.includes(contract)) errors.push(`manifesto do motor sem upgrade: ${contract}`);
 }
 const updater = readFileSync(join(ROOT, '.claude', 'scripts', 'update.sh'), 'utf8');
-for (const contract of [
-  'PRIVATE_IGNORE_MANIFEST',
-  'preserva integralmente o .gitignore do dono',
-]) {
+for (const contract of ['ensure-private-ignore.sh', 'preserva integralmente o']) {
   if (!updater.includes(contract)) errors.push(`atualizador sem proteção incremental: ${contract}`);
+}
+const legacyPing = readFileSync(join(ROOT, '.claude', 'scripts', 'ping.sh'), 'utf8');
+if (!legacyPing.includes('ensure-private-ignore.sh')) {
+  errors.push('ping legado não fecha proteção privada na primeira passagem');
 }
 
 const operate = readFileSync(join(ROOT, '.claude', 'skills', 'operar', 'SKILL.md'), 'utf8');

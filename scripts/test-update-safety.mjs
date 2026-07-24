@@ -71,6 +71,33 @@ try {
   ]) {
     if (!gitignore.includes(rule)) throw new Error(`proteção local ausente: ${rule}`);
   }
+
+  // Compatibilidade de primeira passagem: um atualizador antigo copia os scripts
+  // novos, mas só executa o código novo quando chama ping.sh no final.
+  const legacy = join(sandbox, 'legacy-first-pass');
+  mkdirSync(join(legacy, '.claude'), { recursive: true });
+  mkdirSync(join(legacy, '.cerebro'), { recursive: true });
+  cpSync(join(SOURCE, '.claude', 'scripts'), join(legacy, '.claude', 'scripts'), { recursive: true });
+  cpSync(
+    join(SOURCE, '.cerebro', 'private-ignore.manifest'),
+    join(legacy, '.cerebro', 'private-ignore.manifest'),
+  );
+  writeFileSync(join(legacy, '.gitignore'), '# regra legada do dono\n*.nao-enviar');
+  execFileSync('bash', [join(legacy, '.claude', 'scripts', 'ping.sh'), 'atualizou'], {
+    env: { ...process.env, CEREBRO_TELEMETRY: 'off' },
+    stdio: 'pipe',
+  });
+  const legacyIgnore = readFileSync(join(legacy, '.gitignore'), 'utf8');
+  for (const rule of ['# regra legada do dono', '*.nao-enviar', '.cerebro/sistemas/']) {
+    if (!legacyIgnore.includes(rule)) throw new Error(`migração na primeira passagem ausente: ${rule}`);
+  }
+  execFileSync('bash', [join(legacy, '.claude', 'scripts', 'ping.sh'), 'atualizou'], {
+    env: { ...process.env, CEREBRO_TELEMETRY: 'off' },
+    stdio: 'pipe',
+  });
+  if (readFileSync(join(legacy, '.gitignore'), 'utf8') !== legacyIgnore) {
+    throw new Error('migração de privacidade não é idempotente');
+  }
   console.log(`✓ update real preservou ${protectedFiles.length} sentinelas, instalou seeds ausentes e atualizou o motor`);
 } finally {
   rmSync(sandbox, { recursive: true, force: true });

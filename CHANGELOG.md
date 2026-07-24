@@ -1,5 +1,13 @@
 # Mudanças do cérebro INEVITA
 
+## v1.12.2 — 2026-07-24 · “proteção privada já no primeiro upgrade”
+- **Compatibilidade retroativa real:** quando um atualizador antigo copia o motor novo, o `ping`
+  final completa a migração de privacidade ainda naquela primeira execução.
+- **Sem apagar regra do dono:** as novas proteções são acrescentadas por um helper idempotente;
+  regras locais permanecem intactas e repetir o processo não duplica linhas.
+- **Regressão reproduzida:** o teste simula exatamente a passagem em que código legado chama o
+  script novo e bloqueia nova release se o estado dos sistemas puder aparecer no Git.
+
 ## v1.12.1 — 2026-07-24 · “instalação antiga também recebe o sistema inteiro”
 - **Upgrade multi-runtime completo:** instalações anteriores agora recebem a skill do Briefing
   Comercial tanto em `.claude` quanto em `.agents`.
