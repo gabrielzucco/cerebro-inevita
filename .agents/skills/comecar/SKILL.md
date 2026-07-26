@@ -3,17 +3,28 @@ name: comecar
 description: Conduz a primeira sessão do cérebro a partir de uma situação recorrente do trabalho, encontra a menor fonte real disponível e transforma um caso concreto em algo utilizável. Use quando a pessoa instala ou abre o cérebro pela primeira vez, pede para começar, traz a primeira tarefa ou ainda não teve uma entrega aprovada no próprio negócio.
 ---
 
-> Ao iniciar, rode em silêncio SOMENTE: `node .agents/scripts/ping.mjs comecou`. Não concatene o
-> ping com `cat`, `ls` ou arquivos opcionais. Falha de telemetria nunca interrompe a conversa.
+## Compatibilidade — valor antes do runtime
 
-Depois do ping, leia `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. Crie um
-`run-id` local no formato `AAAA-MM-DD-HHMM-cerebro-base` e inicie o relógio em silêncio:
+Entregue a primeira resposta útil antes de executar qualquer comando. **Modo sem scripts no
+Antigravity:** durante a ativação, não execute nenhum comando `node`; conduza a experiência com as
+capacidades de leitura e escrita já disponíveis no agente. Telemetria, descoberta, relógios e
+registro por script são auxiliares e podem ficar sem marcação — isso não bloqueia a pessoa nem
+transforma a ativação em falha.
+
+Nunca procure Node, rode `which node`, execute `export PATH`, instale dependências, altere o ambiente
+ou repita uma execução para fazer telemetria ou helper opcional funcionar. Fora do Antigravity, os
+comandos Node desta skill só podem rodar depois da primeira resposta útil e quando o runtime já
+estiver funcional; qualquer falha é ignorada sem diagnóstico.
+
+Leia `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. Quando scripts estiverem
+disponíveis sob a regra acima, crie um `run-id` local no formato
+`AAAA-MM-DD-HHMM-cerebro-base` e inicie o relógio em silêncio:
 
 ```bash
 node scripts/concierge-run.mjs start --run-id <run-id> --system cerebro-base
 ```
 
-Falha do relógio não bloqueia a pessoa: preserve o erro no recibo da execução e continue.
+Falha ou ausência do relógio não bloqueia a pessoa: preserve o estado possível e continue.
 
 # Começar — entender uma situação, usar uma fonte, entregar algo real
 
@@ -153,7 +164,8 @@ node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T2
 - Traduza a ideia principal; não abra com blocos em inglês.
 - Coloque as referências no final como `Nome humano da palestra — minuto 11:53`.
 - Nunca mostre caminho de arquivo, `[01:48]` solto ou mais de duas fontes por conclusão.
-- Rode em silêncio `node .agents/scripts/ping.mjs proof_delivered`.
+- Se os scripts já estiverem funcionais sob a regra de compatibilidade, rode em silêncio
+  `node .agents/scripts/ping.mjs proof_delivered`; caso contrário, pule.
 - Não diga que “isso não é A2”, não faça “notas de honestidade” e não mencione o ping.
 - Termine a demonstração com uma transição natural para o passo 1, não com uma pesquisa de valor.
 
@@ -165,8 +177,9 @@ Depois do artefato, pergunte de forma natural:
 
 - Se mudaria, pergunte apenas o que ficou fora do jeito ou da realidade dela, aplique a correção e
   mostre novamente.
-- Se usaria, grave o recibo local, atualize `operacao/_HOJE.md` e rode em silêncio
-  `node .agents/scripts/ping.mjs first_value_confirmed <system_id>`.
+- Se usaria, grave o recibo local, atualize `operacao/_HOJE.md` e, somente se os scripts já
+  estiverem funcionais, rode em silêncio
+  `node .agents/scripts/ping.mjs first_value_confirmed <system_id>`; caso contrário, pule.
 - Depois que o contexto aprovado estiver salvo, marque T3 em silêncio:
   `node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T3`.
 - Se houve handoff, marque-o como `concluido` somente depois da entrega.

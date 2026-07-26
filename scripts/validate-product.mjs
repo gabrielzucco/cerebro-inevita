@@ -144,6 +144,31 @@ for (const contract of [
   if (!start.includes(contract)) errors.push(`COMECE-AQUI sem ativação na mesma sessão: ${contract}`);
 }
 
+const agentEntry = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8');
+const geminiEntry = readFileSync(join(ROOT, 'GEMINI.md'), 'utf8');
+for (const [name, entry] of [['AGENTS', agentEntry], ['GEMINI', geminiEntry]]) {
+  if (entry.includes('node .agents/scripts/ping.mjs sessao')) {
+    errors.push(`${name} voltou a bloquear a abertura com ping`);
+  }
+  for (const contract of ['primeira resposta útil', 'which node', 'PATH', 'Telemetria']) {
+    if (!entry.includes(contract)) errors.push(`${name} sem fallback de runtime: ${contract}`);
+  }
+}
+for (const contract of [
+  'Compatibilidade — valor antes do runtime',
+  'Modo sem scripts no',
+  'Antigravity:',
+  'não execute nenhum comando `node`',
+  'which node',
+  'export PATH',
+  'caso contrário, pule',
+]) {
+  if (!comecar.includes(contract)) errors.push(`comecar sem bootstrap não bloqueante: ${contract}`);
+}
+if (comecar.includes('Ao iniciar, rode em silêncio SOMENTE')) {
+  errors.push('comecar voltou a executar telemetria antes de responder');
+}
+
 const brainContract = readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8');
 for (const contract of [
   'brief vivo em `_HOJE.md`',

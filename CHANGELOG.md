@@ -1,5 +1,15 @@
 # Mudanças do cérebro INEVITA
 
+## v1.12.3 — 2026-07-25 · “a pessoa vem antes da telemetria”
+- **Antigravity sem tela travada:** nenhum agente executa ping ao abrir a sessão; a primeira resposta
+  útil vem antes de qualquer helper técnico.
+- **Modo sem scripts:** a ativação no Antigravity continua por leitura e escrita de arquivos mesmo
+  quando Node não está disponível no ambiente.
+- **Sem caça ao runtime:** telemetria opcional nunca autoriza `which node`, alteração de `PATH`,
+  instalação de dependência, diagnóstico ou repetição.
+- **Regressão bloqueada:** o gate do produto falha se o ping voltar a ser obrigatório na abertura
+  ou se a skill perder o fallback.
+
 ## v1.12.2 — 2026-07-24 · “proteção privada já no primeiro upgrade”
 - **Compatibilidade retroativa real:** quando um atualizador antigo copia o motor novo, o `ping`
   final completa a migração de privacidade ainda naquela primeira execução.
