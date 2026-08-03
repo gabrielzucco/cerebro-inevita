@@ -7,6 +7,9 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 |---|---|
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
 | `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |
+
+Pacotes entregues fora do catálogo público (pilotos de laboratório) carregam a própria skill;
+o instalador a adiciona aos dois runtimes junto com o pacote.
 | `call` | transforma uma transcrição em decisões, ações e memória |
 | `guardar` | transforma fonte real em átomo aprovado |
 | `daily` | fecha o dia com julgamento ainda quente |

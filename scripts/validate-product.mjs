@@ -20,6 +20,7 @@ const required = [
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
   'scripts/test-operating-brief.mjs',
+  'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
@@ -34,6 +35,21 @@ const required = [
 
 for (const item of required) {
   if (!existsSync(join(ROOT, item))) errors.push(`faltando: ${item}`);
+}
+
+// Todo pacote presente em sistemas-disponiveis precisa estar completo — inclusive pacotes
+// entregues fora do catálogo público, quando dropados na árvore para comissionamento/RC.
+const availablePackagesRoot = join(ROOT, 'comunidade', 'inevita', 'sistemas-disponiveis');
+if (existsSync(availablePackagesRoot)) {
+  for (const entry of readdirSync(availablePackagesRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    for (const file of ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md',
+      'changelog.md', 'feedback.template.md', 'configuracao.template.md']) {
+      if (!existsSync(join(availablePackagesRoot, entry.name, file))) {
+        errors.push(`pacote ${entry.name} incompleto: ${file}`);
+      }
+    }
+  }
 }
 function files(root, base = root) {
   if (!existsSync(root)) return [];

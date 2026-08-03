@@ -61,5 +61,9 @@ Depois dos gates e da resposta humana, conclua:
 `node scripts/system-run.mjs briefing-comercial-inteligente complete --eval=<pass|fail> --decision=<approved|changes_requested|rejected>`
 
 O script cria o `run-id`, registra o recibo local e só ativa a instalação quando eval e humano
-aprovam. Falha de fonte, permissão ou régua vira `needs_attention`; pacote copiado nunca equivale a
-sistema ativo.
+aprovam. Se a pessoa confirmar que **usou ou usaria o briefing na reunião real**, registre o valor:
+
+`node scripts/system-run.mjs briefing-comercial-inteligente confirm-value`
+
+Run aprovado sem essa confirmação não conta como first value. Falha de fonte, permissão ou régua
+vira `needs_attention`; pacote copiado nunca equivale a sistema ativo.

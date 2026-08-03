@@ -95,7 +95,30 @@ if (action === 'start') {
   process.exit(0);
 }
 
-if (action !== 'complete') fail('ação válida: show, start ou complete');
+// First value NÃO deriva de run aprovado: exige confirmação explícita de que o responsável
+// usaria/usou o artefato na operação real. Run de configuração aprovado nunca conta como valor.
+if (action === 'confirm-value') {
+  if (state.status !== 'active') fail(`confirme valor depois de um run aprovado (estado atual: ${state.status})`);
+  if (state.first_value_confirmed) {
+    console.log('✓ first value já estava confirmado');
+    process.exit(0);
+  }
+  const now = new Date().toISOString();
+  const run = state.last_run || { id: '', eval_version: '' };
+  const next = {
+    ...state,
+    first_value_confirmed: true,
+    first_value_at: now,
+    updated_at: now,
+  };
+  save(statePath, next);
+  ping('system_value_confirmed', next, run, ['--eval-passed=true', '--human-decision=approved']);
+  refreshBrief();
+  console.log('✓ first value confirmado pelo responsável');
+  process.exit(0);
+}
+
+if (action !== 'complete') fail('ação válida: show, start, complete ou confirm-value');
 if (state.current_run?.status !== 'started') fail('não há run iniciado para concluir');
 
 const evalResult = option('eval');
@@ -103,6 +126,39 @@ const decision = option('decision');
 if (!EVAL_RESULTS.has(evalResult)) fail('informe --eval=pass ou --eval=fail');
 if (!DECISIONS.has(decision)) {
   fail('informe --decision=approved, --decision=changes_requested ou --decision=rejected');
+}
+// Sistema que declara recibo E0–E7 só fecha eval=pass com recibo PREENCHIDO — existir não basta:
+// caminho em operacao/execucoes, run atual referenciado, E0–E7 presentes, zero placeholders,
+// E5 aprovado e decisão coerente com o comando.
+const receiptOption = option('receipt');
+if (evalResult === 'pass'
+  && existsSync(join(ROOT, 'sistemas', 'outros-instalados', slug, 'recibo-evals.template.md'))) {
+  if (!receiptOption) fail('este sistema exige recibo E0–E7: informe --receipt=<recibo preenchido>');
+  const receiptPath = resolve(ROOT, receiptOption);
+  if (!receiptPath.startsWith(join(ROOT, 'operacao', 'execucoes') + '/')) {
+    fail('o recibo preenchido mora em operacao/execucoes/ — o template do pacote não é recibo');
+  }
+  if (!existsSync(receiptPath)) fail(`recibo não encontrado: ${receiptOption}`);
+  // Linhas de citação ("> ...") são instrução herdada do template, não conteúdo do recibo —
+  // sem isso, seguir "copie este template" ao pé da letra produz um recibo inválido.
+  const receipt = readFileSync(receiptPath, 'utf8')
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('>'))
+    .join('\n');
+  const problems = [];
+  if (!receipt.includes(state.current_run.id)) problems.push(`não referencia o run atual ${state.current_run.id}`);
+  for (const dim of ['E0', 'E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7']) {
+    if (!receipt.includes(dim)) problems.push(`dimensão ausente: ${dim}`);
+  }
+  if (receipt.includes('<run-id>') || receipt.includes('·')) {
+    problems.push('contém placeholders do template (escolha "·" não resolvida)');
+  }
+  const e5Line = receipt.split('\n').find((line) => line.includes('E5'));
+  if (!e5Line || !e5Line.includes('passou') || e5Line.includes('falhou')) {
+    problems.push('E5 (segurança e fronteira) precisa estar explicitamente aprovado');
+  }
+  if (!receipt.includes(decision)) problems.push(`decisão do recibo não bate com --decision=${decision}`);
+  if (problems.length > 0) fail(`recibo E0–E7 inválido: ${problems.join(' · ')}`);
 }
 const durationValue = Number(option('duration-ms'));
 const durationMs = Number.isInteger(durationValue) && durationValue >= 0
@@ -121,7 +177,7 @@ const run = {
 };
 const runCount = Number(state.run_count || 0) + 1;
 const approvedRunCount = Number(state.approved_run_count || 0) + (passed && approved ? 1 : 0);
-const firstValueConfirmed = Boolean(state.first_value_confirmed) || (passed && approved);
+const firstValueConfirmed = Boolean(state.first_value_confirmed);
 const nextStatus = passed && approved ? 'active' : 'needs_attention';
 const next = {
   ...state,
@@ -131,8 +187,9 @@ const next = {
   run_count: runCount,
   approved_run_count: approvedRunCount,
   first_value_confirmed: firstValueConfirmed,
-  first_value_at: state.first_value_at || (passed && approved ? now : null),
-  repeated_use_at: state.repeated_use_at || (passed && approved && runCount > 1 ? now : null),
+  first_value_at: state.first_value_at || null,
+  repeated_use_at: state.repeated_use_at
+    || (firstValueConfirmed && passed && approved && runCount > 1 ? now : null),
   updated_at: now,
 };
 save(statePath, next);
@@ -160,11 +217,6 @@ ping('system_run_completed', next, run, [
   `--duration-ms=${durationMs}`,
 ]);
 if (passed && approved) {
-  ping('system_value_confirmed', next, run, [
-    '--eval-passed=true',
-    '--human-decision=approved',
-    `--duration-ms=${durationMs}`,
-  ]);
   if (state.status !== 'active') ping('system_activated', next, run);
 } else {
   ping('system_needs_attention', next, run, [

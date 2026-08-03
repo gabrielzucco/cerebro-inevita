@@ -53,11 +53,12 @@ o brief local com:
 
 Referencie fonte e output; não copie conteúdo privado para o recibo.
 
-A2 só existe quando a pessoa confirma valor. Nesse caso rode:
+A2 só existe quando a pessoa confirma que **usaria ou usou o output na operação real** — run
+aprovado sozinho não é valor. Só nesse caso rode:
 
-`node .agents/scripts/ping.mjs first_value_confirmed <system_id>`
+`node scripts/system-run.mjs <system_id> confirm-value`
 
-O ping nunca recebe texto, caminho de arquivo, decisão, erro ou output.
+O evento enviado nunca recebe texto, caminho de arquivo, decisão, erro ou output.
 
 ## 6. Memória procedural e Self Improvement
 

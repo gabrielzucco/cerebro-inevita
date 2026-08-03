@@ -1,5 +1,47 @@
 # Mudanças do cérebro INEVITA
 
+## v1.13.0 — 2026-08-03 · “o motor aprende a receber sistemas entregues em mãos”
+
+- **Pacote fora do catálogo:** um sistema pode ser entregue no comissionamento (pilotos de
+  laboratório) em vez de distribuído a todos — o instalador aceita qualquer pacote presente em
+  `sistemas-disponiveis/`, e pacote gated pode carregar a própria skill, instalada nos dois
+  runtimes junto com o sistema.
+- **Experimento com pré-registro de verdade:** pacotes podem declarar `experimento.template.md`
+  — arquivo próprio, append-only, instalado como `experimento.md` e protegido do Git como
+  configuração e feedback, inclusive em instalações antigas via atualizador.
+- **Instalador honesto para qualquer pacote:** a entrada de catálogo usa o nome do manifest
+  (antes hardcodava “Briefing Comercial Inteligente”) e templates novos instalam sem quebrar
+  pacotes antigos.
+- **Regressão dinâmica:** o teste de instalação roda o ciclo completo em todo pacote presente na
+  árvore e bloqueia release se configuração, feedback, experimento ou skill forem tratados
+  errado; a validação do produto exige estrutura completa de qualquer pacote dropado.
+- **Versão mínima enforçada:** o instalador compara `minimum_brain_version` com o VERSION do
+  destino ANTES de copiar e recusa cérebro incompatível — a declaração deixou de ser decorativa.
+- **Instalação volta a se reportar — sem trair "a pessoa vem antes da telemetria":** a v1.12.3
+  removeu o único ping incondicional do onboarding e, como `instalou` sempre foi efeito
+  colateral do PRIMEIRO ping, instalação nova ficou invisível de 26/07 em diante (apagão
+  descoberto no dogfood de 03/08). O ping agora dispara **depois** da primeira entrega útil na
+  skill de começo — nunca na abertura — numa única tentativa silenciosa: sem Node, pula sem
+  procurar runtime, sem PATH e sem diagnóstico. Antigravity segue destravado; a abertura segue
+  limpa; o gate anti-regressão da v1.12.3 segue passando.
+- **Costura de identidade no comissionamento:** `install-system.mjs --member-id=<uuid>` grava o
+  member-id do participante em `.cerebro/member-id`. Pacote de acesso restrito
+  (`access_mode: approved_participants`) recusa instalação sem member-id — sem costura não há
+  como contar cérebros distintos nem atribuir telemetria. Instalação já atribuída NUNCA é
+  reatribuída a outro member-id: o instalador falha e exige base limpa.
+- **First value é confirmação, não efeito colateral:** run aprovado ativa o sistema, mas
+  `first_value_confirmed` só existe via `system-run.mjs <sistema> confirm-value`, depois que o
+  responsável confirma uso real; `system_value_confirmed` só dispara aí.
+- **Recibo E0–E7 opt-in por pacote:** sistema que declara `recibo-evals.template.md` não fecha
+  `eval=pass` sem `--receipt=<recibo preenchido>` — "passou" deixa de ser declaração solta.
+- **Pré-registro selado por hash e POR EXPERIMENTO:** `system-experiment.mjs freeze/verify` sela
+  a região imutável (`### Pré-registro` → `### Emendas`) com lock por `experiment-id` — estado
+  operacional fica fora do hash, EXP-002 congela sem conflitar com EXP-001, template vazio é
+  recusado, e edição retroativa de critério é denunciada.
+- **Recibo E0–E7 validado por conteúdo:** não basta existir — o `complete` exige recibo em
+  `operacao/execucoes/`, referenciando o run atual, com E0–E7 presentes, zero placeholders do
+  template, E5 explicitamente aprovado e decisão coerente com o comando.
+
 ## v1.12.3 — 2026-07-25 · “a pessoa vem antes da telemetria”
 - **Antigravity sem tela travada:** nenhum agente executa ping ao abrir a sessão; a primeira resposta
   útil vem antes de qualquer helper técnico.

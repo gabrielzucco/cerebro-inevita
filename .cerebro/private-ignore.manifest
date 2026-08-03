@@ -21,6 +21,8 @@ conexoes/configuradas/*
 !conexoes/configuradas/_LEIA.md
 sistemas/outros-instalados/*/configuracao.md
 sistemas/outros-instalados/*/feedback.md
+sistemas/outros-instalados/*/experimento.md
+sistemas/outros-instalados/*/experimentos/
 comunidade/minhas-contribuicoes/propostas/*
 !comunidade/minhas-contribuicoes/propostas/_LEIA.md
 comunidade/minhas-contribuicoes/aprovadas/*

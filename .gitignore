@@ -1,3 +1,7 @@
+# Pacotes gated (pilotos de laboratório) são entregues no comissionamento,
+# nunca commitados neste repo público. Trava contra `git add -A` acidental.
+comunidade/inevita/sistemas-disponiveis/geracao-demanda/
+
 # PII e material BRUTO nunca entram no git — ficam só na tua máquina.
 # As pastas existem no pacote (com _LEIA.md), mas o que VOCÊ colocar nelas fica de fora do git.
 privado/*
@@ -35,6 +39,8 @@ conexoes/configuradas/*
 !conexoes/configuradas/_LEIA.md
 sistemas/outros-instalados/*/configuracao.md
 sistemas/outros-instalados/*/feedback.md
+sistemas/outros-instalados/*/experimento.md
+sistemas/outros-instalados/*/experimentos/
 comunidade/minhas-contribuicoes/propostas/*
 !comunidade/minhas-contribuicoes/propostas/_LEIA.md
 comunidade/minhas-contribuicoes/aprovadas/*
