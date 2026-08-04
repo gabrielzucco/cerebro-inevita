@@ -1,8 +1,8 @@
 ---
 tipo: metodo
-versao: 1.0
-publicado: 2026-07-09
-origem: "condensado das palestras do AI Engineer World's Fair 2026 + prática validada nos cofres da INEVITA — toda citação com fonte e minutagem"
+versao: 2.0
+publicado: 2026-08-04
+origem: "condensado das palestras do AI Engineer World's Fair 2026 + prática validada nos cofres da INEVITA — toda citação com fonte e minutagem; a v2 acrescenta a camada de sistemas e a voz do fundador"
 ---
 
 # O MÉTODO COMPLETO — Engenharia de Contexto
@@ -29,8 +29,11 @@ E mais fundo ainda — contexto não é só vantagem operacional, é patrimônio
 
 **Engenharia de Contexto** é a disciplina de transformar o que você sabe — e o que o teu negócio gera todo dia — em estrutura que a inteligência artificial opera com precisão. Numa frase pro leigo: **fazer a IA trabalhar com o que só você tem.**
 
-Você já sentiu o problema, mesmo sem esse nome. É a IA que te devolve template. É explicar teu negócio de novo, toda vez, do zero. É a resposta genérica que serve pra qualquer um — logo, não serve pra você. Este documento ensina o método inteiro pra sair disso: os fundamentos (por que funciona), o mapa (onde cada coisa mora), o ciclo (o que se faz, em que ritmo), o contrato (as regras que não se quebram), os erros, os resultados e pra onde isso vai.
+Você já sentiu o problema, mesmo sem esse nome. É a IA que te devolve template. É explicar teu negócio de novo, toda vez, do zero. É a resposta genérica que serve pra qualquer um — logo, não serve pra você. Este documento ensina o método inteiro pra sair disso: os fundamentos (por que funciona), o mapa (onde cada coisa mora), o ciclo (o que se faz, em que ritmo), o contrato (as regras que não se quebram), os erros, os resultados, os sistemas (quando o ciclo vira máquina) e pra onde isso vai.
 
+Eu passei dias dentro do maior evento de IA do mundo esperando ouvir a discussão que eu achava que dominaria tudo: qual modelo é melhor. Ela nunca veio. Ninguém ali gastava um minuto com isso — pra quem opera IA em escala, o modelo já virou commodity: todo mundo tem o mesmo. A briga inteira era outra, e quando eu percebi qual era, não consegui mais desver: **contexto**. O teu contexto ninguém tem, e não tem como recuperar se você não construir. É o último fosso. Este documento é o que eu trouxe de lá.
+
+— Gabriel Zucco
 
 ---
 
@@ -208,6 +211,9 @@ Menos de uma hora por semana de ritual deliberado. O resto é infraestrutura e c
 
 Uma regra fina que economiza horas: **agregados nascem do destilado, nunca da íntegra.** O resumo da semana nasce das dailies — não de reler as transcrições da semana. A daily já extraiu o julgamento quente; reler íntegras refaz o trabalho com julgamento pior. E se o resumo semanal sente falta de algo, o diagnóstico é claro: a daily está rasa — conserta a daily (fundamento 5: o sistema, não a resposta).
 
+Semana passada eu vivi o antes-e-depois em 48 horas. No sábado, o processo de tráfego da nossa operação morava na minha cabeça — eu me ausentei um dia e a operação rodou sem critério; custou mais de mil reais. Na segunda, o processo estava escrito no cérebro: as regras de decisão, a régua de cada experimento, o log de cada mudança. Quem executa agora é a IA — e o meu sócio não precisa "aprender o processo", porque o processo saiu da minha cabeça. Foi a frase que eu disse na hora, e é o que este método faz: *"isso é um puta case — o processo tá na minha cabeça… agora quem executa todo o processo é IA. O processo saiu da minha cabeça."*
+
+— Gabriel Zucco
 
 ---
 
@@ -301,10 +307,65 @@ Três resultados possíveis, três ações: **subiu** → o ciclo está funciona
 
 E a imagem de palco que resume o que você está construindo — o **funcionário novo**: em toda empresa, o novato sugere algo e ouve "já tentamos isso há dois meses, não funcionou por causa de X". O cérebro maduro dá essa resposta na hora: *"'yes, we considered that two months ago'... this is the context, this is the history, now let's go from here"* `[Agent Memory @ 01:53]`. A tua IA deixa de ser o estagiário eterno que esquece tudo a cada conversa.
 
+Fecho esta parte com o placar mais recente da casa. Em 4 de agosto de 2026 eu rodei o primeiro Teste do Cérebro da INEVITA: cinco perguntas de sócio — a maior alavanca de crescimento agora, o que trava a ativação, que decisão de 60 dias atrás a gente reverteria, o que para se eu sumir uma semana, qual promessa está em risco. As cinco respostas vieram no nível **sócio**: com número, com fonte, com data. E uma delas trouxe o que eu não tinha pedido — o cérebro me apontou, com prova e prazo, uma promessa nossa que estava em risco de atrasar. Doeu. E virou a primeira coisa da minha lista naquele dia. É isso que este método constrói: não uma IA que te elogia — uma que te conta o que você precisa ouvir.
+
+— Gabriel Zucco
 
 ---
 
-## PARTE 7 · PARA ONDE VAI
+## PARTE 7 · OS SISTEMAS — quando o ciclo vira máquina
+
+Tudo até aqui é o método operado por você: capturar, destilar, estruturar, operar, medir. Esta parte é o **segundo andar** — o que acontece quando um resultado do teu negócio importa tanto que passa a rodar o ciclo inteiro como **sistema**: com pipeline documentado, régua definida antes do dado e aprendizado que volta pra dentro.
+
+### O que é um sistema
+
+Um sistema é **um resultado que a empresa sabe produzir — com o caminho escrito.** Não é uma pasta nem uma ferramenta: é o pacote de cinco coisas que transforma "alguém aqui sabe fazer" em "a empresa sabe fazer":
+
+```
+RESULTADO     → o que ele entrega, em uma frase (ex.: "call comercial vira decisão registrada")
+PIPELINE      → o caminho: quais fontes entram, o que sai, em que ordem
+CONFIGURAÇÃO  → o contexto do TEU negócio que o sistema precisa (o que só você preenche)
+RÉGUA         → como se mede se a entrega prestou — definida ANTES de rodar
+FEEDBACK      → o que cada execução ensinou; é o que faz a próxima rodar melhor
+```
+
+O teste de maturidade é um só: **se a pessoa que opera o sistema sair amanhã, a empresa continua sabendo?** Se a resposta depende da memória de alguém, você tem um talento — não um sistema.
+
+### Um sistema real, de dentro da nossa operação
+
+Não é teoria — é como a INEVITA opera o próprio funil, contado no nosso grupo:
+
+> *"Hoje a gente conectou o nosso cérebro [...] às transcrições dos anúncios, transcrições da VSL, [...] os dados do funil, as nossas reuniões, as tarefas. E aí a IA consegue cruzar o que o anúncio prometeu, o que a VSL falou, onde as pessoas abandonaram, quem está avançando no funil, quais decisões a gente tomou — e a partir disso identifica o principal gargalo, propõe uma hipótese e monta um experimento. Depois que a gente aprova, ela executa e acompanha, e o resultado volta para o cérebro e melhora a próxima decisão."* `[Gabriel, grupo da comunidade @ 02/08]`
+
+E a consequência, seis meses depois:
+
+> *"Se alguém perguntar por que a gente baixou o orçamento de um anúncio, por que a gente mudou uma VSL ou onde as pessoas pararam de avançar no funil — isso não depende mais da memória de ninguém, porque está tudo documentado com o contexto."* `[Gabriel, grupo da comunidade @ 02/08]`
+
+Repare no desenho: as fontes já existiam (anúncios, vídeo, funil, reuniões). O sistema não criou dado novo — **costurou o que a empresa já gerava** e fechou o circuito: gargalo → hipótese → experimento → aprovação humana → execução → resultado de volta no cérebro.
+
+### O experimento — decisão de negócio com régua selada
+
+Toda mudança que você faz no negócio — subir orçamento, trocar um vídeo, mexer no preço — é um experimento, declarado ou não. A diferença entre operação madura e achismo é **quando a régua é escrita**:
+
+**Critério antes do dado.** O experimento se registra ANTES de rodar: qual a hipótese, qual métrica decide, qual número mata ou aprova. Depois que o dado chega, quem lê **preenche o resultado — não edita o critério.** Régua escrita depois do resultado não é régua: é justificativa. (É a versão de negócio do fundamento 7 — e a razão de ser da Lei 11, abaixo.)
+
+O ganho composto vem do registro: cada experimento — vencedor ou perdedor — vira átomo com hipótese, número e decisão. O gestor de tráfego que sai da equipe leva as mãos, não o critério. O critério ficou.
+
+### O recibo — "passou" deixa de ser declaração
+
+No método individual, a régua é o Teste do Cérebro: 5 perguntas, uma vez por mês, você julga. No sistema, a régua cresce e vira **recibo de execução**: o ciclo só fecha quando a verificação foi preenchida de verdade — com o resultado apontado, a avaliação feita e a **decisão humana registrada**. Sem recibo, não fechou. É a Lei 8 aplicada à operação: "passou" não é uma frase que se diz, é um portão que se atravessa — e portão, como o palco avisou, *"if the gate can be misused, it will"* `[gates talk @ 00:19]`.
+
+### O humano continua no gate
+
+Nada disso remove você da cadeia — muda ONDE você fica. A IA identifica, propõe, executa e registra; **aprovar continua sendo seu**: o experimento só sobe depois do teu "vai", o sistema só se declara valioso depois que quem usa confirma a primeira entrega real. É o mesmo mecanismo do destilar (*"human promotions = the training signal"* `[Agent Memory @ 15:08]`), operando em escala de empresa: teu julgamento sai de dentro das tarefas e sobe pros portões.
+
+### A lei que os sistemas acrescentam ao contrato
+
+**Lei 11 — Critério vem antes do dado.** Experimento sem régua pré-registrada é opinião com gráfico. A régua se escreve antes de rodar; o resultado se preenche depois; **ninguém edita o critério no meio.**
+
+---
+
+## PARTE 8 · PARA ONDE VAI
 
 ### As 3 altitudes
 
@@ -326,9 +387,11 @@ Aqui vai uma boa notícia estrutural: o mercado inteiro está convergindo pra um
 
 O fecho do evento apontou pra frente: *"AI makes individuals faster. Shared memory makes teams faster."* `[No Memory No Harness @ 19:13]`. A IA acelera o indivíduo; a memória compartilhada acelera o grupo. Um founder com cérebro é rápido. Uma comunidade de founders onde cada aprendizado destilado circula — o erro que um cometeu vira átomo que todos consultam — é outra categoria de velocidade. É a fronteira onde este método está sendo empurrado agora.
 
-### Os próximos cadernos
+### Dos cadernos aos sistemas
 
-Este documento é o método — deliberadamente independente de segmento, porque o fundamento não muda: contexto é a vantagem, seja você agência, e-commerce ou SaaS. O que muda é **onde dói primeiro e o que capturar primeiro**. As aplicações por segmento — engenharia de contexto pra **marketing** (o acervo de copy que compõe), pra **produto** (a voz do cliente destilada), pra **vendas** (cada call virando inteligência de funil) — são os próximos cadernos desta série.
+Este documento é o método — deliberadamente independente de segmento, porque o fundamento não muda: contexto é a vantagem, seja você agência, e-commerce ou SaaS. O que muda é **onde dói primeiro e o que capturar primeiro**.
+
+Na primeira versão deste documento, as aplicações por área — marketing, produto, vendas — eram promessa: "os próximos cadernos". A promessa mudou de forma: **as aplicações não estão virando texto, estão virando sistemas instaláveis** (Parte 7) — o resultado, o pipeline, a régua e o feedback empacotados, prontos pra receber a configuração do TEU negócio. O primeiro deles — **geração de demanda**, o circuito de funil que você leu na Parte 7 — já roda em laboratório com empresas da comunidade, e é assim que os próximos nascem: rodando de verdade numa operação real antes de chegar em você.
 
 ### O fecho
 
@@ -342,4 +405,4 @@ O modelo é de todos. **O contexto é teu.** O método é este. Comece pela prim
 
 ---
 
-*Síntese em uma linha: **capture tudo, destile quente, opere só o citado, indexe por tempo-tema-pessoa, meça por mês — e o bruto dorme no arquivo esperando modelos melhores.***
+*Síntese em uma linha: **capture tudo, destile quente, opere só o citado, indexe por tempo-tema-pessoa, meça por mês — e o bruto dorme no arquivo esperando modelos melhores. Quando um resultado importa de verdade, vire-o sistema: régua antes do dado, recibo antes do "pronto".***

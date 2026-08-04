@@ -1,5 +1,21 @@
 # Mudanças do cérebro INEVITA
 
+## v1.14.0 — 2026-08-04 · “o método ganha o segundo andar”
+
+- **MÉTODO COMPLETO v2.0:** o documento que virou material de boas-vindas espontâneo na
+  comunidade foi atualizado — a v1.0 (09/07) parou no método individual e a casa já operava
+  a camada seguinte. A v2 acrescenta a **PARTE 7 · OS SISTEMAS (quando o ciclo vira máquina)**:
+  o que é um sistema (resultado + pipeline + configuração + régua + feedback), um sistema real
+  contado pela própria operação, o experimento com régua selada antes do dado, o recibo de
+  execução e o humano no gate.
+- **Lei 11 no contrato:** “Critério vem antes do dado” — experimento sem régua pré-registrada
+  é opinião com gráfico.
+- **Parte 8 atualizada:** os “próximos cadernos” viraram sistemas instaláveis; o primeiro
+  (geração de demanda) já roda em laboratório com empresas da comunidade.
+- **A voz do fundador entrou no texto:** o estalo no evento do Vale (abertura), o
+  antes-e-depois de 48h da operação de tráfego (Parte 3) e o placar do primeiro Teste do
+  Cérebro da casa, rodado em 04/08 (Parte 6) — a v1 tinha saído sem nenhuma primeira pessoa.
+
 ## v1.13.0 — 2026-08-03 · “o motor aprende a receber sistemas entregues em mãos”
 
 - **Pacote fora do catálogo:** um sistema pode ser entregue no comissionamento (pilotos de
