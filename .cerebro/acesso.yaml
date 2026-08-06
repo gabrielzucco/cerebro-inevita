@@ -15,6 +15,10 @@ colecoes:
     tier: free                 # gratuito por enquanto
     # free_ate: "2026-08-30"   # ative pra deixar grátis só até a data; depois vira society
 
+  imersao:
+    titulo: "Imersão Cérebro da Empresa — turma fundadora"
+    tier: free                 # a turma toda precisa acessar; o vídeo circula só no grupo
+
   # Exemplos de coleções pagas (quando os encontros existirem):
   # encontros-society:
   #   titulo: "Encontros INEVITA Society (online)"

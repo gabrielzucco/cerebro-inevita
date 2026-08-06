@@ -1,5 +1,14 @@
 # Mudanças do cérebro INEVITA
 
+## v1.15.0 — 2026-08-06 · “a imersão entra pro acervo”
+
+- **Nova coleção `conhecimento/imersao/`:** a aula do **Dia 1 da Imersão Cérebro da
+  Empresa** (05/08, turma fundadora) transcrita na íntegra — 2h28, timestamps batendo
+  com o vídeo da aula (que circula no grupo da turma). A tese (execução commodity,
+  contexto × discernimento × execução), a instalação ao vivo e a primeira carga de
+  fontes reais virando átomos, com as dúvidas da turma respondidas.
+- O Dia 2 entra na mesma coleção após a aula de 06/08.
+
 ## v1.14.0 — 2026-08-04 · “o método ganha o segundo andar”
 
 - **MÉTODO COMPLETO v2.0:** o documento que virou material de boas-vindas espontâneo na

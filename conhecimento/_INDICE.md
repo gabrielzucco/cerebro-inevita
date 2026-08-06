@@ -12,6 +12,9 @@ As ideias-raiz que sustentam tudo: o insight do **PayPal** (contexto > fazer mai
 ## 🎤 `ai-experience/` — o maior evento de IA do mundo, destilado (grátis, por tempo limitado)
 **22 sessões** do AI Engineer World's Fair — palestras e workshops dos que constroem IA de ponta, cada uma com destilado + a íntegra. Comece pelo **`mapa-da-conversa.md`**: a síntese das 6 camadas em volta do modelo (contexto, skills, agentes, curadoria, eficiência, pessoa). É o mapa que organiza as 22.
 
+## 🎓 `imersao/` — a Imersão Cérebro da Empresa (turma fundadora)
+A implementação ao vivo, registrada. O **Dia 1** (05/08) está transcrito na íntegra com timestamps que batem com o vídeo da aula: a tese (execução commodity, contexto × discernimento), a instalação e a primeira carga de fontes reais virando átomos. Comece pelo `_catalogo.md`.
+
 ## 🔒 `society/` e `clube/` — os acervos da comunidade (trancados)
 O tácito dos membros: cases reais, encontros por segmento, o contexto que só circula dentro. O catálogo (`_catalogo.md`) mostra o que tem; o cadeado abre quando você entra na comunidade — cada catálogo diz como.
 
