@@ -5,6 +5,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 
 | Skill | Papel |
 |---|---|
+| `prototipar` | monta o protótipo comercial e o de entrega, escolhe a frente e desenha o loop |
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
 | `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |
 | `fonte` | decide o nível de refino de qualquer coisa que chega e trata só até onde o trabalho exige |

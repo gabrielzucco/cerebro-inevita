@@ -1,5 +1,35 @@
 # Mudanças do cérebro INEVITA
 
+## v1.17.0 — 2026-08-06 · “o protótipo — contexto de quê, pra ganhar o quê”
+
+- **Skill `/prototipar` nova:** o cérebro instalado sabe guardar contexto; esta skill
+  responde a pergunta seguinte — *contexto de quê, pra ganhar o quê, medido como*. Uma
+  rodada de ~20 min, quatro saídas: **protótipo comercial** (quem compra, o funil real,
+  onde morre, os quatro artefatos, as objeções) · **protótipo de entrega** (entregáveis,
+  etapas com dono e gate, a régua de "bom", o gargalo) · **diagnóstico da frente**
+  (decisão · venda · entrega — uma só, nunca as três empatadas) · **o loop**.
+  Ancorada no Dia 1 da Imersão: *"a primeira fonte precisa encostar ou numa decisão, ou
+  numa venda, ou numa entrega"*.
+- **Lei zero da skill:** ela não inventa oferta, funil, preço, etapa, entregável ou
+  objeção. O que a pessoa não disse sai como `(não consta — você preenche)`.
+  **Protótipo com 8 lacunas honestas vale mais que protótipo cheio de palpite** — as
+  lacunas são o mapa do que capturar primeiro.
+- **Não precisa de fonte pra rodar.** São 5 perguntas em linguagem comum; fonte real é
+  atalho opcional que se soma às respostas. É a porta de entrada pra quem instalou e
+  perguntou "e agora, como isso vira dinheiro?".
+- **`meu-negocio/entrega.md` deixa de ser órfã:** era o único gabarito que apontava pra
+  uma skill inexistente. Agora a skill existe e preenche.
+- **Portabilidade real, as quatro plataformas:** `/prototipar` entrou no `CLAUDE.md` — o
+  contrato canônico que `AGENTS.md` e `GEMINI.md` mandam ler por inteiro —, ganhou
+  adaptador `agents/openai.yaml` e está sincronizada em `.agents/skills/`. Roda em Claude
+  Code, Codex, Gemini CLI e Antigravity.
+- **`PROTOTIPAR-PORTATIL.md` novo:** o quinto alvo — plataformas **sem** acesso à pasta
+  (ChatGPT, Claude web, qualquer caixa de texto). Arquivo único, autocontido, sem
+  caminho nenhum; as quatro saídas voltam em markdown pra pessoa salvar.
+- **Telemetria fora da abertura:** a skill nasceu com `ping.mjs` no topo, o padrão que a
+  story de 25/07 já tinha removido do `/comecar` — no Antigravity o agente saía caçando
+  Node e a instalação parecia travada. Agora o ping é condicional e posterior à entrega.
+
 ## v1.16.0 — 2026-08-06 · “a régua de refino — quanto tratar deixa de ser dúvida”
 
 - **`FONTES.md` novo:** a régua de tratamento de fontes. Os 5 níveis de refino

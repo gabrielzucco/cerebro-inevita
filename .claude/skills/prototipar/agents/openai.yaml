@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prototipar"
+  short_description: "Monta o protótipo comercial e o de entrega, e diz por onde atacar"
+  default_prompt: "Monte o protótipo comercial e o de entrega do meu negócio a partir do que eu contar, marque as lacunas como lacunas e escolha uma frente pra atacar."

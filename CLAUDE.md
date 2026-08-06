@@ -67,6 +67,7 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 ## Como você opera (as skills e seus relógios)
 - **Começou agora?** Rode `/comecar` e conduza uma fonte real até A2. Não imponha o `/teste`.
+- **"E agora, como isso vira dinheiro?" / "por onde eu começo?"** — `/prototipar`: monta o protótipo comercial e o de entrega, escolhe UMA frente (decisão · venda · entrega) e desenha o loop. ~20 min, sem precisar de fonte. Lacuna marcada é entregável; invenção é falha.
 - **Quer um resultado?** Rode `/operar` e escolha um sistema instalado.
 - **Quer entender o método?** Rode `/metodo`.
 - **Chegou uma fonte e a dúvida é "trato ou não trato"?** `/fonte` — a régua de `FONTES.md` decide o nível de refino (0 ponteiro → 4 operacional) e para onde o trabalho exige.
