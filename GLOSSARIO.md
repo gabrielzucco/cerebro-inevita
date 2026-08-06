@@ -10,6 +10,8 @@
 | **Átomo** | Nota de UMA ideia: afirmação + citação literal + por quê + elos. Sem citação não é átomo, é palpite. |
 | **Bruto** | O material na íntegra (transcrição, print, texto colado), imutável, na bandeja `capturas/`. Guarda-se tudo; opera-se pouco. |
 | **Destilar** | Extrair do bruto só o que tem sinal e virar átomo. [“curate before you compute” — Deasy] |
+| **Nível de refino** | Até onde uma fonte foi tratada: 0 ponteiro · 1 legível · 2 indexado · 3 destilado · 4 operacional. Para-se no nível que o trabalho exige (`FONTES.md`). [rate of change — "the only axis that drives this is rate of change"] |
+| **Ponteiro** | Nível 0: o cérebro registra ONDE a fonte está, sem copiar nem converter. A maioria das fontes vive (bem) aqui. |
 | **Motor vs contexto** | Motor = skills e gabaritos (nossos, atualizam via `/atualizar`). Contexto = tuas notas (nunca tocadas por atualização). [harness — o termo do Vale: "fix your harness, don't reprompt"] |
 | **Skill** | Know-how executável: um comando que sabe fazer UMA coisa, com as regras embutidas. [skills — workshop AIEWF] |
 | **Sistema** | Pacote de um resultado completo: manifest + pipeline + rotinas + skill + eval + feedback + versão. |

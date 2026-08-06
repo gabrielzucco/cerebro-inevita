@@ -9,7 +9,7 @@ description: Captura e transforma algo (uma call, decisão, número, objeção, 
 
 A captura é fácil; o valor está em **tratar**. Você faz o trabalho pesado, a pessoa só aprova.
 
-1. **Receba** o material (colado ou apontado). Se for bruto longo (call, transcrição), salve primeiro em `capturas/<fonte>-AAAA-MM-DD.md` com cabeçalho de origem.
+1. **Receba** o material (colado ou apontado). Se for bruto longo (call, transcrição), salve primeiro em `capturas/<fonte>-AAAA-MM-DD.md` com cabeçalho de origem. Se a dúvida for *"isso merece tratamento?"* — essa decisão é da `/fonte` (régua em `FONTES.md`); o guardar é o nível 3, pra quando o trabalho já pede átomo.
 2. **Sanitize PII** antes de qualquer coisa: e-mail, telefone, nome de cliente, @, CPF/CNPJ → vão pra `privado/` ou ficam de fora. Nunca em `capturas/` nem `meu-negocio/`.
 3. **Destile em átomo(s)** — cada UMA ideia com sinal vira uma nota (veja o formato no `CLAUDE.md`):
    - **afirmação** (título-frase) · **citação literal** + origem · **por quê** (1-2 linhas) · **elos** (`[[ ]]`)

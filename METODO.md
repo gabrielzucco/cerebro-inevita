@@ -66,6 +66,9 @@ Contexto não se acumula "quando der" — tem cadência:
 - **Artigo, palestra, referência** → junta e trata em lote no `/reindex`.
 - Regra de bolso: **guardar tudo ≠ dar tudo pra IA.** O bruto fica em `capturas/` (arquivo frio); a IA opera os átomos. E o resumo da semana nasce das dailies — nunca de reler tudo.
 
+## E QUANTO tratar? (a outra metade da pergunta)
+Isso tem régua própria: os **níveis de refino** (0 ponteiro → 4 operacional), decididos por UMA pergunta — *"que trabalho real vai sair disso?"*. A régua completa, com a tabela por formato (e-mail, PDF, planilha, drive, print), está em **`FONTES.md`**; o executável é a skill **`/fonte`**. A maioria das fontes para no nível 0 ou 1 — e está certo.
+
 ## A saúde do cérebro
 - **Frescor:** a verdade muda. Nota velha fingindo estar viva envenena as respostas — o `/revisar` marca o que morreu como `superado` (nada se deleta).
 - **Medição:** o `/teste` roda tuas 5 perguntas-canário todo mês. A resposta evolui de **em branco → estagiário → sócio**. É assim que você VÊ o cérebro virando sócio.

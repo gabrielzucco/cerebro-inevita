@@ -35,7 +35,7 @@ elos: [[conceito-a]] · [[conceito-b]]
 ## Engenharia de Contexto — o método (4 movimentos)
 > Na era da IA, o que vence não é o prompt, é o **contexto** certo (engenharia de contexto). Este cérebro a operacionaliza:
 1. **Organizar por uso** — cada átomo vai pro **horizonte** certo (agora / áreas / referências / arquivo), nunca por tema solto.
-2. **Capturar em átomos** — o bruto entra em `capturas/`; você destila em átomos. **Nem tudo vira átomo** — só o que tem sinal (dor, decisão, número, objeção, padrão). O resto fica no bruto.
+2. **Capturar em átomos** — o bruto entra em `capturas/`; você destila em átomos. **Nem tudo vira átomo** — só o que tem sinal (dor, decisão, número, objeção, padrão). O resto fica no bruto. E nem todo bruto se trata: o nível de refino de cada fonte segue a régua de `FONTES.md` (parar no ponteiro é saída legítima).
 3. **Conectar leve** — linke o óbvio (`[[ ]]`) e **sugira** o resto; o dono cura. Linkar é pensar.
 4. **Buscar citando** — ao responder, recupere os átomos relevantes e **cite o trecho**. **Nunca engula o bruto inteiro** — é o que causa alucinação.
 
@@ -69,6 +69,7 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **Começou agora?** Rode `/comecar` e conduza uma fonte real até A2. Não imponha o `/teste`.
 - **Quer um resultado?** Rode `/operar` e escolha um sistema instalado.
 - **Quer entender o método?** Rode `/metodo`.
+- **Chegou uma fonte e a dúvida é "trato ou não trato"?** `/fonte` — a régua de `FONTES.md` decide o nível de refino (0 ponteiro → 4 operacional) e para onde o trabalho exige.
 - **Capturar algo?** `/guardar` (ou "guarda isso") — você propõe o átomo, a pessoa aprova.
 - **Fim do dia?** `/daily` — 5-10 min, memória quente (o julgamento expira em ~48h).
 - **Saiu de uma reunião?** `/call` — trata a transcrição em átomos (até 48h).

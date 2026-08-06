@@ -1,5 +1,25 @@
 # Mudanças do cérebro INEVITA
 
+## v1.16.0 — 2026-08-06 · “a régua de refino — quanto tratar deixa de ser dúvida”
+
+- **`FONTES.md` novo:** a régua de tratamento de fontes. Os 5 níveis de refino
+  (0 ponteiro · 1 legível · 2 indexado · 3 destilado · 4 operacional), a pergunta
+  única que decide (*"que trabalho real vai sair disso?"*), o caminho de 5 etapas
+  que toda fonte percorre e a tabela por formato (reunião, e-mail, PDF, planilha/CRM,
+  drive, WhatsApp, print, link). Ancorada no campo: curar 7.000→1.000 blocos subiu a
+  precisão de 57%→82%; 30% de arquivo velho ocupa até 80% do contexto com lixo.
+  **Parar no ponteiro é saída legítima** — não se padroniza o formato de entrada,
+  padroniza-se o caminho.
+- **Skill `/fonte` nova:** o executável da régua. Aponte qualquer coisa
+  ("o que eu faço com isso?", "ingere o que tá em capturas/") e ela recomenda o
+  nível, executa até ele e PARA. Fontes que se repetem ganham oferta de rotina.
+- **`meu-negocio/fontes/` deixa de ser órfã:** ganhou formato de nota de fonte
+  (vista humana) casado com `conexoes/configuradas/fontes.json` (vista da máquina).
+- **"Ingere o que tá em capturas/" agora existe de verdade** — a promessa do
+  `capturas/_LEIA.md` roteia pra `/fonte`.
+- Glossário: entram **Nível de refino** e **Ponteiro**. `METODO.md` ganha a seção
+  "E QUANTO tratar?"; `/guardar` aponta pra régua quando a dúvida é de tratamento.
+
 ## v1.15.0 — 2026-08-06 · “a imersão entra pro acervo”
 
 - **Nova coleção `conhecimento/imersao/`:** a aula do **Dia 1 da Imersão Cérebro da

@@ -7,9 +7,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 |---|---|
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
 | `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |
-
-Pacotes entregues fora do catálogo público (pilotos de laboratório) carregam a própria skill;
-o instalador a adiciona aos dois runtimes junto com o pacote.
+| `fonte` | decide o nível de refino de qualquer coisa que chega e trata só até onde o trabalho exige |
 | `call` | transforma uma transcrição em decisões, ações e memória |
 | `guardar` | transforma fonte real em átomo aprovado |
 | `daily` | fecha o dia com julgamento ainda quente |
@@ -18,5 +16,8 @@ o instalador a adiciona aos dois runtimes junto com o pacote.
 | `teste` | mede o cérebro inteiro com perguntas-canário |
 | `metodo` | explica e aplica Engenharia de Contexto |
 | `atualizar` | atualiza motor sem tocar no que é privado |
+
+Pacotes entregues fora do catálogo público (pilotos de laboratório) carregam a própria skill;
+o instalador a adiciona aos dois runtimes junto com o pacote.
 
 Skill não é sistema: ela encapsula julgamento dentro de um pipeline com resultado e régua.
