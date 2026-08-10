@@ -1,5 +1,19 @@
 # Mudanças do cérebro INEVITA
 
+## v1.17.1 — 2026-08-10 · “o acesso tem dono — uma pergunta vincula você à comunidade”
+
+- **`/comecar` agora vincula o acesso na primeira conversa:** se a instalação ainda não
+  tem identificação (`.cerebro/member-id` ou `.cerebro/acesso-email`), a primeira
+  interação pergunta **qual e-mail você usou pra pegar o Cérebro** — uma pergunta só,
+  e o trabalho segue na mesma resposta. Vale também pra instalação antiga que nunca se
+  identificou: a próxima sessão pergunta.
+- **Por quê:** é o e-mail que liga tua instalação às atualizações semanais e à
+  comunidade. Sem ele, tua cópia é anônima — ninguém consegue te entregar o que o teu
+  uso pede.
+- **Privacidade intacta:** o e-mail fica em `.cerebro/` (fora do Git da tua cópia),
+  viaja só no ping de telemetria e nunca entra em nota, contexto ou arquivo do negócio.
+  Quem preferir não informar, segue funcionando igual — sem insistência.
+
 ## v1.17.0 — 2026-08-06 · “o protótipo — contexto de quê, pra ganhar o quê”
 
 - **Skill `/prototipar` nova:** o cérebro instalado sabe guardar contexto; esta skill

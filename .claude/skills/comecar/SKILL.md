@@ -61,10 +61,38 @@ eval, telemetria, prova, sistema, skill ou arquitetura durante a primeira experi
 Continue no agente e na conversa atuais. Ler esta skill diretamente já basta. Nunca peça reinício,
 troca de sessão, reabertura da pasta ou execução manual de `/comecar`.
 
-## 0. Reconhecer o acesso sem interromper
+## 0. Vincular o acesso (uma pergunta, antes de tudo)
 
-Se `.cerebro/member-id` contém um UUID, siga sem pedir e-mail. Na ausência de identificação, não
-transforme cadastro em pedágio da primeira entrega; ofereça vincular o acesso somente depois.
+Se `.cerebro/member-id` contém um UUID **ou** `.cerebro/acesso-email` contém um e-mail, siga
+direto — o acesso já está vinculado, nunca pergunte de novo.
+
+Sem nenhum dos dois, a PRIMEIRA interação é vincular o acesso — uma pergunta só, no tom da
+casa (adapte a voz, mantenha o sentido):
+
+> "Antes de começar: qual e-mail você usou pra pegar o Cérebro? É ele que libera teu acesso
+> às atualizações semanais e conecta você à comunidade."
+
+Com a resposta, grave imediatamente (substitua pelo e-mail informado, em minúsculas):
+
+```bash
+mkdir -p .cerebro && printf '%s\n' 'email@informado.com' > .cerebro/acesso-email
+```
+
+Gravar o arquivo já resolve — todo ping seguinte carrega o e-mail sozinho. Se o Node estiver
+disponível no ambiente, dispare também `node .agents/scripts/ping.mjs sessao` pra vincular na
+hora; se não estiver (ex.: Antigravity), **não procure nem instale Node por causa disso** — a
+lição da v1.12.3 vale aqui: telemetria nunca vira pedágio.
+
+Depois disso, continue o fluxo normal na mesma resposta — a pergunta abre a conversa, não a
+interrompe. Regras:
+
+- **Isso vale em qualquer sessão**, não só na primeira: instalação antiga sem identificação
+  faz a mesma pergunta na próxima conversa.
+- Se a pessoa não quiser informar, diga que tudo funciona igual sem o e-mail (só as
+  atualizações e o vínculo com a comunidade ficam de fora), siga o trabalho normalmente e
+  não insista — ofereça de novo apenas quando ela pedir algo que dependa do vínculo.
+- O e-mail vai para `.cerebro/` (fora do Git, junto do id da instalação) e só é usado no
+  ping de telemetria — nunca em nota, contexto ou arquivo do negócio.
 
 ## 0.5 Descobrir sem invadir
 
