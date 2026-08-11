@@ -1,5 +1,20 @@
 # Mudanças do cérebro INEVITA
 
+## v1.18.0 — 2026-08-10 · “o acervo da Society desce pra dentro do teu Cérebro”
+
+- **Skill `/society` nova:** membro pagante da INEVITA Society sincroniza o acervo
+  exclusivo direto pra dentro da instalação (`comunidade/society/`, fora do Git da tua
+  cópia). O servidor decide o acesso; a skill pergunta, baixa e conecta o material ao
+  trabalho em andamento. Sem assinatura, avisa uma vez — sem tom de venda — e segue.
+- **Primeiro drop do acervo:** o Protocolo de Experimentos da casa (com um caso real
+  anatomizado e template pronto) e a Arquitetura do Cérebro da Empresa (o desenho de
+  dados que a nossa operação vive: banco × vault, PII, IDs como costura).
+- **Privacidade e segurança:** conteúdo pago nunca entra no repositório público; desce
+  por URL assinada, só pra instalação com vínculo forte de membro. `comunidade/society/`
+  está no `.gitignore` — acervo não vaza pro Git da tua cópia.
+- Ambiente sem Node (ex.: Antigravity): a skill avisa e segue — acervo nunca vira
+  pedágio do trabalho.
+
 ## v1.17.1 — 2026-08-10 · “o acesso tem dono — uma pergunta vincula você à comunidade”
 
 - **`/comecar` agora vincula o acesso na primeira conversa:** se a instalação ainda não

@@ -1,6 +1,8 @@
 # Pacotes gated (pilotos de laboratório) são entregues no comissionamento,
 # nunca commitados neste repo público. Trava contra `git add -A` acidental.
 comunidade/inevita/sistemas-disponiveis/geracao-demanda/
+# acervo pago da Society: desce do servidor por membro, nunca entra no Git da cópia
+comunidade/society/
 
 # PII e material BRUTO nunca entram no git — ficam só na tua máquina.
 # As pastas existem no pacote (com _LEIA.md), mas o que VOCÊ colocar nelas fica de fora do git.

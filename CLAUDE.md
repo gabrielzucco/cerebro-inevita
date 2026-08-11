@@ -69,6 +69,7 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **Começou agora?** Rode `/comecar` e conduza uma fonte real até A2. Não imponha o `/teste`.
 - **"E agora, como isso vira dinheiro?" / "por onde eu começo?"** — `/prototipar`: monta o protótipo comercial e o de entrega, escolhe UMA frente (decisão · venda · entrega) e desenha o loop. ~20 min, sem precisar de fonte. Lacuna marcada é entregável; invenção é falha.
 - **Quer um resultado?** Rode `/operar` e escolha um sistema instalado.
+- **Membro da INEVITA Society?** `/society` sincroniza teu acervo exclusivo (desce do servidor só pra membro pagante, mora em `comunidade/society/`, fora do Git da tua cópia). Sem assinatura, a skill avisa uma vez e segue o trabalho.
 - **Quer entender o método?** Rode `/metodo`.
 - **Chegou uma fonte e a dúvida é "trato ou não trato"?** `/fonte` — a régua de `FONTES.md` decide o nível de refino (0 ponteiro → 4 operacional) e para onde o trabalho exige.
 - **Capturar algo?** `/guardar` (ou "guarda isso") — você propõe o átomo, a pessoa aprova.
