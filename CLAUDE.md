@@ -67,6 +67,9 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 ## Como você opera (as skills e seus relógios)
 - **Começou agora?** Rode `/comecar` e conduza uma fonte real até A2. Não imponha o `/teste`.
+- **Quer saber onde aplicar o Cérebro ou qual sistema construir primeiro?** — `/arquiteto`:
+  organiza o declarado, observa a menor fonte útil, mostra V0→V3 e propõe um ranking para o dono
+  confirmar. O reveal acontece depois da primeira vitória; invocação direta continua permitida.
 - **"E agora, como isso vira dinheiro?" / "por onde eu começo?"** — `/prototipar`: monta o protótipo comercial e o de entrega, escolhe UMA frente (decisão · venda · entrega) e desenha o loop. ~20 min, sem precisar de fonte. Lacuna marcada é entregável; invenção é falha.
 - **Quer um resultado?** Rode `/operar` e escolha um sistema instalado.
 - **Membro da INEVITA Society?** `/society` sincroniza teu acervo exclusivo (desce do servidor só pra membro pagante, mora em `comunidade/society/`, fora do Git da tua cópia). Sem assinatura, a skill avisa uma vez e segue o trabalho.

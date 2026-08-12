@@ -12,6 +12,7 @@ const EVENTOS = new Set([
   'contribution_approved', 'system_installed', 'system_commissioning', 'system_activated',
   'system_first_run', 'system_needs_attention', 'system_run_started',
   'system_run_completed', 'system_value_confirmed',
+  'architect_map_generated',
 ]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

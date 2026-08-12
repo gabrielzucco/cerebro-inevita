@@ -244,6 +244,15 @@ node scripts/concierge-run.mjs mark --run-id <run-id> --milestone T4
 Consulte o recibo com `node scripts/concierge-run.mjs status --run-id <run-id> --json` e leve apenas
 tempos e categorias de intervenção para o recibo operacional. Nunca copie conteúdo para o relógio.
 
+Somente depois de T4, revele a próxima capacidade sem listar comandos nem explicar a casa inteira:
+
+> “Agora que esse contexto já voltou a trabalhar, posso mapear onde sua operação perde
+> inteligência e qual sistema faz sentido construir primeiro. Quer que eu faça?”
+
+Se a pessoa aceitar, leia e execute a skill `arquiteto` na conversa atual. Não reabra o onboarding,
+não repita o que ela já contou e não transforme o convite em oferta da Society. O diagnóstico aberto
+vem antes; rede, laboratórios e instalação assistida só aparecem quando forem necessários.
+
 ## 6. Mostrar o que começa a melhorar
 
 Se esse tipo de material nasce sempre na mesma fonte, ofereça torná-la recorrente apenas agora. Se

@@ -1,5 +1,25 @@
 # Mudanças do cérebro INEVITA
 
+## v1.19.0 — 2026-08-12 · “o Architect revela onde construir primeiro”
+
+- **Skill `/arquiteto` no Cérebro aberto:** depois que o contexto prova que consegue voltar a
+  trabalhar, o agente pode mapear uma operação e propor o primeiro sistema. Invocação direta
+  continua permitida; o onboarding não virou pedágio nem menu de catorze comandos.
+- **Uma régua visível de prova:** V0 declarado → V1 evidência parcial → V2 verificado pelo
+  responsável → V3 validado por execução e resultado. O engine bloqueia promoção de estado sem a
+  evidência correspondente.
+- **Ranking explicável e supervisionado:** no máximo três oportunidades, prioridade ordinal,
+  `reason_codes` e explicação. Sem score inventado; mapa e ordem continuam proposta até o gate
+  humano.
+- **Visual `spec → engine`:** `architect-spec.json` é a fonte canônica e o renderer determinístico
+  usa a identidade/validação de colisões de `frameworks-visuais`. HTML ou desenho livre do modelo
+  não fazem parte do pipeline.
+- **Privacidade e atualização:** specs e mapas ficam em `operacao/arquitetura/`, fora do Git e sem
+  envio de conteúdo. A telemetria registra apenas que um mapa foi gerado e seu estado V0–V3.
+- **Fronteira honesta:** o aberto diagnostica e recomenda; Society concentra acervo, System Packs,
+  laboratórios, releases e instalação assistida. A v1.19 corrige também o manifesto para que a
+  skill `/society` da v1.18 chegue a instalações antigas.
+
 ## v1.18.0 — 2026-08-10 · “o acervo da Society desce pra dentro do teu Cérebro”
 
 - **Skill `/society` nova:** membro pagante da INEVITA Society sincroniza o acervo

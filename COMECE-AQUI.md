@@ -61,6 +61,10 @@ somente um caso recente — uma reunião, conversa, mensagem, documento ou outro
 Uma reunião pode virar decisões e ações; um briefing, uma mensagem ou uma proposta pedem outro
 tipo de entrega. O cérebro escolhe o formato pelo trabalho, não força todo material a virar resumo.
 
+Depois que o contexto aprovado volta numa segunda tarefa, o Cérebro pode abrir o `/arquiteto`: ele
+mapeia como uma operação funciona, mostra o que é só declarado e o que já tem evidência, e propõe o
+primeiro sistema para o responsável confirmar. Diagnóstico não finge implantação nem validação.
+
 O acervo do AI Engineer World's Fair continua disponível com fonte e minuto do vídeo, mas funciona
 como referência para melhorar uma decisão. Ele não substitui o contexto do seu negócio.
 
@@ -71,6 +75,7 @@ como referência para melhorar uma decisão. Ele não substitui o contexto do se
 - `skills/` — julgamentos reutilizáveis do motor.
 - `conexoes/` — arquivos e integrações opcionais.
 - `operacao/` — seu brief vivo, o que rodou, falhou, escalou e os caminhos aprovados que podem ser reutilizados.
+- `operacao/arquitetura/` — specs privadas e mapas visuais produzidos pelo `/arquiteto`.
 - `comunidade/inevita/` — o que recebemos da INEVITA.
 - `comunidade/minhas-contribuicoes/` — o que você pode decidir compartilhar.
 - `conhecimento/` — referências externas; `capturas/` — bruto; `privado/` — PII local.

@@ -5,6 +5,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 
 | Skill | Papel |
 |---|---|
+| `arquiteto` | mapeia uma operação, mostra V0→V3 e propõe o primeiro sistema com razões explícitas |
 | `prototipar` | monta o protótipo comercial e o de entrega, escolhe a frente e desenha o loop |
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
 | `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |
@@ -17,6 +18,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 | `teste` | mede o cérebro inteiro com perguntas-canário |
 | `metodo` | explica e aplica Engenharia de Contexto |
 | `atualizar` | atualiza motor sem tocar no que é privado |
+| `society` | sincroniza o acervo exclusivo quando existe acesso de membro |
 
 Pacotes entregues fora do catálogo público (pilotos de laboratório) carregam a própria skill;
 o instalador a adiciona aos dois runtimes junto com o pacote.

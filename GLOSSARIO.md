@@ -15,6 +15,8 @@
 | **Motor vs contexto** | Motor = skills e gabaritos (nossos, atualizam via `/atualizar`). Contexto = tuas notas (nunca tocadas por atualização). [harness — o termo do Vale: "fix your harness, don't reprompt"] |
 | **Skill** | Know-how executável: um comando que sabe fazer UMA coisa, com as regras embutidas. [skills — workshop AIEWF] |
 | **Sistema** | Pacote de um resultado completo: manifest + pipeline + rotinas + skill + eval + feedback + versão. |
+| **Architect** | A porta de diagnóstico do Cérebro: mapeia a operação, explicita a força das evidências e propõe o primeiro sistema; o dono confirma. |
+| **Estado do mapa** | O grau de prova do Architect: V0 declarado · V1 evidência parcial · V2 verificado pelo responsável · V3 validado por execução e resultado. |
 | **Pipeline** | Estados pelos quais uma entrada vira uma saída verificável. |
 | **Rotina** | Gatilho por evento ou cadência que inicia ou revisa um pipeline. |
 | **Conexão** | Interface fina para uma fonte ou ferramenta; não contém o processo inteiro. [MCP/CLI] |

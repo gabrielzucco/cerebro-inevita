@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "map_id": "exemplo-loop-de-propostas",
+  "generated_at": "2026-08-12T15:00:00.000Z",
+  "state": {
+    "level": "V1",
+    "basis": [
+      {
+        "kind": "declared",
+        "ref": "declared:prototipo-comercial",
+        "summary": "O responsável descreveu como a proposta nasce e onde volta para revisão."
+      },
+      {
+        "kind": "observed",
+        "ref": "capturas/proposta-recente.md",
+        "summary": "Uma proposta recente confirmou que o critério de aprovação não aparece no briefing."
+      }
+    ],
+    "limitations": [
+      "A taxa de aprovação ainda não foi observada no CRM.",
+      "O ranking continua proposto até a confirmação do responsável."
+    ]
+  },
+  "operation": {
+    "name": "Proposta comercial",
+    "front": "sale",
+    "objective": "Enviar propostas mais próximas do critério usado para aprovar.",
+    "recurring_work": "Transformar contexto da oportunidade em proposta revisável.",
+    "metric": "Número de correções por proposta antes do envio.",
+    "current_flow": [
+      {
+        "id": "reunir-contexto",
+        "label": "Reunir contexto",
+        "owner_role": "comercial",
+        "source_ids": ["briefing", "call"],
+        "evidence_refs": ["declared:prototipo-comercial"]
+      },
+      {
+        "id": "escrever-proposta",
+        "label": "Escrever proposta",
+        "owner_role": "comercial",
+        "source_ids": ["briefing"],
+        "evidence_refs": ["capturas/proposta-recente.md"]
+      },
+      {
+        "id": "aprovar-proposta",
+        "label": "Aprovar proposta",
+        "owner_role": "responsável pela operação",
+        "source_ids": ["proposta"],
+        "evidence_refs": ["capturas/proposta-recente.md"]
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "briefing",
+      "label": "Briefing comercial",
+      "type": "document",
+      "status": "observed",
+      "access": "manual",
+      "freshness": "caso recente",
+      "sensitivity": "private",
+      "work_role": "explica oportunidade e escopo",
+      "evidence_refs": ["capturas/proposta-recente.md"]
+    },
+    {
+      "id": "call",
+      "label": "Conversa comercial",
+      "type": "transcript",
+      "status": "declared",
+      "access": "manual",
+      "freshness": "não conferido",
+      "sensitivity": "private",
+      "work_role": "traz linguagem, objeções e compromissos",
+      "evidence_refs": ["declared:prototipo-comercial"]
+    },
+    {
+      "id": "proposta",
+      "label": "Proposta enviada",
+      "type": "document",
+      "status": "observed",
+      "access": "manual",
+      "freshness": "caso recente",
+      "sensitivity": "private",
+      "work_role": "mostra o resultado atual e suas correções",
+      "evidence_refs": ["capturas/proposta-recente.md"]
+    }
+  ],
+  "judgment": {
+    "owner_role": "responsável pela operação",
+    "approval_question": "Esta proposta está pronta para ser enviada?",
+    "criteria": [
+      "A promessa reflete o que foi combinado.",
+      "O escopo não cria expectativa que a entrega não sustenta."
+    ],
+    "status": "declared"
+  },
+  "gaps": [
+    {
+      "id": "criterio-fora-do-briefing",
+      "label": "Critério de aprovação não entra no briefing",
+      "kind": "judgment",
+      "consequence": "A proposta volta para correções que poderiam nascer antes.",
+      "evidence_refs": ["capturas/proposta-recente.md"]
+    },
+    {
+      "id": "resultado-nao-volta",
+      "label": "Resultado da proposta não volta para a próxima",
+      "kind": "measurement",
+      "consequence": "A equipe repete erros sem saber quais ajustes funcionaram.",
+      "evidence_refs": ["declared:prototipo-comercial"]
+    }
+  ],
+  "ranking": {
+    "status": "proposed",
+    "method": "human-proposed-v0",
+    "opportunities": [
+      {
+        "rank": 1,
+        "id": "proposta-com-contexto",
+        "title": "Proposta com contexto e régua",
+        "result": "Primeiro rascunho nasce com fatos citáveis e critérios explícitos.",
+        "expected_gain": "Menos correções antes do envio.",
+        "effort": "medium",
+        "readiness": "ready-with-current-source",
+        "reason_codes": ["fonte-ja-existe", "julgamento-identificavel", "resultado-mensuravel"],
+        "reasoning": "Já existe um caso recente, o responsável consegue explicar o que aprova e a contagem de correções é observável.",
+        "source_ids": ["briefing", "call", "proposta"],
+        "evidence_refs": ["capturas/proposta-recente.md", "declared:prototipo-comercial"],
+        "installed_system_id": null
+      },
+      {
+        "rank": 2,
+        "id": "fechamento-da-call",
+        "title": "Fechamento da call",
+        "result": "Compromissos e pendências saem com dono e evidência.",
+        "expected_gain": "Menos contexto perdido entre conversa e proposta.",
+        "effort": "low",
+        "readiness": "needs-source",
+        "reason_codes": ["decisao-recorrente", "sistema-ja-instalado"],
+        "reasoning": "Calls em Decisões já está instalado, mas falta observar uma transcrição real deste fluxo.",
+        "source_ids": ["call"],
+        "evidence_refs": ["declared:prototipo-comercial"],
+        "installed_system_id": "calls"
+      }
+    ]
+  },
+  "recommendation": {
+    "opportunity_id": "proposta-com-contexto",
+    "human_decision": "pending",
+    "system_brief": {
+      "result": "Proposta pronta para revisão com contexto e critérios citáveis.",
+      "input": "Briefing, conversa comercial e melhor proposta aprovada.",
+      "output": "Rascunho de proposta com lacunas e referências.",
+      "pipeline": [
+        "identificar oportunidade",
+        "reunir fontes autorizadas",
+        "montar rascunho",
+        "aplicar régua",
+        "pedir aprovação",
+        "registrar correções"
+      ],
+      "human_gate": "Responsável aprova o rascunho e explica cada correção.",
+      "metric": "Correções por proposta na rodada 1 versus rodada 3.",
+      "source_ids": ["briefing", "call", "proposta"],
+      "installed_system_id": null
+    }
+  },
+  "validation": {},
+  "next_step": {
+    "kind": "confirm-map",
+    "text": "Confirmar ou corrigir o mapa e a ordem proposta antes de construir o sistema."
+  }
+}

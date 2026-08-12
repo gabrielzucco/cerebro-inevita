@@ -17,6 +17,8 @@ operacao/escalacoes/*
 !operacao/escalacoes/_LEIA.md
 operacao/o-que-melhorou/*
 !operacao/o-que-melhorou/_LEIA.md
+operacao/arquitetura/*
+!operacao/arquitetura/_LEIA.md
 conexoes/configuradas/*
 !conexoes/configuradas/_LEIA.md
 sistemas/outros-instalados/*/configuracao.md

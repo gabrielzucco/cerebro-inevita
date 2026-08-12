@@ -18,6 +18,7 @@ CHANGELOG.md
 .cerebro/acesso.yaml
 .claude/settings.json
 .claude/skills/comecar
+.claude/skills/arquiteto
 .claude/skills/prototipar
 .claude/skills/operar
 .claude/skills/briefing-comercial
@@ -30,6 +31,7 @@ CHANGELOG.md
 .claude/skills/revisar
 .claude/skills/teste
 .claude/skills/frameworks-visuais
+.claude/skills/society
 .claude/scripts
 .agents/skills
 .agents/scripts

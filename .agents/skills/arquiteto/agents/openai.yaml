@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arquiteto"
+  short_description: "Mapeia a operação e recomenda o primeiro sistema"
+  default_prompt: "Use $arquiteto para mapear minha operação, mostrar o estado das evidências e propor o primeiro sistema que devo construir."

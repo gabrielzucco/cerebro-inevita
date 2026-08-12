@@ -14,6 +14,13 @@ const required = [
   'sistemas/cerebro-base/rotinas.md', 'sistemas/cerebro-base/evals.md',
   'sistemas/cerebro-base/feedback.md', 'sistemas/cerebro-base/changelog.md',
   '.claude/skills/operar/SKILL.md',
+  '.claude/skills/arquiteto/SKILL.md',
+  '.claude/skills/arquiteto/agents/openai.yaml',
+  '.claude/skills/arquiteto/references/architect-spec.schema.json',
+  '.claude/skills/arquiteto/references/architect-spec.example.json',
+  '.claude/skills/arquiteto/scripts/render-map.mjs',
+  'operacao/arquitetura/_LEIA.md',
+  'scripts/test-architect.mjs',
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
@@ -111,6 +118,7 @@ for (const event of [
   'system_installed', 'system_commissioning', 'system_first_run', 'system_activated',
   'system_needs_attention',
   'system_run_started', 'system_run_completed', 'system_value_confirmed',
+  'architect_map_generated',
 ]) {
   if (!ping.includes(event)) errors.push(`ping sem evento: ${event}`);
 }
@@ -138,6 +146,8 @@ for (const contract of [
   '--milestone T4',
   'Não releia a fonte bruta',
   'Isso aproveitou o que acabamos de organizar',
+  'Somente depois de T4',
+  'qual sistema faz sentido construir primeiro',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
 }
@@ -195,10 +205,39 @@ for (const contract of [
   if (!brainContract.includes(contract)) errors.push(`CLAUDE sem contrato vivo/procedural: ${contract}`);
 }
 
+const architect = readFileSync(join(ROOT, '.claude', 'skills', 'arquiteto', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'V0 · declarado',
+  'V1 · evidência parcial',
+  'V2 · verificado',
+  'V3 · validado',
+  'human-proposed-v0',
+  'reason_codes',
+  'HTML, SVG ou Excalidraw escrito livremente',
+  'execute `/prototipar`',
+  'Execute `/fonte`',
+  'execute `/operar`',
+]) {
+  if (!architect.includes(contract)) errors.push(`arquiteto sem contrato: ${contract}`);
+}
+const architectRenderer = readFileSync(join(ROOT, '.claude', 'skills', 'arquiteto', 'scripts', 'render-map.mjs'), 'utf8');
+for (const contract of [
+  "const LEVELS = ['V0', 'V1', 'V2', 'V3']",
+  'human-proposed-v0',
+  'exige validation.human_confirmation',
+  'V3 exige validation.run',
+  'frameworks-visuais',
+  'architect_map_generated',
+]) {
+  if (!architectRenderer.includes(contract)) errors.push(`engine do arquiteto sem guarda: ${contract}`);
+}
+
 const motorManifest = readFileSync(join(ROOT, '.cerebro', 'motor.manifest'), 'utf8');
 for (const contract of [
   '.cerebro/private-ignore.manifest',
   '.claude/skills/briefing-comercial',
+  '.claude/skills/arquiteto',
+  '.claude/skills/society',
 ]) {
   if (!motorManifest.includes(contract)) errors.push(`manifesto do motor sem upgrade: ${contract}`);
 }
@@ -258,6 +297,9 @@ if (!ignore.includes('.cerebro/concierge-runs/')) {
 }
 if (!ignore.includes('.cerebro/sistemas/')) {
   errors.push('estado privado dos sistemas não está protegido pelo .gitignore');
+}
+if (!ignore.includes('operacao/arquitetura/*')) {
+  errors.push('mapas privados do Architect não estão protegidos pelo .gitignore');
 }
 
 const baseManifest = readFileSync(join(ROOT, 'sistemas', 'cerebro-base', 'manifest.md'), 'utf8');

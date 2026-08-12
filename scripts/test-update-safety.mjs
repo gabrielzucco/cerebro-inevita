@@ -11,6 +11,7 @@ const sentinel = 'CONTEXTO-DO-DONO-NAO-TOCAR\n';
 const protectedFiles = [
   'meu-negocio/mapa.md',
   'operacao/_HOJE.md',
+  'operacao/arquitetura/mapa-do-dono.architect-spec.json',
   'sistemas/cerebro-base/feedback.md',
   'sistemas/calls/feedback.md',
   'sistemas/outros-instalados/briefing-comercial-inteligente/configuracao.md',
@@ -40,7 +41,7 @@ try {
   for (const file of protectedFiles) {
     if (readFileSync(join(old, file), 'utf8') !== sentinel) throw new Error(`sobrescreveu: ${file}`);
   }
-  for (const seeded of ['operacao/execucoes/_LEIA.md', 'meu-negocio/fontes/_LEIA.md']) {
+  for (const seeded of ['operacao/execucoes/_LEIA.md', 'operacao/arquitetura/_LEIA.md', 'meu-negocio/fontes/_LEIA.md']) {
     if (!existsSync(join(old, seeded))) throw new Error(`seed não chegou: ${seeded}`);
   }
   for (const motorFile of [
@@ -56,6 +57,9 @@ try {
     'scripts/generate-operating-brief.mjs',
     'scripts/test-operating-brief.mjs',
     '.claude/skills/briefing-comercial/SKILL.md',
+    '.claude/skills/arquiteto/SKILL.md',
+    '.claude/skills/arquiteto/scripts/render-map.mjs',
+    '.claude/skills/society/SKILL.md',
     '.cerebro/private-ignore.manifest',
     'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   ]) {
@@ -68,6 +72,7 @@ try {
     '.cerebro/sistemas/',
     'sistemas/outros-instalados/*/configuracao.md',
     'sistemas/outros-instalados/*/feedback.md',
+    'operacao/arquitetura/*',
   ]) {
     if (!gitignore.includes(rule)) throw new Error(`proteção local ausente: ${rule}`);
   }

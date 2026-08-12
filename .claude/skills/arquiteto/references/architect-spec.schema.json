@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.local/schemas/architect-spec-v1.json",
+  "title": "INEVITA Architect Spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "map_id",
+    "generated_at",
+    "state",
+    "operation",
+    "sources",
+    "judgment",
+    "gaps",
+    "ranking",
+    "recommendation",
+    "validation",
+    "next_step"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "map_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,79}$" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "basis", "limitations"],
+      "properties": {
+        "level": { "enum": ["V0", "V1", "V2", "V3"] },
+        "basis": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "ref", "summary"],
+            "properties": {
+              "kind": { "enum": ["declared", "observed", "human-confirmation", "run-result"] },
+              "ref": { "type": "string", "minLength": 1 },
+              "summary": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "limitations": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "front", "objective", "recurring_work", "metric", "current_flow"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "front": { "enum": ["decision", "sale", "delivery"] },
+        "objective": { "type": "string", "minLength": 1 },
+        "recurring_work": { "type": "string", "minLength": 1 },
+        "metric": { "type": "string", "minLength": 1 },
+        "current_flow": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label", "owner_role", "source_ids", "evidence_refs"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+              "label": { "type": "string", "minLength": 1 },
+              "owner_role": { "type": "string", "minLength": 1 },
+              "source_ids": { "type": "array", "items": { "type": "string" } },
+              "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "type", "status", "access", "freshness", "sensitivity", "work_role", "evidence_refs"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "label": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["declared", "observed"] },
+          "access": { "enum": ["manual", "read-only", "connector"] },
+          "freshness": { "type": "string", "minLength": 1 },
+          "sensitivity": { "enum": ["private", "team", "public"] },
+          "work_role": { "type": "string", "minLength": 1 },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    },
+    "judgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner_role", "approval_question", "criteria", "status"],
+      "properties": {
+        "owner_role": { "type": "string", "minLength": 1 },
+        "approval_question": { "type": "string", "minLength": 1 },
+        "criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "status": { "enum": ["declared", "observed", "confirmed"] }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "kind", "consequence", "evidence_refs"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "label": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["data", "context", "judgment", "measurement", "execution", "permission"] },
+          "consequence": { "type": "string", "minLength": 1 },
+          "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+        }
+      }
+    },
+    "ranking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "method", "opportunities"],
+      "properties": {
+        "status": { "enum": ["proposed", "confirmed", "corrected"] },
+        "method": { "const": "human-proposed-v0" },
+        "opportunities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rank", "id", "title", "result", "expected_gain", "effort", "readiness", "reason_codes", "reasoning", "source_ids", "evidence_refs", "installed_system_id"],
+            "properties": {
+              "rank": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+              "title": { "type": "string", "minLength": 1 },
+              "result": { "type": "string", "minLength": 1 },
+              "expected_gain": { "type": "string", "minLength": 1 },
+              "effort": { "enum": ["low", "medium", "high", "unknown"] },
+              "readiness": { "enum": ["ready-with-current-source", "needs-source", "needs-rule", "needs-system"] },
+              "reason_codes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+              },
+              "reasoning": { "type": "string", "minLength": 1 },
+              "source_ids": { "type": "array", "items": { "type": "string" } },
+              "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "installed_system_id": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["opportunity_id", "human_decision", "system_brief"],
+      "properties": {
+        "opportunity_id": { "type": "string" },
+        "human_decision": { "enum": ["pending", "approved", "changes-requested", "rejected"] },
+        "system_brief": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "input", "output", "pipeline", "human_gate", "metric", "source_ids", "installed_system_id"],
+          "properties": {
+            "result": { "type": "string", "minLength": 1 },
+            "input": { "type": "string", "minLength": 1 },
+            "output": { "type": "string", "minLength": 1 },
+            "pipeline": { "type": "array", "minItems": 2, "maxItems": 7, "items": { "type": "string", "minLength": 1 } },
+            "human_gate": { "type": "string", "minLength": 1 },
+            "metric": { "type": "string", "minLength": 1 },
+            "source_ids": { "type": "array", "items": { "type": "string" } },
+            "installed_system_id": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "human_confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["map_status", "ranking_status", "confirmed_at", "confirmed_by_role", "corrections"],
+          "properties": {
+            "map_status": { "enum": ["confirmed", "corrected"] },
+            "ranking_status": { "enum": ["confirmed", "corrected"] },
+            "confirmed_at": { "type": "string", "format": "date-time" },
+            "confirmed_by_role": { "type": "string", "minLength": 1 },
+            "corrections": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "run": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["run_id", "system_id", "eval_passed", "human_decision", "baseline", "observed", "delta", "measured_at"],
+          "properties": {
+            "run_id": { "type": "string", "minLength": 1 },
+            "system_id": { "type": "string", "minLength": 1 },
+            "eval_passed": { "const": true },
+            "human_decision": { "const": "approved" },
+            "baseline": { "type": "string", "minLength": 1 },
+            "observed": { "type": "string", "minLength": 1 },
+            "delta": { "type": "string", "minLength": 1 },
+            "measured_at": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    },
+    "next_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "enum": ["observe-source", "confirm-map", "operate-system", "measure-result", "revise-map"] },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
