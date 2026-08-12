@@ -315,6 +315,10 @@ Fecho esta parte com o placar mais recente da casa. Em 4 de agosto de 2026 eu ro
 
 ## PARTE 7 · OS SISTEMAS — quando o ciclo vira máquina
 
+> Esta parte apresenta a camada. O contrato das oito unidades e os templates estão em
+> [`METODO-SISTEMAS.md`](METODO-SISTEMAS.md); o protocolo executável de pré-registro e decisão está
+> em [`METODO-EXPERIMENTOS.md`](METODO-EXPERIMENTOS.md).
+
 Tudo até aqui é o método operado por você: capturar, destilar, estruturar, operar, medir. Esta parte é o **segundo andar** — o que acontece quando um resultado do teu negócio importa tanto que passa a rodar o ciclo inteiro como **sistema**: com pipeline documentado, régua definida antes do dado e aprendizado que volta pra dentro.
 
 ### O que é um sistema

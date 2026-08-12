@@ -5,6 +5,12 @@ import { join, resolve } from 'node:path';
 const ROOT = resolve(process.cwd());
 const errors = [];
 const required = [
+  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md',
+  'templates/experimento.md',
+  'templates/sistema/manifest.md', 'templates/sistema/configuracao.md',
+  'templates/sistema/pipeline.md', 'templates/sistema/rotinas.md',
+  'templates/sistema/skill-contract.md', 'templates/sistema/evals.md',
+  'templates/sistema/feedback.md', 'templates/sistema/changelog.md',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest',
@@ -42,6 +48,38 @@ const required = [
 
 for (const item of required) {
   if (!existsSync(join(ROOT, item))) errors.push(`faltando: ${item}`);
+}
+
+const systemsMethod = readFileSync(join(ROOT, 'METODO-SISTEMAS.md'), 'utf8');
+for (const contract of [
+  'As oito unidades do contrato',
+  'Motor compartilhável × configuração privada',
+  'O método circula. Os dados não.',
+  'A IA organiza evidência e opções; o humano dá o',
+  'O que é aberto e o que a Society acrescenta',
+]) {
+  if (!systemsMethod.includes(contract)) errors.push(`método de sistemas sem contrato: ${contract}`);
+}
+
+const experimentsMethod = readFileSync(join(ROOT, 'METODO-EXPERIMENTOS.md'), 'utf8');
+for (const contract of [
+  'Critério vem antes do dado',
+  'Ler diariamente protege o experimento',
+  'O martelo permanece humano',
+  'o que NÃO ficou provado',
+  'system-experiment.mjs meu-sistema freeze',
+]) {
+  if (!experimentsMethod.includes(contract)) errors.push(`método de experimentos sem contrato: ${contract}`);
+}
+
+const experimentTemplate = readFileSync(join(ROOT, 'templates', 'experimento.md'), 'utf8');
+for (const contract of [
+  '## EXP-001', '### Pré-registro', '### Emendas',
+  '- dono da leitura:', '- baseline:', '- hipótese:', '- mudança única:',
+  '- métrica primária:', '- guardrail:', '- janela de leitura:', '- regra de decisão:',
+  '- o que NÃO ficou provado:', '- decisão: manter | corrigir | descartar | inconclusivo',
+]) {
+  if (!experimentTemplate.includes(contract)) errors.push(`template de experimento incompatível: ${contract}`);
 }
 
 // Todo pacote presente em sistemas-disponiveis precisa estar completo — inclusive pacotes
@@ -238,6 +276,9 @@ for (const contract of [
   '.claude/skills/briefing-comercial',
   '.claude/skills/arquiteto',
   '.claude/skills/society',
+  'METODO-SISTEMAS.md',
+  'METODO-EXPERIMENTOS.md',
+  'templates',
 ]) {
   if (!motorManifest.includes(contract)) errors.push(`manifesto do motor sem upgrade: ${contract}`);
 }

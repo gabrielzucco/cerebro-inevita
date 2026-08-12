@@ -1,5 +1,22 @@
 # Mudanças do cérebro INEVITA
 
+## v1.20.0 — 2026-08-12 · “o método vira Sistema e o Sistema aprende por Experimentos”
+
+- **Método de Sistemas completo e público:** separa Cérebro, Sistema, pipeline, rotina, skill,
+  conexão, gate, agente, eval e feedback; ensina o contrato das oito unidades, fronteiras de dados,
+  régua, recibo, maturidade e Self Improvement supervisionado.
+- **Método de Experimentos executável:** gargalo com evidência → hipótese → pré-registro congelado
+  → coleta diária → leitura na data → decisão humana → mudança versionada na próxima execução. A
+  leitura preserva limites e não transforma entrega mínima em significância estatística.
+- **Templates copiáveis:** pacote de Sistema com manifest, configuração privada, pipeline, rotinas,
+  contrato da skill, evals, feedback e changelog; Experimento com região compatível com
+  `system-experiment.mjs`.
+- **Telemetria explicada sem eufemismo:** os métodos e o onboarding listam identificadores e eventos
+  técnicos possíveis, reafirmam que conteúdo não viaja e mostram os dois mecanismos de opt-out.
+- **Fronteira da Society preservada:** o aberto entrega arquitetura e templates; System Packs,
+  julgamento de operadores, golden patterns, laboratórios, casos e releases validados continuam
+  sendo capacidade da rede.
+
 ## v1.19.0 — 2026-08-12 · “o Architect revela onde construir primeiro”
 
 - **Skill `/arquiteto` no Cérebro aberto:** depois que o contexto prova que consegue voltar a

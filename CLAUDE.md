@@ -52,7 +52,8 @@ elos: [[conceito-a]] · [[conceito-b]]
   - `arquivo/` — o que **esfriou** (não se joga fora; sai do caminho)
   - `fontes/` — índice das fontes reais; bruto continua em `capturas/`
 - `sistemas/` — pacotes de resultado instalados. Cada sistema declara manifest, pipeline, rotinas,
-  evals, feedback e changelog. Comece por `sistemas/_CATALOGO.md`.
+  evals, feedback e changelog. Comece por `sistemas/_CATALOGO.md`; para construir um, siga
+  `METODO-SISTEMAS.md` e `templates/sistema/`. Experimentos seguem `METODO-EXPERIMENTOS.md`.
 - `skills/` — catálogo humano; o executável vive em `.claude/skills/` e `.agents/skills/`.
 - `conexoes/` — interfaces opcionais para fontes e ferramentas. Arquivos locais funcionam sem plano pago.
 - `operacao/` — brief vivo em `_HOJE.md`, execuções, decisões pendentes, erros, escalações e
@@ -70,6 +71,9 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **Quer saber onde aplicar o Cérebro ou qual sistema construir primeiro?** — `/arquiteto`:
   organiza o declarado, observa a menor fonte útil, mostra V0→V3 e propõe um ranking para o dono
   confirmar. O reveal acontece depois da primeira vitória; invocação direta continua permitida.
+- **Quer construir o sistema recomendado?** Leia `METODO-SISTEMAS.md`, comece pelo resultado e use
+  `templates/sistema/`. Mudança controlada dentro dele usa `METODO-EXPERIMENTOS.md`; o dono aprova
+  pré-registro, escrita externa e decisão.
 - **"E agora, como isso vira dinheiro?" / "por onde eu começo?"** — `/prototipar`: monta o protótipo comercial e o de entrega, escolhe UMA frente (decisão · venda · entrega) e desenha o loop. ~20 min, sem precisar de fonte. Lacuna marcada é entregável; invenção é falha.
 - **Quer um resultado?** Rode `/operar` e escolha um sistema instalado.
 - **Membro da INEVITA Society?** `/society` sincroniza teu acervo exclusivo (desce do servidor só pra membro pagante, mora em `comunidade/society/`, fora do Git da tua cópia). Sem assinatura, a skill avisa uma vez e segue o trabalho.

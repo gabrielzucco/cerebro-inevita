@@ -39,6 +39,10 @@ O cérebro **opera os átomos citados — nunca engole o bruto inteiro.** É iss
 O mesmo protocolo existe no cérebro da empresa e no teu. O da empresa tem mais sistemas e conexões;
 o teu começa guiado, com contexto privado e o primeiro sistema instalado.
 
+O desenho completo de um Sistema, suas oito unidades e os templates de construção estão em
+[`METODO-SISTEMAS.md`](METODO-SISTEMAS.md). O ciclo de hipótese, pré-registro, coleta, decisão e
+mudança da próxima execução está em [`METODO-EXPERIMENTOS.md`](METODO-EXPERIMENTOS.md).
+
 ## As 4 memórias (por que a estrutura é assim)
 Todo sistema de IA tem 4 memórias — e cada uma tem UMA casa no teu cérebro:
 

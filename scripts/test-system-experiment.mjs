@@ -51,6 +51,28 @@ try {
   mkdirSync(join(dir, 'experimentos'), { recursive: true });
   const mainPath = join(dir, 'experimento.md');
 
+  // O template publicado é o mesmo contrato aceito pelo motor: vazio falha; preenchido congela.
+  const templateSlug = 'template-system';
+  const templateDir = join(sandbox, 'sistemas', 'outros-instalados', templateSlug, 'experimentos');
+  mkdirSync(templateDir, { recursive: true });
+  const templatePath = join(templateDir, 'EXP-TEMPLATE.md');
+  const publishedTemplate = readFileSync(join(source, 'templates', 'experimento.md'), 'utf8')
+    .replaceAll('EXP-001', 'EXP-TEMPLATE');
+  writeFileSync(templatePath, publishedTemplate);
+  run([templateSlug, 'freeze', '--file=experimentos/EXP-TEMPLATE.md'], true);
+  const completedTemplate = publishedTemplate
+    .replace('- dono da leitura:', '- dono da leitura: responsável da operação')
+    .replace('- baseline:', '- baseline: 10 conversões, últimos 14 dias, CRM')
+    .replace('- hipótese:', '- hipótese: se X mudar, Y melhora porque Z')
+    .replace('- mudança única:', '- mudança única: trocar X; todo o restante permanece igual')
+    .replace('- métrica primária:', '- métrica primária: conversão em 14 dias, deduplicada por ID')
+    .replace('- guardrail:', '- guardrail: custo não pode subir mais de 20%')
+    .replace('- janela de leitura:', '- janela de leitura: 01/08 → 14/08')
+    .replace('- regra de decisão:', '- regra de decisão: manter se Y >= 12; inconclusivo sem entrega mínima');
+  writeFileSync(templatePath, completedTemplate);
+  run([templateSlug, 'freeze', '--file=experimentos/EXP-TEMPLATE.md']);
+  run([templateSlug, 'verify', '--file=experimentos/EXP-TEMPLATE.md']);
+
   // Template vazio não congela.
   writeFileSync(mainPath, experimentDoc('EXP-001', { vazio: true }));
   run([slug, 'freeze'], true);

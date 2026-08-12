@@ -80,11 +80,25 @@ como referência para melhorar uma decisão. Ele não substitui o contexto do se
 - `comunidade/minhas-contribuicoes/` — o que você pode decidir compartilhar.
 - `conhecimento/` — referências externas; `capturas/` — bruto; `privado/` — PII local.
 
+## Quando quiser construir além da primeira vitória
+
+- **Onde aplicar primeiro:** rode `/arquiteto` para mapear uma operação e propor o primeiro Sistema.
+- **Como um Sistema funciona:** leia [`METODO-SISTEMAS.md`](METODO-SISTEMAS.md) e use
+  [`templates/sistema/`](templates/sistema/).
+- **Como testar uma mudança sem enganar a leitura:** leia
+  [`METODO-EXPERIMENTOS.md`](METODO-EXPERIMENTOS.md) e use
+  [`templates/experimento.md`](templates/experimento.md).
+
+O material aberto entrega arquitetura e templates. Os System Packs, laboratórios, casos e releases
+validados pela rede entram pela Society.
+
 ## Privacidade, ping e comunidade
 
-Seu contexto fica local. Para medir ativação, o cérebro envia ping mínimo: código aleatório da
-instalação, evento, versão, sistema operacional, runtime e, quando existe, `system_id`. Nunca envia
-fonte, output, decisão, erro ou texto. Desligar: crie `.cerebro/sem-telemetria`.
+Seu contexto fica local. Para medir ativação, o cérebro envia telemetria técnica opcional: evento,
+`install_id`, versão, sistema operacional, runtime e, quando configurados, e-mail de acesso ou
+`member_id`. Runs de Sistemas também podem levar IDs opacos, versão, resultado do eval e decisão
+humana categórica. Nunca envia fonte, output, erro ou texto. Desligar: crie
+`.cerebro/sem-telemetria` ou use `CEREBRO_TELEMETRY=off`.
 
 Quando encontra um padrão útil, o cérebro pode perguntar se você quer **preparar** uma contribuição
 anonimizada. Ele mostra o payload exato. Aprovar não envia; enviar pede outro “sim”. A rede e o

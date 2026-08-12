@@ -17,3 +17,15 @@ Escolha pelo que precisa sair pronto — não pela ferramenta.
 
 O catálogo da INEVITA mostra outros sistemas disponíveis ou em construção em
 `comunidade/inevita/_CATALOGO.md`. Uma linha no roadmap não significa que o sistema já existe.
+
+## Construir um Sistema próprio
+
+1. Use `/arquiteto` para encontrar e confirmar o primeiro resultado.
+2. Siga [`METODO-SISTEMAS.md`](../METODO-SISTEMAS.md).
+3. Copie [`templates/sistema/`](../templates/sistema/) e rode um caso real ponta a ponta.
+4. Quando houver uma mudança a testar, use
+   [`METODO-EXPERIMENTOS.md`](../METODO-EXPERIMENTOS.md) e
+   [`templates/experimento.md`](../templates/experimento.md).
+
+Template em branco não é Sistema validado. Validação exige resultado repetido com eval, decisão
+humana, feedback e versão.
