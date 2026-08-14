@@ -34,7 +34,7 @@ function ping(event, state, run, extra = []) {
   spawnSync(process.execPath, [
     join(ROOT, '.agents', 'scripts', 'ping.mjs'),
     event,
-    slug,
+    state.system_id || slug,
     `--run-id=${run.id}`,
     `--release-version=${state.package_version || ''}`,
     `--eval-version=${run.eval_version || ''}`,
