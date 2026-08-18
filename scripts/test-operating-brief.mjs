@@ -26,6 +26,10 @@ try {
   mkdirSync(external, { recursive: true });
   write(join(brain, 'COMECE-AQUI.md'), '# Comece aqui\n');
   write(join(brain, 'VERSION'), '1.12.0\n');
+  write(join(brain, '.cerebro', 'layout.json'), JSON.stringify({
+    version: 2,
+    runLedger: '.cerebro/ledger/runs.jsonl',
+  }));
   write(join(brain, '.cerebro', 'sistemas', 'calls.json'), JSON.stringify({
     system_id: 'calls',
     status: 'needs_attention',
@@ -54,6 +58,26 @@ try {
   write(join(brain, 'operacao', 'decisoes-pendentes', 'aprovar-brief.md'), '# Aprovar o briefing\n');
   write(join(brain, 'operacao', 'execucoes', 'run.md'), '# Execução — calls\n');
   write(join(brain, 'operacao', 'o-que-melhorou', 'procedimento.md'), '# Procedimento candidato — call curta\n');
+  const runBase = {
+    protocol_version: 1,
+    system_version: '0.1.0',
+    status: 'completed',
+    started_at: '2026-07-24T12:00:00.000Z',
+    completed_at: '2026-07-24T12:01:00.000Z',
+    entity_refs: [{ role: 'lead', id: 'lead-abc' }],
+    source_refs: [{ role: 'crm', id: 'fonte-1' }],
+    output_refs: ['operacao/execucoes/run.md'],
+    eval: { version: '0.1.0', passed: true },
+    human_decision: 'approved',
+    correction_ref: null,
+    outcomes: [],
+    privacy: { content_shared_with_inevita: false },
+  };
+  write(join(brain, '.cerebro', 'ledger', 'runs.jsonl'), [
+    JSON.stringify({ ...runBase, run_id: 'run-calls', system_id: 'calls' }),
+    JSON.stringify({ ...runBase, run_id: 'run-followup', system_id: 'followup' }),
+    '',
+  ].join('\n'));
 
   execFileSync(process.execPath, [join(SOURCE, 'scripts', 'generate-operating-brief.mjs')], {
     env: {
@@ -73,6 +97,7 @@ try {
     'Aprovar o briefing',
     'Procedimento candidato — call curta',
     'primeiras experiências ainda sem T4: **1**',
+    'runs no protocolo comum: **2** · entidades atravessando mais de um Sistema: **1**',
   ]) {
     if (!text.includes(expected)) throw new Error(`brief sem: ${expected}`);
   }

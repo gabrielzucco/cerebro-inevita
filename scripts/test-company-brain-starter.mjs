@@ -20,28 +20,32 @@ try {
     '.cerebro/manifest.json', 'company/map.md', 'sources/register.md',
     'systems/first-system/brief.md', 'skills/company-brain-sprint/SKILL.md',
     'skills/company-brain-sprint/references/output-contract.md', 'raw/.gitkeep',
+    'systems/first-system/contract.template.json', 'systems/first-system/capability.template.json',
+    'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
   ];
   for (const file of required) if (!existsSync(join(output, file))) errors.push(`missing: ${file}`);
   if (!existsSync(zip)) errors.push('missing zip');
 
   if (existsSync(join(output, '.cerebro', 'layout.json'))) {
     const layout = JSON.parse(readFileSync(join(output, '.cerebro', 'layout.json'), 'utf8'));
-    for (const key of ['companyMap', 'sourceRegister', 'firstSystemBrief', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections']) {
+    for (const key of ['companyMap', 'sourceRegister', 'firstSystemBrief', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'systemContract', 'runLedger', 'learningRegister']) {
       const value = layout[key];
       if (!value || value.startsWith('/') || value.includes('..')) errors.push(`unsafe layout path: ${key}`);
     }
   }
 
   const start = readFileSync(join(output, 'START-HERE.md'), 'utf8');
-  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence']) {
+  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'System Contract', 'Run Record']) {
     if (!start.includes(contract)) errors.push(`START-HERE missing contract: ${contract}`);
   }
   const skill = readFileSync(join(output, 'skills', 'company-brain-sprint', 'SKILL.md'), 'utf8');
-  for (const contract of ['evidence → current map', 'V0 declared', 'V3 outcome validated', 'Do not claim to map']) {
+  for (const contract of ['evidence → current map', 'V0 declared', 'V3 outcome validated', 'Do not claim to map', 'one completed Run Record']) {
     if (!skill.includes(contract)) errors.push(`skill missing contract: ${contract}`);
   }
   const ignore = readFileSync(join(output, '.gitignore'), 'utf8');
-  for (const contract of ['raw/*', 'private/*']) if (!ignore.includes(contract)) errors.push(`ignore missing: ${contract}`);
+  for (const contract of ['raw/*', 'private/*', 'operations/runs/*', 'operations/learning/*']) {
+    if (!ignore.includes(contract)) errors.push(`ignore missing: ${contract}`);
+  }
 
   for (const forbidden of ['conhecimento', 'comunidade', 'member-id', 'acesso-email', 'METODO-COMPLETO.md']) {
     if (existsSync(join(output, forbidden))) errors.push(`starter leaked full product path: ${forbidden}`);

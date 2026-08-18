@@ -2,4 +2,12 @@ raw/*
 !raw/.gitkeep
 private/*
 !private/.gitkeep
+operations/runs/*
+!operations/runs/.gitkeep
+operations/corrections/*
+!operations/corrections/.gitkeep
+operations/learning/*
+!operations/learning/.gitkeep
+.cerebro/ledger/
+.cerebro/learning/
 .DS_Store

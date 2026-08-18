@@ -16,9 +16,10 @@ or another file-based AI can operate it, but the files remain the durable memory
 > `.cerebro/layout.json`. Do not browse, invent facts, or connect any external system. If you need
 > my decision, ask one question at a time.
 
-The first run should leave six durable artifacts: company map, source register, first System Brief,
-Context Pack, useful output and activation receipt. The raw files are evidence; they are not the
-prompt. The Context Pack is the smallest derived context needed by the first system.
+The first run should leave six human-facing artifacts: company map, source register, first System
+Brief, Context Pack, useful output and activation receipt. It also leaves a machine-readable
+System Contract and Run Record using the shared schemas in `protocol/`. The raw files are evidence; they
+are not the prompt. The Context Pack is the smallest derived context needed by the first system.
 
 ## After the first run
 

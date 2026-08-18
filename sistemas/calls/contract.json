@@ -1,0 +1,60 @@
+{
+  "protocol_version": 1,
+  "system_id": "calls-decisoes",
+  "name": "Calls em Decisões",
+  "version": "0.1.1",
+  "status": "confirmed",
+  "result": {
+    "statement": "reunião deixa decisões, ações, evidências e pendências aprovadas",
+    "non_success": "gerar apenas um resumo bonito",
+    "output_type": "decisoes-e-acoes",
+    "definition_of_done": "o dono confirma que usaria o artefato para decidir ou agir",
+    "owner": "dono-do-cerebro",
+    "human_gate": "aprovação dos derivados antes de salvar"
+  },
+  "trigger": {
+    "type": "event",
+    "description": "quando uma reunião real termina e a transcrição fica legível"
+  },
+  "capability": {
+    "capability_id": "extrair-decisoes-de-call",
+    "version": "0.1.0",
+    "origin": "inevita"
+  },
+  "entities": [
+    { "type": "meeting", "role": "reuniao", "required": false }
+  ],
+  "sources": [
+    {
+      "role": "transcricao",
+      "source_id": null,
+      "required": true,
+      "access": "manual",
+      "freshness": "por evento",
+      "purpose": "proveniência das decisões e ações"
+    }
+  ],
+  "pipeline": [
+    { "state": "recebida", "input": "transcrição", "output": "fonte identificada", "gate": "acesso autorizado" },
+    { "state": "extraida", "input": "fonte identificada", "output": "decisões e ações candidatas", "gate": "toda afirmação crítica aponta evidência" },
+    { "state": "aprovada", "input": "candidatas", "output": "artefato utilizável", "gate": "decisão humana registrada" }
+  ],
+  "permissions": {
+    "read": ["transcrição autorizada"],
+    "write": ["derivados e recibos locais"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.0",
+    "deterministic_gates": ["evidência presente", "PII fora das notas"],
+    "human_questions": ["Você usaria isso do jeito que está?"],
+    "outcome_measure": "uso-confirmado",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  }
+}

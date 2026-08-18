@@ -36,6 +36,10 @@ Se a operação já está clara, espelhe o que entendeu e prossiga. Se não est�
 > trabalho e qual entrega utilizável precisa existir no final?
 
 Isso configura o primeiro sistema por resultado. Não é uma entrevista genérica sobre a empresa.
+Se a pessoa disser que não sabe por onde começar, use a rota de observação: peça um único rastro
+recente de trabalho que tomou tempo, voltou para correção ou dependeu do julgamento dela. Observe o
+caso, desenhe o mapa atual e proponha até três resultados. Nunca responda à incerteza pedindo para
+conectar todas as fontes.
 
 ## 2. Descobrir sem invadir
 
@@ -66,6 +70,10 @@ Execute `company-brain-sprint` para:
 7. produzir um output real e ajustar uma vez;
 8. salvar os seis artefatos nos caminhos de `.cerebro/layout.json`.
 
+Além dos seis artefatos humanos, salve o System Contract e o primeiro Run Record definidos no
+layout. Eles são o envelope comum que permite costurar entidades, fontes, outputs e correções entre
+Sistemas diferentes sem padronizar o conteúdo privado.
+
 O bruto é usado para prova, citação, contradição e reprocessamento. O Context Pack recebe apenas o
 recorte necessário à tarefa. Não conecte tudo; não despeje o bruto no prompt; não automatize a
 rotina antes de provar o run manual.
@@ -83,6 +91,8 @@ fonte bruta se o contexto aprovado for suficiente. Pergunte:
 > Isso aproveitou o que já estava no cérebro ou você precisou explicar tudo de novo?
 
 Uma correção vira aprendizado candidato; só repetição e resultado medido tornam a regra validada.
+Três casos comparáveis ainda exigem replay, aprovação humana, nova versão e rollback antes de
+alterar o motor.
 
 ## 5. Vincular e conectar só quando fizer sentido
 

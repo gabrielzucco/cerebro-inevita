@@ -10,10 +10,11 @@ current operator. Work directly in the local folder and keep all durable context
 
 Deliver this chain:
 
-`evidence → current map → first result system → Context Pack → useful output → correction`
+`evidence → current map → System Contract → Context Pack → useful output → Run Record → correction`
 
-Read `.cerebro/layout.json` and `references/output-contract.md` before writing. Do not claim to map
-the whole company in one activation.
+Read `.cerebro/layout.json`, `references/output-contract.md` and
+`protocol/system-contract.schema.json` when that path exists before writing. Do not claim to map the
+whole company in one activation.
 
 ## Non-negotiables
 
@@ -40,7 +41,11 @@ Only when the operation is missing, ask:
 > Which recurring piece of work should this brain make easier first — what triggers it, and what
 > usable output must exist at the end?
 
-This is an installation decision, not a generic company interview.
+This is an installation decision, not a generic company interview. If the owner genuinely does not
+know which work to choose, switch to the observation route: ask for one recent trace of work that
+took time, came back for correction or depended on their judgment. Observe that trace, map the
+operation and propose at most three result Systems. Never replace uncertainty with “connect all
+your sources”.
 
 ## 2. Find the smallest evidence bundle
 
@@ -58,8 +63,8 @@ the gap. Never request a source merely because it exists.
 
 ## 3. Build the evidence ledger
 
-For every inspected item record: label, role, raw/derived state, authority, what it supports, what
-it cannot support, freshness, sensitivity and access state.
+For every inspected item assign an opaque `source-id` and record: label, role, raw/derived state,
+authority, what it supports, what it cannot support, freshness, sensitivity and access state.
 
 Map state:
 
@@ -89,7 +94,10 @@ one and ask the owner to confirm or replace it.
 
 After confirmation define the first system: result, trigger, inputs, minimal pipeline, output, human
 gate, predeclared eval, permissions, capture routine if already known, manual-run boundary and stop
-conditions. A system is a repeatable result contract, not an agent or a folder.
+conditions. A system is a repeatable result contract, not an agent or a folder. Write the same
+decision as a machine-readable System Contract at `systemContract` from `.cerebro/layout.json`.
+Use protocol version 1 and keep strategy, excerpts and private judgments out of the JSON envelope.
+Capability describes the portable task; source bindings and entity roles describe this company.
 
 ## 6. Compile context and run once
 
@@ -107,9 +115,14 @@ activation, not V3.
 
 ## 7. Persist and continue
 
-Write all six outputs to the paths in `.cerebro/layout.json`. End with exactly one next action: add
-the highest-leverage missing role, repeat this output on the next real case, or connect one recurring
-read source after the manual run proved value.
+Write the six human-facing outputs plus the System Contract and one completed Run Record to the
+paths in `.cerebro/layout.json`. The Run Record references opaque entities, source IDs, relative
+output paths and the correction path; it never copies raw evidence, output content or the literal
+correction. Append it as one JSON line to `runLedger`. If shell is available after value, validate
+or register with `system-contract.mjs`; without shell, the files themselves remain canonical.
+
+End with exactly one next action: add the highest-leverage missing role, repeat this output on the
+next real case, or connect one recurring read source after the manual run proved value.
 
 Only after the useful output is saved may you offer to link access/updates by email. It is optional,
 non-blocking and must stay in `.cerebro/acesso-email`, never in business notes.
@@ -117,4 +130,5 @@ non-blocking and must stay in `.cerebro/acesso-email`, never in business notes.
 On the next real case, read the persisted map, System Brief and Context Pack first. Reuse approved
 context without reopening raw evidence unless the new case or a contradiction requires it. Record
 what the owner corrected so the brain can improve without pretending that one correction is a
-validated rule.
+validated rule. A correction stays candidate until three comparable runs, replay, explicit human
+approval, target version and rollback exist.

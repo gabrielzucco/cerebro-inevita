@@ -1,0 +1,28 @@
+{
+  "protocol_version": 1,
+  "capability_id": "capacidade-local",
+  "name": "Nome da capacidade",
+  "version": "0.1.0",
+  "task": "uma tarefa reutilizável",
+  "when_to_use": [],
+  "when_not_to_use": [],
+  "input_roles": [
+    {
+      "role": "evidencia-principal",
+      "required": true,
+      "purpose": "sustentar o trabalho sem invenção"
+    }
+  ],
+  "output": {
+    "type": "artefato-verificavel",
+    "definition_of_done": "output passa na régua declarada"
+  },
+  "permissions": {
+    "read": [],
+    "write": [],
+    "external_actions": false
+  },
+  "human_authority": ["aprovação do output"],
+  "evals": ["fidelidade à evidência"],
+  "extensions": {}
+}

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateCapabilityContract } from './lib/system-protocol.mjs';
 
 const SOURCE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET_ROOT = resolve(process.env.CEREBRO_INSTALL_ROOT || SOURCE_ROOT);
@@ -28,6 +29,7 @@ const SHA256_RE = /^[0-9a-f]{64}$/;
 const GRANT_RE = /^[A-Za-z0-9_-]{40,96}$/;
 const RUNTIMES = new Set(['claude-code', 'codex', 'gemini-cli', 'antigravity', 'outro']);
 const PACKAGE_FILES = ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md'];
+const OPTIONAL_PACKAGE_FILES = ['capability.json'];
 const TEMPLATE_FILES = [
   ['feedback.template.md', 'feedback.md'],
   ['configuracao.template.md', 'configuracao.md'],
@@ -141,6 +143,11 @@ function validateRemotePackage(responseBody) {
   if (manifest.system_id !== bundle.system_id || manifest.release?.version !== bundle.version) {
     fail('manifesto e envelope do pacote divergem; nenhum arquivo foi alterado');
   }
+  if (typeof bundle.files['capability.json'] === 'string') {
+    const capability = JSON.parse(bundle.files['capability.json']);
+    const errors = validateCapabilityContract(capability);
+    if (errors.length) fail(`capability contract inválido: ${errors.join(' · ')}`);
+  }
   return { bundle, manifest, files: bundle.files, packageSha256: calculated };
 }
 
@@ -154,6 +161,10 @@ function loadLocalPackage() {
     files[file] = readFileSync(path, 'utf8');
   }
   for (const optional of ['experimento.template.md', 'recibo-evals.template.md']) {
+    const path = join(source, optional);
+    if (existsSync(path)) files[optional] = readFileSync(path, 'utf8');
+  }
+  for (const optional of OPTIONAL_PACKAGE_FILES) {
     const path = join(source, optional);
     if (existsSync(path)) files[optional] = readFileSync(path, 'utf8');
   }
@@ -206,6 +217,9 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
   const target = join(TARGET_ROOT, 'sistemas', 'outros-instalados', slug);
   mkdirSync(target, { recursive: true });
   for (const file of PACKAGE_FILES) writeFileSync(join(target, file), files[file]);
+  for (const file of OPTIONAL_PACKAGE_FILES) {
+    if (typeof files[file] === 'string') writeFileSync(join(target, file), files[file]);
+  }
   for (const [template, destination] of TEMPLATE_FILES) {
     if (typeof files[template] !== 'string') continue;
     const destinationPath = join(target, destination);
@@ -243,6 +257,12 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
   const previous = hadState ? readJson(statePath, 'estado local do sistema') : {};
   const sameRelease = previous.package_version === bundle.version
     && previous.package_sha256 === packageSha256;
+  let capability = previous.capability || null;
+  if (typeof files['capability.json'] === 'string') {
+    capability = JSON.parse(files['capability.json']);
+    const errors = validateCapabilityContract(capability);
+    if (errors.length) fail(`capability contract inválido: ${errors.join(' · ')}`);
+  }
   writeFileSync(statePath, `${JSON.stringify({
     ...(sameRelease ? previous : {}),
     slug,
@@ -251,6 +271,11 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
     package_sha256: packageSha256,
     release_channel: manifest.release?.channel || 'unknown',
     validation_stage: manifest.validation?.stage || 'unknown',
+    capability: capability ? {
+      capability_id: capability.capability_id,
+      version: capability.version,
+      origin: 'inevita',
+    } : null,
     status: sameRelease ? (previous.status || 'package_added') : 'package_added',
     updated_at: new Date().toISOString(),
   }, null, 2)}\n`, { mode: 0o600 });

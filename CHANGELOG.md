@@ -1,5 +1,26 @@
 # Mudanças do cérebro INEVITA
 
+## v1.22.0 — 2026-08-18 · “Sistemas diferentes; protocolo comum”
+
+- **Control plane local:** Capability, System Contract e Run Record ganharam schemas versionados.
+  Sistemas continuam diferentes por dentro, mas declaram resultado, IDs, fontes, permissões, eval,
+  decisão e versão no mesmo envelope.
+- **Dado canônico fora do Sistema:** entidades opacas atravessam vendas, conteúdo, produto ou
+  operação sem cada Sistema copiar lead, cliente, oferta ou experimento. `entity.mjs journey`
+  reconstrói a jornada local pelo ledger.
+- **Run ledger sem conteúdo:** cada início e conclusão registra referências de entidade, fonte,
+  output, eval, decisão, correção e outcome; bruto, output e texto da correção não entram no JSONL e
+  não são enviados à INEVITA.
+- **Capability portátil:** System Packs podem carregar `capability.json`; o instalador liga a
+  capacidade compartilhada ao estado local sem tocar configuração, fontes ou feedback do founder.
+- **Aprendizado supervisionado:** uma correção nasce candidata. Promoção exige três ocorrências
+  comparáveis, três replays, aprovação humana, versão maior e rollback; o motor nunca se autoedita.
+- **Duas entradas, uma convergência:** `/comecar` segue result-first quando o trabalho está claro e
+  usa observação de um rastro real quando não está. As duas rotas terminam no primeiro Sistema
+  verificado; “conecte tudo” não é onboarding.
+- **Starter EN no mesmo protocolo:** a pasta mínima continua sem Node obrigatório e agora produz os
+  seis artefatos humanos mais System Contract e Run Record compatíveis com o produto completo.
+
 ## v1.21.0 — 2026-08-17 · “a pasta é o cérebro; a IA é o operador”
 
 - **Ativação local evidence-first:** `/comecar` deixa e-mail e pergunta genérica para depois do

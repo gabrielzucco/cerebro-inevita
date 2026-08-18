@@ -1,0 +1,49 @@
+{
+  "protocol_version": 1,
+  "capability_id": "preparar-briefing-comercial",
+  "name": "Preparar briefing comercial citável",
+  "version": "0.1.0",
+  "task": "Transformar contexto autorizado de uma oportunidade em briefing utilizável antes da reunião",
+  "when_to_use": [
+    "antes de uma reunião comercial real com lead identificado"
+  ],
+  "when_not_to_use": [
+    "quando não existe fonte autorizada sobre a oportunidade"
+  ],
+  "input_roles": [
+    {
+      "role": "lead",
+      "required": true,
+      "purpose": "identificar a oportunidade sem misturar jornadas"
+    },
+    {
+      "role": "historico-conversas",
+      "required": true,
+      "purpose": "sustentar hipóteses e perguntas com evidência"
+    },
+    {
+      "role": "oferta",
+      "required": true,
+      "purpose": "manter o briefing aderente ao que a empresa realmente vende"
+    }
+  ],
+  "output": {
+    "type": "briefing-comercial",
+    "definition_of_done": "o operador confirma que usaria o briefing na reunião real"
+  },
+  "permissions": {
+    "read": ["fontes autorizadas do lead", "oferta aprovada"],
+    "write": ["output local e recibo"],
+    "external_actions": false
+  },
+  "human_authority": [
+    "aprovar o briefing",
+    "aprovar qualquer diff de CRM"
+  ],
+  "evals": [
+    "afirmações críticas apontam evidência",
+    "lacunas permanecem explícitas",
+    "nenhuma escrita externa acontece silenciosamente"
+  ],
+  "extensions": {}
+}

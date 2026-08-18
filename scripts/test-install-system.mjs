@@ -79,7 +79,7 @@ function testCase({ slug, name, minimumBrain, gated, hasExperimento, hasSkill, h
       }
     }
     if (readFileSync(feedback, 'utf8') !== 'FEEDBACK-PRIVADO\n') throw new Error('feedback foi sobrescrito');
-    const expectedFiles = ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md', 'configuracao.md'];
+    const expectedFiles = ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md', 'configuracao.md', 'capability.json'];
     if (hasExperimento) expectedFiles.push('experimento.md');
     if (hasRecibo) expectedFiles.push('recibo-evals.template.md');
     for (const file of expectedFiles) {
@@ -94,6 +94,9 @@ function testCase({ slug, name, minimumBrain, gated, hasExperimento, hasSkill, h
     const initialState = JSON.parse(readFileSync(statePath, 'utf8'));
     if (initialState.status !== 'package_added') throw new Error('estado inicial incorreto');
     if (initialState.validation_stage !== 'pilot') throw new Error('piloto perdeu o gate de validação');
+    if (initialState.capability?.capability_id !== 'preparar-briefing-comercial') {
+      throw new Error('capability compartilhável não foi ligada ao estado local');
+    }
     run('system-state.mjs', [slug, 'configuring'], sandbox);
     if (JSON.parse(readFileSync(statePath, 'utf8')).status !== 'configuring') throw new Error('transição não persistiu');
     run('system-run.mjs', [slug, 'start'], sandbox);

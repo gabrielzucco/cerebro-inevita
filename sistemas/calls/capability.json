@@ -1,0 +1,28 @@
+{
+  "protocol_version": 1,
+  "capability_id": "extrair-decisoes-de-call",
+  "name": "Extrair decisões de uma call",
+  "version": "0.1.0",
+  "task": "Transformar uma transcrição autorizada em decisões, ações, evidências e pendências aprovadas",
+  "when_to_use": ["depois de uma reunião real com transcrição legível"],
+  "when_not_to_use": ["quando a fonte não é uma reunião ou não há autorização de leitura"],
+  "input_roles": [
+    {
+      "role": "transcricao",
+      "required": true,
+      "purpose": "sustentar decisões e ações com fala real"
+    }
+  ],
+  "output": {
+    "type": "decisoes-e-acoes",
+    "definition_of_done": "o dono confirma que consegue agir usando o artefato"
+  },
+  "permissions": {
+    "read": ["transcrição autorizada"],
+    "write": ["átomos, decisões, ações e recibo locais"],
+    "external_actions": false
+  },
+  "human_authority": ["aprovar os derivados antes de salvar"],
+  "evals": ["decisões e ações apontam evidência", "toda ação tem dono quando a fonte informa"],
+  "extensions": {}
+}

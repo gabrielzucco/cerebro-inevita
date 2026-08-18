@@ -23,6 +23,9 @@ rmSync(output, { recursive: true, force: true });
 mkdirSync(output, { recursive: true });
 cpSync(PROFILE, output, { recursive: true });
 cpSync(join(ROOT, '.claude', 'skills', 'company-brain-sprint'), join(output, 'skills', 'company-brain-sprint'), { recursive: true });
+cpSync(join(ROOT, 'protocol'), join(output, 'protocol'), { recursive: true });
+cpSync(join(ROOT, 'templates', 'sistema', 'contract.json'), join(output, 'systems', 'first-system', 'contract.template.json'));
+cpSync(join(ROOT, 'templates', 'sistema', 'capability.json'), join(output, 'systems', 'first-system', 'capability.template.json'));
 writeFileSync(join(output, 'VERSION'), `${version}\n`);
 
 rmSync(zipPath, { force: true });

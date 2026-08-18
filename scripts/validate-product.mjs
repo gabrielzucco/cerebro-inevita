@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { validateCapabilityContract, validateSystemContract } from './lib/system-protocol.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -11,14 +12,19 @@ const required = [
   'templates/sistema/pipeline.md', 'templates/sistema/rotinas.md',
   'templates/sistema/skill-contract.md', 'templates/sistema/evals.md',
   'templates/sistema/feedback.md', 'templates/sistema/changelog.md',
+  'templates/sistema/contract.json', 'templates/sistema/capability.json',
+  'protocol/README.md', 'protocol/capability-contract.schema.json',
+  'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
   'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
   'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
+  'sistemas/calls/capability.json', 'sistemas/calls/contract.json',
   'sistemas/cerebro-base/manifest.md', 'sistemas/cerebro-base/pipeline.md',
   'sistemas/cerebro-base/rotinas.md', 'sistemas/cerebro-base/evals.md',
   'sistemas/cerebro-base/feedback.md', 'sistemas/cerebro-base/changelog.md',
+  'sistemas/cerebro-base/capability.json', 'sistemas/cerebro-base/contract.json',
   '.claude/skills/operar/SKILL.md',
   '.claude/skills/arquiteto/SKILL.md',
   '.claude/skills/arquiteto/agents/openai.yaml',
@@ -36,6 +42,8 @@ const required = [
   'profiles/company-brain-starter-en/START-HERE.md',
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
+  'scripts/system-contract.mjs', 'scripts/entity.mjs', 'scripts/system-learn.mjs',
+  'scripts/lib/system-protocol.mjs', 'scripts/test-system-protocol.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
@@ -48,10 +56,25 @@ const required = [
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/changelog.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/feedback.template.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/configuracao.template.md',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/capability.json',
 ];
 
 for (const item of required) {
   if (!existsSync(join(ROOT, item))) errors.push(`faltando: ${item}`);
+}
+
+for (const [label, path, validate] of [
+  ['template capability', 'templates/sistema/capability.json', validateCapabilityContract],
+  ['template system contract', 'templates/sistema/contract.json', validateSystemContract],
+  ['calls capability', 'sistemas/calls/capability.json', validateCapabilityContract],
+  ['calls system contract', 'sistemas/calls/contract.json', validateSystemContract],
+  ['cerebro-base capability', 'sistemas/cerebro-base/capability.json', validateCapabilityContract],
+  ['cerebro-base system contract', 'sistemas/cerebro-base/contract.json', validateSystemContract],
+  ['briefing capability', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/capability.json', validateCapabilityContract],
+]) {
+  if (!existsSync(join(ROOT, path))) continue;
+  const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
+  for (const error of validationErrors) errors.push(`${label} inválido: ${error}`);
 }
 
 const systemsMethod = readFileSync(join(ROOT, 'METODO-SISTEMAS.md'), 'utf8');
@@ -93,7 +116,7 @@ if (existsSync(availablePackagesRoot)) {
   for (const entry of readdirSync(availablePackagesRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     for (const file of ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md',
-      'changelog.md', 'feedback.template.md', 'configuracao.template.md']) {
+      'changelog.md', 'feedback.template.md', 'configuracao.template.md', 'capability.json']) {
       if (!existsSync(join(availablePackagesRoot, entry.name, file))) {
         errors.push(`pacote ${entry.name} incompleto: ${file}`);
       }
@@ -182,6 +205,11 @@ for (const contract of [
   'Isso aproveitou o que já estava no cérebro',
   'Somente depois do output útil',
   'V3 só existe',
+  'System Contract',
+  'primeiro Run Record',
+  'replay, aprovação humana, nova versão e rollback',
+  'rota de observação',
+  'Nunca responda à incerteza pedindo para',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
 }
@@ -337,6 +365,9 @@ if (!ignore.includes('.cerebro/concierge-runs/')) {
 if (!ignore.includes('.cerebro/sistemas/')) {
   errors.push('estado privado dos sistemas não está protegido pelo .gitignore');
 }
+for (const privatePath of ['.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
+  if (!ignore.includes(privatePath)) errors.push(`estado privado sem ignore: ${privatePath}`);
+}
 if (!ignore.includes('operacao/arquitetura/*')) {
   errors.push('mapas privados do Architect não estão protegidos pelo .gitignore');
 }
@@ -344,6 +375,25 @@ if (!ignore.includes('operacao/arquitetura/*')) {
 const baseManifest = readFileSync(join(ROOT, 'sistemas', 'cerebro-base', 'manifest.md'), 'utf8');
 for (const contract of ['fonte real', 'artefato aprovado', 'T0', 'T4', 'segunda utilização']) {
   if (!baseManifest.includes(contract)) errors.push(`cerebro-base sem contrato: ${contract}`);
+}
+
+const layout = JSON.parse(readFileSync(join(ROOT, '.cerebro', 'layout.json'), 'utf8'));
+if (layout.version !== 2) errors.push('layout precisa estar no protocolo v2');
+for (const key of ['systemContract', 'runLedger', 'learningRegister']) {
+  if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
+    errors.push(`layout sem caminho seguro: ${key}`);
+  }
+}
+
+const sprint = readFileSync(join(ROOT, '.claude', 'skills', 'company-brain-sprint', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'System Contract → Context Pack',
+  'opaque `source-id`',
+  'one completed Run Record',
+  'three comparable runs, replay',
+  'observation route',
+]) {
+  if (!sprint.includes(contract)) errors.push(`company-brain-sprint sem protocolo comum: ${contract}`);
 }
 
 const clock = readFileSync(join(ROOT, 'scripts', 'concierge-run.mjs'), 'utf8');

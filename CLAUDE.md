@@ -54,6 +54,9 @@ elos: [[conceito-a]] · [[conceito-b]]
 - `sistemas/` — pacotes de resultado instalados. Cada sistema declara manifest, pipeline, rotinas,
   evals, feedback e changelog. Comece por `sistemas/_CATALOGO.md`; para construir um, siga
   `METODO-SISTEMAS.md` e `templates/sistema/`. Experimentos seguem `METODO-EXPERIMENTOS.md`.
+- `protocol/` — o **protocolo comum**: Capability, System Contract e Run Record. Sistemas podem ser
+  diferentes por dentro, mas usam IDs, referências, permissões, evals e versões compatíveis nas
+  bordas. Entidades opacas costuram a jornada sem duplicar o dado canônico.
 - `skills/` — catálogo humano; o executável vive em `.claude/skills/` e `.agents/skills/`.
 - `conexoes/` — interfaces opcionais para fontes e ferramentas. Arquivos locais funcionam sem plano pago.
 - `operacao/` — brief vivo em `_HOJE.md`, execuções, decisões pendentes, erros, escalações e
@@ -90,6 +93,8 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **Depois de operar:** um run aprovado pode virar procedimento candidato; três casos comparáveis
   habilitam diff e replay antes da decisão humana.
 - **Feedback recorrente:** três falhas comparáveis candidatam correção pequena; nunca autoedite o motor silenciosamente.
+- **Para costurar Sistemas:** o dado continua na fonte de verdade; cada Run Record referencia a
+  mesma Entidade e os mesmos `source-id`s. Padronize a observabilidade, nunca o julgamento.
 
 > **Frescor:** notas de `meu-negocio/` carregam `confirmado: <data>` (última vez que a pessoa validou) e, quando morrem, `status: superado` (nunca se deleta). Nota superada só entra em resposta como histórico, nunca como fato vigente.
 

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/run-record-v1.json",
+  "title": "INEVITA Run Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "run_id",
+    "system_id",
+    "system_version",
+    "status",
+    "started_at",
+    "entity_refs",
+    "source_refs",
+    "output_refs",
+    "eval",
+    "human_decision",
+    "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "run_id": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "system_id": { "$ref": "#/$defs/id" },
+    "system_version": { "type": "string", "minLength": 1 },
+    "capability": {
+      "type": ["object", "null"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/id" },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "required": ["capability_id", "version"],
+      "additionalProperties": false
+    },
+    "status": { "enum": ["started", "completed"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "entity_refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+    "source_refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+    "output_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "eval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "passed"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "passed": { "type": ["boolean", "null"] }
+      }
+    },
+    "human_decision": { "enum": ["pending", "approved", "changes_requested", "rejected"] },
+    "correction_ref": { "type": ["string", "null"] },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["measure", "value"],
+        "properties": {
+          "measure": { "$ref": "#/$defs/id" },
+          "value": { "type": ["number", "string", "boolean"] }
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_shared_with_inevita"],
+      "properties": {
+        "content_shared_with_inevita": { "const": false }
+      }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "id"],
+      "properties": {
+        "role": { "$ref": "#/$defs/id" },
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" }
+      }
+    }
+  }
+}

@@ -21,6 +21,7 @@ Essa diferença resolve a confusão mais comum:
 | **Pipeline** | define os estados pelos quais a entrada vira saída |
 | **Rotina** | decide quando uma parte do pipeline começa ou é revisada |
 | **Skill** | carrega o julgamento reutilizável para executar uma tarefa |
+| **Capability** | declara o contrato portátil da skill antes de receber contexto local |
 | **Conexão** | dá acesso a uma fonte ou ferramenta |
 | **Agente** | executa partes autorizadas usando contexto, skills e ferramentas |
 | **Experimento** | testa uma mudança dentro do sistema com critério definido antes do dado |
@@ -32,6 +33,10 @@ Sistema: ela sabe fazer uma etapa, não responde pelo resultado inteiro. Um pipe
 Sistema: ele descreve o caminho, mas não contém sozinho a régua, o julgamento e o aprendizado.
 
 > **Sistema = resultado + caminho + julgamento + régua + feedback + versão.**
+
+Em termos de composição:
+
+> **Sistema local = Capability portátil + contexto + bindings de fontes e entidades + permissões + eval + memória.**
 
 ---
 
@@ -96,6 +101,25 @@ resultado → pipeline → output → eval → feedback → mudança → nova me
 
 O primeiro impede uma IA genérica. O segundo impede que o contexto vire apenas um acervo bem
 organizado.
+
+### Protocolo comum: liberdade dentro, padrão nas bordas
+
+Sistemas diferentes não precisam usar o mesmo pipeline ou produzir o mesmo output. Precisam deixar
+o mesmo envelope observável. O Cérebro padroniza:
+
+- `system_id`, Capability e versões;
+- Entidades e fontes por IDs opacos;
+- permissões e gates;
+- Run Record com output, eval, decisão e correção por referência;
+- promoção de aprendizado com recorrência, replay, aprovação e rollback.
+
+O conteúdo permanece flexível e privado. Um Sistema comercial e um Sistema de conteúdo podem
+referenciar o mesmo `lead-id` ou `offer-id` sem copiar o lead ou a oferta para dentro de cada um.
+Assim, o dado canônico permanece na fonte de verdade e a jornada aparece no ledger local.
+
+Os schemas estão em `protocol/`. Quando Node estiver disponível, `system-contract.mjs`,
+`system-run.mjs`, `entity.mjs` e `system-learn.mjs` validam o protocolo. Sem shell, os arquivos
+continuam sendo o contrato canônico.
 
 ---
 
@@ -324,7 +348,8 @@ processo na mão.
 
 ### Passo 3 — congele o contrato mínimo
 
-Preencha resultado, não-sucesso, output, dono e setpoint no `manifest.md`.
+Preencha resultado, não-sucesso, output, dono e setpoint no `manifest.md`; registre o mesmo envelope
+em `contract.json` para o control plane.
 
 ### Passo 4 — desenhe o pipeline real
 
@@ -389,14 +414,16 @@ Instalação não é ativação. Automação não é validação. Volume não su
 
 Copie [`templates/sistema/`](templates/sistema/) para uma nova pasta e preencha nesta ordem:
 
-1. `manifest.md` — o contrato do resultado;
-2. `configuracao.md` — o contexto privado da empresa;
-3. `pipeline.md` — os estados;
-4. `rotinas.md` — os gatilhos;
-5. `skill-contract.md` — o julgamento executável;
-6. `evals.md` — a régua;
-7. `feedback.md` — as correções locais;
-8. `changelog.md` — as versões do motor.
+1. `manifest.md` — o contrato humano do resultado;
+2. `capability.json` — a capacidade portátil sem contexto privado;
+3. `contract.json` — o envelope comum do Sistema local;
+4. `configuracao.md` — o contexto privado da empresa;
+5. `pipeline.md` — os estados;
+6. `rotinas.md` — os gatilhos;
+7. `skill-contract.md` — o julgamento executável;
+8. `evals.md` — a régua;
+9. `feedback.md` — as correções locais;
+10. `changelog.md` — as versões do motor.
 
 Prompt direto para usar com o agente:
 

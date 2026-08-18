@@ -1,5 +1,8 @@
 # Manifest — <Nome do Sistema>
 
+> Vista humana do contrato. Mantenha `contract.json` como envelope legível por máquina e
+> `capability.json` como capacidade portátil sem contexto privado.
+
 ```yaml
 system_id: meu-sistema
 name: Nome do Sistema

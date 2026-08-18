@@ -11,6 +11,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { latestRunRecords } from './lib/system-protocol.mjs';
 
 const ROOT = process.env.CEREBRO_INSTALL_ROOT
   ? resolve(process.env.CEREBRO_INSTALL_ROOT)
@@ -119,6 +120,20 @@ function makeBrief() {
       .filter((source) => source.availability !== 'disponível')
       .map((source) => `Fonte **${source.label || source.id}** não está acessível no caminho registrado.`),
   ];
+  let ledgerRuns = [];
+  try {
+    ledgerRuns = latestRunRecords(ROOT).filter((run) => run.status === 'completed');
+  } catch {
+    alerts.push('Ledger de runs precisa de reparo antes de costurar novas jornadas.');
+  }
+  const entitySystems = new Map();
+  for (const run of ledgerRuns) {
+    for (const entity of run.entity_refs || []) {
+      if (!entitySystems.has(entity.id)) entitySystems.set(entity.id, new Set());
+      entitySystems.get(entity.id).add(run.system_id);
+    }
+  }
+  const stitchedEntities = [...entitySystems.values()].filter((systemIds) => systemIds.size > 1).length;
   const timestamp = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
@@ -138,6 +153,7 @@ function makeBrief() {
     `- sistemas instalados: **${systems.length}** · ativos: **${systems.filter((system) => system.status === 'active').length}** · em atenção: **${systems.filter((system) => system.status === 'needs_attention').length}**`,
     `- decisões pendentes: **${decisions.length}**`,
     `- fontes registradas: **${sources.length}** · não encontradas: **${sources.filter((source) => source.availability !== 'disponível').length}**`,
+    `- runs no protocolo comum: **${ledgerRuns.length}** · entidades atravessando mais de um Sistema: **${stitchedEntities}**`,
     `- primeiras experiências ainda sem T4: **${incompleteOnboarding.length}**`,
     `- candidatos de melhoria/procedimento: **${improvements.length}**`,
     '',

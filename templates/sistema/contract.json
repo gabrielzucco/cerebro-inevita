@@ -1,0 +1,52 @@
+{
+  "protocol_version": 1,
+  "system_id": "meu-sistema",
+  "name": "Nome do Sistema",
+  "version": "0.1.0",
+  "status": "proposed",
+  "result": {
+    "statement": "resultado completo e observável",
+    "non_success": "o que não conta como sucesso",
+    "output_type": "artefato-verificavel",
+    "definition_of_done": "condição mínima para aceitar o output",
+    "owner": "papel-do-dono",
+    "human_gate": "decisão que permanece humana"
+  },
+  "trigger": {
+    "type": "manual",
+    "description": "quando o trabalho real começa"
+  },
+  "capability": {
+    "capability_id": "capacidade-local",
+    "version": "0.1.0",
+    "origin": "local"
+  },
+  "entities": [],
+  "sources": [],
+  "pipeline": [
+    {
+      "state": "recebido",
+      "input": "menor entrada real",
+      "output": "output candidato",
+      "gate": "fonte e permissão válidas"
+    }
+  ],
+  "permissions": {
+    "read": [],
+    "write": [],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.0",
+    "deterministic_gates": ["afirmações críticas apontam evidência"],
+    "human_questions": ["Você usaria isso do jeito que está?"],
+    "outcome_measure": "resultado observado no próximo caso",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  }
+}

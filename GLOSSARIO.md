@@ -14,7 +14,10 @@
 | **Ponteiro** | Nível 0: o cérebro registra ONDE a fonte está, sem copiar nem converter. A maioria das fontes vive (bem) aqui. |
 | **Motor vs contexto** | Motor = skills e gabaritos (nossos, atualizam via `/atualizar`). Contexto = tuas notas (nunca tocadas por atualização). [harness — o termo do Vale: "fix your harness, don't reprompt"] |
 | **Skill** | Know-how executável: um comando que sabe fazer UMA coisa, com as regras embutidas. [skills — workshop AIEWF] |
+| **Capability** | Contrato portátil do que uma skill sabe fazer: entradas por papel, output, permissões, autoridade humana e evals; ganha contexto privado só quando compõe um Sistema. |
 | **Sistema** | Pacote de um resultado completo: manifest + pipeline + rotinas + skill + eval + feedback + versão. |
+| **System Contract** | Envelope legível por máquina que liga resultado, Capability, entidades, fontes, pipeline, permissões, eval e aprendizado sem carregar conteúdo privado. |
+| **Control plane** | Camada local que registra contratos, versões, permissões, runs e aprendizado de Sistemas diferentes pelo mesmo protocolo. |
 | **Agente** | Executor movido por modelo que usa contexto, skills e ferramentas dentro das permissões; não é a memória nem o Sistema inteiro. |
 | **Architect** | A porta de diagnóstico do Cérebro: mapeia a operação, explicita a força das evidências e propõe o primeiro sistema; o dono confirma. |
 | **Estado do mapa** | O grau de prova do Architect: V0 declarado · V1 evidência parcial · V2 verificado pelo responsável · V3 validado por execução e resultado. |
@@ -23,6 +26,8 @@
 | **Conexão** | Interface fina para uma fonte ou ferramenta; não contém o processo inteiro. [MCP/CLI] |
 | **Output** | Resultado concreto e verificável produzido por uma execução. |
 | **Recibo** | Registro local que liga entrada, output, versão, gates, decisão, falhas e próxima ação de uma execução. |
+| **Run Record** | Recibo estruturado de um Run: IDs e referências de entidade, fonte, output, eval, decisão e correção, nunca o conteúdo bruto. |
+| **Entidade** | Objeto canônico que atravessa Sistemas, como lead, cliente, oferta ou experimento; usa ID opaco para costurar a jornada sem duplicar o dado. |
 | **Gate** | Regra objetiva que impede um estado de avançar quando uma condição obrigatória falha. |
 | **Sensor** | Sinal real que o Sistema consegue observar para avaliar uma execução ou resultado. |
 | **Métrica** | Número ou estado que descreve o resultado observado. |

@@ -4,6 +4,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  appendRunRecord,
+  parseOutcomes,
+  parseRoleRefs,
+  readJson,
+  safeRelativePath,
+  validateSystemContract,
+} from './lib/system-protocol.mjs';
 
 const ROOT = process.env.CEREBRO_INSTALL_ROOT
   ? resolve(process.env.CEREBRO_INSTALL_ROOT)
@@ -23,6 +31,68 @@ function fail(message) {
 function option(name) {
   const prefix = `--${name}=`;
   return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) ?? '';
+}
+
+function options(name) {
+  const prefix = `--${name}=`;
+  return process.argv.filter((arg) => arg.startsWith(prefix)).map((arg) => arg.slice(prefix.length));
+}
+
+function uniqueRefs(refs) {
+  return [...new Map(refs.map((ref) => [`${ref.role}:${ref.id}`, ref])).values()];
+}
+
+function contractFor(stateValue) {
+  const path = stateValue.contract_path
+    ? resolve(ROOT, stateValue.contract_path)
+    : join(ROOT, '.cerebro', 'contracts', `${slug}.json`);
+  if (!existsSync(path)) return null;
+  const contract = readJson(path, 'System Contract');
+  const errors = validateSystemContract(contract);
+  if (errors.length) fail(`System Contract inválido: ${errors.join(' · ')}`);
+  return contract;
+}
+
+function requireRoles(contract, entityRefs, sourceRefs) {
+  if (!contract) return;
+  const missingEntities = contract.entities
+    .filter((entity) => entity.required && !entityRefs.some((ref) => ref.role === entity.role))
+    .map((entity) => entity.role);
+  const missingSources = contract.sources
+    .filter((source) => source.required && !sourceRefs.some((ref) => ref.role === source.role))
+    .map((source) => source.role);
+  if (missingEntities.length || missingSources.length) {
+    fail([
+      missingEntities.length ? `entidades obrigatórias: ${missingEntities.join(', ')}` : '',
+      missingSources.length ? `fontes obrigatórias: ${missingSources.join(', ')}` : '',
+    ].filter(Boolean).join(' · '));
+  }
+}
+
+function ledgerRecord(run, stateValue, contract, overrides = {}) {
+  const capability = contract?.capability || stateValue.capability || null;
+  return {
+    protocol_version: 1,
+    run_id: run.id,
+    system_id: stateValue.system_id || slug,
+    system_version: stateValue.package_version || contract?.version || '0.0.0',
+    capability: capability ? {
+      capability_id: capability.capability_id,
+      version: capability.version,
+    } : null,
+    status: run.status,
+    started_at: run.started_at,
+    completed_at: run.completed_at || null,
+    entity_refs: run.entity_refs || [],
+    source_refs: run.source_refs || [],
+    output_refs: [],
+    eval: { version: run.eval_version || contract?.eval?.version || '0.1.0', passed: null },
+    human_decision: 'pending',
+    correction_ref: null,
+    outcomes: [],
+    privacy: { content_shared_with_inevita: false },
+    ...overrides,
+  };
 }
 
 function save(path, value) {
@@ -60,6 +130,7 @@ if (!SLUG_RE.test(slug)) fail('informe um system_id válido');
 const statePath = join(ROOT, '.cerebro', 'sistemas', `${slug}.json`);
 if (!existsSync(statePath)) fail('adicione e configure o pacote antes de iniciar um run');
 const state = JSON.parse(readFileSync(statePath, 'utf8'));
+const contract = contractFor(state);
 
 if (action === 'show') {
   console.log(JSON.stringify(state, null, 2));
@@ -74,12 +145,28 @@ if (action === 'start') {
     console.log(`✓ run já iniciado: ${state.current_run.id}`);
     process.exit(0);
   }
+  let entityRefs;
+  let sourceRefs;
+  try {
+    entityRefs = parseRoleRefs(options('entity'), '--entity');
+    sourceRefs = uniqueRefs([
+      ...parseRoleRefs(options('source'), '--source'),
+      ...(contract?.sources || [])
+        .filter((source) => source.source_id)
+        .map((source) => ({ role: source.role, id: source.source_id })),
+    ]);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+  requireRoles(contract, entityRefs, sourceRefs);
   const now = new Date().toISOString();
   const run = {
     id: randomUUID(),
     status: 'started',
     started_at: now,
-    eval_version: option('eval-version') || '0.1.0',
+    eval_version: option('eval-version') || contract?.eval?.version || '0.1.0',
+    entity_refs: entityRefs,
+    source_refs: sourceRefs,
   };
   const next = {
     ...state,
@@ -87,6 +174,11 @@ if (action === 'start') {
     current_run: run,
     updated_at: now,
   };
+  try {
+    appendRunRecord(ROOT, ledgerRecord(run, next, contract));
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
   save(statePath, next);
   ping('system_run_started', next, run);
   if (state.status === 'configuring') ping('system_first_run', next, run);
@@ -167,6 +259,24 @@ const durationMs = Number.isInteger(durationValue) && durationValue >= 0
 const now = new Date().toISOString();
 const passed = evalResult === 'pass';
 const approved = decision === 'approved';
+let outputRefs;
+let correctionRef = null;
+let outcomes;
+try {
+  outputRefs = options('output').map((path) => safeRelativePath(ROOT, path, { mustExist: true }));
+  if (contract && outputRefs.length === 0) {
+    fail('System Contract exige ao menos um --output=<caminho relativo existente>');
+  }
+  if (option('correction-ref')) {
+    correctionRef = safeRelativePath(ROOT, option('correction-ref'), { mustExist: true });
+  }
+  if (decision === 'changes_requested' && !correctionRef) {
+    fail('mudanças pedidas exigem --correction-ref=<arquivo local>');
+  }
+  outcomes = parseOutcomes(options('outcome'));
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 const run = {
   ...state.current_run,
   status: 'completed',
@@ -174,6 +284,9 @@ const run = {
   duration_ms: durationMs,
   eval_passed: passed,
   human_decision: decision,
+  output_refs: outputRefs,
+  correction_ref: correctionRef,
+  outcomes,
 };
 const runCount = Number(state.run_count || 0) + 1;
 const approvedRunCount = Number(state.approved_run_count || 0) + (passed && approved ? 1 : 0);
@@ -192,6 +305,17 @@ const next = {
     || (firstValueConfirmed && passed && approved && runCount > 1 ? now : null),
   updated_at: now,
 };
+try {
+  appendRunRecord(ROOT, ledgerRecord(run, next, contract, {
+    output_refs: outputRefs,
+    eval: { version: run.eval_version, passed },
+    human_decision: decision,
+    correction_ref: correctionRef,
+    outcomes,
+  }));
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 save(statePath, next);
 
 const receiptDir = join(ROOT, 'operacao', 'execucoes');
@@ -206,6 +330,10 @@ writeFileSync(join(receiptDir, `${run.id}-${slug}.md`), [
   `- duração-ms: ${run.duration_ms}`,
   `- eval: ${passed ? 'passou' : 'falhou'}`,
   `- decisão humana: ${decision}`,
+  `- entidades: ${run.entity_refs.length}`,
+  `- fontes: ${run.source_refs.length}`,
+  `- outputs: ${outputRefs.length}`,
+  `- correção referenciada: ${correctionRef ? 'sim' : 'não'}`,
   `- estado final: ${nextStatus}`,
   '- conteúdo enviado à INEVITA: não',
   '',

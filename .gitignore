@@ -28,6 +28,9 @@ capturas/*
 .cerebro/runtime
 .cerebro/concierge-runs/
 .cerebro/sistemas/
+.cerebro/contracts/
+.cerebro/ledger/
+.cerebro/learning/
 
 # rastros privados de operação e contribuição — templates ficam no pacote
 operacao/execucoes/*

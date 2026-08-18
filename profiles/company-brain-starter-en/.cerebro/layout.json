@@ -1,10 +1,13 @@
 {
-  "version": 1,
+  "version": 2,
   "companyMap": "company/map.md",
   "sourceRegister": "sources/register.md",
   "firstSystemBrief": "systems/first-system/brief.md",
   "contextPack": "context-packs/first-system.md",
   "firstOutput": "outputs/first-output.md",
   "activationReceipt": "operations/runs/activation-receipt.md",
-  "corrections": "operations/corrections"
+  "corrections": "operations/corrections",
+  "systemContract": "systems/first-system/contract.json",
+  "runLedger": "operations/runs/ledger.jsonl",
+  "learningRegister": "operations/learning"
 }

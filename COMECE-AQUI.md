@@ -17,8 +17,10 @@ de slash é um atalho, não um requisito.
 | Antigravity | `.agents/skills/` | “quero começar meu cérebro” |
 | outro agente local | `.agents/skills/` | ler `comecar/SKILL.md` |
 
-O agente precisa abrir esta pasta, ler e editar arquivos e executar scripts. Se ele só recebe
-arquivos como base de conhecimento, consulta o acervo, mas não mantém o cérebro acumulando contexto.
+O agente precisa abrir esta pasta, ler e editar arquivos. Scripts validam o protocolo quando o
+ambiente permite, mas não são requisito para a primeira ativação. Se ele só recebe arquivos como
+base de conhecimento e não consegue gravar, consulta o acervo, mas não mantém o cérebro acumulando
+contexto.
 
 Se a instalação começou fora desta pasta, o agente pode usar o caminho absoluto como diretório de
 trabalho. Só peça para abrir uma nova sessão quando o ambiente realmente não conseguir ler, escrever
@@ -56,10 +58,16 @@ O cérebro começa entendendo uma situação recorrente do seu trabalho: o que o
 suas mãos ou ainda depende da sua decisão. Depois localiza onde esse trabalho deixa rastros e pede
 somente um caso recente — uma reunião, conversa, mensagem, documento ou outro material real.
 
+Se você já sabe o resultado, ele começa por ele. Se não sabe, começa por um rastro recente do
+trabalho real, reconstrói a operação e propõe até três resultados. Nenhuma das rotas começa
+conectando tudo.
+
 `situação recorrente → menor fonte real → algo pronto para usar → ajuste → contexto para a próxima`
 
 Uma reunião pode virar decisões e ações; um briefing, uma mensagem ou uma proposta pedem outro
 tipo de entrega. O cérebro escolhe o formato pelo trabalho, não força todo material a virar resumo.
+Ao final, o resultado fica legível para você e também deixa System Contract e Run Record para que
+outros Sistemas reutilizem entidades, fontes e aprendizados sem copiar o dado canônico.
 
 Depois que o contexto aprovado volta numa segunda tarefa, o Cérebro pode abrir o `/arquiteto`: ele
 mapeia como uma operação funciona, mostra o que é só declarado e o que já tem evidência, e propõe o
@@ -73,6 +81,7 @@ como referência para melhorar uma decisão. Ele não substitui o contexto do se
 - `meu-negocio/` — seu contexto privado.
 - `sistemas/` — resultados instalados e suas réguas.
 - `skills/` — julgamentos reutilizáveis do motor.
+- `protocol/` — o contrato comum de Capabilities, Sistemas e Runs.
 - `conexoes/` — arquivos e integrações opcionais.
 - `operacao/` — seu brief vivo, o que rodou, falhou, escalou e os caminhos aprovados que podem ser reutilizados.
 - `operacao/arquitetura/` — specs privadas e mapas visuais produzidos pelo `/arquiteto`.

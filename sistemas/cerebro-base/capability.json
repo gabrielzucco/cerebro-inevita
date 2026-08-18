@@ -1,0 +1,28 @@
+{
+  "protocol_version": 1,
+  "capability_id": "ativar-recorte-operacional",
+  "name": "Ativar um recorte operacional",
+  "version": "0.1.0",
+  "task": "Transformar evidências mínimas de um trabalho recorrente em mapa, primeiro Sistema, contexto e output aprovados",
+  "when_to_use": ["na primeira ativação ou quando falta um primeiro Sistema verificável"],
+  "when_not_to_use": ["quando a pessoa quer apenas uma explicação genérica do método"],
+  "input_roles": [
+    {
+      "role": "evidencia-operacional",
+      "required": true,
+      "purpose": "observar como o trabalho acontece de verdade"
+    }
+  ],
+  "output": {
+    "type": "primeiro-sistema-verificado",
+    "definition_of_done": "um output útil foi avaliado e deixou contexto reutilizável"
+  },
+  "permissions": {
+    "read": ["fontes explicitamente autorizadas"],
+    "write": ["mapa, contrato, contexto, output e recibos locais"],
+    "external_actions": false
+  },
+  "human_authority": ["confirmar mapa", "escolher primeiro Sistema", "aprovar output e correção"],
+  "evals": ["fonte real observada", "output utilizável", "contexto reaproveitado no segundo caso"],
+  "extensions": {}
+}

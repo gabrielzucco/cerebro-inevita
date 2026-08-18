@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/system-contract-v1.json",
+  "title": "INEVITA System Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "system_id",
+    "name",
+    "version",
+    "status",
+    "result",
+    "trigger",
+    "capability",
+    "entities",
+    "sources",
+    "pipeline",
+    "permissions",
+    "eval",
+    "learning"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "system_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "version": { "$ref": "#/$defs/version" },
+    "status": { "enum": ["proposed", "confirmed", "active", "needs_attention"] },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "non_success", "output_type", "definition_of_done", "owner", "human_gate"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1 },
+        "non_success": { "type": "string", "minLength": 1 },
+        "output_type": { "$ref": "#/$defs/id" },
+        "definition_of_done": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "human_gate": { "type": "string", "minLength": 1 }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "description"],
+      "properties": {
+        "type": { "enum": ["manual", "event", "schedule"] },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "version", "origin"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/id" },
+        "version": { "$ref": "#/$defs/version" },
+        "origin": { "enum": ["local", "inevita", "external"] }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "role", "required"],
+        "properties": {
+          "type": { "$ref": "#/$defs/id" },
+          "role": { "$ref": "#/$defs/id" },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "required", "access", "freshness", "purpose"],
+        "properties": {
+          "role": { "$ref": "#/$defs/id" },
+          "source_id": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+          "required": { "type": "boolean" },
+          "access": { "enum": ["manual", "read-only", "write-with-approval"] },
+          "freshness": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "pipeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "input", "output", "gate"],
+        "properties": {
+          "state": { "$ref": "#/$defs/id" },
+          "input": { "type": "string", "minLength": 1 },
+          "output": { "type": "string", "minLength": 1 },
+          "gate": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["read", "write", "external_actions"],
+      "properties": {
+        "read": { "type": "array", "items": { "type": "string" } },
+        "write": { "type": "array", "items": { "type": "string" } },
+        "external_actions": { "type": "boolean" }
+      }
+    },
+    "eval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "deterministic_gates", "human_questions", "outcome_measure"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "deterministic_gates": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "human_questions": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "outcome_measure": { "type": "string", "minLength": 1 },
+        "baseline": { "type": ["string", "null"] }
+      }
+    },
+    "learning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correction_policy", "promotion_threshold", "requires_replay", "requires_human_approval"],
+      "properties": {
+        "correction_policy": { "const": "candidate-first" },
+        "promotion_threshold": { "type": "integer", "minimum": 3 },
+        "requires_replay": { "const": true },
+        "requires_human_approval": { "const": true }
+      }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" }
+  }
+}

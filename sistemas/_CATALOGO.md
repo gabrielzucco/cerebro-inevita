@@ -1,6 +1,7 @@
 # Sistemas instalados
 
-Sistema é um pacote de resultado: manifest, pipeline, rotinas, skill, eval, feedback e changelog.
+Sistema é um pacote de resultado: manifest, Capability, System Contract, pipeline, rotinas, skill,
+eval, feedback e changelog.
 Escolha pelo que precisa sair pronto — não pela ferramenta.
 
 | Sistema | Estado | Resultado | Como operar |
@@ -23,6 +24,7 @@ O catálogo da INEVITA mostra outros sistemas disponíveis ou em construção em
 1. Use `/arquiteto` para encontrar e confirmar o primeiro resultado.
 2. Siga [`METODO-SISTEMAS.md`](../METODO-SISTEMAS.md).
 3. Copie [`templates/sistema/`](../templates/sistema/) e rode um caso real ponta a ponta.
+   Registre `contract.json` no control plane quando o resultado for confirmado.
 4. Quando houver uma mudança a testar, use
    [`METODO-EXPERIMENTOS.md`](../METODO-EXPERIMENTOS.md) e
    [`templates/experimento.md`](../templates/experimento.md).

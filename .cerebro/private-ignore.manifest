@@ -7,6 +7,9 @@
 .cerebro/runtime
 .cerebro/concierge-runs/
 .cerebro/sistemas/
+.cerebro/contracts/
+.cerebro/ledger/
+.cerebro/learning/
 operacao/execucoes/*
 !operacao/execucoes/_LEIA.md
 operacao/decisoes-pendentes/*
