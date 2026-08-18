@@ -63,6 +63,7 @@ evidence-first activation method needed for the event.
 - `docs/guides/founder-house-company-brain-sprint.md`
 - `skills/_CATALOGO.md`
 - `.cerebro/motor.manifest`
+- `.gitignore`
 - `VERSION`
 - `CHANGELOG.md`
 - `/Users/gabrielzucco/Desktop/Arquivos/inevita-lps/src/app/companybrain/page.tsx`

@@ -4,6 +4,9 @@ comunidade/inevita/sistemas-disponiveis/geracao-demanda/
 # acervo pago da Society: desce do servidor por membro, nunca entra no Git da cópia
 comunidade/society/
 
+# pasta expandida é artefato de build; os ZIPs publicáveis continuam versionados em dist/
+dist/company-brain-starter-en/
+
 # PII e material BRUTO nunca entram no git — ficam só na tua máquina.
 # As pastas existem no pacote (com _LEIA.md), mas o que VOCÊ colocar nelas fica de fora do git.
 privado/*
