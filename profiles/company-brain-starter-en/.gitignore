@@ -1,0 +1,5 @@
+raw/*
+!raw/.gitkeep
+private/*
+!private/.gitkeep
+.DS_Store

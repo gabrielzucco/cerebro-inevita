@@ -1,5 +1,20 @@
 # Mudanças do cérebro INEVITA
 
+## v1.21.0 — 2026-08-17 · “a pasta é o cérebro; a IA é o operador”
+
+- **Ativação local evidence-first:** `/comecar` deixa e-mail e pergunta genérica para depois do
+  valor e parte de uma operação real com a menor amostra de evidência disponível.
+- **Seis objetos persistidos:** mapa atual, registro de fontes, primeiro System Brief, Context Pack,
+  output útil e recibo sanitizado formam o primeiro estado durável do cérebro.
+- **Bruto ≠ contexto pronto:** evidência crua fica para prova e reprocessamento; cada Sistema recebe
+  um Context Pack estreito com regras, permissões, forma de saída e eval.
+- **Uma skill, dois layouts:** `company-brain-sprint` lê `.cerebro/layout.json` e opera tanto o
+  produto completo em português quanto o starter internacional sem duplicar o método.
+- **Starter EN gerado do repositório canônico:** pasta local mínima e portável entre Manus Desktop,
+  Codex, Claude e Gemini, sem corpus pago, vínculo ou dados de outro founder.
+- **Ordem explícita:** primeiro run manual e human gate; rotina quando o trabalho se repete; conexão
+  de leitura quando a fonte prova valor; escrita/automação só depois da régua.
+
 ## v1.20.0 — 2026-08-12 · “o método vira Sistema e o Sistema aprende por Experimentos”
 
 - **Método de Sistemas completo e público:** separa Cérebro, Sistema, pipeline, rotina, skill,

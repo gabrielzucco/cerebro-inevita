@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "companyMap": "meu-negocio/mapa.md",
+  "sourceRegister": "meu-negocio/fontes/registro-ativacao.md",
+  "firstSystemBrief": "operacao/arquitetura/primeiro-sistema.md",
+  "contextPack": "operacao/execucoes/ativacao/context-pack.md",
+  "firstOutput": "operacao/execucoes/ativacao/first-output.md",
+  "activationReceipt": "operacao/execucoes/ativacao/receipt.md",
+  "corrections": "operacao/o-que-melhorou"
+}

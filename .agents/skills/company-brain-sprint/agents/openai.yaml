@@ -1,0 +1,4 @@
+interface:
+  display_name: "Company Brain Sprint"
+  short_description: "Activate one evidence-backed operating slice"
+  default_prompt: "Run the Company Brain Sprint from the files in this local folder."

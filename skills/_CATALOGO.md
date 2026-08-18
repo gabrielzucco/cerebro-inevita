@@ -5,6 +5,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 
 | Skill | Papel |
 |---|---|
+| `company-brain-sprint` | ativa fontes → mapa atual → primeiro sistema → Context Pack → output → correção |
 | `arquiteto` | mapeia uma operação, mostra V0→V3 e propõe o primeiro sistema com razões explícitas |
 | `prototipar` | monta o protótipo comercial e o de entrega, escolhe a frente e desenha o loop |
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |

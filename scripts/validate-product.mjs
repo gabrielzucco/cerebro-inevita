@@ -13,7 +13,7 @@ const required = [
   'templates/sistema/feedback.md', 'templates/sistema/changelog.md',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
-  'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest',
+  'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
   'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
   'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
   'sistemas/cerebro-base/manifest.md', 'sistemas/cerebro-base/pipeline.md',
@@ -25,11 +25,15 @@ const required = [
   '.claude/skills/arquiteto/references/architect-spec.schema.json',
   '.claude/skills/arquiteto/references/architect-spec.example.json',
   '.claude/skills/arquiteto/scripts/render-map.mjs',
+  '.claude/skills/company-brain-sprint/SKILL.md',
+  '.claude/skills/company-brain-sprint/references/output-contract.md',
   'operacao/arquitetura/_LEIA.md',
   'scripts/test-architect.mjs',
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
+  'scripts/build-company-brain-starter.mjs', 'scripts/test-company-brain-starter.mjs',
+  'profiles/company-brain-starter-en/START-HERE.md',
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
   'scripts/test-operating-brief.mjs',
@@ -163,29 +167,21 @@ for (const event of [
 
 const comecar = readFileSync(join(ROOT, '.claude', 'skills', 'comecar', 'SKILL.md'), 'utf8');
 for (const contract of [
-  'Retomar antes de perguntar',
   'Use sempre `você`, `seu` e `sua`',
-  'Reutilize as palavras da pessoa',
-  'Pergunte por comportamentos observáveis',
-  'Começar por uma amostra',
-  'Nome humano da palestra — minuto 11:53',
+  'A pasta local é o cérebro',
+  'Não abra com e-mail',
+  'Qual trabalho recorrente este cérebro deve tornar mais fácil primeiro',
+  'menor amostra real',
   'Você usaria isso do jeito que está ou mudaria alguma coisa antes?',
   'operacao/decisoes-pendentes/onboarding.md',
-  'Nunca peça reinício',
-  'proof_delivered',
   'Descobrir sem invadir',
   'discover-context.mjs',
   'register-source.mjs',
   'não é uma conexão automática',
-  'concierge-run.mjs start',
-  '--milestone T1',
-  '--milestone T2',
-  '--milestone T3',
-  '--milestone T4',
-  'Não releia a fonte bruta',
-  'Isso aproveitou o que acabamos de organizar',
-  'Somente depois de T4',
-  'qual sistema faz sentido construir primeiro',
+  'não despeje o bruto no prompt',
+  'Isso aproveitou o que já estava no cérebro',
+  'Somente depois do output útil',
+  'V3 só existe',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
 }
@@ -193,6 +189,7 @@ for (const regression of [
   'Fale como operador, em `tu/teu`',
   'Isso te ajuda a decidir ou agir agora?',
   'Duas notas de honestidade',
+  'a PRIMEIRA interação é vincular o acesso',
 ]) {
   if (comecar.includes(regression)) errors.push(`comecar regrediu para linguagem antiga: ${regression}`);
 }
@@ -220,11 +217,9 @@ for (const [name, entry] of [['AGENTS', agentEntry], ['GEMINI', geminiEntry]]) {
 }
 for (const contract of [
   'Compatibilidade — valor antes do runtime',
-  'Modo sem scripts no',
-  'Antigravity:',
-  'não execute nenhum comando `node`',
+  'No Antigravity',
+  'scripts auxiliares só podem rodar depois',
   'which node',
-  'export PATH',
   'caso contrário, pule',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem bootstrap não bloqueante: ${contract}`);
@@ -275,6 +270,9 @@ for (const contract of [
   '.cerebro/private-ignore.manifest',
   '.claude/skills/briefing-comercial',
   '.claude/skills/arquiteto',
+  '.claude/skills/company-brain-sprint',
+  '.cerebro/layout.json',
+  'profiles/company-brain-starter-en',
   '.claude/skills/society',
   'METODO-SISTEMAS.md',
   'METODO-EXPERIMENTOS.md',

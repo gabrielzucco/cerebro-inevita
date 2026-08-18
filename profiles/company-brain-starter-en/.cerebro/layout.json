@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "companyMap": "company/map.md",
+  "sourceRegister": "sources/register.md",
+  "firstSystemBrief": "systems/first-system/brief.md",
+  "contextPack": "context-packs/first-system.md",
+  "firstOutput": "outputs/first-output.md",
+  "activationReceipt": "operations/runs/activation-receipt.md",
+  "corrections": "operations/corrections"
+}
