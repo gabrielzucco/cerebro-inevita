@@ -28,19 +28,30 @@ try {
 
   if (existsSync(join(output, '.cerebro', 'layout.json'))) {
     const layout = JSON.parse(readFileSync(join(output, '.cerebro', 'layout.json'), 'utf8'));
-    for (const key of ['companyMap', 'sourceRegister', 'firstSystemBrief', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'systemContract', 'runLedger', 'learningRegister']) {
+    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'runLedger', 'learningRegister']) {
       const value = layout[key];
       if (!value || value.startsWith('/') || value.includes('..')) errors.push(`unsafe layout path: ${key}`);
+    }
+    for (const [canonical, legacy] of [['activationBrief', 'firstSystemBrief'], ['configuration', 'contextPack'], ['activationContract', 'systemContract']]) {
+      if (layout[canonical] !== layout[legacy]) errors.push(`broken layout alias: ${canonical} → ${legacy}`);
     }
   }
 
   const start = readFileSync(join(output, 'START-HERE.md'), 'utf8');
-  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'System Contract', 'Run Record']) {
+  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'Activation Contract', 'Run Record']) {
     if (!start.includes(contract)) errors.push(`START-HERE missing contract: ${contract}`);
   }
   const skill = readFileSync(join(output, 'skills', 'company-brain-sprint', 'SKILL.md'), 'utf8');
-  for (const contract of ['evidence → current map', 'V0 declared', 'V3 outcome validated', 'Do not claim to map', 'one completed Run Record']) {
+  for (const contract of ['orientation → source register', 'V0 declared', 'V3 outcome validated', 'Do not claim to map', 'one completed Run Record', 'first business System', 'capability.capability_id: ativar-recorte-operacional', 'result.output_type: cerebro-base-ativado']) {
     if (!skill.includes(contract)) errors.push(`skill missing contract: ${contract}`);
+  }
+  const outputContract = readFileSync(join(output, 'skills', 'company-brain-sprint', 'references', 'output-contract.md'), 'utf8');
+  for (const contract of ['`system_id`: `cerebro-base`', '`capability.capability_id`: `ativar-recorte-operacional`', '`result.output_type`: `cerebro-base-ativado`']) {
+    if (!outputContract.includes(contract)) errors.push(`output contract missing stable identity: ${contract}`);
+  }
+  const activationBrief = readFileSync(join(output, 'systems', 'first-system', 'brief.md'), 'utf8');
+  for (const contract of ['Base Brain Activation Brief', 'first business System is selected only after T4']) {
+    if (!activationBrief.includes(contract)) errors.push(`activation brief seed missing contract: ${contract}`);
   }
   const ignore = readFileSync(join(output, '.gitignore'), 'utf8');
   for (const contract of ['raw/*', 'private/*', 'operations/runs/*', 'operations/learning/*']) {

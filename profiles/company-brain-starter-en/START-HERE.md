@@ -16,13 +16,15 @@ or another file-based AI can operate it, but the files remain the durable memory
 > `.cerebro/layout.json`. Do not browse, invent facts, or connect any external system. If you need
 > my decision, ask one question at a time.
 
-The first run should leave six human-facing artifacts: company map, source register, first System
-Brief, Context Pack, useful output and activation receipt. It also leaves a machine-readable
-System Contract and Run Record using the shared schemas in `protocol/`. The raw files are evidence; they
-are not the prompt. The Context Pack is the smallest derived context needed by the first system.
+The first run should leave six human-facing artifacts: broad company orientation, source register,
+Base Brain Activation Brief, CONFIGURATION, useful output and activation receipt. It also leaves a
+machine-readable Activation Contract and Run Record using the shared System Contract schema in
+`protocol/`. The raw files are evidence; they are not the prompt. CONFIGURATION is the smallest
+derived context needed by this use.
 
 ## After the first run
 
-On the next real case, ask the AI to read the persisted map, brief and Context Pack before using
-new raw evidence. If it can produce the next output without you repeating the company context, the
-brain has begun to work. Put this folder in a private Git repository when you want version history.
+On the next real task, ask the AI to read the persisted map, Activation Brief and CONFIGURATION
+before using new raw evidence. If it can produce the next output without reopening the raw files or
+making you repeat the company context, the Base Brain is active. Only then choose the first business
+System. Put this folder in a private Git repository when you want version history.

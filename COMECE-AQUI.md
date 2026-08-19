@@ -50,7 +50,7 @@ conector real e consentimento específico.
 ## Não usa nenhum agente pago?
 
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não
-exige uma assinatura específica e o primeiro sistema opera com arquivos locais.
+exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
 
 ## A primeira experiência
 
@@ -62,12 +62,13 @@ Se você já sabe o resultado, ele começa por ele. Se não sabe, começa por um
 trabalho real, reconstrói a operação e propõe até três resultados. Nenhuma das rotas começa
 conectando tudo.
 
-`situação recorrente → menor fonte real → algo pronto para usar → ajuste → contexto para a próxima`
+`orientar → registrar sem conectar → menor fonte real → usar → ajustar → reutilizar`
 
 Uma reunião pode virar decisões e ações; um briefing, uma mensagem ou uma proposta pedem outro
 tipo de entrega. O cérebro escolhe o formato pelo trabalho, não força todo material a virar resumo.
-Ao final, o resultado fica legível para você e também deixa System Contract e Run Record para que
-outros Sistemas reutilizem entidades, fontes e aprendizados sem copiar o dado canônico.
+Ao final, o resultado fica legível para você e também deixa o contrato de ativação do Cérebro Base
+e Run Records para que Sistemas futuros reutilizem entidades, fontes e aprendizados sem copiar o
+dado canônico.
 
 Depois que o contexto aprovado volta numa segunda tarefa, o Cérebro pode abrir o `/arquiteto`: ele
 mapeia como uma operação funciona, mostra o que é só declarado e o que já tem evidência, e propõe o

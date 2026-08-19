@@ -1,6 +1,6 @@
 ---
 name: comecar
-description: Instala o primeiro recorte observado do Cérebro da Empresa na pasta local, usando fontes reais para persistir mapa, primeiro sistema, Context Pack, output útil e aprendizado. Use na primeira abertura ou quando ainda não existe ativação aprovada.
+description: Ativa o Cérebro Base na pasta local: orienta o Mapa da empresa, registra fontes sem conectá-las, usa uma fonte real e prova reutilização do contexto aprovado. Use na primeira abertura ou quando T4 ainda não foi confirmado.
 ---
 
 # Começar — configurar o cérebro com realidade, não com formulário
@@ -9,9 +9,11 @@ A pasta local é o cérebro. Manus, Codex, Claude, Gemini ou qualquer outra IA b
 apenas o operador atual. A primeira sessão deve deixar contexto durável na pasta e um resultado que
 a pessoa possa usar — não apenas respostas numa conversa.
 
-Leia `.cerebro/layout.json`, `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. Em
-seguida, leia e execute `company-brain-sprint` na conversa atual. Não peça reinício, troca de sessão
-ou instalação de runtime.
+Leia `.cerebro/layout.json`, `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. No
+layout, prefira `activationBrief`, `configuration` e `activationContract`; aceite os aliases legados
+`firstSystemBrief`, `contextPack` e `systemContract`. Em seguida, leia e execute
+`company-brain-sprint` na conversa atual. Não peça reinício, troca de sessão ou instalação de
+runtime.
 
 ## Experiência de abertura
 
@@ -32,14 +34,13 @@ movidas nem alteradas sem autorização. Procure uma operação concreta na mens
 
 Se a operação já está clara, espelhe o que entendeu e prossiga. Se não está, pergunte apenas:
 
-> Qual trabalho recorrente este cérebro deve tornar mais fácil primeiro — o que dispara esse
-> trabalho e qual entrega utilizável precisa existir no final?
+> Qual trabalho real este cérebro deve compreender primeiro — você já sabe a entrega que quer
+> melhorar ou prefere me mostrar um rastro recente que voltou para sua mão?
 
-Isso configura o primeiro sistema por resultado. Não é uma entrevista genérica sobre a empresa.
-Se a pessoa disser que não sabe por onde começar, use a rota de observação: peça um único rastro
-recente de trabalho que tomou tempo, voltou para correção ou dependeu do julgamento dela. Observe o
-caso, desenhe o mapa atual e proponha até três resultados. Nunca responda à incerteza pedindo para
-conectar todas as fontes.
+Isso escolhe a semente de ativação; ainda não instala o primeiro Sistema de negócio. Se a pessoa já
+sabe a entrega, siga `resultado → fonte mínima`. Se não sabe, siga `rastro → observação → resultado`:
+peça um único caso recente que tomou tempo, voltou para correção ou dependeu do julgamento dela.
+Nunca responda à incerteza pedindo para conectar todas as fontes.
 
 ## 2. Descobrir sem invadir
 
@@ -48,7 +49,12 @@ de pastas e marcadores técnicos. Nunca abra documentos externos antes da autori
 mais de uma instalação, mostre os caminhos e deixe a pessoa escolher. Cérebro existente não é a
 mesma coisa que contexto existente.
 
-Peça ou localize a menor amostra real sobre a operação: duas a quatro fontes pequenas e, quando
+Antes de abrir conteúdo, faça uma orientação ampla e rasa: registre o que a pessoa declara sobre o
+negócio, as fontes que ela sabe que existem, onde moram, para que poderiam servir, quem autoriza e o
+que continua desconhecido. Isso é **Mapa da empresa V0 + topologia de fontes**, não prova nem
+conexão. **Registrar fonte ≠ conectar fonte.** Uma fonte pode ficar apenas registrada como ponteiro.
+
+Depois peça ou localize a menor amostra real sobre o recorte: duas a quatro fontes pequenas e, quando
 possível, de papéis diferentes — verdade do negócio, rastro do trabalho, voz do cliente, sinal de
 resultado ou rastro de julgamento. Upload, texto, transcrição, pasta local autorizada e relato
 ditado são válidos. Uma fonte permite observação parcial; não permite chamar o mapa de completo.
@@ -57,24 +63,25 @@ Se a pessoa autorizar uma pasta externa recorrente, registre apenas a referênci
 `register-source.mjs`. Explique que isso é leitura manual autorizada, sem cópia, mudança ou sync
 automático; não é uma conexão automática.
 
-## 3. Ativar o primeiro recorte
+## 3. Ativar o Cérebro Base
 
 Execute `company-brain-sprint` para:
 
-1. classificar o que cada evidência sustenta e não sustenta;
-2. desenhar o mapa atual de uma única operação;
-3. mostrar contradições, desconhecidos e cobertura;
-4. receber a correção do dono antes de persistir a verdade;
-5. escolher o primeiro sistema pelo resultado;
-6. compilar um Context Pack estreito e pronto para aquela tarefa;
-7. produzir um output real e ajustar uma vez;
-8. salvar os seis artefatos nos caminhos de `.cerebro/layout.json`.
+1. persistir o Mapa da empresa amplo e raso com estado V0 e lacunas explícitas;
+2. classificar o que cada evidência autorizada sustenta e não sustenta;
+3. observar profundamente uma única passagem de trabalho;
+4. receber a correção do dono antes de persistir o recorte como verdade verificada;
+5. definir o Activation Brief do Cérebro Base — o uso atual, não um Sistema de negócio;
+6. compilar uma **CONFIGURAÇÃO** estreita e pronta para aquela tarefa;
+7. produzir um output real, ajustar uma vez e registrar o primeiro uso;
+8. salvar os seis artefatos nos caminhos canônicos ou aliases de `.cerebro/layout.json`.
 
-Além dos seis artefatos humanos, salve o System Contract e o primeiro Run Record definidos no
-layout. Eles são o envelope comum que permite costurar entidades, fontes, outputs e correções entre
-Sistemas diferentes sem padronizar o conteúdo privado.
+Além dos seis artefatos humanos, salve o Activation Contract do `cerebro-base` no formato de System
+Contract e o primeiro Run Record definidos no layout. Eles são o envelope comum que permite
+costurar entidades, fontes, outputs e correções entre Sistemas futuros sem padronizar o conteúdo
+privado.
 
-O bruto é usado para prova, citação, contradição e reprocessamento. O Context Pack recebe apenas o
+O bruto é usado para prova, citação, contradição e reprocessamento. A CONFIGURAÇÃO recebe apenas o
 recorte necessário à tarefa. Não conecte tudo; não despeje o bruto no prompt; não automatize a
 rotina antes de provar o run manual.
 
@@ -85,14 +92,15 @@ Depois do primeiro output, pergunte naturalmente:
 > Você usaria isso do jeito que está ou mudaria alguma coisa antes?
 
 Grave a correção nas palavras da pessoa. Quando aprovado, atualize `operacao/_HOJE.md` e o recibo.
-Na próxima execução, leia primeiro o mapa, o System Brief e o Context Pack persistidos. Não releia a
-fonte bruta se o contexto aprovado for suficiente. Pergunte:
+Na próxima tarefa, leia primeiro o mapa, o Activation Brief e a CONFIGURAÇÃO persistidos. Não releia
+a fonte bruta se o contexto aprovado for suficiente. Pergunte:
 
 > Isso aproveitou o que já estava no cérebro ou você precisou explicar tudo de novo?
 
-Uma correção vira aprendizado candidato; só repetição e resultado medido tornam a regra validada.
-Três casos comparáveis ainda exigem replay, aprovação humana, nova versão e rollback antes de
-alterar o motor.
+Se a resposta confirmar reutilização sem reexplicação, marque T4: o Cérebro Base está ativado. Só
+então ofereça `/arquiteto` para escolher o primeiro Sistema de negócio. Uma correção vira
+aprendizado candidato; só repetição e resultado medido tornam a regra validada. Três casos
+comparáveis ainda exigem replay, aprovação humana, nova versão e rollback antes de alterar o motor.
 
 ## 5. Vincular e conectar só quando fizer sentido
 
@@ -100,10 +108,11 @@ Somente depois do output útil, se ainda não existir `.cerebro/member-id` ou
 `.cerebro/acesso-email`, ofereça em uma frase vincular atualizações/comunidade por e-mail. É
 opcional, não bloqueia nada e o e-mail fica apenas em `.cerebro/acesso-email`, fora das notas.
 
-Crie rotina quando a mesma entrada e o mesmo output voltarem a acontecer. Conecte fonte recorrente
-quando o run manual provar que ela é necessária e houver permissão de leitura. Conecte ferramenta
-de escrita/ação apenas depois do human gate e da avaliação estarem definidos. V3 só existe depois
-de uma execução comparável devolver resultado observado contra a medida pré-declarada.
+No primeiro Sistema de negócio, crie rotina quando a mesma entrada e o mesmo output voltarem a
+acontecer. Conecte fonte recorrente quando o run manual provar que ela é necessária e houver
+permissão de leitura. Conecte ferramenta de escrita/ação apenas depois do human gate e da avaliação
+estarem definidos. V3 só existe depois de uma execução comparável devolver resultado observado
+contra a medida pré-declarada; T4 não implica V3.
 
 ## Compatibilidade — valor antes do runtime
 

@@ -1,5 +1,26 @@
 # Mudanças do cérebro INEVITA
 
+## v1.23.0 — 2026-08-19 · “usar antes de sistematizar”
+
+- **Cérebro Base é o primeiro metassistema:** instalar a pasta não basta. A ativação fecha quando
+  uma fonte real vira contexto aprovado e uma segunda tarefa reutiliza esse contexto sem reler o
+  bruto nem pedir que o founder explique a empresa de novo.
+- **Mapa em duas resoluções:** orientação ampla e rasa nasce antes da leitura; apenas o recorte de
+  trabalho escolhido fica estreito e profundo por evidência. Um recorte nunca se fantasia de mapa
+  completo da empresa.
+- **Registrar não é conectar:** fontes podem ter ponteiro, papel, autoridade e estado de acesso sem
+  ingestão, índice ou sincronização. Conexões entram depois que o uso prova qual fonte importa.
+- **Uma entrada por resultado ou por rastro:** as duas rotas convergem em CONFIGURAÇÃO, output útil,
+  gate humano e reutilização. O primeiro Sistema de negócio só é escolhido depois de T4.
+- **Réguas separadas:** V0→V3 mede evidência; T0→T4 mede ativação do Cérebro Base. T4 não promove o
+  mapa para V3 nem valida resultado de negócio.
+- **Identidade estável do metassistema:** todo Activation Contract usa `cerebro-base`, capability
+  `ativar-recorte-operacional` e output `cerebro-base-ativado`; o caso de uso muda o pipeline, não a
+  identidade do cérebro.
+- **Starter internacional alinhado:** layout v3, Activation Brief, CONFIGURATION, Activation
+  Contract e Run Records operam localmente em Manus, Codex, Claude ou Gemini sem depender do corpus
+  privado em português.
+
 ## v1.22.0 — 2026-08-18 · “Sistemas diferentes; protocolo comum”
 
 - **Control plane local:** Capability, System Contract e Run Record ganharam schemas versionados.

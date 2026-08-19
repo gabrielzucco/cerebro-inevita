@@ -2,9 +2,9 @@
   "protocol_version": 1,
   "capability_id": "ativar-recorte-operacional",
   "name": "Ativar um recorte operacional",
-  "version": "0.1.0",
-  "task": "Transformar evidências mínimas de um trabalho recorrente em mapa, primeiro Sistema, contexto e output aprovados",
-  "when_to_use": ["na primeira ativação ou quando falta um primeiro Sistema verificável"],
+  "version": "0.2.0",
+  "task": "Transformar uma fonte real em orientação, output aprovado e contexto reutilizável antes do primeiro Sistema de negócio",
+  "when_to_use": ["na primeira ativação ou quando o Cérebro Base ainda não chegou a T4"],
   "when_not_to_use": ["quando a pessoa quer apenas uma explicação genérica do método"],
   "input_roles": [
     {
@@ -14,15 +14,15 @@
     }
   ],
   "output": {
-    "type": "primeiro-sistema-verificado",
-    "definition_of_done": "um output útil foi avaliado e deixou contexto reutilizável"
+    "type": "cerebro-base-ativado",
+    "definition_of_done": "um output útil foi aprovado e o contexto voltou numa segunda tarefa sem releitura do bruto"
   },
   "permissions": {
     "read": ["fontes explicitamente autorizadas"],
-    "write": ["mapa, contrato, contexto, output e recibos locais"],
+    "write": ["mapa, registro de fontes, CONFIGURAÇÃO, outputs e recibos locais"],
     "external_actions": false
   },
-  "human_authority": ["confirmar mapa", "escolher primeiro Sistema", "aprovar output e correção"],
-  "evals": ["fonte real observada", "output utilizável", "contexto reaproveitado no segundo caso"],
+  "human_authority": ["confirmar recorte observado", "aprovar output e correção", "confirmar reutilização"],
+  "evals": ["fonte real observada", "output utilizável", "contexto reaproveitado sem reexplicação"],
   "extensions": {}
 }

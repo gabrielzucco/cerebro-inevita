@@ -4,6 +4,8 @@
 
 - [ ] T0–T4 foram registrados pelo produto ou a ausência do marco foi explicitada.
 - [ ] A fonte foi lida somente depois de autorização.
+- [ ] Fontes conhecidas podem estar registradas sem terem sido abertas, copiadas ou conectadas.
+- [ ] O mapa separa orientação V0 ampla e rasa do recorte estreito realmente observado.
 - [ ] O artefato preserva fatos e linguagem da fonte.
 - [ ] Nenhum contexto derivado foi salvo antes da aprovação.
 - [ ] A segunda saída usa somente contexto salvo, sem reler o bruto.
@@ -22,6 +24,7 @@ Na segunda saída, perguntar: **“Isso aproveitou o que acabamos de organizar o
 explicar tudo de novo?”**
 
 T4 exige confirmação de que o contexto voltou a trabalhar sem reexplicação nem releitura do bruto.
+T4 não promove o mapa para V3 e não instala automaticamente o primeiro Sistema de negócio.
 
 ## Hipóteses do primeiro lote
 

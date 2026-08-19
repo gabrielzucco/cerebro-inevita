@@ -1,12 +1,15 @@
 {
-  "version": 2,
+  "version": 3,
   "companyMap": "meu-negocio/mapa.md",
   "sourceRegister": "meu-negocio/fontes/registro-ativacao.md",
+  "activationBrief": "operacao/arquitetura/primeiro-sistema.md",
   "firstSystemBrief": "operacao/arquitetura/primeiro-sistema.md",
+  "configuration": "operacao/execucoes/ativacao/context-pack.md",
   "contextPack": "operacao/execucoes/ativacao/context-pack.md",
   "firstOutput": "operacao/execucoes/ativacao/first-output.md",
   "activationReceipt": "operacao/execucoes/ativacao/receipt.md",
   "corrections": "operacao/o-que-melhorou",
+  "activationContract": "operacao/arquitetura/primeiro-sistema.json",
   "systemContract": "operacao/arquitetura/primeiro-sistema.json",
   "runLedger": ".cerebro/ledger/runs.jsonl",
   "learningRegister": ".cerebro/learning"

@@ -2,19 +2,19 @@
   "protocol_version": 1,
   "system_id": "cerebro-base",
   "name": "Cérebro Base",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "status": "confirmed",
   "result": {
-    "statement": "um trabalho recorrente vira primeiro Sistema verificável e contexto reutilizável",
+    "statement": "uma fonte real vira contexto aprovado que volta a trabalhar sem reexplicação",
     "non_success": "clonar a pasta, responder formulário ou organizar arquivos sem output útil",
-    "output_type": "primeiro-sistema-verificado",
-    "definition_of_done": "o dono usaria o output e o segundo caso reaproveita o contexto salvo",
+    "output_type": "cerebro-base-ativado",
+    "definition_of_done": "o dono usaria o primeiro output e uma segunda tarefa reaproveita o contexto salvo sem reler o bruto",
     "owner": "dono-do-cerebro",
-    "human_gate": "confirmar mapa, Sistema, output e correção"
+    "human_gate": "confirmar recorte observado, output, correção e reutilização"
   },
   "trigger": {
     "type": "manual",
-    "description": "primeira ativação ou escolha de novo recorte operacional"
+    "description": "primeira ativação do Cérebro Base ou retomada antes de T4"
   },
   "capability": {
     "capability_id": "ativar-recorte-operacional",
@@ -33,9 +33,10 @@
     }
   ],
   "pipeline": [
-    { "state": "observado", "input": "fontes mínimas", "output": "mapa atual", "gate": "escopo e proveniência explícitos" },
-    { "state": "compilado", "input": "mapa confirmado", "output": "System Contract e Context Pack", "gate": "dono escolheu o resultado" },
-    { "state": "verificado", "input": "primeiro output", "output": "Run Record e correção", "gate": "avaliação humana registrada" }
+    { "state": "orientado", "input": "declaração e topologia", "output": "Mapa da empresa V0 e fontes registradas", "gate": "registro não abriu nem conectou fonte" },
+    { "state": "observado", "input": "fonte mínima autorizada", "output": "recorte verificado", "gate": "escopo e proveniência explícitos" },
+    { "state": "usado", "input": "CONFIGURAÇÃO da ativação", "output": "primeiro output e Run Record", "gate": "dono usaria o output" },
+    { "state": "reutilizado", "input": "contexto aprovado", "output": "segunda saída e T4", "gate": "sem releitura do bruto nem reexplicação" }
   ],
   "permissions": {
     "read": ["fontes autorizadas"],
@@ -43,10 +44,10 @@
     "external_actions": false
   },
   "eval": {
-    "version": "0.2.0",
+    "version": "0.3.0",
     "deterministic_gates": ["sem invenção", "proveniência", "fronteira local"],
     "human_questions": ["Você usaria isso do jeito que está?", "Foi necessário explicar tudo de novo?"],
-    "outcome_measure": "first-verified-system",
+    "outcome_measure": "approved-context-reused",
     "baseline": null
   },
   "learning": {

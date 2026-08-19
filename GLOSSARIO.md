@@ -7,6 +7,8 @@
 | **Engenharia de Contexto** | O método: montar o contexto certo pra IA em vez de caçar o prompt perfeito. [context engineering — Karpathy] |
 | **Contexto** | Tudo que a IA precisa saber do TEU negócio pra responder como sócio, não como estranho. O modelo é igual pra todo mundo; o contexto é a vantagem. |
 | **Cérebro** | O cofre de notas + as skills que o operam. A tua IA equipada com o teu contexto. |
+| **Cérebro Base** | O metassistema que ativa a pasta: orienta o mapa, registra fontes sem conectá-las, usa uma fonte real e prova que o contexto aprovado volta numa segunda tarefa. Não é o primeiro Sistema de negócio. |
+| **Ativação** | O gate `usar → reutilizar`: uma fonte real gera output aprovado e o contexto salvo volta numa segunda tarefa sem releitura do bruto nem reexplicação. T0→T4 mede este ciclo; instalação sozinha não basta. |
 | **Átomo** | Nota de UMA ideia: afirmação + citação literal + por quê + elos. Sem citação não é átomo, é palpite. |
 | **Bruto** | O material na íntegra (transcrição, print, texto colado), imutável, na bandeja `capturas/`. Guarda-se tudo; opera-se pouco. |
 | **Destilar** | Extrair do bruto só o que tem sinal e virar átomo. [“curate before you compute” — Deasy] |
@@ -17,10 +19,12 @@
 | **Capability** | Contrato portátil do que uma skill sabe fazer: entradas por papel, output, permissões, autoridade humana e evals; ganha contexto privado só quando compõe um Sistema. |
 | **Sistema** | Pacote de um resultado completo: manifest + pipeline + rotinas + skill + eval + feedback + versão. |
 | **System Contract** | Envelope legível por máquina que liga resultado, Capability, entidades, fontes, pipeline, permissões, eval e aprendizado sem carregar conteúdo privado. |
+| **CONFIGURAÇÃO** | Contexto compilado para um uso ou Sistema: estado, evidência, regras, exemplos, permissões, output e eval. Aponta para o bruto; não o copia. [Context Pack] |
 | **Control plane** | Camada local que registra contratos, versões, permissões, runs e aprendizado de Sistemas diferentes pelo mesmo protocolo. |
 | **Agente** | Executor movido por modelo que usa contexto, skills e ferramentas dentro das permissões; não é a memória nem o Sistema inteiro. |
 | **Architect** | A porta de diagnóstico do Cérebro: mapeia a operação, explicita a força das evidências e propõe o primeiro sistema; o dono confirma. |
 | **Estado do mapa** | O grau de prova do Architect: V0 declarado · V1 evidência parcial · V2 verificado pelo responsável · V3 validado por execução e resultado. |
+| **Mapa da empresa** | Vista de controle que começa ampla e rasa no declarado e ganha recortes observados por uso; registra entidades, fontes, relações, decisões, lacunas e estado de evidência sem exigir ingestão total. |
 | **Pipeline** | Estados pelos quais uma entrada vira uma saída verificável. |
 | **Rotina** | Gatilho por evento ou cadência que inicia ou revisa um pipeline. |
 | **Conexão** | Interface fina para uma fonte ou ferramenta; não contém o processo inteiro. [MCP/CLI] |

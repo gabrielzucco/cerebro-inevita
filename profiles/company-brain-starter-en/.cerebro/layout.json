@@ -1,12 +1,15 @@
 {
-  "version": 2,
+  "version": 3,
   "companyMap": "company/map.md",
   "sourceRegister": "sources/register.md",
+  "activationBrief": "systems/first-system/brief.md",
   "firstSystemBrief": "systems/first-system/brief.md",
+  "configuration": "context-packs/first-system.md",
   "contextPack": "context-packs/first-system.md",
   "firstOutput": "outputs/first-output.md",
   "activationReceipt": "operations/runs/activation-receipt.md",
   "corrections": "operations/corrections",
+  "activationContract": "systems/first-system/contract.json",
   "systemContract": "systems/first-system/contract.json",
   "runLedger": "operations/runs/ledger.jsonl",
   "learningRegister": "operations/learning"

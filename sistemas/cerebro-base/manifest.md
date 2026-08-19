@@ -3,15 +3,14 @@
 ```yaml
 system_id: cerebro-base
 name: Cérebro Base
-version: 0.1.0
+version: 0.2.0
 status: beta
 owner: dono-do-cerebro
 result: uma fonte real vira um artefato aprovado e volta a trabalhar numa segunda tarefa
-input: situação recorrente + menor fonte real autorizada
-output: artefato aprovado + contexto salvo + segunda utilização + recibo
+input: resultado conhecido ou rastro recente + menor fonte real autorizada
+output: orientação V0 + artefato aprovado + CONFIGURAÇÃO salva + segunda utilização + recibo
 entry_skill: comecar
 setpoint: T0 até T3 em até 15 minutos; T3 até T4 apenas medido no primeiro lote
-first_route: calls-decisoes
 privacy: local-first
 ```
 
@@ -26,6 +25,10 @@ O ciclo só fecha quando a pessoa:
 
 Instalar, abrir a pasta, consultar o acervo ou receber um resumo não fecham o ciclo.
 
+T4 ativa o **Cérebro Base**. O primeiro Sistema de negócio é escolhido depois: ele recebe resultado,
+fontes, CONFIGURAÇÃO, pipeline, eval, gate, feedback e versão próprios. O recorte usado para ativar
+o cérebro pode virar candidato, mas não é promovido automaticamente.
+
 ## Marcos do produto
 
 - **T0:** a conversa de trabalho da `/comecar` começou depois da instalação.
@@ -39,10 +42,11 @@ registra conteúdo, nome, contato, caminho da fonte ou resposta da pessoa no rel
 
 ## Dependências
 
-- `/comecar` para retomar a situação e encontrar o menor caso;
-- `calls-decisoes` para o primeiro lote, sempre com uma reunião real;
-- `/operar` para pipeline, aprovação e recibo;
-- `/guardar` quando a fonte não for reunião.
+- `/comecar` para orientar o mapa, escolher resultado ou rastro e encontrar a menor fonte;
+- `/fonte` para decidir o nível de refino sem tratar tudo;
+- `company-brain-sprint` para produzir os artefatos e os dois usos;
+- `/guardar` quando a correção aprovada merece virar átomo candidato;
+- `/arquiteto` somente depois de T4 para escolher o primeiro Sistema de negócio.
 
 ## Fronteira
 

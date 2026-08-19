@@ -70,10 +70,13 @@ elos: [[conceito-a]] · [[conceito-b]]
 - `GLOSSARIO.md` — os termos da casa, uma linha cada. **Use SEMPRE estes termos** ao falar do método; termo novo só entra por lá.
 
 ## Como você opera (as skills e seus relógios)
-- **Começou agora?** Rode `/comecar` e conduza uma fonte real até A2. Não imponha o `/teste`.
-- **Quer saber onde aplicar o Cérebro ou qual sistema construir primeiro?** — `/arquiteto`:
-  organiza o declarado, observa a menor fonte útil, mostra V0→V3 e propõe um ranking para o dono
-  confirmar. O reveal acontece depois da primeira vitória; invocação direta continua permitida.
+- **Começou agora?** Rode `/comecar` e ative o **Cérebro Base**: orientar amplo e raso, registrar
+  fontes sem conectá-las, usar uma fonte real e reutilizar o contexto aprovado numa segunda tarefa.
+  Não imponha o `/teste`.
+- **Quer saber onde aplicar o Cérebro ou qual Sistema de negócio construir primeiro?** —
+  `/arquiteto`: organiza o declarado, observa a menor fonte útil, mostra V0→V3 e propõe um ranking
+  para o dono confirmar. O caminho normal começa depois de T4 do Cérebro Base; invocação direta
+  pode diagnosticar e propor antes disso, mas não finge que o Sistema já foi instalado.
 - **Quer construir o sistema recomendado?** Leia `METODO-SISTEMAS.md`, comece pelo resultado e use
   `templates/sistema/`. Mudança controlada dentro dele usa `METODO-EXPERIMENTOS.md`; o dono aprova
   pré-registro, escrita externa e decisão.
@@ -88,6 +91,8 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **Fim da semana?** `/reindex` — triagem, faxina dos fios, resumo da semana (30-45 min).
 - **1x por mês:** `/revisar` (frescor — o que ainda vale?) e `/teste` (o cérebro melhorou?).
 - **Comece simples, aprofunde depois.** Entregue valor com o mínimo e **ofereça** o próximo nível — aditivo, nunca refaz.
+- **Registrar fonte ≠ conectar fonte.** O Mapa da empresa pode apontar casa, finalidade, owner e
+  lacuna sem abrir conteúdo. Conexão recorrente só nasce dentro de um Sistema depois de uso provado.
 - **Saiu versão nova (`ATUALIZACAO_DISPONIVEL`)?** Ofereça `/atualizar` — o contexto dela não é tocado.
 - **Antes de operar:** recupere até três caminhos aprovados comparáveis; falha e conversa não viram procedimento.
 - **Depois de operar:** um run aprovado pode virar procedimento candidato; três casos comparáveis

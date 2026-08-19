@@ -193,7 +193,7 @@ for (const contract of [
   'Use sempre `você`, `seu` e `sua`',
   'A pasta local é o cérebro',
   'Não abra com e-mail',
-  'Qual trabalho recorrente este cérebro deve tornar mais fácil primeiro',
+  'Qual trabalho real este cérebro deve compreender primeiro',
   'menor amostra real',
   'Você usaria isso do jeito que está ou mudaria alguma coisa antes?',
   'operacao/decisoes-pendentes/onboarding.md',
@@ -205,10 +205,13 @@ for (const contract of [
   'Isso aproveitou o que já estava no cérebro',
   'Somente depois do output útil',
   'V3 só existe',
-  'System Contract',
+  'Activation Contract',
   'primeiro Run Record',
   'replay, aprovação humana, nova versão e rollback',
-  'rota de observação',
+  'resultado → fonte mínima',
+  'rastro → observação → resultado',
+  'Registrar fonte ≠ conectar fonte',
+  'T4 não implica V3',
   'Nunca responda à incerteza pedindo para',
 ]) {
   if (!comecar.includes(contract)) errors.push(`comecar sem contrato de retomada: ${contract}`);
@@ -378,22 +381,45 @@ for (const contract of ['fonte real', 'artefato aprovado', 'T0', 'T4', 'segunda 
 }
 
 const layout = JSON.parse(readFileSync(join(ROOT, '.cerebro', 'layout.json'), 'utf8'));
-if (layout.version !== 2) errors.push('layout precisa estar no protocolo v2');
-for (const key of ['systemContract', 'runLedger', 'learningRegister']) {
+if (layout.version !== 3) errors.push('layout precisa estar no protocolo v3');
+for (const key of ['activationBrief', 'configuration', 'activationContract', 'systemContract', 'runLedger', 'learningRegister']) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);
+  }
+}
+for (const [canonical, legacy] of [
+  ['activationBrief', 'firstSystemBrief'],
+  ['configuration', 'contextPack'],
+  ['activationContract', 'systemContract'],
+]) {
+  if (layout[canonical] !== layout[legacy]) {
+    errors.push(`layout v3 precisa preservar alias: ${canonical} → ${legacy}`);
   }
 }
 
 const sprint = readFileSync(join(ROOT, '.claude', 'skills', 'company-brain-sprint', 'SKILL.md'), 'utf8');
 for (const contract of [
-  'System Contract → Context Pack',
+  'orientation → source register',
   'opaque `source-id`',
   'one completed Run Record',
   'three comparable runs, replay',
-  'observation route',
+  'source-first route',
+  'Registering a source',
+  'first business System',
+  'CONFIGURATION',
+  'capability.capability_id: ativar-recorte-operacional',
+  'result.output_type: cerebro-base-ativado',
 ]) {
   if (!sprint.includes(contract)) errors.push(`company-brain-sprint sem protocolo comum: ${contract}`);
+}
+const sprintOutputContract = readFileSync(join(ROOT, '.claude', 'skills', 'company-brain-sprint', 'references', 'output-contract.md'), 'utf8');
+for (const contract of [
+  '`system_id`: `cerebro-base`',
+  '`capability.capability_id`: `ativar-recorte-operacional`',
+  '`result.output_type`: `cerebro-base-ativado`',
+  'becomes `active` only after T4',
+]) {
+  if (!sprintOutputContract.includes(contract)) errors.push(`output contract sem identidade estável: ${contract}`);
 }
 
 const clock = readFileSync(join(ROOT, 'scripts', 'concierge-run.mjs'), 'utf8');

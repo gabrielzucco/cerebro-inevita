@@ -1,6 +1,6 @@
 ---
 name: arquiteto
-description: Mapeia uma operação real, explicita o estado das evidências (V0→V3), propõe até três oportunidades e recomenda o primeiro sistema sem fingir certeza. Use quando a pessoa perguntar por onde começar, onde aplicar o Cérebro, qual sistema construir, onde perde inteligência, ou pedir diagnóstico, mapa da operação, arquitetura atual/alvo ou Architect.
+description: Depois da ativação do Cérebro Base, mapeia uma operação real, explicita a força da evidência (V0→V3), propõe até três oportunidades e recomenda o primeiro Sistema de negócio. Antes de T4 pode diagnosticar, mas não finge implantação.
 ---
 
 # Arquiteto — da operação ao primeiro sistema
@@ -12,6 +12,8 @@ recomendação como proposta e deixa a pessoa decidir.
 ## Contrato
 
 - Entregue clareza sem inflar certeza. Mostre sempre o estado V0, V1, V2 ou V3.
+- V0→V3 mede evidência do mapa; T0→T4 mede ativação do Cérebro Base. Nunca use uma escala para
+  promover a outra.
 - Reutilize `/prototipar`, `/fonte` e `/operar`; não replique esses protocolos.
 - Ranqueie no máximo três oportunidades, sem score numérico ou pesos não calibrados.
 - Toda oportunidade leva `reason_codes`, explicação e referências.
@@ -25,12 +27,15 @@ recomendação como proposta e deixa a pessoa decidir.
 Leia primeiro, quando existirem:
 
 - `meu-negocio/mapa.md`, `oferta.md`, `icp.md`, `entrega.md` e `o-que-funciona.md`;
+- o recibo de ativação e o último marco T0→T4 do Cérebro Base;
 - o fio quente em `meu-negocio/fios/`;
 - `conexoes/configuradas/fontes.json`, sem abrir as fontes;
 - `sistemas/_CATALOGO.md` e `sistemas/outros-instalados/_CATALOGO.md`.
 
-Não faça a pessoa repetir o que o Cérebro já sabe. Se ela invocou esta skill diretamente, prossiga;
-`/comecar` é a rota recomendada da primeira experiência, não um pedágio artificial.
+Não faça a pessoa repetir o que o Cérebro já sabe. Se T4 existe, prossiga para o primeiro Sistema
+de negócio. Se a pessoa invocou esta skill diretamente antes de T4, prossiga com o diagnóstico e a
+proposta, mas marque a recomendação como `proposed` e ofereça `/comecar` como o único próximo passo
+para provar `usar → reutilizar`. O gate protege a implantação; não bloqueia clareza.
 
 ## 2. Construir V0 — declarado
 
@@ -90,9 +95,9 @@ Escolha uma oportunidade e escreva um System Brief:
 - sistema instalado, quando existir.
 
 Se nenhum sistema instalado servir, diga isso e entregue o brief. Um brief não é um sistema em
-produção. System Packs, laboratórios, releases e instalação assistida podem vir da Society; conexão
-customizada, legado, SLA e implantação profunda são trabalho premium. Não limite o diagnóstico
-aberto para simular exclusividade.
+produção. Antes de T4, o brief permanece proposta e não é instalado. System Packs, laboratórios,
+releases e instalação assistida podem vir da Society; conexão customizada, legado, SLA e implantação
+profunda são trabalho premium. Não limite o diagnóstico aberto para simular exclusividade.
 
 ## 6. Mostrar, corrigir e confirmar
 
@@ -153,6 +158,9 @@ Atualize o mesmo spec, regenere o visual e registre o que mudou. Execução sem 
 - **V1 · evidência parcial:** ao menos uma fonte foi observada.
 - **V2 · verificado:** responsável confirmou/corrigiu mapa e ranking.
 - **V3 · validado:** sistema rodou e o resultado voltou medido.
+
+T4 não aparece nesta escada: ele confirma que o Cérebro Base reutilizou contexto; não que um
+resultado de negócio foi validado.
 
 Feche com um próximo passo único, proporcional ao estado atual. Diagnóstico mostra a capacidade;
 operação, medição e repetição fazem a capacidade acumular.
