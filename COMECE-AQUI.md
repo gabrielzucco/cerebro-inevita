@@ -74,6 +74,11 @@ Depois que o contexto aprovado volta numa segunda tarefa, o Cérebro pode abrir 
 mapeia como uma operação funciona, mostra o que é só declarado e o que já tem evidência, e propõe o
 primeiro sistema para o responsável confirmar. Diagnóstico não finge implantação nem validação.
 
+Com o resultado confirmado, `/sistematizar` observa uma execução recente, separa declarado de
+observado e instala a versão manual em `sistemas/outros-instalados/`. As fontes ficam registradas
+por papel e casa de verdade; isso ainda não as conecta. O Sistema nasce `configuring`, roda o
+primeiro caso com `/operar` e só depois pode merecer conexão, rotina por evento ou automação.
+
 O acervo do AI Engineer World's Fair continua disponível com fonte e minuto do vídeo, mas funciona
 como referência para melhorar uma decisão. Ele não substitui o contexto do seu negócio.
 
@@ -93,8 +98,10 @@ como referência para melhorar uma decisão. Ele não substitui o contexto do se
 ## Quando quiser construir além da primeira vitória
 
 - **Onde aplicar primeiro:** rode `/arquiteto` para mapear uma operação e propor o primeiro Sistema.
-- **Como um Sistema funciona:** leia [`METODO-SISTEMAS.md`](METODO-SISTEMAS.md) e use
-  [`templates/sistema/`](templates/sistema/).
+- **Como transformar trabalho real em Sistema:** rode `/sistematizar`; ele usa
+  [`METODO-SISTEMAS.md`](METODO-SISTEMAS.md) e gera o contrato local sem conectar tudo.
+- **Como operar o primeiro caso:** rode `/operar <system-id>` e confirme valor somente quando o
+  responsável disser que usaria ou usou o output.
 - **Como testar uma mudança sem enganar a leitura:** leia
   [`METODO-EXPERIMENTOS.md`](METODO-EXPERIMENTOS.md) e use
   [`templates/experimento.md`](templates/experimento.md).

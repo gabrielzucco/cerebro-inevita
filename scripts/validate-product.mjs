@@ -31,10 +31,15 @@ const required = [
   '.claude/skills/arquiteto/references/architect-spec.schema.json',
   '.claude/skills/arquiteto/references/architect-spec.example.json',
   '.claude/skills/arquiteto/scripts/render-map.mjs',
+  '.claude/skills/sistematizar/SKILL.md',
+  '.claude/skills/sistematizar/agents/openai.yaml',
+  '.claude/skills/sistematizar/references/commissioning-spec.schema.json',
+  '.claude/skills/sistematizar/references/jornada-ponta-a-ponta.example.json',
   '.claude/skills/company-brain-sprint/SKILL.md',
   '.claude/skills/company-brain-sprint/references/output-contract.md',
   'operacao/arquitetura/_LEIA.md',
   'scripts/test-architect.mjs',
+  'scripts/commission-system.mjs', 'scripts/test-commission-system.mjs',
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
@@ -296,11 +301,41 @@ for (const contract of [
   if (!architectRenderer.includes(contract)) errors.push(`engine do arquiteto sem guarda: ${contract}`);
 }
 
+const systematize = readFileSync(join(ROOT, '.claude', 'skills', 'sistematizar', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'Cérebro Base T4 → resultado confirmado → caso real observado',
+  'Registrar fonte ≠ conectar fonte',
+  'declared:',
+  'observed:',
+  'gap:',
+  'não crie conexão, agenda ou ação externa',
+  'três runs comparáveis',
+  'commission-system.mjs',
+  '/operar <system-id>',
+]) {
+  if (!systematize.toLowerCase().includes(contract.toLowerCase())) {
+    errors.push(`sistematizar sem contrato: ${contract}`);
+  }
+}
+const commissionEngine = readFileSync(join(ROOT, 'scripts', 'commission-system.mjs'), 'utf8');
+for (const contract of [
+  "const ALLOWED_ACCESS = new Set(['manual', 'read-only'])",
+  'Cérebro Base ainda não chegou a T4',
+  'comissionamento nunca sobrescreve pacote local',
+  "status: 'configuring'",
+  'connected_sources: 0',
+  'spec contém PII óbvia',
+  'permissions.external_actions precisa ser false',
+]) {
+  if (!commissionEngine.includes(contract)) errors.push(`engine de sistematização sem guarda: ${contract}`);
+}
+
 const motorManifest = readFileSync(join(ROOT, '.cerebro', 'motor.manifest'), 'utf8');
 for (const contract of [
   '.cerebro/private-ignore.manifest',
   '.claude/skills/briefing-comercial',
   '.claude/skills/arquiteto',
+  '.claude/skills/sistematizar',
   '.claude/skills/company-brain-sprint',
   '.cerebro/layout.json',
   'profiles/company-brain-starter-en',

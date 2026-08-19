@@ -340,6 +340,8 @@ pipeline, régua ou próxima execução. O protocolo completo está em
 ### Passo 1 — escolha um resultado
 
 Escolha algo recorrente que encoste em **decisão, venda ou entrega**. Um Sistema por vez.
+O `/arquiteto` ajuda a comparar candidatos; `/sistematizar` transforma o resultado confirmado em
+contrato local.
 
 ### Passo 2 — descreva o estado atual com evidência
 
@@ -410,9 +412,14 @@ Instalação não é ativação. Automação não é validação. Volume não su
 
 ---
 
-## 14. Comece pelo template
+## 14. Comissione a partir do trabalho real
 
-Copie [`templates/sistema/`](templates/sistema/) para uma nova pasta e preencha nesta ordem:
+Rode `/sistematizar` depois que o Cérebro Base chegou a T4. A skill exige resultado confirmado,
+um caso real observado e aprovação humana; então cria o pacote em
+`sistemas/outros-instalados/<system-id>/` e registra o estado `configuring`. Fontes aparecem por
+papel, propósito e casa de verdade, com **zero conexões** no primeiro ciclo.
+
+O scaffold preenche nesta ordem:
 
 1. `manifest.md` — o contrato humano do resultado;
 2. `capability.json` — a capacidade portátil sem contexto privado;
@@ -425,12 +432,18 @@ Copie [`templates/sistema/`](templates/sistema/) para uma nova pasta e preencha 
 9. `feedback.md` — as correções locais;
 10. `changelog.md` — as versões do motor.
 
-Prompt direto para usar com o agente:
+Depois rode `/operar <system-id>` no mesmo trabalho. Run aprovado ativa o Sistema local; não prova
+outcome nem valida o motor. Conexão recorrente, agenda e skill especializada só entram quando runs
+comparáveis mostrarem um trecho estável.
 
-> Leia `METODO-SISTEMAS.md`. Quero transformar uma operação real em Sistema. Não invente meu
-> processo. Comece pelo resultado, pelo que não seria sucesso, pelo output verificável e por uma
-> execução recente. Depois proponha o contrato das oito unidades usando `templates/sistema/`.
-> Mostre as lacunas e peça minha aprovação antes de gravar.
+Pedido direto para usar com qualquer agente compatível:
+
+> Use `/sistematizar`. Quero transformar uma operação real em Sistema. Não invente meu processo.
+> Comece pelo resultado, pelo que não seria sucesso, pelo output verificável e por uma execução
+> recente. Mostre declarado, observado e lacunas; peça minha aprovação antes de instalar.
+
+[`templates/sistema/`](templates/sistema/) continua sendo a referência do contrato e o fallback
+manual. Template copiado sem evidência, gate e primeiro run ainda é somente uma pasta.
 
 ---
 

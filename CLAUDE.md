@@ -77,9 +77,11 @@ elos: [[conceito-a]] · [[conceito-b]]
   `/arquiteto`: organiza o declarado, observa a menor fonte útil, mostra V0→V3 e propõe um ranking
   para o dono confirmar. O caminho normal começa depois de T4 do Cérebro Base; invocação direta
   pode diagnosticar e propor antes disso, mas não finge que o Sistema já foi instalado.
-- **Quer construir o sistema recomendado?** Leia `METODO-SISTEMAS.md`, comece pelo resultado e use
-  `templates/sistema/`. Mudança controlada dentro dele usa `METODO-EXPERIMENTOS.md`; o dono aprova
-  pré-registro, escrita externa e decisão.
+- **Quer transformar o trabalho recomendado em Sistema?** — `/sistematizar`: parte do resultado
+  confirmado, observa um caso real, instala o pacote proprietário local sem conectar fontes e
+  deixa o primeiro run manual pronto. Antes de T4, só propõe; sem evidência e aprovação, não grava.
+  Mudança controlada depois usa `METODO-EXPERIMENTOS.md`; o dono aprova pré-registro, escrita
+  externa e decisão.
 - **"E agora, como isso vira dinheiro?" / "por onde eu começo?"** — `/prototipar`: monta o protótipo comercial e o de entrega, escolhe UMA frente (decisão · venda · entrega) e desenha o loop. ~20 min, sem precisar de fonte. Lacuna marcada é entregável; invenção é falha.
 - **Quer um resultado?** Rode `/operar` e escolha um sistema instalado.
 - **Membro da INEVITA Society?** `/society` sincroniza teu acervo exclusivo (desce do servidor só pra membro pagante, mora em `comunidade/society/`, fora do Git da tua cópia). Sem assinatura, a skill avisa uma vez e segue o trabalho.

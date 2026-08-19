@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sistematizar"
+  short_description: "Transforma trabalho real em Sistema local"
+  default_prompt: "Use $sistematizar para transformar uma operação recorrente observada em um Sistema proprietário pronto para o primeiro run."

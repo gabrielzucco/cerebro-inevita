@@ -1,0 +1,113 @@
+{
+  "protocol_version": 1,
+  "system_id": "jornada-ponta-a-ponta",
+  "name": "Jornada ponta a ponta",
+  "version": "0.1.0",
+  "evidence": {
+    "state": "observed",
+    "refs": [
+      {
+        "role": "caso-recente",
+        "path": "capturas/caso-recente.md",
+        "purpose": "confrontar a jornada declarada com um caso que atravessou a operação"
+      }
+    ]
+  },
+  "result": {
+    "statement": "um caso tem etapa atual, lacunas e próxima ação aprovadas com a jornada inteira visível",
+    "non_success": "desenhar um fluxograma genérico ou resumir documentos sem decidir a próxima ação",
+    "output_type": "jornada-operacional",
+    "definition_of_done": "etapas observadas, estado atual, lacunas, próxima ação e responsável foram aprovados pelo dono",
+    "owner": "responsavel-da-operacao",
+    "human_gate": "o responsável confirma o estado atual e aprova a próxima ação"
+  },
+  "trigger": {
+    "type": "manual",
+    "description": "quando um caso recente precisa ser reconstruído de aquisição até entrega ou atendimento"
+  },
+  "capability": {
+    "capability_id": "costurar-jornada-operacional",
+    "name": "Costurar jornada operacional",
+    "task": "reconstruir um caso por evidência e propor a próxima ação sem inventar etapas",
+    "when_to_use": ["quando o responsável precisa enxergar a jornada inteira de um caso"],
+    "when_not_to_use": ["quando não existe caso real autorizado ou a intenção é apenas configurar um CRM"]
+  },
+  "entities": [
+    { "type": "case", "role": "caso", "required": true },
+    { "type": "customer", "role": "cliente", "required": false }
+  ],
+  "sources": [
+    {
+      "role": "caso-recente",
+      "source_id": null,
+      "required": true,
+      "access": "manual",
+      "freshness": "por caso",
+      "purpose": "provar a sequência real, decisões, handoffs e lacunas",
+      "truth_home": "pasta ou sistema original da operação"
+    },
+    {
+      "role": "estado-comercial",
+      "source_id": null,
+      "required": false,
+      "access": "manual",
+      "freshness": "por mudança de etapa",
+      "purpose": "confirmar origem, promessa e fechamento",
+      "truth_home": "CRM ou registro comercial"
+    },
+    {
+      "role": "estado-entrega",
+      "source_id": null,
+      "required": false,
+      "access": "manual",
+      "freshness": "por marco",
+      "purpose": "confirmar onboarding, execução, pendências e conclusão",
+      "truth_home": "gestão de projetos ou pasta de entrega"
+    }
+  ],
+  "pipeline": [
+    { "state": "orientado", "input": "resultado e caso", "output": "fronteira da jornada", "gate": "começo e fim foram definidos pelo responsável" },
+    { "state": "observado", "input": "caso autorizado", "output": "eventos e decisões com evidência", "gate": "declared e observed permanecem separados" },
+    { "state": "costurado", "input": "eventos observados", "output": "jornada atual por entidade", "gate": "nenhuma etapa foi inventada para fechar o desenho" },
+    { "state": "diagnosticado", "input": "jornada atual", "output": "lacunas, handoffs e próxima ação", "gate": "cada lacuna aponta a evidência ausente" },
+    { "state": "aprovado", "input": "próxima ação candidata", "output": "jornada operacional utilizável", "gate": "responsável aprova estado e próxima ação" },
+    { "state": "medido", "input": "ação executada", "output": "outcome e recibo", "gate": "resultado observado não é inferido do output" }
+  ],
+  "routines": [
+    {
+      "trigger": "manual no primeiro caso",
+      "owner": "responsavel-da-operacao",
+      "input": "um caso recente e suas fontes autorizadas",
+      "output": "jornada operacional e próxima ação aprovadas",
+      "gate": "nenhuma conexão ou escrita externa no primeiro run"
+    }
+  ],
+  "permissions": {
+    "read": ["fontes locais autorizadas para o caso"],
+    "write": ["derivados e recibos locais aprovados"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.0",
+    "deterministic_gates": ["toda etapa crítica aponta evidência", "PII não entra nos derivados versionáveis", "próxima ação tem responsável"],
+    "human_questions": ["Você usaria esta jornada e esta próxima ação do jeito que estão?"],
+    "outcome_measure": "proxima-acao-com-contexto-confirmada"
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  },
+  "frontier": {
+    "local": ["conteúdo dos casos, identidade, documentos e decisões privadas"],
+    "derived": ["estrutura de etapas, gates e padrões anonimizados aprovados"],
+    "forbidden": ["PII, segredo, documento integral e ação externa sem aprovação"]
+  },
+  "baseline": {
+    "measure": "tempo-para-reconstruir-jornada",
+    "value": "nao-medido",
+    "period": "primeiro caso",
+    "source": "caso observado e confirmação do responsável"
+  }
+}

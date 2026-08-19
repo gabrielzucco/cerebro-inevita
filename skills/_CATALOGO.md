@@ -7,6 +7,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 |---|---|
 | `company-brain-sprint` | orienta o mapa → registra fontes sem conectar → observa um recorte → compila CONFIGURAÇÃO → usa → reutiliza → ativa o Cérebro Base |
 | `arquiteto` | mapeia uma operação, mostra V0→V3 e propõe o primeiro sistema com razões explícitas |
+| `sistematizar` | transforma um trabalho observado em Sistema proprietário local e deixa o primeiro run manual pronto |
 | `prototipar` | monta o protótipo comercial e o de entrega, escolhe a frente e desenha o loop |
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
 | `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |

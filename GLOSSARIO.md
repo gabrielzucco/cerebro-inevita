@@ -23,6 +23,7 @@
 | **Control plane** | Camada local que registra contratos, versões, permissões, runs e aprendizado de Sistemas diferentes pelo mesmo protocolo. |
 | **Agente** | Executor movido por modelo que usa contexto, skills e ferramentas dentro das permissões; não é a memória nem o Sistema inteiro. |
 | **Architect** | A porta de diagnóstico do Cérebro: mapeia a operação, explicita a força das evidências e propõe o primeiro sistema; o dono confirma. |
+| **Sistematização** | O comissionamento que transforma trabalho recorrente observado em Sistema proprietário local: resultado, contrato, CONFIGURAÇÃO, pipeline, régua e primeiro run manual; não pressupõe conexão nem validação. |
 | **Estado do mapa** | O grau de prova do Architect: V0 declarado · V1 evidência parcial · V2 verificado pelo responsável · V3 validado por execução e resultado. |
 | **Mapa da empresa** | Vista de controle que começa ampla e rasa no declarado e ganha recortes observados por uso; registra entidades, fontes, relações, decisões, lacunas e estado de evidência sem exigir ingestão total. |
 | **Pipeline** | Estados pelos quais uma entrada vira uma saída verificável. |

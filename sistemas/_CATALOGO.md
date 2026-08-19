@@ -22,12 +22,11 @@ O catálogo da INEVITA mostra outros sistemas disponíveis ou em construção em
 ## Construir um Sistema próprio
 
 1. Use `/arquiteto` para encontrar e confirmar o primeiro resultado.
-2. Siga [`METODO-SISTEMAS.md`](../METODO-SISTEMAS.md).
-3. Copie [`templates/sistema/`](../templates/sistema/) e rode um caso real ponta a ponta.
-   Registre `contract.json` no control plane quando o resultado for confirmado.
+2. Use `/sistematizar` para observar um caso real, aprovar o contrato e gerar o pacote local.
+3. Rode `/operar <system-id>` manualmente ponta a ponta; conexão e agenda vêm depois da prova.
 4. Quando houver uma mudança a testar, use
    [`METODO-EXPERIMENTOS.md`](../METODO-EXPERIMENTOS.md) e
    [`templates/experimento.md`](../templates/experimento.md).
 
-Template em branco não é Sistema validado. Validação exige resultado repetido com eval, decisão
-humana, feedback e versão.
+Template em branco não é Sistema instalado. Primeiro run aprovado não é Sistema validado.
+Validação exige resultado repetido com eval, decisão humana, feedback e versão.

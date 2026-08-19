@@ -1,5 +1,21 @@
 # Mudanças do cérebro INEVITA
 
+## v1.24.0 — 2026-08-19 · “trabalho real vira Sistema”
+
+- **Elo executável entre Architect e operação:** `/sistematizar` transforma um resultado
+  confirmado e uma execução observada em Sistema proprietário local, sem repetir o onboarding.
+- **Comissionamento evidence-first:** o scaffold valida T4, caso real, contrato, PII, caminhos e
+  aprovação antes de criar as dez superfícies do pacote e registrá-lo no control plane.
+- **Registrar ainda não é conectar:** o Sistema nasce `configuring`, com fontes por papel e casa de
+  verdade, zero conexões, rotina manual e nenhuma ação externa.
+- **Primeiro run honesto:** `/operar` liga entidade, fonte, output, eval, decisão e outcome. Um run
+  aprovado ativa o Sistema, mas primeira vitória continua exigindo confirmação humana explícita.
+- **Aprendizado sem cristalizar acaso:** skill especializada, conexão ou rotina automática só vira
+  candidata depois de três runs comparáveis, replay e aprovação humana.
+- **Primeira prova ponta a ponta:** o exemplo de Jornada operacional costura aquisição, venda,
+  onboarding, entrega e atendimento por evidência, sem fingir que o pacote já serve para qualquer
+  empresa.
+
 ## v1.23.0 — 2026-08-19 · “usar antes de sistematizar”
 
 - **Cérebro Base é o primeiro metassistema:** instalar a pasta não basta. A ativação fecha quando
