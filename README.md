@@ -1,0 +1,108 @@
+# Cérebro INEVITA
+
+**O segundo cérebro de negócio que roda local, dentro do agente de IA que tu já usa.**
+
+[![Release](https://img.shields.io/github/v/release/gabrielzucco/cerebro-inevita?label=vers%C3%A3o&color=C5A35A)](https://github.com/gabrielzucco/cerebro-inevita/releases)
+[![Motor: MIT](https://img.shields.io/badge/motor-MIT-green)](LICENSE)
+[![Conteúdo: CC BY-NC 4.0](https://img.shields.io/badge/conte%C3%BAdo-CC%20BY--NC%204.0-blue)](LICENSE-CONTEUDO.md)
+[![Agentes](https://img.shields.io/badge/agentes-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Gemini%20CLI%20%C2%B7%20Antigravity-black)](#comece-em-2-minutos)
+
+Não é uma pasta pra tu baixar e esquecer. É um sistema local que lê fontes reais,
+aprende teu contexto e começa a operar contigo. A IA já é boa — e é a mesma pra todos.
+O que falta é **contexto**: o que tu vendes, pra quem, o que já funcionou. As empresas
+do Vale organizam esse contexto religiosamente. Este repositório é o método, aberto.
+
+## O momento em que tu entende
+
+Sem o Cérebro:
+
+> **Tu:** "Como eu aumento a margem do meu negócio?"
+> **IA:** "Existem várias estratégias: 1. Reduza custos. 2. Aumente preços. 3. Otimize processos…"
+>
+> *Um template. Serve pra qualquer empresa — ou seja, pra nenhuma.*
+
+Com o Cérebro instalado, o mesmo agente responde a partir das **tuas** fontes — teu
+histórico, tuas calls, teus números — e cita de onde tirou cada afirmação, com fonte e
+minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
+
+## Comece em 2 minutos
+
+```bash
+git clone https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
+```
+
+Abre a pasta no teu agente e diz **"quero começar"**:
+
+| Ambiente | Entrada |
+|---|---|
+| Claude Code | `/comecar` |
+| Codex | `$comecar` ou "quero começar" |
+| Gemini CLI (grátis) | "quero começar" |
+| Antigravity (grátis) | "quero começar meu cérebro" |
+| Outro agente local | ler `.agents/skills/comecar/SKILL.md` |
+
+O agente conduz o resto: primeira vitória em minutos, teu negócio dentro em seguida.
+Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](METODO.md).
+
+## Primeiras vitórias (escolhe uma)
+
+- **Perguntar ao acervo do Vale** — resposta verificável nas fontes reais, não um apanhado da internet.
+- **Aplicar no meu negócio** — "me mostra uma decisão que estou tomando sem evidência suficiente".
+- **Transformar uma call em trabalho** — decisões, pendências com dono, contexto que volta na próxima.
+- **Criar com a minha voz** — a peça nasce do teu contexto, tu ajusta em vez de reescrever.
+
+## O que vem dentro
+
+```
+conhecimento/   acervo do Vale, imersão e comunidade — com fonte e minutagem
+sistemas/       trabalho recorrente vira Sistema: roda, deixa rastro, melhora
+skills/         os comandos que o agente executa (/comecar, /daily, /sistematizar…)
+meu-negocio/    TEU contexto — nasce vazio, é o que dá vida ao resto
+protocol/       contratos que mantêm tudo auditável (Capability, Run Record…)
+```
+
+## Privacidade e telemetria — sem letra miúda
+
+**Local-first de verdade:** teu conteúdo, tuas fontes e teus outputs vivem na tua máquina
+e **nunca saem**. Nenhum arquivo teu é enviado a lugar nenhum.
+
+O que existe é telemetria **técnica de ativação** ([código aberto aqui](.agents/scripts/ping.mjs)):
+eventos como `instalou`/`comecou`/`system_activated`, versão e sistema operacional. Se tu
+instalaste pelo funil da INEVITA, teu e-mail/member-id acompanham o evento — é o que liga
+teu progresso à tua conta na plataforma. Conteúdo, nunca.
+
+Desligar é uma linha, e o agente respeita:
+
+```bash
+export CEREBRO_TELEMETRY=off        # ou: touch .cerebro/sem-telemetria
+```
+
+## Comunidade
+
+- **[Discussions](https://github.com/gabrielzucco/cerebro-inevita/discussions)** — mostra teu
+  Cérebro rodando, pergunta, propõe.
+- **[Grupo no WhatsApp](https://chat.whatsapp.com/FyEWHhKdoKY5QLZnlnvFoi)** — destrave de instalação
+  com quem já passou por ela.
+- **[INEVITA Society](https://inevitasociety.com/society)** — a rede que valida Sistemas em lote,
+  julga execuções e distribui capacidade em cima da base aberta.
+
+## Versões
+
+Release atual em [Releases](https://github.com/gabrielzucco/cerebro-inevita/releases) ·
+histórico completo e honesto em [`CHANGELOG.md`](CHANGELOG.md).
+
+## Licença
+
+**Motor MIT** (usa, modifica, redistribui) · **conteúdo CC BY-NC 4.0** (usa e adapta no teu
+Cérebro; não revende). Mapa exato em [`LICENSE-CONTEUDO.md`](LICENSE-CONTEUDO.md).
+O que tu escreves dentro do teu Cérebro é teu, integralmente.
+
+---
+
+### English
+
+**Cérebro INEVITA is an open-source Company Brain**: a local-first second brain for your
+business that runs inside the AI agent you already use (Claude Code, Codex, Gemini CLI,
+Antigravity). Your context stays on your machine; the agent answers from your real sources
+with citations. English starter: [`dist/company-brain-starter-en.zip`](dist/company-brain-starter-en.zip).
+Docs are in Brazilian Portuguese — the agent speaks whatever language you do.

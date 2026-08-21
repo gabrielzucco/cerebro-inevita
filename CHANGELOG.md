@@ -1,5 +1,20 @@
 # Mudanças do cérebro INEVITA
 
+## v1.24.1 — 2026-08-21 · “open source de verdade”
+
+- **Licença dupla:** o motor (scripts, skills, protocolo, templates) agora é MIT; o conteúdo
+  (acervo, método escrito, glossário) é CC BY-NC 4.0. Antes o repositório era público sem
+  licença nenhuma — ou seja, juridicamente fechado: ninguém podia usar nem compartilhar.
+  O que tu escreves dentro do teu Cérebro segue sendo teu, integralmente.
+- **README:** o repositório ganhou porta de entrada para quem chega de fora — o que é em uma
+  frase, o momento genérico × com contexto, instalação em dois minutos nos quatro agentes,
+  e o mapa do que vem dentro. Até aqui, quem abria o link via uma lista de 37 arquivos.
+- **Telemetria declarada, sem letra miúda:** o que sai (evento técnico, versão, SO — e
+  e-mail/member-id para quem instala pelo funil INEVITA), o que nunca sai (teu conteúdo),
+  o código aberto do ping e o desligamento em uma linha.
+- **CONTRIBUTING + Discussions:** motor recebe PR; conteúdo é curadoria com casa própria
+  para contribuição da comunidade; bugs com diagnóstico pronto.
+
 ## v1.24.0 — 2026-08-19 · “trabalho real vira Sistema”
 
 - **Elo executável entre Architect e operação:** `/sistematizar` transforma um resultado
