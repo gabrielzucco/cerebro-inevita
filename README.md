@@ -2,6 +2,7 @@
 
 **O segundo cérebro de negócio que roda local, dentro do agente de IA que tu já usa.**
 
+[![CI](https://github.com/gabrielzucco/cerebro-inevita/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielzucco/cerebro-inevita/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/gabrielzucco/cerebro-inevita?label=vers%C3%A3o&color=C5A35A)](https://github.com/gabrielzucco/cerebro-inevita/releases)
 [![Motor: MIT](https://img.shields.io/badge/motor-MIT-green)](LICENSE)
 [![Conteúdo: CC BY-NC 4.0](https://img.shields.io/badge/conte%C3%BAdo-CC%20BY--NC%204.0-blue)](LICENSE-CONTEUDO.md)
