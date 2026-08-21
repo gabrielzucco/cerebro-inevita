@@ -1,0 +1,54 @@
+name: motor
+
+# O motor tem 12 testes e nenhum os rodava em push/PR: um commit ruim chegava
+# ao main sem verificação — e o updater distribui a partir de release, que sai
+# do main. Este workflow é o portão que faltava.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Protocolo, superfícies e skills sincronizadas
+        run: node scripts/validate-product.mjs
+
+      - name: Suíte do motor
+        run: |
+          falhou=0
+          for teste in scripts/test-*.mjs; do
+            if node "$teste"; then
+              echo "✓ $teste"
+            else
+              echo "✗ $teste"; falhou=1
+            fi
+          done
+          exit $falhou
+
+      - name: Telemetria não vaza com o desligamento ligado
+        env:
+          CEREBRO_TELEMETRY: 'off'
+        run: node .agents/scripts/ping.mjs --diagnose | grep -q 'desativado'
+
+  # O motor promete rodar onde o agente roda — inclusive Windows sem WSL, onde
+  # bash/curl/tar não existem. Só o updater Node é cobrado aqui.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Sintaxe do motor em Windows
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -Filter *.mjs -Path scripts, .agents/scripts |
+            ForEach-Object { node --check $_.FullName }

@@ -1,5 +1,24 @@
 # Mudanças do cérebro INEVITA
 
+## v1.25.0 — 2026-08-21 · “infraestrutura à altura do open source”
+
+- **A atualização vem de RELEASE, não do último commit.** Os dois atualizadores passam a
+  resolver a última release publicada e só caem no branch se não houver release ou rede.
+  Antes, um commit ruim no `main` chegava instantaneamente em todo cérebro que atualizasse.
+- **Atualizador multiplataforma:** `node scripts/update.mjs` roda em macOS, Linux e Windows
+  sem WSL — o `update.sh` dependia de bash, curl e tar, que não existem no Windows onde os
+  agentes rodam. Zero dependência mantida: o leitor de tar é stdlib pura, com trava contra
+  path traversal. O bash legado continua funcionando para cérebros antigos.
+- **O contrato de segurança agora é cobrado dos DOIS atualizadores** no mesmo teste: 10
+  sentinelas do dono preservadas, seeds instalados, motor atualizado. Um passar e o outro
+  não seria regressão silenciosa em quem já tem o produto instalado.
+- **CI de verdade:** os 11 testes + o validador de protocolo rodam em push e PR, o
+  desligamento de telemetria é verificado, e a sintaxe do motor é checada em Windows.
+  Antes os testes existiam e nada os executava.
+- **Telemetria redirecionável:** `CEREBRO_API_URL` aponta o ping para outro endpoint — quem
+  forka o motor não pinga na telemetria da INEVITA.
+- **Requisito declarado:** Node.js 20+, stdlib apenas, sem `npm install`.
+
 ## v1.24.1 — 2026-08-21 · “open source de verdade”
 
 - **Licença dupla:** o motor (scripts, skills, protocolo, templates) agora é MIT; o conteúdo

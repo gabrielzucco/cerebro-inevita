@@ -31,6 +31,9 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 git clone https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
 
+Requisito: **Node.js 20+** (só a stdlib — o motor não tem nenhuma dependência externa,
+não existe `npm install`). Funciona em macOS, Linux e Windows.
+
 Abre a pasta no teu agente e diz **"quero começar"**:
 
 | Ambiente | Entrada |

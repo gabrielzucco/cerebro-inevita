@@ -14,8 +14,18 @@ if [ -n "${CEREBRO_UPDATE_SOURCE_DIR:-}" ]; then
   SRC="$(cd "$CEREBRO_UPDATE_SOURCE_DIR" && pwd)"
   echo "→ Validando atualização local ($SRC)…"
 else
-  echo "→ Baixando a última versão do motor ($REPO@$BRANCH)…"
-  if ! curl -fsSL --max-time 30 "https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz" -o "$TMP/motor.tar.gz"; then
+  # Release publicada é a fonte canônica: um commit ruim no main não pode chegar
+  # instantaneamente em todo cérebro instalado. Sem release (ou sem rede para
+  # consultar), cai no branch como último recurso.
+  TAG="$(curl -fsSL --max-time 15 "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+    | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+  if [ -n "$TAG" ]; then
+    ORIGEM="refs/tags/$TAG"; ROTULO="$TAG"
+  else
+    ORIGEM="refs/heads/$BRANCH"; ROTULO="$BRANCH"
+  fi
+  echo "→ Baixando a última versão do motor ($REPO@$ROTULO)…"
+  if ! curl -fsSL --max-time 30 "https://github.com/$REPO/archive/$ORIGEM.tar.gz" -o "$TMP/motor.tar.gz"; then
     echo "✗ Não consegui baixar. Confere a conexão (e o repo em .cerebro/source)."
     echo "  Teu contexto está intacto — nada foi alterado."
     exit 1

@@ -22,6 +22,10 @@ const VERSION_RE = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,31}$/;
 const REASON_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const HUMAN_DECISIONS = new Set(['approved', 'changes_requested', 'rejected']);
 
+// Quem forka o motor não deve pingar na telemetria da INEVITA. O default é o
+// endpoint da casa; CEREBRO_API_URL redireciona para o teu.
+const ENDPOINT = (process.env.CEREBRO_API_URL || 'https://peegicizxybjgvuutegc.supabase.co/functions/v1').replace(/\/+$/, '');
+
 function read(relative) {
   try {
     return readFileSync(join(ROOT, relative), 'utf8').trim();
@@ -100,7 +104,7 @@ async function main() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 2000);
   try {
-    const response = await fetch('https://peegicizxybjgvuutegc.supabase.co/functions/v1/cerebro-ping', {
+    const response = await fetch(`${ENDPOINT}/cerebro-ping`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
