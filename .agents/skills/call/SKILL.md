@@ -27,7 +27,13 @@ Quando usada como primeira vitória ou via `operar`, leia antes `sistemas/calls/
    pode ter principais + reserva; aula pode ter também um destilado de estudo, claramente separado.
 6. **Roteie:** decisões → `meu-negocio/decisoes/`; assunto quente → `meu-negocio/fios/`; padrão de
    cliente/oferta → arquivo correspondente; pessoa-chave → `meu-negocio/gente/` sem PII.
-7. **Avalie.** Aplique `sistemas/calls/evals.md` e devolva o controle para `operar` fechar o recibo.
+7. **Passe pelo gate que não mente.** Quando scripts estiverem naturalmente disponíveis, rode
+   `node scripts/eval-calls.mjs <fonte> <garimpo>` sobre o candidato ANTES de perguntar "você
+   usaria?" — corrija violações e rode de novo; o que chega na régua humana já passou pela
+   determinística. Sem scripts, aplique a checklist do `sistemas/calls/evals.md` manualmente
+   (e não a chame de verificada). Nunca trate o gate como pedágio pra pessoa: ele é seu, não dela.
+8. **Avalie.** Aplique a régua humana de `sistemas/calls/evals.md` e devolva o controle para
+   `operar` fechar o recibo.
 
 ## Armadilhas
 

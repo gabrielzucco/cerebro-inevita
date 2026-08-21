@@ -1,5 +1,23 @@
 # Mudanças do cérebro INEVITA
 
+## v1.26.0 — 2026-08-21 · “o gate parou de confiar em quem ele avalia”
+
+- **O gate determinístico do Calls em Decisões virou código executável**
+  (`node scripts/eval-calls.mjs <fonte> <garimpo>`): citação literal contra a fonte
+  (paráfrase reprova; o escape honesto “(não consta na fonte)” isenta), timestamp
+  obrigatório quando a fonte tem minutagem, PII barrada no garimpo, compromisso sem dono
+  reprovado. Antes, a checklist era prosa auditada pelo próprio agente que ela deveria
+  auditar.
+- **O harness se testa nos dois sentidos:** 5 fixtures sintéticas exigem que os gates
+  aprovem o garimpo honesto E reprovem o slop (paráfrase, PII vazada, ação sem dono).
+  Checker que só sabe aprovar é teatro. Roda no CI a cada push e PR.
+- **A skill `call` roda o gate antes da régua humana:** o que chega no “você usaria?”
+  já passou pela régua que não mente. Sem scripts no ambiente, a checklist manual vale —
+  mas não se chama de verificada.
+- **O que fica fora do código, por desenho:** “número ambíguo confirmado” e “gravou sem
+  aprovação” exigem julgamento — só entram com juiz calibrado contra rótulo humano
+  (concordância medida antes de delegar), nunca com o executor se autoavaliando.
+
 ## v1.25.0 — 2026-08-21 · “infraestrutura à altura do open source”
 
 - **A atualização vem de RELEASE, não do último commit.** Os dois atualizadores passam a

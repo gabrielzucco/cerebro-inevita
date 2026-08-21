@@ -1,13 +1,31 @@
 # Evals — Calls em Decisões
 
-## Gate determinístico
+## Gate determinístico — executável, não prosa
 
-- [ ] Existe fonte real e referência para ela.
-- [ ] Toda citação é literal e tem timestamp quando a fonte fornece.
-- [ ] PII desnecessária foi removida.
-- [ ] Ação declarada tem dono; sem dono vira pendência, não compromisso.
+Quando scripts estiverem disponíveis, o gate roda em código (o mesmo que o CI executa):
+
+```
+node scripts/eval-calls.mjs <fonte> <garimpo>
+```
+
+- **g1 · citação literal** — todo blockquote existe verbatim na fonte; paráfrase reprova.
+  O escape honesto `(não consta na fonte)` isenta a linha: afirmar sem prova é permitido
+  desde que declarado.
+- **g2 · timestamp** — fonte com minutagem exige minutagem em cada citação; fonte sem
+  timestamps torna o gate não-aplicável.
+- **g3 · PII** — e-mail, telefone e CPF nunca atravessam para o garimpo (participante é
+  papel, não pessoa). A fonte pode conter PII; sanitizar é o trabalho.
+- **g4 · dono** — bullet sob "Compromissos/Ações" exige `dono:`; sem dono, o lugar honesto
+  é "Pendências".
+
+Sem scripts no ambiente, aplique os quatro itens acima como checklist manual — mas o
+resultado só conta como gate verificado quando o código rodou.
+
+Continuam fora do código, por desenho (exigem julgamento; só entram com juiz calibrado
+contra rótulo humano):
+
 - [ ] Número ambíguo foi confirmado ou marcado como incerto.
-- [ ] Nenhum arquivo derivado foi gravado sem aprovação.
+- [ ] Nenhum arquivo derivado foi gravado sem aprovação (verificação de conduta, não de artefato).
 
 ## Régua humana
 
