@@ -15,6 +15,8 @@ import {
   runRoutine,
 } from './lib/routine-runtime.mjs';
 import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { readRoutineRunContext } from './lib/context-snapshot-runtime.mjs';
+import { revokeAccessGrant } from './lib/access-runtime.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
 import {
   correctionActions,
@@ -114,6 +116,16 @@ function outputReceiptFrom(pathname) {
   return match?.[1] || null;
 }
 
+function contextReceiptFrom(pathname) {
+  const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/context$/);
+  return match?.[1] || null;
+}
+
+function grantRevocationFrom(pathname) {
+  const match = pathname.match(/^\/api\/grants\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/revoke$/);
+  return match?.[1] || null;
+}
+
 function judgmentReceiptFrom(pathname) {
   const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/judgments$/);
   return match?.[1] || null;
@@ -183,11 +195,26 @@ export function createConsoleServer({
       const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;
       if (outputReceiptId) {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const outputDetail = readPrivateRoutineOutput(brainRoot, outputReceiptId);
+        let contextAvailable = false;
+        try {
+          readRoutineRunContext(brainRoot, outputReceiptId);
+          contextAvailable = true;
+        } catch (error) {
+          if (!(error instanceof Error) || error.message !== 'context-not-recorded') throw error;
+        }
         send(response, 200, {
-          ...readPrivateRoutineOutput(brainRoot, outputReceiptId),
+          ...outputDetail,
           correction: correctionView(brainRoot, outputReceiptId),
           correction_actions: correctionActions(brainRoot, outputReceiptId),
+          context_available: contextAvailable,
         });
+        return;
+      }
+      const contextReceiptId = request.method === 'GET' ? contextReceiptFrom(url.pathname) : null;
+      if (contextReceiptId) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, readRoutineRunContext(brainRoot, contextReceiptId));
         return;
       }
       const comparisonReceiptId = request.method === 'GET' ? comparisonReceiptFrom(url.pathname) : null;
@@ -255,6 +282,22 @@ export function createConsoleServer({
             external_action_executed: false,
           });
         }
+        return;
+      }
+      const grantId = request.method === 'POST' ? grantRevocationFrom(url.pathname) : null;
+      if (grantId) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const approvedBy = actor(payload);
+        const result = revokeAccessGrant(brainRoot, grantId, approvedBy, { now: clock() });
+        send(response, 200, {
+          status: result.status,
+          grant_ref: `access-grant:${grantId}`,
+          revocation_receipt_ref: result.receipt_ref,
+          effect: 'future-only',
+          past_artifacts_deleted: false,
+          external_action_executed: false,
+        });
         return;
       }
       const action = request.method === 'POST' ? actionFrom(url.pathname) : null;

@@ -28,6 +28,7 @@ const MIGRATION_STATUSES = new Set([
 ]);
 const COLLECTOR_EXECUTABLES = new Set(['python3', 'node']);
 const COLLECTOR_ARG_RE = /^(?!-c$)(?!.*[;&|`$<>])[A-Za-z0-9._/:=-]{1,255}$/;
+const JSON_POINTER_RE = /^\/(?:[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*)?$/;
 const WEEKDAY_FROM_INTL = { Mon: 'MO', Tue: 'TU', Wed: 'WE', Thu: 'TH', Fri: 'FR', Sat: 'SA', Sun: 'SU' };
 const SECRET_RE = /Bearer\s+|-----BEGIN .*PRIVATE KEY-----|\b(?:sk|ghp|xoxb)[-_A-Za-z0-9]{12,}/i;
 const MAX_SCHEDULE_LOOKBACK_MINUTES = 62 * 24 * 60;
@@ -217,10 +218,39 @@ export function validateRoutineContract(value) {
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
   if (object(value.extensions?.preparation)) {
     const preparation = value.extensions.preparation;
-    closed(errors, preparation, 'extensions.preparation', ['kind', 'binding_ref', 'output_ref']);
+    closed(errors, preparation, 'extensions.preparation', [
+      'kind', 'binding_ref', 'output_ref', 'source_selections',
+    ]);
     if (preparation.kind !== 'trusted-local-command') errors.push('extensions.preparation.kind inválido');
     if (!REF_ID_RE.test(preparation.binding_ref || '')) errors.push('extensions.preparation.binding_ref inválido');
     localRef(errors, preparation.output_ref, 'extensions.preparation.output_ref', { relativePath: true });
+    if (preparation.source_selections !== undefined) {
+      list(errors, preparation.source_selections, 'extensions.preparation.source_selections');
+      const sourceRefs = [];
+      const selections = Array.isArray(preparation.source_selections) ? preparation.source_selections : [];
+      for (const [index, selection] of selections.entries()) {
+        const path = `extensions.preparation.source_selections[${index}]`;
+        if (!object(selection)) {
+          errors.push(`${path} precisa ser objeto`);
+          continue;
+        }
+        closed(errors, selection, path, ['source_ref', 'selected_pointers', 'freshness_pointer']);
+        if (!REF_ID_RE.test(selection.source_ref || '')) errors.push(`${path}.source_ref inválido`);
+        sourceRefs.push(selection.source_ref);
+        list(errors, selection.selected_pointers, `${path}.selected_pointers`);
+        const pointers = Array.isArray(selection.selected_pointers) ? selection.selected_pointers : [];
+        if (pointers.length === 0) errors.push(`${path}.selected_pointers precisa ter pelo menos 1 item`);
+        for (const pointer of pointers) {
+          if (!JSON_POINTER_RE.test(pointer || '')) errors.push(`${path}.selected_pointers contém JSON Pointer inválido`);
+        }
+        unique(errors, selection.selected_pointers, `${path}.selected_pointers`);
+        if (selection.freshness_pointer !== null
+          && !JSON_POINTER_RE.test(selection.freshness_pointer || '')) {
+          errors.push(`${path}.freshness_pointer inválido`);
+        }
+      }
+      unique(errors, sourceRefs, 'extensions.preparation.source_selections.source_ref');
+    }
   } else if (value.extensions?.preparation !== undefined) {
     errors.push('extensions.preparation precisa ser objeto');
   }

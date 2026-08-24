@@ -174,6 +174,14 @@ local confiável, sem shell e sem guardar stdout. O coletor determinístico aces
 concedidas e grava um snapshot por referência; só então o modelo recebe a instrução para interpretar
 esse snapshot. Falha, timeout ou output ausente impedem a chamada ao modelo.
 
+Para um System Contract V2, `extensions.preparation.source_selections` liga cada `source_ref` aos
+JSON Pointers do artefato agregado que pertencem àquele papel e, opcionalmente, ao ponteiro de
+frescor. O runtime valida todos os recortes obrigatórios antes do provider, guarda uma cópia privada
+content-addressed em `.cerebro/runtime/context-artifacts/` e conclui com Run Record V2. O ledger
+recebe somente hash/referência, ponteiros, filtros, janela, frescor, lacunas e garantia — nunca os
+valores recuperados. Uma seleção `receipt-audited` prova o rastro do contrato, não uma ACL que o
+agente local não possui.
+
 ```bash
 node scripts/routine-runtime.mjs install caminho/routine-contract.json --confirm
 node scripts/routine-runtime.mjs binding executor-codex-local --adapter=codex-cli \
@@ -208,6 +216,10 @@ sessão efêmera HttpOnly e exige CSRF em toda mutação. `/api/console` continu
 output privado só é servido por rota autenticada quando o dono abre explicitamente um run. Abrir,
 navegar e atualizar recompila o estado sem chamar modelo. Não há telemetria de conteúdo nem banco
 concorrente.
+
+A tela de Execuções abre o Context Snapshot reference-only sem abrir o artefato privado nem chamar
+modelo. A tela de Governança revoga Access Grants com confirmação explícita e CSRF; o efeito é
+somente futuro, preserva o rastro passado e bloqueia o provider antes do próximo Run.
 
 A Caixa de Julgamento grava eventos imutáveis em `.cerebro/runtime/judgments/`. Aprovar, pedir
 ajuste ou rejeitar não altera a Fonte nem o output. `propose-action` registra apenas intenção local:
@@ -248,3 +260,6 @@ com configuração existente interrompe o processo; nada é sobrescrito silencio
 - o E2E de Rotinas usa processos fake injetados: prova `run now → complete → activate → due →
   pause`, retry, slot idempotente, timeout, cliente ausente, autenticação requerida e os dois
   adapters sem consumir nenhuma assinatura real.
+- o E2E do Console prova três papéis de Fonte, Context Snapshot sem bruto, correção com segundo Run
+  e revogação futura bloqueando o modelo; o teste dedicado rejeita ponteiro obrigatório ausente,
+  Fonte não declarada e diretório de artefatos redirecionado por symlink.

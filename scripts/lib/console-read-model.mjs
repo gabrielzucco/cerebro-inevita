@@ -19,6 +19,7 @@ import {
 } from './routine-protocol.mjs';
 import {
   layout,
+  latestRunRecords,
   readJson,
   validateSourceContract,
   validateSystemContract,
@@ -220,7 +221,7 @@ function healthReason(contract, state, binding, preparation, migration, receipts
     : 'ready-manual-run';
 }
 
-function routineView(root, contract, now) {
+function routineView(root, contract, now, runRecordsById) {
   const state = loadRoutineState(root, contract.routine_id).state;
   const binding = bindingView(root, contract);
   const preparation = preparationView(root, contract);
@@ -258,30 +259,39 @@ function routineView(root, contract, now) {
       can_confirm_legacy_pause: migration?.status === 'awaiting-legacy-pause',
       activation_evidence_ref: latestManual ? `routine-receipt:${latestManual.receipt_id}` : null,
     },
-    receipts: receipts.slice(0, 12).map((receipt) => ({
-      receipt_id: receipt.receipt_id,
-      receipt_ref: `routine-receipt:${receipt.receipt_id}`,
-      trigger: receipt.trigger,
-      status: receipt.status,
-      reason_code: receipt.reason_code,
-      scheduled_for: receipt.scheduled_for,
-      started_at: receipt.started_at,
-      completed_at: receipt.completed_at,
-      requested_model: receipt.requested_model,
-      model_observation: receipt.model_observation,
-      input_refs: receipt.input_refs,
-      output_ref: receipt.output_ref,
-      access_receipt_refs: receipt.access_receipt_refs,
-      content_shared_with_provider: receipt.content_shared_with_provider,
-    })),
+    receipts: receipts.slice(0, 12).map((receipt) => {
+      const runRecord = runRecordsById.get(receipt.run_id) || null;
+      return {
+        receipt_id: receipt.receipt_id,
+        receipt_ref: `routine-receipt:${receipt.receipt_id}`,
+        trigger: receipt.trigger,
+        status: receipt.status,
+        reason_code: receipt.reason_code,
+        scheduled_for: receipt.scheduled_for,
+        started_at: receipt.started_at,
+        completed_at: receipt.completed_at,
+        requested_model: receipt.requested_model,
+        model_observation: receipt.model_observation,
+        input_refs: receipt.input_refs,
+        output_ref: receipt.output_ref,
+        access_receipt_refs: receipt.access_receipt_refs,
+        content_shared_with_provider: receipt.content_shared_with_provider,
+        run_record_ref: runRecord ? `run-record:${runRecord.run_id}` : null,
+        context_status: runRecord?.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+        context_source_count: runRecord?.protocol_version === 2
+          ? runRecord.context_snapshot.accesses.length
+          : 0,
+      };
+    }),
   };
 }
 
-function judgmentInbox(root, routines, issues) {
+function judgmentInbox(root, routines, issues, runRecordsById) {
   const names = new Map(routines.map((routine) => [routine.routine_id, routine.name]));
   return listRoutineRunReceipts(root)
     .filter((receipt) => receipt.status === 'completed' && receipt.output_ref)
     .map((receipt) => {
+      const runRecord = runRecordsById.get(receipt.run_id) || null;
       let judgment;
       let correction = null;
       let actions = {
@@ -315,6 +325,11 @@ function judgmentInbox(root, routines, issues) {
         completed_at: receipt.completed_at,
         requested_model: receipt.requested_model,
         output_ref: receipt.output_ref,
+        run_record_ref: runRecord ? `run-record:${runRecord.run_id}` : null,
+        context_status: runRecord?.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+        context_source_count: runRecord?.protocol_version === 2
+          ? runRecord.context_snapshot.accesses.length
+          : 0,
         judgment,
         correction,
         actions,
@@ -332,9 +347,17 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const issues = [];
   const sources = listSourceContracts(root, issues);
   const systems = listSystemContracts(root, issues);
+  let runRecords = [];
+  try {
+    runRecords = latestRunRecords(root);
+  } catch {
+    issues.push({ reason_code: 'run-ledger-invalid', ref: '.cerebro/runtime/ledger/runs.jsonl' });
+  }
+  const runRecordsById = new Map(runRecords.map((record) => [record.run_id, record]));
   let routines = [];
   try {
-    routines = listRoutineContracts(root).map((contract) => routineView(root, contract, observedAt));
+    routines = listRoutineContracts(root)
+      .map((contract) => routineView(root, contract, observedAt, runRecordsById));
   } catch {
     issues.push({ reason_code: 'routine-contract-invalid', ref: '.cerebro/contracts/routines' });
   }
@@ -346,7 +369,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.area_ref === areaRef).map((routine) => routine.routine_id),
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
-  const judgments = judgmentInbox(root, routines, issues);
+  const judgments = judgmentInbox(root, routines, issues, runRecordsById);
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
   let learningCandidates = 0;
   try {
@@ -357,7 +380,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'judgments', 'corrections', 'learning-candidates'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,

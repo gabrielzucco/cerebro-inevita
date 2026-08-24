@@ -13,6 +13,7 @@ import {
 } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { checkAccess } from './access-runtime.mjs';
+import { appendCompletedRunRecord, prepareContextSnapshot } from './context-snapshot-runtime.mjs';
 import { runModelExecutor } from './model-executors.mjs';
 import {
   createSlotKey,
@@ -247,6 +248,7 @@ function grantId(grantRef) {
 
 function evaluateRoutineAccess(root, contract, now, provider) {
   const refs = [];
+  const results = [];
   for (const request of contract.context.access_requests) {
     let result;
     try {
@@ -258,17 +260,23 @@ function evaluateRoutineAccess(root, contract, now, provider) {
         mode: request.mode,
       }, provider, { now });
     } catch {
-      return { ok: false, reason_code: 'access-check-failed', receipt_refs: refs };
+      return { ok: false, reason_code: 'access-check-failed', receipt_refs: refs, results };
     }
     refs.push(result.receipt_ref);
+    results.push({
+      source_ref: request.source_ref,
+      assurance: result.assurance,
+      decision: result.decision,
+      receipt_ref: result.receipt_ref,
+    });
     if (!['allowed', 'file-only'].includes(result.decision)) {
-      return { ok: false, reason_code: result.reason_code, receipt_refs: refs };
+      return { ok: false, reason_code: result.reason_code, receipt_refs: refs, results };
     }
     if (result.assurance === 'runtime-enforced') {
-      return { ok: false, reason_code: 'runtime-connector-not-bound', receipt_refs: refs };
+      return { ok: false, reason_code: 'runtime-connector-not-bound', receipt_refs: refs, results };
     }
   }
-  return { ok: true, receipt_refs: refs };
+  return { ok: true, receipt_refs: refs, results };
 }
 
 export async function runRoutine(root, routineId, {
@@ -380,6 +388,25 @@ export async function runRoutine(root, routineId, {
       return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
     }
 
+    let runContext = { status: 'not-declared', input_refs: [] };
+    if (contract.extensions?.preparation?.source_selections) {
+      try {
+        runContext = prepareContextSnapshot(root, contract, access.results);
+      } catch (error) {
+        const recorded = recordTerminal(root, contract, binding, {
+          ...base,
+          attempts: 0,
+          status: 'failed',
+          reasonCode: error instanceof Error ? error.message : 'context-snapshot-failed',
+          completedAt: clockValue(clock),
+          accessReceiptRefs: access.receipt_refs,
+          preparationInputRefs: preparation.input_refs,
+        });
+        return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
+      }
+    }
+    const governedInputRefs = [...preparation.input_refs, ...runContext.input_refs];
+
     let prompt;
     try {
       const promptRef = safeRelativePath(root, contract.context.prompt_ref, { mustExist: true });
@@ -410,7 +437,7 @@ export async function runRoutine(root, routineId, {
         reasonCode: execution.reason_code,
         completedAt: clockValue(clock),
         accessReceiptRefs: access.receipt_refs,
-        preparationInputRefs: preparation.input_refs,
+        preparationInputRefs: governedInputRefs,
       });
       if (attempt < contract.operations.retry.max_attempts) {
         await wait(contract.operations.retry.backoff_seconds * 1000);
@@ -427,16 +454,37 @@ export async function runRoutine(root, routineId, {
       const recorded = recordTerminal(root, contract, binding, {
         ...base, attempts, status: 'failed', reasonCode: 'destination-write-failed',
         completedAt: clockValue(clock), accessReceiptRefs: access.receipt_refs,
-        preparationInputRefs: preparation.input_refs,
+        preparationInputRefs: governedInputRefs,
+      });
+      return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
+    }
+
+    const completedAt = clockValue(clock);
+    try {
+      appendCompletedRunRecord(root, contract, runContext, {
+        runId,
+        receiptId,
+        startedAt,
+        completedAt,
+        outputRef: destination.ref,
+        accessReceiptRefs: access.receipt_refs,
+        correctionRef: supplementalInputRefs.find((ref) => ref.startsWith('judgment-receipt:')) || null,
+      });
+    } catch {
+      const recorded = recordTerminal(root, contract, binding, {
+        ...base, attempts, status: 'failed', reasonCode: 'context-record-failed',
+        completedAt, outputRef: destination.ref,
+        accessReceiptRefs: access.receipt_refs,
+        preparationInputRefs: governedInputRefs,
       });
       return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
     }
 
     const recorded = recordTerminal(root, contract, binding, {
       ...base, attempts, status: 'completed', reasonCode: 'executor-completed',
-      completedAt: clockValue(clock), outputRef: destination.ref,
+      completedAt, outputRef: destination.ref,
       accessReceiptRefs: access.receipt_refs,
-      preparationInputRefs: preparation.input_refs,
+      preparationInputRefs: governedInputRefs,
     });
     return { status: 'completed', receipt: recorded.value, receipt_ref: recorded.ref };
   } finally {

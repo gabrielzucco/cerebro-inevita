@@ -41,6 +41,8 @@ const labels = {
   'propose-action': 'Intenção de ação', none: 'Sem ação', unavailable: 'Indisponível',
   candidate: 'Candidato', baseline: 'Baseline',
   'not-eligible': 'Ainda não elegível',
+  recorded: 'Contexto selecionado',
+  'context-not-recorded': 'Contexto não registrado',
 };
 
 function label(value) {
@@ -121,7 +123,7 @@ function judgmentCard(item) {
     ? `Aprendizado ${item.correction.learning_candidate.occurrences}/${item.correction.learning_candidate.promotion_threshold}`
     : '';
   return `<article class="judgment-card" data-open-judgment="${escapeHtml(item.receipt_id)}">
-    <div class="judgment-head"><div><p class="micro">${escapeHtml(item.system_ref)} · ${escapeHtml(item.trigger)}</p><h3>${escapeHtml(item.routine_name)}</h3></div><div class="judgment-badges">${badge(status)}${action}${correction}</div></div>
+    <div class="judgment-head"><div><p class="micro">${escapeHtml(item.system_ref)} · ${escapeHtml(item.trigger)}</p><h3>${escapeHtml(item.routine_name)}</h3></div><div class="judgment-badges">${badge(status)}${action}${correction}${item.context_status === 'recorded' ? badge('recorded', 'good') : ''}</div></div>
     <p>Output privado concluído em ${fmtDate(item.completed_at)}. Abrir não chama modelo nem publica conteúdo.</p>
     <div class="judgment-meta"><code>${escapeHtml(item.receipt_ref)}</code><span>${learning || `${current.history_count || 0} julgamento(s)`}</span></div>
     <button data-open-judgment="${escapeHtml(item.receipt_id)}">Abrir resultado <b>→</b></button>
@@ -172,12 +174,17 @@ function allReceipts() {
 
 function renderRuns() {
   const receipts = allReceipts();
-  return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Referências suficientes para auditoria, sem guardar prompt, output ou erro cru.</p></div><div class="table-wrap"><table><thead><tr><th>Rotina</th><th>Quando</th><th>Gatilho</th><th>Estado</th><th>Modelo</th><th>Output ref.</th></tr></thead><tbody>${receipts.map((receipt) => `<tr><td><strong>${escapeHtml(receipt.routine_name)}</strong><small>${escapeHtml(receipt.receipt_ref)}</small></td><td>${fmtDate(receipt.completed_at)}</td><td>${escapeHtml(label(receipt.trigger))}</td><td>${badge(receipt.status)}</td><td>${escapeHtml(receipt.requested_model)}<small>${escapeHtml(receipt.model_observation)}</small></td><td><code>${escapeHtml(receipt.output_ref || '—')}</code></td></tr>`).join('') || `<tr><td colspan="6">Nenhum recibo ainda.</td></tr>`}</tbody></table></div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Run Record mostra o contexto selecionado por referência. O conteúdo continua privado.</p></div><div class="table-wrap"><table><thead><tr><th>Rotina</th><th>Quando</th><th>Gatilho</th><th>Estado</th><th>Contexto selecionado</th><th>Modelo</th><th>Output ref.</th></tr></thead><tbody>${receipts.map((receipt) => `<tr><td><strong>${escapeHtml(receipt.routine_name)}</strong><small>${escapeHtml(receipt.receipt_ref)}</small></td><td>${fmtDate(receipt.completed_at)}</td><td>${escapeHtml(label(receipt.trigger))}</td><td>${badge(receipt.status)}</td><td>${receipt.context_status === 'recorded' ? `<button class="table-action" data-open-context="${escapeHtml(receipt.receipt_id)}">${receipt.context_source_count} fontes →</button>` : badge('context-not-recorded', 'neutral')}</td><td>${escapeHtml(receipt.requested_model)}<small>${escapeHtml(receipt.model_observation)}</small></td><td><code>${escapeHtml(receipt.output_ref || '—')}</code></td></tr>`).join('') || `<tr><td colspan="7">Nenhum recibo ainda.</td></tr>`}</tbody></table></div>`;
 }
 
 function renderGovernance() {
   const grants = state.model.routines.flatMap((routine) => routine.access.map((access) => ({ ...access, routine })));
-  return `<div class="section-heading"><div><p class="eyebrow">AUTORIDADE</p><h2>Governança de acesso</h2></div><p>Revogação vale para o futuro; uma cópia já exportada nunca é apagada retroativamente.</p></div><div class="object-grid">${grants.map(({ routine, ...access }) => `<article class="object-card"><div class="object-card-top">${badge(access.grant_status, access.grant_status === 'granted' ? 'good' : 'bad')}${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(routine.name)}</p><h3>${escapeHtml(access.source_ref)}</h3><p>${escapeHtml(access.action)} · ${escapeHtml(access.requested_mode)}</p><div class="boundary-note"><b>Revogação</b>${escapeHtml(label(access.revocation_effect))}</div></article>`).join('') || empty('Nenhuma concessão declarada', 'A rotina pode existir sem grant quando trabalha apenas com instrução local.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">AUTORIDADE</p><h2>Governança de acesso</h2></div><p>Revogação bloqueia Runs futuros. Ela não apaga um contexto já consumido.</p></div><div class="object-grid">${grants.map(({ routine, ...access }) => {
+    const grantId = access.grant_ref.replace(/^access-grant:/, '');
+    const revoke = access.grant_status === 'granted' && access.revocation_effect === 'future-only'
+      ? `<button class="secondary-action" data-revoke-grant="${escapeHtml(grantId)}">Revogar acesso futuro</button>` : '';
+    return `<article class="object-card"><div class="object-card-top">${badge(access.grant_status, access.grant_status === 'granted' ? 'good' : 'bad')}${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(routine.name)}</p><h3>${escapeHtml(access.source_ref)}</h3><p>${escapeHtml(access.action)} · ${escapeHtml(access.requested_mode)}</p><div class="boundary-note"><b>Revogação</b>${escapeHtml(label(access.revocation_effect))}</div>${revoke}</article>`;
+  }).join('') || empty('Nenhuma concessão declarada', 'A rotina pode existir sem grant quando trabalha apenas com instrução local.')}</div>`;
 }
 
 function renderHealth() {
@@ -277,6 +284,35 @@ function correctionButtons(detail) {
   return buttons.join('');
 }
 
+function contextMarkup(context) {
+  const snapshot = context.context_snapshot;
+  const accesses = snapshot.accesses.map((access) => `<article class="context-access"><div class="object-card-top">${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}<code>${escapeHtml(access.source_ref.role)}</code></div><h3>${escapeHtml(access.source_ref.id)}</h3><dl><div><dt>Seleção</dt><dd>${escapeHtml(access.query)}</dd></div><div><dt>Janela</dt><dd>${escapeHtml(access.window)}</dd></div><div><dt>Frescor</dt><dd>${escapeHtml(access.freshness_marker || 'não informado')}</dd></div></dl><div class="ref-list">${access.selected_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('');
+  const gaps = snapshot.gaps.length
+    ? `<div class="context-gaps"><p class="micro">LACUNAS</p>${snapshot.gaps.map((gap) => `<code>${escapeHtml(gap.source_role)} · ${escapeHtml(gap.reason_code)}</code>`).join('')}</div>`
+    : '<p class="good-note">Nenhuma lacuna de Fonte registrada.</p>';
+  return `<div class="context-summary"><span><b>${snapshot.accesses.length}</b> fontes selecionadas</span><span><b>${snapshot.gaps.length}</b> lacunas</span><span><b>v${escapeHtml(snapshot.retrieval_version)}</b> retrieval</span></div><div class="context-grid">${accesses}</div>${gaps}<div class="boundary-note"><b>Snapshot reference-only</b>O ledger guarda hash, ponteiros, filtros, janela, frescor e garantia. A seleção é auditada; somente uma garantia runtime-enforced provaria bloqueio preventivo. O artefato privado não foi aberto nesta tela.</div>`;
+}
+
+async function loadContext(receiptId, slot) {
+  try {
+    const context = await getJson(`/api/runs/${receiptId}/context`);
+    slot.innerHTML = contextMarkup(context);
+  } catch (error) {
+    slot.innerHTML = empty('Contexto indisponível', label(error.message));
+    toast(label(error.message), 'bad');
+  }
+}
+
+async function openContextDrawer(receiptId) {
+  state.selectedRoutine = null;
+  state.selectedJudgment = receiptId;
+  $('#drawer-content').innerHTML = '<div class="drawer-head"><p class="eyebrow">RUN RECORD V2</p><h2>Contexto selecionado</h2></div><div id="context-slot"><p class="muted">Lendo referências locais…</p></div>';
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#drawer-backdrop').hidden = false;
+  await loadContext(receiptId, $('#context-slot'));
+}
+
 async function openJudgment(receiptId) {
   state.selectedRoutine = null;
   state.selectedJudgment = receiptId;
@@ -290,6 +326,7 @@ async function openJudgment(receiptId) {
     $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">OUTPUT PRIVADO</p><h2>${escapeHtml(detail.receipt.routine_id)}</h2>${badge(current.status === 'pending' ? 'pending' : current.verdict)}</div>
       <div class="boundary-note"><b>Leitura local explícita</b>Este conteúdo não entrou no recibo, no read model ou na INEVITA. Abrir não executou modelo.</div>
       <section class="drawer-section"><div class="output-heading"><h3>Resultado</h3><span>${detail.output.bytes} bytes</span></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
+      ${detail.context_available ? `<section class="drawer-section"><div class="output-heading"><h3>Contexto selecionado</h3><button class="table-action" data-load-context="${escapeHtml(receiptId)}">Abrir Run Record V2 →</button></div><div id="context-slot"></div></section>` : ''}
       ${correctionSection(detail)}
       <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p><textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
       <section class="drawer-section"><h3>Histórico imutável</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section>
@@ -379,6 +416,23 @@ async function performCorrectionAction(action) {
   }
 }
 
+async function revokeGrant(grantId) {
+  if (state.busy) return;
+  const approvedBy = window.prompt('Quem está aprovando a revogação? Use uma referência sem dado pessoal.', 'role-founder') || '';
+  if (!approvedBy) return;
+  if (!window.confirm('Revogar este acesso para Runs futuros?\n\nIsso não apaga outputs, recibos ou artefatos já consumidos. Nenhuma ação externa será executada.')) return;
+  state.busy = true;
+  try {
+    const result = await mutate(`/api/grants/${grantId}/revoke`, { approved_by: approvedBy });
+    toast(`${label(result.status)} · próximos Runs serão bloqueados.`);
+    await loadModel();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
+}
+
 async function performAction(action) {
   if (state.busy || !state.selectedRoutine) return;
   const routine = state.model.routines.find((item) => item.routine_id === state.selectedRoutine);
@@ -429,6 +483,12 @@ document.addEventListener('click', (event) => {
   if (judgmentAction) { performJudgment(judgmentAction.dataset.judgmentAction); return; }
   const correctionAction = event.target.closest('[data-correction-action]');
   if (correctionAction) { performCorrectionAction(correctionAction.dataset.correctionAction); return; }
+  const contextAction = event.target.closest('[data-open-context]');
+  if (contextAction) { openContextDrawer(contextAction.dataset.openContext); return; }
+  const loadContextAction = event.target.closest('[data-load-context]');
+  if (loadContextAction) { loadContext(loadContextAction.dataset.loadContext, $('#context-slot')); return; }
+  const revokeAction = event.target.closest('[data-revoke-grant]');
+  if (revokeAction) { revokeGrant(revokeAction.dataset.revokeGrant); return; }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
 });

@@ -68,7 +68,10 @@ Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, 
 exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
 Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,
 rejeitar ou propor uma ação. Um ajuste pode autorizar um novo Run, comparar baseline × resultado e
-criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa ação externa.
+criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa ação externa. Runs
+governados por System Contract V2 também mostram o Context Snapshot: fontes e recortes selecionados,
+janela, frescor, lacunas e nível de garantia, sempre por referência. A Governança pode revogar um
+Access Grant para Runs futuros sem prometer apagar artefatos ou recibos já consumidos.
 
 ## O que vem dentro
 

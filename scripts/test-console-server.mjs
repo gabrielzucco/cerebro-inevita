@@ -128,6 +128,8 @@ try {
     routineCorrections: '.cerebro/runtime/corrections',
     learningCandidates: '.cerebro/runtime/learning-candidates',
     routineMigrations: '.cerebro/runtime/migrations/routines',
+    runLedger: '.cerebro/runtime/ledger/runs.jsonl',
+    contextArtifacts: '.cerebro/runtime/context-artifacts',
   });
   write(join(root, '.cerebro', 'private-ignore.manifest'), '.cerebro/runtime\n.cerebro/contracts/\noperacao/execucoes/*\n');
   write(join(root, 'operacao', 'rotinas', 'funil-diario.prompt.md'), 'PROMPT_ONLY_ON_STDIN\n');
@@ -178,6 +180,11 @@ try {
         kind: 'trusted-local-command',
         binding_ref: 'collector-funnel-local',
         output_ref: '.automacao/_FUNIL-ULTIMO.json',
+        source_selections: [
+          { source_ref: 'paid-media', selected_pointers: ['/paid'], freshness_pointer: '/observed' },
+          { source_ref: 'sales-ledger', selected_pointers: ['/sales'], freshness_pointer: '/observed' },
+          { source_ref: 'experiment-ledger', selected_pointers: ['/experiments'], freshness_pointer: '/observed' },
+        ],
       },
     },
     context: {
@@ -209,7 +216,12 @@ try {
     clock: () => new Date('2026-08-24T11:29:00.000Z'),
     spawnCollector: (command, args) => {
       collectorCalls.push({ command, args });
-      write(join(root, '.automacao', '_FUNIL-ULTIMO.json'), '{"sanitized":true}\n');
+      write(join(root, '.automacao', '_FUNIL-ULTIMO.json'), {
+        observed: '2026-08-24T11:29:00.000Z',
+        paid: { spend_index: 17 },
+        sales: { confirmed_index: 9 },
+        experiments: { previous_ref: 'experiment-sanitized' },
+      });
       const future = new Date('2026-08-24T11:29:00.000Z');
       const path = join(root, '.automacao', '_FUNIL-ULTIMO.json');
       utimesSync(path, future, future);
@@ -284,7 +296,18 @@ try {
   assert.equal(output.status, 200, JSON.stringify({ response: output.value, output_ref: receiptFixture.output_ref, root }));
   assert.equal(output.value.output.content, 'PRIVATE_OUTPUT_NOT_IN_API\n');
   assert.equal(output.value.judgment.summary.status, 'pending');
+  assert.equal(output.value.context_available, true);
   assert.equal(calls.length, 1, 'abrir output não pode executar modelo');
+
+  assert.equal((await request(base, `/api/runs/${receiptId}/context`)).status, 403);
+  const context = await request(base, `/api/runs/${receiptId}/context`, { cookie });
+  assert.equal(context.status, 200);
+  assert.equal(context.value.context_snapshot.accesses.length, 3);
+  assert.equal(context.value.privacy.artifact_content_exposed, false);
+  assert.equal(context.value.privacy.model_executed, false);
+  assert.equal(JSON.stringify(context.value).includes('spend_index'), false);
+  assert.equal(JSON.stringify(context.value).includes('confirmed_index'), false);
+  assert.equal(calls.length, 1, 'abrir Context Snapshot não pode executar modelo');
 
   consoleView = await request(base, '/api/console', { cookie });
   const afterRun = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
@@ -435,6 +458,12 @@ try {
   assert.equal(correctionRerun.value.external_action_executed, false);
   assert.equal(calls.length, 2);
   const correctedReceiptId = correctionRerun.value.resulting_receipt_ref.replace('routine-receipt:', '');
+  const correctedContext = await request(base, `/api/runs/${correctedReceiptId}/context`, { cookie });
+  assert.equal(correctedContext.status, 200);
+  assert.equal(correctedContext.value.context_snapshot.accesses.length, 3);
+  const runLedger = readFileSync(join(root, '.cerebro', 'runtime', 'ledger', 'runs.jsonl'), 'utf8');
+  assert.equal(runLedger.includes('spend_index'), false);
+  assert(runLedger.includes('judgment-receipt:'), 'o segundo Run Record precisa apontar para a correção humana');
   const duplicateCorrection = await request(base, `/api/runs/${receiptId}/rerun-with-correction`, {
     method: 'POST', cookie, csrf: 'fixed-csrf-token',
     body: { confirm: true, approved_by: 'role-owner' },
@@ -578,8 +607,28 @@ try {
   assert.equal(active.migration.status, 'cutover-completed');
   assert.equal(calls.length, 2);
 
+  const revokeWithoutCsrf = await request(base, '/api/grants/grant-funnel-media/revoke', {
+    method: 'POST', cookie, body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(revokeWithoutCsrf.status, 403);
+  const revocation = await request(base, '/api/grants/grant-funnel-media/revoke', {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(revocation.status, 200);
+  assert.equal(revocation.value.effect, 'future-only');
+  assert.equal(revocation.value.past_artifacts_deleted, false);
+  assert.equal(revocation.value.external_action_executed, false);
+  const blockedFutureRun = await request(base, '/api/routines/funil-diario-cerebro/run', {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: { confirm: true },
+  });
+  assert.equal(blockedFutureRun.status, 200);
+  assert.equal(blockedFutureRun.value.status, 'denied');
+  assert.equal(blockedFutureRun.value.reason_code, 'grant-revoked');
+  assert.equal(calls.length, 2, 'grant revogado deve bloquear o modelo antes da execução');
+
   await new Promise((resolveClose) => instance.server.close(resolveClose));
-  console.log('✓ Console local fecha julgamento → correção → comparação → candidato sem ação externa');
+  console.log('✓ Console local fecha contexto → julgamento → correção → revogação sem ação externa');
 } finally {
   rmSync(root, { recursive: true, force: true });
   rmSync(legacyRoot, { recursive: true, force: true });
