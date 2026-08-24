@@ -154,7 +154,9 @@ function graphRequestFrom(pathname) {
   const system = pathname.match(/^\/api\/graphs\/systems\/([a-z0-9][a-z0-9-]{0,63})$/);
   if (system) return { type: 'system', ref: system[1] };
   const run = pathname.match(/^\/api\/graphs\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})$/);
-  return run ? { type: 'run', ref: run[1] } : null;
+  if (run) return { type: 'run', ref: run[1] };
+  const runRecord = pathname.match(/^\/api\/graphs\/run-records\/([A-Za-z0-9][A-Za-z0-9_.:-]{0,127})$/);
+  return runRecord ? { type: 'run-record', ref: runRecord[1] } : null;
 }
 
 function graphLayoutFrom(pathname) {
@@ -233,7 +235,8 @@ export function createConsoleServer({
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const graph = graphRequest.type === 'brain' ? buildBrainGraph(brainRoot, { now: clock() })
           : graphRequest.type === 'system' ? buildSystemGraph(brainRoot, graphRequest.ref)
-            : buildRunGraph(brainRoot, graphRequest.ref);
+            : graphRequest.type === 'run-record' ? buildRunGraph(brainRoot, `run-record:${graphRequest.ref}`)
+              : buildRunGraph(brainRoot, graphRequest.ref);
         send(response, 200, graph);
         return;
       }

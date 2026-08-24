@@ -387,6 +387,20 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
   const judgments = judgmentInbox(root, routines, issues, runRecordsById);
+  const routineRunIds = new Set(routines.flatMap((routine) => routine.receipts.map((receipt) => receipt.run_id)));
+  const runRecordViews = runRecords.map((record) => ({
+    run_id: record.run_id,
+    run_record_ref: `run-record:${record.run_id}`,
+    system_ref: record.system_id,
+    status: record.status,
+    started_at: record.started_at,
+    completed_at: record.completed_at,
+    chain_id: record.chain_id ?? null,
+    mode: record.mode ?? null,
+    experiment_ref: record.experiment_ref ?? null,
+    handoff_count: record.handoff_refs?.length || 0,
+    has_routine_receipt: routineRunIds.has(record.run_id),
+  }));
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
   let learningCandidates = 0;
   try {
@@ -412,6 +426,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       routines: routines.length,
       attention: attention.length,
       judgments: pendingJudgments.length,
+      executions: runRecordViews.length,
       learning_candidates: learningCandidates,
       compatibility_gaps: compatibility.checks.filter((item) => item.status !== 'met').length,
     },
@@ -420,6 +435,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     sources,
     experiments: experimentModel.experiments,
     routines,
+    run_records: runRecordViews,
     judgments,
     compatibility,
     today: {

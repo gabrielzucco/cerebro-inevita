@@ -114,6 +114,16 @@ try {
   expectInvalid('artifacts em V1', validateSystemContract, artifactsOnV1, 'não é permitido');
   expectValid('Run Record V1', validateRunRecord, runV1);
   expectValid('Run Record V2', validateRunRecord, runV2);
+  const runWithoutChain = clone(runV2);
+  runWithoutChain.chain_id = null;
+  expectInvalid('mode sem chain', validateRunRecord, runWithoutChain, 'mode exige chain_id');
+  const runExperimentWithoutChain = clone(runV2);
+  runExperimentWithoutChain.chain_id = null;
+  runExperimentWithoutChain.mode = null;
+  expectInvalid('experimento sem chain', validateRunRecord, runExperimentWithoutChain, 'experiment_ref exige chain_id');
+  const runDuplicateHandoff = clone(runV2);
+  runDuplicateHandoff.handoff_refs.push(runDuplicateHandoff.handoff_refs[0]);
+  expectInvalid('handoff repetido', validateRunRecord, runDuplicateHandoff, 'não pode repetir');
   expectValid('Access Grant V1', validateAccessGrant, grant);
 
   if (systemContractView(systemV1).retrieval_status !== 'retrieval-not-declared') {

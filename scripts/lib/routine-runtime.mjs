@@ -299,6 +299,10 @@ export async function runRoutine(root, routineId, {
   secretProvider = UNAVAILABLE_SECRET_PROVIDER,
   supplementalPrompt = '',
   supplementalInputRefs = [],
+  chainId = null,
+  mode = null,
+  experimentRef = null,
+  handoffRefs = [],
 } = {}) {
   const { contract } = loadRoutineContract(root, routineId);
   const startedAt = clockValue(clock);
@@ -318,6 +322,18 @@ export async function runRoutine(root, routineId, {
     throw new Error('supplemental-context-incomplete');
   }
   if (supplementalPrompt && trigger !== 'manual') throw new Error('supplemental-context-manual-only');
+  if (chainId !== null && !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(chainId)) {
+    throw new Error('chain-id-invalid');
+  }
+  if (chainId === null && mode !== null) throw new Error('mode-requires-chain-id');
+  if (chainId !== null && !['replay', 'live'].includes(mode)) throw new Error('chain-mode-invalid');
+  if (experimentRef !== null && !/^EXP-[A-Za-z0-9_-]{1,48}$/.test(experimentRef)) {
+    throw new Error('experiment-ref-invalid');
+  }
+  if (experimentRef !== null && chainId === null) throw new Error('experiment-ref-requires-chain-id');
+  if (!Array.isArray(handoffRefs)
+    || handoffRefs.some((ref) => !LOCAL_REF_RE.test(ref || ''))
+    || new Set(handoffRefs).size !== handoffRefs.length) throw new Error('handoff-refs-invalid');
   const base = {
     runId, receiptId, trigger, slotKey, scheduledFor: scheduledIso, startedAt, supplementalInputRefs,
   };
@@ -332,6 +348,10 @@ export async function runRoutine(root, routineId, {
     runId,
     systemRef: contract.system_ref,
     routineRef,
+    chainId,
+    mode,
+    experimentRef,
+    handoffRefs,
     clock,
   });
   tracer.emit({
@@ -401,6 +421,16 @@ export async function runRoutine(root, routineId, {
         outputRefs: [result.receipt_ref],
         reasonCode: allowed ? null : 'access-denied',
         extensions: { assurance: result.assurance, decision: result.decision },
+      });
+      if (allowed) tracer.emit({
+        stepId: traceStepId('connector', result.source_ref),
+        stepType: 'connector',
+        state: 'completed',
+        parentStepId: traceStepId('access', result.source_ref),
+        sourceRef: result.source_ref,
+        connectorRef: result.source_ref,
+        assurance: result.assurance,
+        outputRefs: [result.receipt_ref],
       });
     }
     if (!access.ok) return deny(access.reason_code, access.receipt_refs);
@@ -555,6 +585,17 @@ export async function runRoutine(root, routineId, {
       return { status: 'failed', receipt: lastFailure.value, receipt_ref: lastFailure.ref };
     }
 
+    tracer.emit({
+      stepId: 'model',
+      stepType: 'model',
+      state: 'completed',
+      parentStepId: 'capability',
+      modelRef: contract.executor.requested_model,
+      assurance: 'requested-not-verified',
+      inputRefs: governedInputRefs,
+      extensions: { adapter: binding.adapter, attempts },
+    });
+
     const skillLoadRefs = [];
     for (const loaded of execution.skill_loads || []) {
       skillLoadRefs.push(`skill:${loaded.ref}:${loaded.evidence_ref}`);
@@ -636,6 +677,10 @@ export async function runRoutine(root, routineId, {
         evaluation,
         executionTraceRef: tracer.traceRef,
         skillLoadRefs,
+        chainId,
+        mode,
+        experimentRef,
+        handoffRefs,
       });
     } catch {
       const recorded = recordTerminal(root, contract, binding, {

@@ -13,12 +13,16 @@ const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
 const LOCAL_REF_RE = /^(?!.*\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const STEP_TYPES = new Set([
-  'run', 'access', 'collector', 'retrieval', 'skill', 'capability', 'output', 'eval', 'judgment',
+  'run', 'access', 'collector', 'retrieval', 'skill', 'model', 'connector', 'capability', 'output', 'eval', 'judgment',
 ]);
 const STATES = new Set([
   'declared', 'running', 'completed', 'failed', 'denied', 'skipped', 'gap', 'pending',
 ]);
 const SECRET_RE = /Bearer\s+|-----BEGIN .*PRIVATE KEY-----|\b(?:sk|ghp|xoxb)[-_A-Za-z0-9]{12,}/i;
+const OPAQUE_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
+const EXPERIMENT_ID_RE = /^EXP-[A-Za-z0-9_-]{1,48}$/;
+const MODEL_ASSURANCES = new Set(['requested-not-verified', 'provider-reported', 'verified']);
+const CONNECTOR_ASSURANCES = new Set(['exported', 'receipt-audited', 'runtime-enforced']);
 
 function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -61,7 +65,8 @@ export function validateExecutionTraceEvent(value) {
     'protocol_version', 'trace_id', 'event_id', 'run_id', 'sequence', 'step_id', 'step_type',
     'state', 'occurred_at', 'parent_step_id', 'system_ref', 'routine_ref', 'source_ref',
     'capability_ref', 'skill_ref', 'input_refs', 'output_refs', 'reason_code', 'evidence_ref',
-    'privacy', 'extensions',
+    'model_ref', 'connector_ref', 'assurance', 'chain_id', 'mode', 'experiment_ref',
+    'handoff_refs', 'privacy', 'extensions',
   ]);
   for (const key of Object.keys(value)) if (!allowed.has(key)) errors.push(`${key} não é permitido`);
   if (value.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
@@ -73,7 +78,7 @@ export function validateExecutionTraceEvent(value) {
   if (!STEP_TYPES.has(value.step_type)) errors.push('step_type inválido');
   if (!STATES.has(value.state)) errors.push('state inválido');
   if (!Number.isFinite(Date.parse(value.occurred_at || ''))) errors.push('occurred_at inválido');
-  for (const field of ['parent_step_id', 'system_ref', 'routine_ref', 'source_ref', 'capability_ref', 'reason_code', 'evidence_ref']) {
+  for (const field of ['parent_step_id', 'system_ref', 'routine_ref', 'source_ref', 'capability_ref', 'model_ref', 'connector_ref', 'reason_code', 'evidence_ref']) {
     if (value[field] !== null && !REF_RE.test(value[field] || '')) errors.push(`${field} inválido`);
   }
   if (value.skill_ref !== null && !LOCAL_REF_RE.test(value.skill_ref || '')) errors.push('skill_ref inválido');
@@ -85,6 +90,28 @@ export function validateExecutionTraceEvent(value) {
   if (value.step_type === 'skill' && value.state === 'completed'
     && (!value.skill_ref || !String(value.evidence_ref || '').startsWith('sha256:'))) {
     errors.push('skill concluída exige skill_ref e evidência sha256');
+  }
+  if (value.step_type === 'model') {
+    if (!value.model_ref) errors.push('step_type model exige model_ref');
+    if (!MODEL_ASSURANCES.has(value.assurance)) errors.push('step_type model exige assurance de modelo');
+  } else if (value.model_ref != null) errors.push('model_ref só existe em step_type model');
+  if (value.step_type === 'connector') {
+    if (!value.connector_ref) errors.push('step_type connector exige connector_ref');
+    if (!CONNECTOR_ASSURANCES.has(value.assurance)) errors.push('step_type connector exige assurance de conector');
+  } else if (value.connector_ref != null) errors.push('connector_ref só existe em step_type connector');
+  if (!['model', 'connector'].includes(value.step_type) && value.assurance != null) {
+    errors.push('assurance só existe em step_type model ou connector');
+  }
+  if (value.chain_id != null && !OPAQUE_REF_RE.test(value.chain_id || '')) errors.push('chain_id inválido');
+  if (value.chain_id == null && value.mode != null) errors.push('mode exige chain_id');
+  if (value.chain_id != null && !['replay', 'live'].includes(value.mode)) errors.push('chain_id exige mode replay ou live');
+  if (value.mode != null && !['replay', 'live'].includes(value.mode)) errors.push('mode inválido');
+  if (value.experiment_ref != null && !EXPERIMENT_ID_RE.test(value.experiment_ref || '')) errors.push('experiment_ref inválido');
+  if (value.experiment_ref && !value.chain_id) errors.push('experiment_ref exige chain_id');
+  if (value.handoff_refs !== undefined && !Array.isArray(value.handoff_refs)) errors.push('handoff_refs precisa ser lista');
+  else if (Array.isArray(value.handoff_refs)) {
+    if (new Set(value.handoff_refs).size !== value.handoff_refs.length) errors.push('handoff_refs não pode repetir valores');
+    if (value.handoff_refs.some((ref) => !LOCAL_REF_RE.test(ref || ''))) errors.push('handoff_refs contém referência inválida');
   }
   if (!object(value.privacy)
     || value.privacy.content_shared_with_inevita !== false
@@ -126,6 +153,10 @@ export function createExecutionTracer(root, {
   systemRef,
   routineRef,
   traceId = `execution-trace-${randomUUID()}`,
+  chainId = null,
+  mode = null,
+  experimentRef = null,
+  handoffRefs = [],
   clock = () => new Date(),
 } = {}) {
   const path = tracePath(root, runId);
@@ -139,6 +170,9 @@ export function createExecutionTracer(root, {
     sourceRef = null,
     capabilityRef = null,
     skillRef = null,
+    modelRef = null,
+    connectorRef = null,
+    assurance = null,
     inputRefs = [],
     outputRefs = [],
     reasonCode = null,
@@ -161,6 +195,13 @@ export function createExecutionTracer(root, {
       source_ref: sourceRef,
       capability_ref: capabilityRef,
       skill_ref: skillRef,
+      model_ref: modelRef,
+      connector_ref: connectorRef,
+      assurance,
+      chain_id: chainId,
+      mode,
+      experiment_ref: experimentRef,
+      handoff_refs: handoffRefs,
       input_refs: inputRefs,
       output_refs: outputRefs,
       reason_code: reasonCode,

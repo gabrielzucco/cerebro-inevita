@@ -5,7 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createExecutionTracer } from './lib/execution-trace-runtime.mjs';
-import { buildRunGraph, buildSystemGraph, graphForLayout } from './lib/graph-read-model.mjs';
+import { buildBrainGraph, buildRunGraph, buildSystemGraph, graphForLayout } from './lib/graph-read-model.mjs';
+import { registerHandoffContract } from './lib/handoff-protocol.mjs';
 import { registerRoutineContract, writeRoutineRunReceipt } from './lib/routine-protocol.mjs';
 import { appendRunRecord } from './lib/system-protocol.mjs';
 
@@ -29,14 +30,30 @@ try {
     routineReceipts: '.cerebro/runtime/receipts/routines',
     runLedger: '.cerebro/runtime/ledger/runs.jsonl',
     executionTraces: '.cerebro/runtime/traces',
-    canvasLayouts: '.cerebro/runtime/canvas-layouts'
+    canvasLayouts: '.cerebro/runtime/canvas-layouts',
+    handoffContracts: '.cerebro/contracts/handoffs',
+    handoffReceipts: '.cerebro/runtime/receipts/handoffs'
   });
   const source = example('source-contract.v1.json');
   write(join(root, '.cerebro', 'contracts', 'sources', `${source.source_id}.json`), {
     ...source,
     name: 'Métricas reais do funil',
   });
-  write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), example('system-contract.v2.json'));
+  const funilSystem = example('system-contract.v2.json');
+  funilSystem.artifacts.consumes = funilSystem.artifacts.consumes.map((item) => ({ ...item, required: true }));
+  write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), funilSystem);
+  const contentSystem = {
+    ...structuredClone(funilSystem), system_id: 'conteudo', name: 'Sistema de Conteúdo',
+    result: { ...funilSystem.result, output_type: 'creative-brief' },
+    capability: { ...funilSystem.capability, capability_id: 'criar-briefing' },
+    artifacts: { produces: [{
+      role: 'briefing-editorial', artifact_type: 'creative-brief',
+      schema_ref: 'protocol/artifacts/creative-brief.schema.json', schema_version: '1.0.0', sensitivity: 'private',
+    }], consumes: [] },
+  };
+  write(join(root, '.cerebro', 'contracts', 'systems', 'conteudo.json'), contentSystem);
+  const handoff = example('handoff-contract.v1.json');
+  registerHandoffContract(root, handoff);
   registerRoutineContract(root, example('routine-contract.v1.json'));
 
   const receipt = example('routine-run-receipt.v1.json');
@@ -46,8 +63,28 @@ try {
     run_id: receipt.run_id,
     started_at: receipt.started_at,
     completed_at: receipt.completed_at,
+    chain_id: 'chain-graph-test-001',
+    mode: 'replay',
+    experiment_ref: 'EXP-GRAPH-001',
+    handoff_refs: [`handoff-contract:${handoff.handoff_id}`],
   };
   appendRunRecord(root, record);
+  const producerRun = {
+    ...structuredClone(record), run_id: 'run-content-graph-test-001', system_id: 'conteudo',
+    capability: { capability_id: 'criar-briefing', version: contentSystem.capability.version },
+    output_refs: ['.cerebro/runtime/outputs/briefing-graph-test.json'],
+  };
+  appendRunRecord(root, producerRun);
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'handoffs', 'handoff-graph-test-001.json'), {
+    ...example('handoff-receipt.v1.json'), receipt_id: 'handoff-graph-test-001',
+    handoff_ref: handoff.handoff_id, chain_id: record.chain_id, mode: 'replay',
+    experiment_ref: record.experiment_ref, producer_run_ref: `run-record:${producerRun.run_id}`,
+    artifact: {
+      ...example('handoff-receipt.v1.json').artifact,
+      artifact_ref: producerRun.output_refs[0],
+    },
+    consumer_run_ref: `run-record:${record.run_id}`,
+  });
 
   const system = buildSystemGraph(root, 'analisar-funil');
   assert.equal(system.graph_type, 'system');
@@ -104,6 +141,22 @@ try {
   assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'deliverable' && node.actual));
   assert(recorded.edges.some((edge) => edge.relation === 'consumed-by' && edge.target === 'capability' && edge.actual));
   assert(recorded.edges.some((edge) => edge.relation === 'awaits-judgment' && edge.target === 'judgment' && edge.actual));
+  assert.equal(recorded.run.chain_id, 'chain-graph-test-001');
+  assert(recorded.nodes.some((node) => node.kind === 'run' && node.details.run_id === producerRun.run_id));
+  assert(recorded.nodes.some((node) => node.kind === 'artifact'
+    && node.details.handoff_receipt_ref === 'handoff-receipt:handoff-graph-test-001'));
+  assert(recorded.edges.some((edge) => edge.relation === 'hands-off' && edge.actual));
+  const brain = buildBrainGraph(root);
+  assert(brain.nodes.some((node) => node.kind === 'handoff' && node.actual));
+  assert(brain.edges.some((edge) => edge.relation === 'produces-handoff' && edge.actual));
+  const standalone = buildRunGraph(root, `run-record:${producerRun.run_id}`);
+  assert.equal(standalone.run.canonical_ref, `run-record:${producerRun.run_id}`);
+  assert.equal(standalone.run.routine_receipt_ref, null);
+  assert.equal(standalone.nodes.find((node) => node.id === 'judgment').state, 'completed');
+  assert.equal(standalone.nodes.find((node) => node.id === 'gate:1').state, 'completed');
+  assert(standalone.nodes.some((node) => node.kind === 'artifact'
+    && node.label === 'Entrega · Briefing Graph Test'));
+  assert.equal(graphForLayout(root, `run-${producerRun.run_id}`).graph_ref, producerRun.run_id);
   assert.equal(graphForLayout(root, `run-${receipt.run_id}`).graph_ref, receipt.run_id);
   assert.equal(JSON.stringify(recorded).includes('PRIVATE'), false);
   console.log('✓ Canvas read model separa contrato, trace reconstruído e caminho realmente registrado');

@@ -172,6 +172,10 @@ h1 { margin-bottom: 5px; font-size: clamp(26px, 3vw, 38px); line-height: 1; lett
 .brain-node--artifact::before, .brain-node--output::before { background: #e2e8f0; }.brain-node--artifact .brain-node-icon, .brain-node--output .brain-node-icon { border-color: #5a6472; }
 .brain-node--artifact { border-radius: 8px; background: linear-gradient(145deg, #1c232c, #151b22); }.brain-node--artifact .brain-node-icon { border-radius: 6px; background: #111820; }
 .brain-node--gate::before, .brain-node--judgment::before { background: #f6bd4a; }.brain-node--gate .brain-node-icon, .brain-node--judgment .brain-node-icon { border-color: #725d32; }
+.brain-node--run::before { background: #42d392; }.brain-node--run .brain-node-icon { border-color: #32735a; }
+.brain-node--handoff::before { background: #59d6ff; }.brain-node--handoff .brain-node-icon { border-color: #326d80; }
+.brain-node--model::before { background: #d98cff; }.brain-node--model .brain-node-icon { border-color: #704d80; }
+.brain-node--connector::before { background: #5eead4; }.brain-node--connector .brain-node-icon { border-color: #2f6e68; }
 .brain-node--state-active, .brain-node--state-running { border-color: #4da3ff; background: linear-gradient(145deg, #132b47, #10243b); box-shadow: 0 10px 26px rgba(0,0,0,.28), 0 0 22px rgba(77,163,255,.3); }
 .brain-node--state-completed { border-color: #42d392; background: linear-gradient(145deg, #12372e, #102b24); box-shadow: 0 10px 26px rgba(0,0,0,.28), 0 0 22px rgba(66,211,146,.28); }
 .brain-node--state-gap, .brain-node--state-pending { border-color: #f6bd4a; background: linear-gradient(145deg, #3b2e16, #302612); box-shadow: 0 10px 26px rgba(0,0,0,.28), 0 0 22px rgba(246,189,74,.26); }

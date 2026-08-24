@@ -5,6 +5,7 @@ import { readCanvasLayout } from './canvas-layout-runtime.mjs';
 import { buildConsoleReadModel } from './console-read-model.mjs';
 import { latestStepStates, readExecutionTrace } from './execution-trace-runtime.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
+import { listHandoffContracts, listHandoffReceipts } from './handoff-protocol.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -117,6 +118,36 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
       || item.system_id === routine.system_ref);
     if (system) edges.push(graphEdge(`edge:system:${system.system_id}:routine:${routine.routine_id}`,
       `system:${system.system_id}`, `routine:${routine.routine_id}`, 'operates'));
+  }
+  const handoffReceipts = listHandoffReceipts(root);
+  for (const handoff of listHandoffContracts(root)) {
+    const receipts = handoffReceipts.filter((receipt) => receipt.handoff_ref === handoff.handoff_id
+      && receipt.status === 'accepted');
+    const actual = receipts.length > 0;
+    const nodeId = `handoff:${handoff.handoff_id}`;
+    const node = graphNode(nodeId, 'handoff', readableRef(handoff.artifact.artifact_type),
+      actual ? 'completed' : 'declared', {
+        ref: handoff.handoff_id,
+        contract_ref: `handoff-contract:${handoff.handoff_id}`,
+        producer: handoff.producer.system_ref,
+        consumer: handoff.consumer.system_ref,
+        artifact_type: handoff.artifact.artifact_type,
+        schema_ref: handoff.artifact.schema_ref,
+        accepted_receipt_count: receipts.length,
+        chain_ids: [...new Set(receipts.map((receipt) => receipt.chain_id))],
+      });
+    node.actual = actual;
+    nodes.push(node);
+    for (const [source, target, relation] of [
+      [`system:${handoff.producer.system_ref}`, nodeId, 'produces-handoff'],
+      [nodeId, `system:${handoff.consumer.system_ref}`, 'consumed-by'],
+    ]) {
+      if (!nodes.some((item) => item.id === source) || !nodes.some((item) => item.id === target)) continue;
+      const edge = graphEdge(stableId('edge', `${source}|${target}|${handoff.handoff_id}`), source, target,
+        relation, actual ? 'completed' : 'declared');
+      edge.actual = actual;
+      edges.push(edge);
+    }
   }
   return applyLayout(root, 'brain', {
     protocol_version: 1,
@@ -253,6 +284,26 @@ export function buildSystemGraph(root, systemRef) {
 }
 
 function receiptById(root, receiptId) {
+  if (String(receiptId).startsWith('run-record:')) {
+    const runId = String(receiptId).slice('run-record:'.length);
+    const record = latestRunRecords(root).find((item) => item.run_id === runId);
+    if (!record) throw new Error('graph-run-not-found');
+    const routineRef = String(record.extensions?.routine_ref || '');
+    const routineMatch = routineRef.match(/^routine:([a-z0-9][a-z0-9-]{0,63}):/);
+    return {
+      receipt_id: `record-${record.run_id}`,
+      run_id: record.run_id,
+      routine_id: routineMatch?.[1] || `execucao-${record.system_id}`,
+      system_ref: record.system_id,
+      status: record.status,
+      reason_code: record.mode === 'replay' ? 'governed-replay' : 'run-record',
+      started_at: record.started_at,
+      completed_at: record.completed_at,
+      input_refs: record.context_snapshot?.accesses.flatMap((access) => access.selected_refs) || [],
+      output_ref: record.output_refs[0] || null,
+      synthetic_from_run_record: true,
+    };
+  }
   try { return readRoutineRunReceipt(root, `routine-receipt:${receiptId}`); }
   catch { throw new Error('graph-run-not-found'); }
 }
@@ -278,7 +329,21 @@ function applyRecordedTrace(graph, events) {
     else if (event.step_type === 'collector') nodeId = 'collector';
     else if (event.step_type === 'retrieval') nodeId = 'retrieval';
     else if (event.step_type === 'skill' && event.skill_ref) nodeId = `skill:${event.skill_ref}`;
-    else if (event.step_type === 'capability') nodeId = 'capability';
+    else if (event.step_type === 'model' && event.model_ref) {
+      nodeId = `model:${event.model_ref}`;
+      if (!graph.nodes.some((node) => node.id === nodeId)) graph.nodes.push(graphNode(
+        nodeId, 'model', readableRef(event.model_ref), event.state, {
+          ref: event.model_ref, assurance: event.assurance,
+        },
+      ));
+    } else if (event.step_type === 'connector' && event.connector_ref) {
+      nodeId = `connector:${event.connector_ref}`;
+      if (!graph.nodes.some((node) => node.id === nodeId)) graph.nodes.push(graphNode(
+        nodeId, 'connector', readableRef(event.connector_ref), event.state, {
+          ref: event.connector_ref, assurance: event.assurance,
+        },
+      ));
+    } else if (event.step_type === 'capability') nodeId = 'capability';
     else if (event.step_type === 'output') nodeId = 'output';
     else if (event.step_type === 'judgment') nodeId = 'judgment';
     if (nodeId) setNode(graph, nodeId, event.state, true, { reason_code: event.reason_code });
@@ -322,7 +387,10 @@ function artifactLabel(ref, system) {
   if (kind === 'context-snapshot') return 'Context Snapshot';
   if (kind === 'collector-output') return `Coleta · ${readableRef(basename(value.slice('collector-output:'.length)).replace(/\.[^.]+$/, ''))}`;
   if (kind === 'instruction') return 'Instrução da rotina';
-  if (kind === 'deliverable') return `Entrega · ${readableRef(system.result.output_type)}`;
+  if (kind === 'deliverable') {
+    const file = basename(value).replace(/\.[^.]+$/, '');
+    return `Entrega · ${readableRef(file || system.result.output_type)}`;
+  }
   if (value.includes('app.clickup.com/')) return 'Objeto no ClickUp';
   if (value.includes('drive.google.com/')) return 'Objeto no Drive';
   const file = basename(value).replace(/\.[^.]+$/, '');
@@ -380,10 +448,65 @@ function traceNodeId(event) {
   if (event.step_type === 'collector') return 'collector';
   if (event.step_type === 'retrieval') return 'retrieval';
   if (event.step_type === 'skill' && event.skill_ref) return `skill:${event.skill_ref}`;
+  if (event.step_type === 'model' && event.model_ref) return `model:${event.model_ref}`;
+  if (event.step_type === 'connector' && event.connector_ref) return `connector:${event.connector_ref}`;
   if (event.step_type === 'capability' || event.step_type === 'run') return 'capability';
   if (event.step_type === 'output') return 'output';
   if (event.step_type === 'judgment') return 'judgment';
   return null;
+}
+
+function runIdFromRef(ref) {
+  return String(ref || '').startsWith('run-record:') ? String(ref).slice('run-record:'.length) : null;
+}
+
+function materializeChain(root, graph, record, selectedRunId, system) {
+  if (!record?.chain_id) return;
+  const records = latestRunRecords(root).filter((item) => item.chain_id === record.chain_id);
+  const recordById = new Map(records.map((item) => [item.run_id, item]));
+  const receipts = listHandoffReceipts(root).filter((item) => item.chain_id === record.chain_id);
+  for (const receipt of receipts) {
+    const producerId = runIdFromRef(receipt.producer_run_ref);
+    const consumerId = runIdFromRef(receipt.consumer_run_ref);
+    if (!producerId || !consumerId || !recordById.has(producerId) || !recordById.has(consumerId)) continue;
+    const endpoint = (runId, role) => {
+      if (runId === selectedRunId) return role === 'producer' ? 'output' : 'capability';
+      const id = `run:${runId}`;
+      if (!graph.nodes.some((node) => node.id === id)) {
+        const linked = recordById.get(runId);
+        const node = graphNode(id, 'run', `Execução · ${readableRef(linked.system_id)}`, linked.status === 'completed' ? 'completed' : 'running', {
+          run_id: runId,
+          system_ref: linked.system_id,
+          chain_id: linked.chain_id,
+          mode: linked.mode,
+          experiment_ref: linked.experiment_ref,
+        });
+        node.actual = true;
+        graph.nodes.push(node);
+      }
+      return id;
+    };
+    const producerNode = endpoint(producerId, 'producer');
+    const consumerNode = endpoint(consumerId, 'consumer');
+    const artifactId = ensureArtifact(graph, receipt.artifact.artifact_ref, system,
+      receipt.status === 'accepted' ? 'completed' : 'pending');
+    const artifactNode = graph.nodes.find((node) => node.id === artifactId);
+    artifactNode.details = {
+      ...artifactNode.details,
+      artifact_type: receipt.artifact.artifact_type,
+      schema_ref: receipt.artifact.schema_ref,
+      schema_version: receipt.artifact.schema_version,
+      sha256: receipt.artifact.sha256,
+      handoff_ref: receipt.handoff_ref,
+      handoff_receipt_ref: `handoff-receipt:${receipt.receipt_id}`,
+      chain_id: receipt.chain_id,
+      mode: receipt.mode,
+      experiment_ref: receipt.experiment_ref,
+    };
+    const state = receipt.status === 'accepted' ? 'completed' : 'pending';
+    addActualEdge(graph, producerNode, artifactId, 'hands-off', state);
+    addActualEdge(graph, artifactId, consumerNode, 'consumed-by', state);
+  }
 }
 
 function materializeRecordedArtifacts(graph, events, system) {
@@ -497,12 +620,18 @@ export function buildRunGraph(root, receiptId) {
     subtitle: `${receipt.status} · ${receipt.reason_code}`,
     run: {
       run_id: receipt.run_id,
-      receipt_ref: `routine-receipt:${receipt.receipt_id}`,
+      receipt_ref: receipt.synthetic_from_run_record ? null : `routine-receipt:${receipt.receipt_id}`,
       started_at: receipt.started_at,
       completed_at: receipt.completed_at,
       status: receipt.status,
       reason_code: receipt.reason_code,
       eval_passed: record?.eval?.passed ?? null,
+      chain_id: record?.chain_id ?? null,
+      mode: record?.mode ?? null,
+      experiment_ref: record?.experiment_ref ?? null,
+      handoff_refs: record?.handoff_refs ?? [],
+      canonical_ref: `run-record:${receipt.run_id}`,
+      routine_receipt_ref: receipt.synthetic_from_run_record ? null : `routine-receipt:${receipt.receipt_id}`,
     },
   };
   let events = [];
@@ -520,15 +649,33 @@ export function buildRunGraph(root, receiptId) {
   }
   try {
     const judgment = judgmentView(root, receipt.receipt_id);
-    setNode(graph, 'judgment', judgment.status === 'pending' ? 'pending'
-      : judgment.verdict === 'approved' ? 'completed'
-        : judgment.verdict === 'rejected' ? 'failed' : 'pending', true, {
-          verdict: judgment.verdict,
-          decided_at: judgment.decided_at,
-        });
-  } catch { setNode(graph, 'judgment', 'pending', true); }
+    const tracedJudgment = graph.nodes.find((node) => node.id === 'judgment');
+    if (judgment.status === 'decided') setNode(graph, 'judgment', judgment.verdict === 'approved' ? 'completed'
+      : judgment.verdict === 'rejected' ? 'failed' : 'pending', true, {
+        verdict: judgment.verdict,
+        decided_at: judgment.decided_at,
+      });
+    else if (!tracedJudgment?.actual) setNode(graph, 'judgment', receipt.synthetic_from_run_record
+      && record?.human_decision === 'approved' ? 'completed'
+      : receipt.synthetic_from_run_record && record?.human_decision === 'rejected' ? 'failed' : 'pending', true, {
+        verdict: receipt.synthetic_from_run_record ? record?.human_decision || 'pending' : 'pending',
+      });
+  } catch {
+    const tracedJudgment = graph.nodes.find((node) => node.id === 'judgment');
+    if (!tracedJudgment?.actual) setNode(graph, 'judgment', record?.human_decision === 'approved' ? 'completed'
+      : record?.human_decision === 'rejected' ? 'failed' : 'pending', true, {
+        verdict: record?.human_decision || 'pending',
+      });
+  }
+  const recordedGates = graph.nodes.filter((node) => node.kind === 'gate' && node.actual);
+  if (recordedGates.length === 0 && record?.eval?.passed !== null && record?.eval?.passed !== undefined) {
+    for (const node of graph.nodes.filter((item) => item.kind === 'gate')) {
+      setNode(graph, node.id, record.eval.passed ? 'completed' : 'failed', true);
+    }
+  }
   materializeRecordArtifacts(graph, record, receipt, system);
   if (events.length) materializeRecordedArtifacts(graph, events, system);
+  materializeChain(root, graph, record, receipt.run_id, system);
   activateEdges(graph);
   return applyLayout(root, `run-${receipt.run_id}`, graph);
 }
@@ -539,8 +686,9 @@ export function graphForLayout(root, key) {
   if (key.startsWith('run-')) {
     const runId = key.slice('run-'.length);
     const receipt = listRoutineRunReceipts(root).find((item) => item.run_id === runId);
-    if (!receipt) throw new Error('graph-run-not-found');
-    return buildRunGraph(root, receipt.receipt_id);
+    if (receipt) return buildRunGraph(root, receipt.receipt_id);
+    if (latestRunRecords(root).some((item) => item.run_id === runId)) return buildRunGraph(root, `run-record:${runId}`);
+    throw new Error('graph-run-not-found');
   }
   throw new Error('graph-layout-key-invalid');
 }

@@ -71,7 +71,7 @@
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
     "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
-    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!.*\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
     "opaque_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" }
   }
 }

@@ -14,6 +14,7 @@ import {
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { registerAccessGrant } from './lib/access-runtime.mjs';
+import { readExecutionTrace } from './lib/execution-trace-runtime.mjs';
 import { observeExecutor, runModelExecutor } from './lib/model-executors.mjs';
 import {
   confirmLegacySchedulePaused,
@@ -217,12 +218,19 @@ try {
     spawn: fakeCodex({ calls: manualCalls }),
     clock: fixed('2026-08-24T11:29:00.000Z'),
     wait: async () => assert.fail('successful run must not retry'),
+    chainId: 'chain-routine-test-001',
+    mode: 'replay',
+    handoffRefs: ['handoff-contract:briefing-para-funil'],
   });
   assert.equal(manual.status, 'completed');
   assert.equal(manualCalls.length, 1);
   assert.equal(readFileSync(join(root, 'operacao', 'execucoes', 'rotinas', 'funil-diario.md'), 'utf8'), `${outputMarker}\n`);
   assert.equal(manual.receipt.access_receipt_refs.length, 1);
   assertReferenceOnly(manual.receipt);
+  const manualTrace = readExecutionTrace(root, manual.receipt.run_id);
+  assert(manualTrace.every((event) => event.chain_id === 'chain-routine-test-001' && event.mode === 'replay'));
+  assert.equal(manualTrace.find((event) => event.step_type === 'model')?.assurance, 'requested-not-verified');
+  assert.equal(manualTrace.find((event) => event.step_type === 'connector')?.connector_ref, 'paid-media');
 
   assert.throws(() => activateRoutine(root, 'funil-diario-cerebro', manual.receipt_ref, 'role-marketing-owner', {
     clock: fixed('2026-08-24T11:29:00.000Z'),

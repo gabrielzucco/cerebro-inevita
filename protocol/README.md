@@ -37,7 +37,8 @@ conteúdo bruto.
   `1/3`, sem copiar conteúdo nem alterar automaticamente o motor.
 - `execution-trace-event.schema.json`: evento privado, ordenado e append-only do caminho real do
   Run. Registra estados e referências, nunca prompt, output, payload ou erro cru. Skill concluída
-  exige evidência de leitura bem-sucedida e hash.
+  exige evidência de leitura bem-sucedida e hash. `chain_id` costura execuções; eventos de Modelo
+  e Conector só existem quando observados e carregam o nível de assurance disponível.
 - `experiment-contract.schema.json`: pré-registro congelado de uma mudança controlada, ligado ao
   Sistema palco, Sistemas de leitura, braços, métrica, guardrails, janela e regra de decisão.
 - `experiment-state.schema.json`: estado privado pós-congelamento, com emendas, Runs ligados,
@@ -48,7 +49,13 @@ conteúdo bruto.
   entre Sistemas só existe quando este contrato existe; Fonte compartilhada não é conexão.
 - `handoff-receipt.schema.json`: prova de um handoff real — `chain_id` genérico de runtime, Run
   produtor, artefato com hash e schema validado, resultado do gate, Run consumidor e modo
-  `replay` ou `live` (replay nunca se apresenta como execução original). Reference-only.
+`replay` ou `live` (replay nunca se apresenta como execução original). Reference-only.
+
+Run Record V2 pode declarar `chain_id`, `mode`, `experiment_ref` e `handoff_refs`. A chain é
+genérica: existe para qualquer pipeline entre Sistemas; Experimento apenas aponta para ela quando
+há uma mudança controlada. Handoff Contract acende no Canvas somente quando o runtime encontra um
+Handoff Receipt aceito e compatível com os dois Runs, os dois Traces, o schema, a versão e o hash
+do artefato.
 
 Os artefatos que atravessam handoffs têm schema próprio em `protocol/artifacts/` (por exemplo
 `creative-brief.schema.json` e `funnel-reading.schema.json`); o System Contract V2 declara em

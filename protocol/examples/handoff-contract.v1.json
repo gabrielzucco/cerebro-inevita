@@ -9,7 +9,7 @@
     "artifact_role": "briefing-editorial"
   },
   "consumer": {
-    "system_ref": "funil-crescimento",
+    "system_ref": "analisar-funil",
     "input_role": "experiment-brief",
     "required": true
   },

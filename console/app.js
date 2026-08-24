@@ -59,6 +59,9 @@ const labels = {
   source: 'Fonte', area: 'Área', system: 'Sistema', routine: 'Rotina',
   collector: 'Coleta', retrieval: 'Contexto', skill: 'Skill', capability: 'Capability',
   stage: 'Etapa', artifact: 'Artefato', output: 'Output', gate: 'Gate', judgment: 'Julgamento',
+  run: 'Execução', handoff: 'Handoff', model: 'Modelo', connector: 'Conector',
+  replay: 'Replay', live: 'Ao vivo',
+  'requested-not-verified': 'Solicitado, não verificado', 'provider-reported': 'Reportado pelo provider', verified: 'Verificado',
   met: 'Atendido', partial: 'Parcial', missing: 'Ausente',
   new: 'Começando do zero', 'organized-context': 'Contexto organizado',
   'partial-brain': 'Cérebro parcial', 'inevita-compatible': 'Compatível com INEVITA',
@@ -263,7 +266,7 @@ function canvasRefOptions() {
     return state.model.systems.map((system) => `<option value="${escapeHtml(system.system_id)}"${state.canvas.ref === system.system_id ? ' selected' : ''}>${escapeHtml(system.name)}</option>`).join('');
   }
   if (state.canvas.scope === 'run') {
-    return allReceipts().map((receipt) => `<option value="${escapeHtml(receipt.receipt_id)}"${state.canvas.ref === receipt.receipt_id ? ' selected' : ''}>${escapeHtml(receipt.routine_name)} · ${fmtDate(receipt.completed_at)}</option>`).join('');
+    return allCanvasExecutions().map((execution) => `<option value="${escapeHtml(execution.selector_ref)}"${state.canvas.ref === execution.selector_ref ? ' selected' : ''}>${escapeHtml(execution.label)} · ${escapeHtml(execution.mode ? label(execution.mode) : 'Run')} · ${fmtDate(execution.completed_at)}</option>`).join('');
   }
   return '';
 }
@@ -362,6 +365,25 @@ function allReceipts() {
   return state.model.routines.flatMap((routine) => routine.receipts.map((receipt) => ({ ...receipt, routine_name: routine.name, routine_id: routine.routine_id }))).sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at));
 }
 
+function allCanvasExecutions() {
+  const receipts = allReceipts().map((receipt) => ({
+    selector_ref: receipt.receipt_id,
+    run_id: receipt.run_id,
+    label: receipt.routine_name,
+    completed_at: receipt.completed_at,
+    mode: state.model.run_records?.find((record) => record.run_id === receipt.run_id)?.mode || null,
+  }));
+  const receivedRunIds = new Set(receipts.map((receipt) => receipt.run_id));
+  const standalone = (state.model.run_records || []).filter((record) => !receivedRunIds.has(record.run_id)).map((record) => ({
+    selector_ref: record.run_record_ref,
+    run_id: record.run_id,
+    label: `${label(record.system_ref)}${record.experiment_ref ? ` · ${record.experiment_ref}` : ''}`,
+    completed_at: record.completed_at,
+    mode: record.mode,
+  }));
+  return [...receipts, ...standalone].sort((left, right) => Date.parse(right.completed_at) - Date.parse(left.completed_at));
+}
+
 function renderRuns() {
   const receipts = allReceipts();
   return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Run Record mostra o contexto selecionado por referência. O conteúdo continua privado.</p></div><div class="table-wrap"><table><thead><tr><th>Rotina</th><th>Quando</th><th>Gatilho</th><th>Estado</th><th>Contexto selecionado</th><th>Modelo</th><th>Output ref.</th></tr></thead><tbody>${receipts.map((receipt) => `<tr><td><strong>${escapeHtml(receipt.routine_name)}</strong><small>${escapeHtml(receipt.receipt_ref)}</small></td><td>${fmtDate(receipt.completed_at)}</td><td>${escapeHtml(label(receipt.trigger))}</td><td>${badge(receipt.status)}</td><td>${receipt.context_status === 'recorded' ? `<button class="table-action" data-open-context="${escapeHtml(receipt.receipt_id)}">${receipt.context_source_count} fontes →</button>` : badge('context-not-recorded', 'neutral')}</td><td>${escapeHtml(receipt.requested_model)}<small>${escapeHtml(receipt.model_observation)}</small></td><td><code>${escapeHtml(receipt.output_ref || '—')}</code></td></tr>`).join('') || `<tr><td colspan="7">Nenhum recibo ainda.</td></tr>`}</tbody></table></div>`;
@@ -420,6 +442,9 @@ function render() {
 function canvasEndpoint() {
   if (state.canvas.scope === 'brain') return '/api/graphs/brain';
   if (state.canvas.scope === 'system') return `/api/graphs/systems/${state.canvas.ref}`;
+  if (String(state.canvas.ref).startsWith('run-record:')) {
+    return `/api/graphs/run-records/${String(state.canvas.ref).slice('run-record:'.length)}`;
+  }
   return `/api/graphs/runs/${state.canvas.ref}`;
 }
 
@@ -466,7 +491,7 @@ function canvasList(graph) {
 
 async function mountCanvasView() {
   if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id;
-  if (state.canvas.scope === 'run' && !state.canvas.ref) state.canvas.ref = allReceipts()[0]?.receipt_id;
+  if (state.canvas.scope === 'run' && !state.canvas.ref) state.canvas.ref = allCanvasExecutions()[0]?.selector_ref;
   const container = $('#operational-canvas');
   if (!container || (state.canvas.scope !== 'brain' && !state.canvas.ref)) {
     if (container) container.innerHTML = empty('Nada para desenhar', 'Ainda não existe objeto real nesta escala.');
@@ -478,7 +503,7 @@ async function mountCanvasView() {
     state.canvas.graph = graph;
     state.canvas.positions = null;
     $('#canvas-origin').innerHTML = graph.trace_origin
-      ? `<span>${graph.trace_origin === 'recorded' ? 'TRACE V1' : 'TRACE RECONSTRUÍDO'}</span><b>${escapeHtml(graph.trace_origin === 'recorded' ? `${graph.trace_events} eventos` : 'granularidade limitada')}</b>`
+      ? `<span>${graph.run?.mode ? escapeHtml(label(graph.run.mode).toUpperCase()) : graph.trace_origin === 'recorded' ? 'TRACE V1' : 'TRACE RECONSTRUÍDO'}</span><b>${escapeHtml(graph.run?.chain_id ? `${graph.run.chain_id} · ${graph.trace_events} eventos` : graph.trace_origin === 'recorded' ? `${graph.trace_events} eventos` : 'granularidade limitada')}</b>`
       : `<span>CONTRATO</span><b>${graph.nodes.length} nós · ${graph.edges.length} arestas</b>`;
     $('#canvas-list').innerHTML = canvasList(graph);
     state.canvas.controller = await mountOperationalCanvas({
@@ -818,7 +843,7 @@ document.addEventListener('click', (event) => {
     state.canvas.scope = canvasScope.dataset.canvasScope;
     state.canvas.ref = state.canvas.scope === 'system'
       ? state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id || null
-      : state.canvas.scope === 'run' ? allReceipts()[0]?.receipt_id || null : null;
+      : state.canvas.scope === 'run' ? allCanvasExecutions()[0]?.selector_ref || null : null;
     state.canvas.positions = null;
     render();
     return;

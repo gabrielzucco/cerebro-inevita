@@ -280,12 +280,20 @@ export function appendCompletedRunRecord(root, routineContract, context, {
   evaluation = null,
   executionTraceRef = null,
   skillLoadRefs = [],
+  chainId = null,
+  mode = null,
+  experimentRef = null,
+  handoffRefs = [],
 }) {
   if (context.status !== 'recorded') return null;
   const system = context.system;
   const record = {
     protocol_version: 2,
     run_id: runId,
+    chain_id: chainId,
+    mode,
+    experiment_ref: experimentRef,
+    handoff_refs: handoffRefs,
     system_id: system.system_id,
     system_version: system.version,
     capability: {

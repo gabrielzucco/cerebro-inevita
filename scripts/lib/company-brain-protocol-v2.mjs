@@ -1,9 +1,11 @@
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const REF_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
-const LOCAL_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
+const LOCAL_REF_RE = /^(?!.*\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
 const ACCEPTED_VERSION_RE = /^\d+(?:\.x|\.\d+(?:\.x|\.\d+)?)?$/;
 const ASSURANCES = new Set(['runtime-enforced', 'receipt-audited', 'exported']);
+const OPAQUE_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
+const EXPERIMENT_ID_RE = /^EXP-[A-Za-z0-9_-]{1,48}$/;
 const LOCAL_SOURCE_TYPES = new Set([
   'local-folder', 'local-file', 'obsidian', 'git-repository', 'meetings-folder',
   'knowledge-workspace',
@@ -288,7 +290,7 @@ function validateRunShape(errors, value, version) {
     'started_at', 'completed_at', 'entity_refs', 'source_refs', 'output_refs', 'eval',
     'human_decision', 'correction_ref', 'outcomes', 'privacy', 'extensions',
   ];
-  if (version === 2) top.push('context_snapshot');
+  if (version === 2) top.push('context_snapshot', 'chain_id', 'mode', 'experiment_ref', 'handoff_refs');
   closed(errors, value, 'run_record', top);
   if (value.capability !== undefined && value.capability !== null) {
     if (!object(value.capability)) errors.push('capability precisa ser objeto ou null');
@@ -328,6 +330,24 @@ function validateRunShape(errors, value, version) {
   if (!object(value.privacy)) errors.push('privacy precisa ser objeto');
   else closed(errors, value.privacy, 'privacy', ['content_shared_with_inevita']);
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
+  if (version === 2) {
+    const lineageDeclared = ['chain_id', 'mode', 'experiment_ref', 'handoff_refs']
+      .some((key) => Object.hasOwn(value, key));
+    if (lineageDeclared) {
+      if (value.chain_id !== null && !OPAQUE_REF_RE.test(value.chain_id || '')) errors.push('chain_id inválido');
+      if (value.chain_id === null && value.mode !== null) errors.push('mode exige chain_id');
+      if (value.chain_id !== null && !['replay', 'live'].includes(value.mode)) errors.push('chain_id exige mode replay ou live');
+      if (value.mode !== null && value.mode !== undefined && !['replay', 'live'].includes(value.mode)) errors.push('mode inválido');
+      if (value.experiment_ref !== null && value.experiment_ref !== undefined
+        && !EXPERIMENT_ID_RE.test(value.experiment_ref || '')) errors.push('experiment_ref inválido');
+      if (value.experiment_ref && !value.chain_id) errors.push('experiment_ref exige chain_id');
+      stringList(errors, value.handoff_refs, 'handoff_refs');
+      unique(errors, value.handoff_refs, 'handoff_refs');
+      for (const [index, ref] of (Array.isArray(value.handoff_refs) ? value.handoff_refs : []).entries()) {
+        if (!LOCAL_REF_RE.test(ref || '')) errors.push(`handoff_refs[${index}] inválido`);
+      }
+    }
+  }
 }
 
 function validateContextSnapshot(errors, snapshot, run) {
@@ -423,6 +443,10 @@ export function validateRunRecordVersion(value, validateV1) {
   if (value.protocol_version !== 2) return ['protocol_version de Run Record suportada: 1 ou 2'];
   const base = { ...value, protocol_version: 1 };
   delete base.context_snapshot;
+  delete base.chain_id;
+  delete base.mode;
+  delete base.experiment_ref;
+  delete base.handoff_refs;
   const errors = validateV1(base).filter((error) => error !== 'protocol_version precisa ser 1');
   validateRunShape(errors, value, 2);
   validateContextSnapshot(errors, value.context_snapshot, value);

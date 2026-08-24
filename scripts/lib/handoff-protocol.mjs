@@ -1,10 +1,20 @@
-import { ID_RE, VERSION_RE } from './system-protocol.mjs';
+import { createHash } from 'node:crypto';
+import {
+  existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync,
+} from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
+import {
+  ID_RE, VERSION_RE, latestRunRecords, layout, readJson, validateSystemContract, writeJsonAtomic,
+} from './system-protocol.mjs';
+import { readExecutionTrace } from './execution-trace-runtime.mjs';
+import { validateJsonSchema } from './json-schema-runtime.mjs';
 
 const OPAQUE_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
-const LOCAL_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
+const LOCAL_REF_RE = /^(?!.*\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
 const ACCEPTED_VERSION_RE = /^\d+(?:\.x|\.\d+(?:\.x|\.\d+)?)?$/;
 const EXPERIMENT_ID_RE = /^EXP-[A-Za-z0-9_-]{1,48}$/;
+const MAX_ARTIFACT_BYTES = 4 * 1024 * 1024;
 const CONTRACT_KEYS = new Set([
   'protocol_version', 'handoff_id', 'name', 'version', 'status', 'producer', 'consumer',
   'artifact', 'trigger', 'acceptance_gate', 'permissions', 'privacy', 'extensions',
@@ -196,4 +206,273 @@ export function validateHandoffReceipt(value) {
   }
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
   return [...new Set(errors)];
+}
+
+function safeDirectory(root, configured, fallback, { runtimeOnly = false } = {}) {
+  const rootPath = resolve(root);
+  const target = resolve(root, configured || fallback);
+  const lexical = relative(rootPath, target);
+  if (!lexical || lexical.startsWith('..') || lexical.startsWith(sep)) throw new Error('handoff-layout-outside-brain');
+  if (runtimeOnly) {
+    const runtime = resolve(root, '.cerebro', 'runtime');
+    const runtimeRelative = relative(runtime, target);
+    if (!runtimeRelative || runtimeRelative.startsWith('..') || runtimeRelative.startsWith(sep)) {
+      throw new Error('handoff-receipts-not-private');
+    }
+  }
+  mkdirSync(target, { recursive: true, mode: 0o700 });
+  if (lstatSync(target).isSymbolicLink()) throw new Error('handoff-directory-symlink-blocked');
+  const realRoot = realpathSync(rootPath);
+  const realTarget = realpathSync(target);
+  const realRelative = relative(realRoot, realTarget);
+  if (!realRelative || realRelative.startsWith('..') || realRelative.startsWith(sep)) {
+    throw new Error('handoff-directory-outside-brain');
+  }
+  return realTarget;
+}
+
+export function handoffContractDirectory(root) {
+  return safeDirectory(root, layout(root).handoffContracts, join('.cerebro', 'contracts', 'handoffs'));
+}
+
+export function handoffReceiptDirectory(root) {
+  return safeDirectory(root, layout(root).handoffReceipts, join('.cerebro', 'runtime', 'receipts', 'handoffs'), {
+    runtimeOnly: true,
+  });
+}
+
+function systemContract(root, systemRef) {
+  const directory = resolve(root, layout(root).systemContracts || join('.cerebro', 'contracts', 'systems'));
+  const path = join(directory, `${systemRef}.json`);
+  if (!existsSync(path) || lstatSync(path).isSymbolicLink()) throw new Error('handoff-system-contract-missing');
+  const contract = readJson(path, 'System Contract');
+  if (validateSystemContract(contract).length || contract.system_id !== systemRef) {
+    throw new Error('handoff-system-contract-invalid');
+  }
+  return contract;
+}
+
+function interfaceErrors(root, contract) {
+  const errors = [];
+  const producer = systemContract(root, contract.producer.system_ref);
+  const consumer = systemContract(root, contract.consumer.system_ref);
+  const produced = producer.artifacts?.produces?.find((item) => item.role === contract.producer.artifact_role);
+  if (!produced) errors.push('producer não declara artifact_role em artifacts.produces');
+  else {
+    if (produced.artifact_type !== contract.artifact.artifact_type) errors.push('artifact_type diverge do produtor');
+    if (produced.schema_ref !== contract.artifact.schema_ref) errors.push('schema_ref diverge do produtor');
+  }
+  const consumed = consumer.artifacts?.consumes?.find((item) => item.role === contract.consumer.input_role);
+  if (!consumed) errors.push('consumer não declara input_role em artifacts.consumes');
+  else {
+    if (consumed.artifact_type !== contract.artifact.artifact_type) errors.push('artifact_type diverge do consumidor');
+    if (consumed.schema_ref !== contract.artifact.schema_ref) errors.push('schema_ref diverge do consumidor');
+    if (contract.consumer.required !== consumed.required) errors.push('required diverge do consumidor');
+    if (!contract.artifact.accepted_versions.some((version) => consumed.accepted_versions.includes(version))) {
+      errors.push('accepted_versions não intersectam a interface do consumidor');
+    }
+  }
+  return errors;
+}
+
+export function registerHandoffContract(root, contract) {
+  const errors = validateHandoffContract(contract);
+  if (errors.length === 0) errors.push(...interfaceErrors(root, contract));
+  if (errors.length) throw new Error(`handoff-contract-invalid:${errors.join('|')}`);
+  const path = join(handoffContractDirectory(root), `${contract.handoff_id}.json`);
+  if (existsSync(path)) {
+    const current = readJson(path, 'Handoff Contract');
+    if (JSON.stringify(current) !== JSON.stringify(contract)) throw new Error('handoff-contract-already-exists');
+    return { contract: current, ref: `handoff-contract:${current.handoff_id}` };
+  }
+  writeJsonAtomic(path, contract);
+  return { contract, ref: `handoff-contract:${contract.handoff_id}` };
+}
+
+export function loadHandoffContract(root, handoffId) {
+  if (!ID_RE.test(handoffId || '')) throw new Error('handoff-id-invalid');
+  const path = join(handoffContractDirectory(root), `${handoffId}.json`);
+  if (!existsSync(path) || lstatSync(path).isSymbolicLink()) throw new Error('handoff-contract-missing');
+  const contract = readJson(path, 'Handoff Contract');
+  const errors = [...validateHandoffContract(contract), ...interfaceErrors(root, contract)];
+  if (errors.length || contract.handoff_id !== handoffId) throw new Error('handoff-contract-invalid');
+  return { contract, ref: `handoff-contract:${handoffId}` };
+}
+
+export function listHandoffContracts(root) {
+  const configured = resolve(root, layout(root).handoffContracts || join('.cerebro', 'contracts', 'handoffs'));
+  if (!existsSync(configured)) return [];
+  const directory = handoffContractDirectory(root);
+  return readdirSync(directory).filter((name) => name.endsWith('.json')).sort().flatMap((name) => {
+    try { return [loadHandoffContract(root, name.slice(0, -5)).contract]; } catch { return []; }
+  });
+}
+
+export function listHandoffReceipts(root) {
+  const configured = resolve(root, layout(root).handoffReceipts || join('.cerebro', 'runtime', 'receipts', 'handoffs'));
+  if (!existsSync(configured)) return [];
+  const directory = handoffReceiptDirectory(root);
+  return readdirSync(directory).filter((name) => name.endsWith('.json')).sort().flatMap((name) => {
+    try {
+      const receipt = readJson(join(directory, name), 'Handoff Receipt');
+      return validateHandoffReceipt(receipt).length ? [] : [receipt];
+    } catch { return []; }
+  });
+}
+
+export function readHandoffReceipt(root, receiptId) {
+  if (!OPAQUE_REF_RE.test(receiptId || '')) throw new Error('handoff-receipt-id-invalid');
+  const path = join(handoffReceiptDirectory(root), `${receiptId}.json`);
+  if (!existsSync(path) || lstatSync(path).isSymbolicLink()) throw new Error('handoff-receipt-missing');
+  const receipt = readJson(path, 'Handoff Receipt');
+  const errors = validateHandoffReceipt(receipt);
+  if (errors.length || receipt.receipt_id !== receiptId) throw new Error('handoff-receipt-invalid');
+  return receipt;
+}
+
+function parseRunRef(value) {
+  if (!String(value).startsWith('run-record:')) throw new Error('handoff-run-ref-invalid');
+  return value.slice('run-record:'.length);
+}
+
+function versionAccepted(version, ranges) {
+  const parts = String(version).split(/[+-]/, 1)[0].split('.');
+  return ranges.some((range) => {
+    const accepted = String(range).split('.');
+    return accepted.every((part, index) => part === 'x' || part === parts[index]);
+  });
+}
+
+function safeArtifact(root, artifactRef) {
+  if (!LOCAL_REF_RE.test(artifactRef || '')) throw new Error('handoff-artifact-ref-invalid');
+  const rootPath = realpathSync(root);
+  const path = resolve(root, artifactRef);
+  const lexical = relative(resolve(root), path);
+  if (!lexical || lexical.startsWith('..') || lexical.startsWith(sep)) throw new Error('handoff-artifact-outside-brain');
+  if (!existsSync(path) || lstatSync(path).isSymbolicLink()) throw new Error('handoff-artifact-missing');
+  const stat = statSync(path);
+  if (!stat.isFile() || stat.size < 2 || stat.size > MAX_ARTIFACT_BYTES) throw new Error('handoff-artifact-size-invalid');
+  const realPath = realpathSync(path);
+  const realRelative = relative(rootPath, realPath);
+  if (!realRelative || realRelative.startsWith('..') || realRelative.startsWith(sep)) {
+    throw new Error('handoff-artifact-outside-brain');
+  }
+  const bytes = readFileSync(realPath);
+  let value;
+  try { value = JSON.parse(bytes.toString('utf8')); } catch { throw new Error('handoff-artifact-json-invalid'); }
+  return { bytes, value };
+}
+
+function traceProves(root, runId, artifactRef, direction, { chainId, mode, experimentRef, handoffId }) {
+  const events = readExecutionTrace(root, runId);
+  const field = direction === 'producer' ? 'output_refs' : 'input_refs';
+  return events.length > 0
+    && events.every((event) => event.chain_id === chainId && event.mode === mode
+      && event.experiment_ref === experimentRef
+      && event.handoff_refs.includes(`handoff-contract:${handoffId}`))
+    && events.some((event) => event[field].includes(artifactRef));
+}
+
+export function recordAcceptedHandoff(root, handoffId, {
+  receiptId,
+  chainId,
+  mode,
+  experimentRef = null,
+  producerRunRef,
+  consumerRunRef,
+  artifactRef,
+  humanDecision = 'approved',
+  approvalRef = null,
+  producedAt,
+  gatedAt,
+  consumedAt,
+} = {}) {
+  if (!OPAQUE_REF_RE.test(receiptId || '')) throw new Error('handoff-receipt-id-invalid');
+  if (!OPAQUE_REF_RE.test(chainId || '')) throw new Error('handoff-chain-id-invalid');
+  if (!['replay', 'live'].includes(mode)) throw new Error('handoff-mode-invalid');
+  if (experimentRef !== null && !EXPERIMENT_ID_RE.test(experimentRef || '')) throw new Error('handoff-experiment-ref-invalid');
+  const { contract } = loadHandoffContract(root, handoffId);
+  if (contract.status !== 'active') throw new Error('handoff-contract-not-active');
+  const producerId = parseRunRef(producerRunRef);
+  const consumerId = parseRunRef(consumerRunRef);
+  const records = latestRunRecords(root);
+  const producer = records.find((record) => record.run_id === producerId);
+  const consumer = records.find((record) => record.run_id === consumerId);
+  if (!producer || !consumer) throw new Error('handoff-run-missing');
+  if (producer.system_id !== contract.producer.system_ref || consumer.system_id !== contract.consumer.system_ref) {
+    throw new Error('handoff-run-system-mismatch');
+  }
+  for (const record of [producer, consumer]) {
+    if (record.chain_id !== chainId || record.mode !== mode || record.experiment_ref !== experimentRef) {
+      throw new Error('handoff-run-lineage-mismatch');
+    }
+    if (!record.handoff_refs?.includes(`handoff-contract:${handoffId}`)) {
+      throw new Error('handoff-contract-ref-missing-from-run');
+    }
+  }
+  if (!producer.output_refs.includes(artifactRef)) throw new Error('handoff-artifact-not-produced');
+  const traceLineage = { chainId, mode, experimentRef, handoffId };
+  if (!traceProves(root, producerId, artifactRef, 'producer', traceLineage)) throw new Error('handoff-producer-trace-missing');
+  if (!traceProves(root, consumerId, artifactRef, 'consumer', traceLineage)) throw new Error('handoff-consumer-trace-missing');
+  const artifact = safeArtifact(root, artifactRef);
+  const schemaPath = resolve(root, contract.artifact.schema_ref);
+  const schemaRelative = relative(resolve(root), schemaPath);
+  if (!schemaRelative || schemaRelative.startsWith('..') || schemaRelative.startsWith(sep)) {
+    throw new Error('handoff-artifact-schema-outside-brain');
+  }
+  if (!existsSync(schemaPath) || lstatSync(schemaPath).isSymbolicLink()) throw new Error('handoff-artifact-schema-missing');
+  const schema = readJson(schemaPath, 'Artifact Schema');
+  const schemaErrors = validateJsonSchema(artifact.value, schema);
+  if (schemaErrors.length) throw new Error(`handoff-artifact-schema-invalid:${schemaErrors.join('|')}`);
+  if (artifact.value.artifact_type !== contract.artifact.artifact_type) throw new Error('handoff-artifact-type-mismatch');
+  if (!versionAccepted(artifact.value.schema_version, contract.artifact.accepted_versions)) {
+    throw new Error('handoff-artifact-version-not-accepted');
+  }
+  if (artifact.value.produced_by?.system_ref !== producer.system_id
+    || artifact.value.produced_by?.run_ref !== producer.run_id) throw new Error('handoff-artifact-producer-mismatch');
+  if (artifact.value.experiment_ref !== experimentRef) throw new Error('handoff-artifact-experiment-mismatch');
+  if (contract.acceptance_gate.human_approval_required && humanDecision !== 'approved') {
+    throw new Error('handoff-human-approval-required');
+  }
+  if (contract.acceptance_gate.human_approval_required && !LOCAL_REF_RE.test(approvalRef || '')) {
+    throw new Error('handoff-approval-ref-required');
+  }
+  for (const [label, value] of [['produced_at', producedAt], ['gated_at', gatedAt], ['consumed_at', consumedAt]]) {
+    if (!Number.isFinite(Date.parse(value || ''))) throw new Error(`handoff-${label.replace('_', '-')}-invalid`);
+  }
+  const checks = contract.acceptance_gate.deterministic_checks.map((check) => ({ check, passed: true }));
+  const receipt = {
+    protocol_version: 1,
+    receipt_id: receiptId,
+    handoff_ref: handoffId,
+    chain_id: chainId,
+    mode,
+    experiment_ref: experimentRef,
+    producer_run_ref: producerRunRef,
+    artifact: {
+      artifact_ref: artifactRef,
+      artifact_type: contract.artifact.artifact_type,
+      schema_ref: contract.artifact.schema_ref,
+      schema_version: artifact.value.schema_version,
+      sha256: createHash('sha256').update(artifact.bytes).digest('hex'),
+      schema_validated: true,
+    },
+    gate: {
+      result: 'passed', checks,
+      human_decision: contract.acceptance_gate.human_approval_required ? humanDecision : 'not-required',
+    },
+    consumer_run_ref: consumerRunRef,
+    status: 'accepted',
+    produced_at: new Date(producedAt).toISOString(),
+    gated_at: new Date(gatedAt).toISOString(),
+    consumed_at: new Date(consumedAt).toISOString(),
+    privacy: { content_shared_with_inevita: false },
+    extensions: { approval_ref: approvalRef },
+  };
+  const errors = validateHandoffReceipt(receipt);
+  if (errors.length) throw new Error(`handoff-receipt-invalid:${errors.join('|')}`);
+  const path = join(handoffReceiptDirectory(root), `${receipt.receipt_id}.json`);
+  if (existsSync(path)) throw new Error('handoff-receipt-already-exists');
+  writeJsonAtomic(path, receipt);
+  return { receipt, ref: `handoff-receipt:${receipt.receipt_id}` };
 }

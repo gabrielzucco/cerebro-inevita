@@ -25,11 +25,16 @@ try {
     '2026-08-24T10:00:00.000Z',
     '2026-08-24T10:00:01.000Z',
     '2026-08-24T10:00:02.000Z',
+    '2026-08-24T10:00:03.000Z',
+    '2026-08-24T10:00:04.000Z',
   ];
   const tracer = createExecutionTracer(root, {
     runId: 'routine-run-trace-test-001',
     systemRef: 'calls',
     routineRef: 'routine:call-em-decisoes-manual:1.0.0',
+    chainId: 'chain-trace-test-001',
+    mode: 'replay',
+    handoffRefs: ['handoff-contract:call-para-decisoes'],
     clock: () => new Date(moments.shift()),
   });
   tracer.emit({ stepId: 'run', stepType: 'run', state: 'running', parentStepId: null });
@@ -38,15 +43,28 @@ try {
     skillRef: '.claude/skills/calls/SKILL.md',
     evidenceRef: 'sha256:7c9d01bbfce5f44c4e66f8a23e40fc7dd495a1dbde36b1f22ef7845ff8e4ba91',
   });
+  tracer.emit({
+    stepId: 'connector-fathom', stepType: 'connector', state: 'completed',
+    connectorRef: 'fathom-calls', assurance: 'receipt-audited',
+  });
+  tracer.emit({
+    stepId: 'model', stepType: 'model', state: 'completed',
+    modelRef: 'gpt-5.6', assurance: 'provider-reported',
+  });
   tracer.emit({ stepId: 'run', stepType: 'run', state: 'completed', parentStepId: null });
 
   const events = readExecutionTrace(root, 'routine-run-trace-test-001');
-  assert.deepEqual(events.map((event) => event.sequence), [1, 2, 3]);
+  assert.deepEqual(events.map((event) => event.sequence), [1, 2, 3, 4, 5]);
   assert.equal(latestStepStates(events).get('run').state, 'completed');
   assert.equal(events[1].privacy.payload_recorded, false);
+  assert(events.every((event) => event.chain_id === 'chain-trace-test-001' && event.mode === 'replay'));
+  assert.equal(events.find((event) => event.step_type === 'model').assurance, 'provider-reported');
+  assert.equal(events.find((event) => event.step_type === 'connector').connector_ref, 'fathom-calls');
+  assert(validateExecutionTraceEvent({ ...example, step_type: 'model', model_ref: 'gpt-5.6', assurance: null })
+    .some((error) => error.includes('assurance de modelo')));
   assert.equal(JSON.stringify(events).includes('PRIVATE'), false);
 
-  appendFileSync(tracer.path, `${JSON.stringify({ ...events[2], sequence: 8 })}\n`);
+  appendFileSync(tracer.path, `${JSON.stringify({ ...events[4], sequence: 8 })}\n`);
   assert.throws(() => readExecutionTrace(root, 'routine-run-trace-test-001'), /trace-sequence-invalid/);
   console.log('✓ Execution Trace V1 é ordenado, reference-only e exige prova para skill carregada');
 } finally {

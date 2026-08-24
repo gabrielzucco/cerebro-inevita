@@ -31,6 +31,7 @@ const KIND_ACCENT = {
   source: '#4fd1c5', area: '#67a7ff', system: '#9b8cff', routine: '#5e7ce2',
   collector: '#5eead4', retrieval: '#4da3ff', skill: '#d98cff', capability: '#9b8cff',
   stage: '#78a9ff', artifact: '#e2e8f0', output: '#e2e8f0', gate: '#f6bd4a', judgment: '#f6bd4a',
+  run: '#42d392', handoff: '#59d6ff', model: '#d98cff', connector: '#5eead4',
 };
 
 const KIND_LABEL = {
@@ -47,6 +48,10 @@ const KIND_LABEL = {
   output: 'Output',
   gate: 'Gate',
   judgment: 'Julgamento',
+  run: 'Execução',
+  handoff: 'Handoff',
+  model: 'Modelo',
+  connector: 'Conector',
 };
 
 const STATE_LABEL = {
@@ -74,6 +79,10 @@ const KIND_ICON = {
   output: FileOutput,
   gate: ShieldCheck,
   judgment: Gavel,
+  run: RefreshCw,
+  handoff: Share2,
+  model: BrainCircuit,
+  connector: Webhook,
 };
 
 function escapeHtml(value) {
@@ -126,6 +135,8 @@ function nodeSize(datum) {
   if (kind === 'capability') return [216, 78];
   if (kind === 'stage') return [222, 78];
   if (kind === 'artifact') return [232, 78];
+  if (kind === 'handoff') return [220, 78];
+  if (kind === 'run') return [226, 78];
   if (kind === 'judgment') return [204, 78];
   return [204, 74];
 }
@@ -156,6 +167,7 @@ function brainPositions(model) {
   const systems = model.nodes.filter((node) => node.kind === 'system');
   const sources = model.nodes.filter((node) => node.kind === 'source');
   const routines = model.nodes.filter((node) => node.kind === 'routine');
+  const handoffs = model.nodes.filter((node) => node.kind === 'handoff');
   const areaBySystem = new Map(model.edges
     .filter((edge) => edge.relation === 'contains')
     .map((edge) => [edge.target, edge.source]));
@@ -204,6 +216,15 @@ function brainPositions(model) {
       };
     });
   }
+  handoffs.forEach((handoff, index) => {
+    const inbound = model.edges.find((edge) => edge.target === handoff.id && edge.source.startsWith('system:'));
+    const outbound = model.edges.find((edge) => edge.source === handoff.id && edge.target.startsWith('system:'));
+    const left = positions[inbound?.source];
+    const right = positions[outbound?.target];
+    positions[handoff.id] = left && right
+      ? { x: (left.x + right.x) / 2, y: Math.max(left.y, right.y) + 72 + ((index % 3) * 34) }
+      : { x: 180 + (index * 240), y: 620 };
+  });
   return positions;
 }
 

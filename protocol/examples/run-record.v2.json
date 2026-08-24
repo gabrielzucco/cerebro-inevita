@@ -1,6 +1,10 @@
 {
   "protocol_version": 2,
   "run_id": "run-funnel-20260823-001",
+  "chain_id": "chain-funnel-20260823-001",
+  "mode": "live",
+  "experiment_ref": "EXP-FUNNEL-001",
+  "handoff_refs": ["handoff-receipt:handoff-funnel-20260823-001"],
   "system_id": "analisar-funil",
   "system_version": "0.2.0",
   "capability": {

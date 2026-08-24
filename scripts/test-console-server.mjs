@@ -367,6 +367,11 @@ try {
   assert(runGraph.value.edges.some((edge) => edge.actual && edge.relation === 'produces'));
   assert.equal(runGraph.value.nodes.some((node) => node.details?.external_url), false);
   assert.equal(JSON.stringify(runGraph.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  const directRunRecordGraph = await request(base,
+    `/api/graphs/run-records/${runGraph.value.run.run_id}`, { cookie });
+  assert.equal(directRunRecordGraph.status, 200);
+  assert.equal(directRunRecordGraph.value.run.canonical_ref, `run-record:${runGraph.value.run.run_id}`);
+  assert.equal(directRunRecordGraph.value.run.routine_receipt_ref, null);
 
   const graphNodeId = brainGraph.value.nodes[0].id;
   const layoutMissingCsrf = await request(base, '/api/graphs/layouts/brain', {
@@ -411,6 +416,7 @@ try {
   const afterRun = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(afterRun.actions.can_activate, false, 'migração ainda bloqueia o segundo relógio');
   assert.equal(consoleView.value.counts.judgments, 1);
+  assert(consoleView.value.run_records.some((record) => record.run_id === runGraph.value.run.run_id));
   assert.equal(consoleView.value.judgments[0].judgment.status, 'pending');
   assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
   assert.equal(calls.length, 1, 'recompilar read model não executa modelo');
