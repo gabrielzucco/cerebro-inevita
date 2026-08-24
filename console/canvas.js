@@ -26,6 +26,10 @@ import {
   siSupabase,
   siWhatsapp,
 } from 'simple-icons';
+import {
+  operationalPositions,
+  readableViewportPlan,
+} from './canvas-layout-policy.js';
 
 const KIND_ACCENT = {
   source: '#4fd1c5', area: '#67a7ff', system: '#9b8cff', routine: '#5e7ce2',
@@ -228,38 +232,6 @@ function brainPositions(model) {
   return positions;
 }
 
-function operationalPositions(model) {
-  const positions = {};
-  const depth = new Map(model.nodes.map((node) => [node.id, 0]));
-  for (let pass = 0; pass < model.nodes.length; pass += 1) {
-    let changed = false;
-    for (const edge of model.edges) {
-      if (!depth.has(edge.source) || !depth.has(edge.target)) continue;
-      const candidate = depth.get(edge.source) + 1;
-      if (candidate > depth.get(edge.target) && candidate <= model.nodes.length) {
-        depth.set(edge.target, candidate);
-        changed = true;
-      }
-    }
-    if (!changed) break;
-  }
-  const gateDepths = model.nodes.filter((node) => node.kind === 'gate').map((node) => depth.get(node.id) || 0);
-  if (gateDepths.length) {
-    const gateDepth = Math.min(...gateDepths);
-    for (const node of model.nodes.filter((item) => item.kind === 'gate')) depth.set(node.id, gateDepth);
-    for (const node of model.nodes.filter((item) => item.kind === 'judgment')) depth.set(node.id, gateDepth + 1);
-  }
-  const layers = new Map();
-  for (const node of model.nodes) {
-    const level = depth.get(node.id) || 0;
-    layers.set(level, [...(layers.get(level) || []), node]);
-  }
-  for (const [level, nodes] of [...layers.entries()].sort(([a], [b]) => a - b)) {
-    Object.assign(positions, distribute(nodes, { x: 95 + (level * 248), centerY: 340, gap: 112 }));
-  }
-  return positions;
-}
-
 function defaultPositions(model) {
   return model.graph_type === 'brain' ? brainPositions(model) : operationalPositions(model);
 }
@@ -312,8 +284,8 @@ export async function mountOperationalCanvas({
     container,
     data,
     background: 'transparent',
-    padding: 72,
-    autoFit: 'view',
+    padding: model.graph_type === 'brain' ? 72 : 24,
+    autoFit: false,
     animation: { duration: 440, easing: 'ease-out' },
     layout: layoutFor(model),
     behaviors: [
@@ -366,6 +338,15 @@ export async function mountOperationalCanvas({
       element.classList.remove('is-focused', 'is-neighbor', 'is-dimmed');
     }
   };
+  const fitReadable = async (duration) => {
+    await graph.fitView({ when: 'always', direction: 'both' }, { duration });
+    const plan = readableViewportPlan(model, graph.getZoom());
+    if (!plan.clamped) return;
+    await graph.zoomTo(plan.zoom, { duration, easing: 'ease-out' });
+    if (plan.focus_ids.length) {
+      await graph.focusElement(plan.focus_ids, { duration, easing: 'ease-out' });
+    }
+  };
   const focusNode = async (id) => {
     const relatedEdges = graph.getRelatedEdgesData(id);
     const relatedEdgeIds = new Set(relatedEdges.map((edge) => edge.id));
@@ -407,10 +388,7 @@ export async function mountOperationalCanvas({
     graph.on(NodeEvent.DRAG_END, () => onLayoutChange(allPositions(graph)));
   }
   await graph.render();
-  const readableZoom = 0.82;
-  if (model.graph_type === 'brain' && graph.getZoom() < readableZoom) {
-    await graph.zoomTo(readableZoom, { duration: 360, easing: 'ease-out' });
-  }
+  await fitReadable(360);
   for (const node of model.nodes) {
     if (node.actual) await graph.setElementState(node.id, ['actual'], false);
   }
@@ -418,7 +396,7 @@ export async function mountOperationalCanvas({
     fit: async () => {
       clearDomFocus();
       await graph.setElementState(baselineStates(), false);
-      await graph.fitView({ when: 'always', direction: 'both' }, { duration: 420 });
+      await fitReadable(420);
     },
     positions: () => allPositions(graph),
     destroy: () => graph.destroy(),
