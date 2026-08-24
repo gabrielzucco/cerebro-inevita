@@ -1,5 +1,22 @@
 # Mudanças do cérebro INEVITA
 
+## v1.31.0 — 2026-08-24 · “output virou julgamento humano, não automação cega”
+
+- **Caixa de Julgamento local:** outputs concluídos aparecem pendentes, abrem somente por gesto
+  explícito e podem ser aprovados, rejeitados ou devolvidos para ajuste sem chamar o modelo.
+- **Conteúdo fora do ledger:** `/api/console` continua reference-only. O output é lido apenas por
+  rota autenticada, com teto de tamanho, UTF-8 obrigatório e bloqueios de traversal, symlink,
+  binário, arquivo ausente e run incompleto.
+- **Judgment Receipt V1:** cada martelo é um evento privado e imutável ligado ao recibo do run.
+  Decisões posteriores não apagam o histórico; o read model mostra apenas estado, nunca nota ou
+  conteúdo.
+- **Propor não é executar:** `propose-action` registra intenção local e declara
+  `external_action_executed: false`; não cria task, não envia mensagem, não publica output e não
+  altera Fonte.
+- **Harness adversarial:** E2E cobre sessão, CSRF, output real fake, contador pendente, histórico
+  monotônico, mudança/rejeição com nota obrigatória e garantia de que abrir ou julgar não consome
+  assinatura.
+
 ## v1.30.0 — 2026-08-23 · “as rotinas ganharam mesa de controle local”
 
 - **Primeira superfície do Console:** servidor stdlib em `127.0.0.1` compila Áreas, Sistemas,

@@ -1,4 +1,11 @@
-const state = { model: null, csrf: '', view: 'routines', selectedRoutine: null, busy: false };
+const state = {
+  model: null,
+  csrf: '',
+  view: 'routines',
+  selectedRoutine: null,
+  selectedJudgment: null,
+  busy: false,
+};
 
 const $ = (selector) => document.querySelector(selector);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
@@ -29,6 +36,9 @@ const labels = {
   completed: 'Concluída', failed: 'Falhou', denied: 'Negada', skipped: 'Pulada',
   'runtime-enforced': 'Bloqueio pelo runtime',
   'receipt-audited': 'Auditado por recibo', exported: 'Cópia exportada', unknown: 'Não verificado',
+  pending: 'Pendente', decided: 'Julgado', approved: 'Aprovado',
+  'changes-requested': 'Pedir ajuste', rejected: 'Rejeitado',
+  'propose-action': 'Intenção de ação', none: 'Sem ação', unavailable: 'Indisponível',
 };
 
 function label(value) {
@@ -36,8 +46,8 @@ function label(value) {
 }
 
 function tone(reason) {
-  if (['active', 'completed', 'ready-manual-run', 'ready-to-activate'].includes(reason)) return 'good';
-  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required'].includes(reason)) return 'warn';
+  if (['active', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided'].includes(reason)) return 'good';
+  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested'].includes(reason)) return 'warn';
   return 'bad';
 }
 
@@ -75,11 +85,11 @@ function summaryCards() {
   const model = state.model;
   const active = model.today.active.length;
   const ready = model.today.ready_to_work.length;
-  const attention = model.today.needs_attention.length;
+  const judgments = model.counts.judgments;
   return [
     ['Rotinas ativas', active, 'Rodam apenas quando o estado canônico está ativo', 'signal'],
+    ['Aguardam julgamento', judgments, 'Outputs privados que ainda precisam do seu martelo', 'decision'],
     ['Prontas para trabalhar', ready, 'Replay manual não liga o agendamento', 'play'],
-    ['Pedem decisão', attention, 'Conflito, pausa, login ou contrato pendente', 'decision'],
     ['Recibos privados', model.routines.reduce((total, routine) => total + routine.receipts.length, 0), 'Prompt e output não aparecem no ledger', 'receipt'],
   ].map(([title, value, description, icon]) => `<article class="summary-card"><span class="summary-icon ${icon}"></span><div><small>${title}</small><strong>${value}</strong><p>${description}</p></div></article>`).join('');
 }
@@ -100,6 +110,22 @@ function empty(title, body) {
   return `<div class="empty"><div class="empty-mark">◇</div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p></div>`;
 }
 
+function judgmentCard(item) {
+  const current = item.judgment;
+  const status = current.status === 'pending' ? 'pending' : current.verdict || current.status;
+  const action = current.action_intent === 'propose-action' ? badge('propose-action', 'neutral') : '';
+  return `<article class="judgment-card" data-open-judgment="${escapeHtml(item.receipt_id)}">
+    <div class="judgment-head"><div><p class="micro">${escapeHtml(item.system_ref)} · ${escapeHtml(item.trigger)}</p><h3>${escapeHtml(item.routine_name)}</h3></div><div class="judgment-badges">${badge(status)}${action}</div></div>
+    <p>Output privado concluído em ${fmtDate(item.completed_at)}. Abrir não chama modelo nem publica conteúdo.</p>
+    <div class="judgment-meta"><code>${escapeHtml(item.receipt_ref)}</code><span>${current.history_count || 0} julgamento(s)</span></div>
+    <button data-open-judgment="${escapeHtml(item.receipt_id)}">Abrir resultado <b>→</b></button>
+  </article>`;
+}
+
+function judgmentList(items) {
+  return `<div class="judgment-list">${items.map(judgmentCard).join('')}</div>`;
+}
+
 function renderRoutines() {
   return `<div class="section-heading"><div><p class="eyebrow">CONTROL PLANE</p><h2>Todas as rotinas</h2></div><p>Abrir e inspecionar nunca executa modelos. O relógio só liga após replay e aprovação.</p></div>
     <div class="routine-list">${state.model.routines.length ? state.model.routines.map(routineCard).join('') : empty('Nenhuma rotina instalada', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
@@ -108,7 +134,18 @@ function renderRoutines() {
 function renderToday() {
   const ids = [...state.model.today.needs_attention, ...state.model.today.ready_to_work, ...state.model.today.active];
   const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean);
-  return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div><div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
+  const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
+  return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div>
+    ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
+    <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
+}
+
+function renderJudgments() {
+  const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
+  const decided = state.model.judgments.filter((item) => item.judgment.status !== 'pending');
+  return `<div class="section-heading"><div><p class="eyebrow">MARTELO HUMANO</p><h2>Caixa de Julgamento</h2></div><p>Abra o output privado, decida e deixe rastro. Nenhum botão desta tela executa ação externa.</p></div>
+    <div class="judgment-section"><div class="subheading"><h3>Pendentes</h3><span>${pending.length}</span></div>${pending.length ? judgmentList(pending) : empty('Nenhum output pendente', 'O próximo run concluído aparecerá aqui para julgamento.')}</div>
+    <div class="judgment-section"><div class="subheading"><h3>Histórico</h3><span>${decided.length}</span></div>${decided.length ? judgmentList(decided) : '<p class="muted">Nenhum julgamento registrado ainda.</p>'}</div>`;
 }
 
 function renderAreas() {
@@ -146,13 +183,14 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { today: renderToday, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { today: renderToday, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
   sources: ['Fontes', 'Casas de verdade, autoridade, frescor e garantia de acesso.'],
   routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
+  judgments: ['Julgamento', 'Outputs privados esperando decisão humana rastreável.'],
   runs: ['Execuções', 'O rastro reference-only de cada tentativa.'],
   governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
   health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
@@ -185,6 +223,7 @@ function openDrawer(routineId) {
   const routine = state.model.routines.find((item) => item.routine_id === routineId);
   if (!routine) return;
   state.selectedRoutine = routineId;
+  state.selectedJudgment = null;
   const access = routine.access.map((item) => `<div class="access-item"><div><strong>${escapeHtml(item.source_ref)}</strong><span>${escapeHtml(item.action)} · ${escapeHtml(item.requested_mode)}</span></div>${badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')}<small>${escapeHtml(label(item.revocation_effect))}</small></div>`).join('') || '<p class="muted">Sem Access Grants declarados.</p>';
   const receipts = routine.receipts.map((receipt) => `<div class="receipt-item"><span class="timeline-dot ${tone(receipt.status)}"></span><div><strong>${escapeHtml(label(receipt.status))} · ${escapeHtml(receipt.trigger)}</strong><span>${fmtDate(receipt.completed_at)} · ${escapeHtml(receipt.reason_code)}</span><code>${escapeHtml(receipt.receipt_ref)}</code>${receipt.output_ref ? `<code>output: ${escapeHtml(receipt.output_ref)}</code>` : ''}</div></div>`).join('') || '<p class="muted">Nenhuma execução registrada.</p>';
   const migration = routine.migration ? `<div class="migration-box ${routine.migration.status === 'awaiting-legacy-pause' ? 'attention' : ''}"><p class="micro">MIGRAÇÃO DE AGENDA</p><strong>${escapeHtml(label(routine.migration.status))}</strong><p>${escapeHtml(routine.migration.source.schedule_summary)}</p><small>Fonte: ${escapeHtml(routine.migration.source.kind)} · o Console não pausa esse fornecedor sozinho.</small></div>` : '';
@@ -204,6 +243,70 @@ function closeDrawer() {
   $('#drawer').setAttribute('aria-hidden', 'true');
   $('#drawer-backdrop').hidden = true;
   state.selectedRoutine = null;
+  state.selectedJudgment = null;
+}
+
+function judgmentHistory(history) {
+  return history.slice().reverse().map((item) => `<div class="receipt-item"><span class="timeline-dot ${tone(item.verdict)}"></span><div><strong>${escapeHtml(label(item.verdict))}${item.action_intent === 'propose-action' ? ' · intenção de ação' : ''}</strong><span>${fmtDate(item.decided_at)} · ${escapeHtml(item.actor_ref)}</span>${item.note ? `<p class="judgment-note">${escapeHtml(item.note)}</p>` : ''}<code>${escapeHtml(item.judgment_id)}</code></div></div>`).join('') || '<p class="muted">Ainda não julgado.</p>';
+}
+
+async function openJudgment(receiptId) {
+  state.selectedRoutine = null;
+  state.selectedJudgment = receiptId;
+  $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo output privado local…</span></div>';
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#drawer-backdrop').hidden = false;
+  try {
+    const detail = await getJson(`/api/runs/${receiptId}/output`);
+    const current = detail.judgment.summary;
+    $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">OUTPUT PRIVADO</p><h2>${escapeHtml(detail.receipt.routine_id)}</h2>${badge(current.status === 'pending' ? 'pending' : current.verdict)}</div>
+      <div class="boundary-note"><b>Leitura local explícita</b>Este conteúdo não entrou no recibo, no read model ou na INEVITA. Abrir não executou modelo.</div>
+      <section class="drawer-section"><div class="output-heading"><h3>Resultado</h3><span>${detail.output.bytes} bytes</span></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
+      <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p><textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
+      <section class="drawer-section"><h3>Histórico imutável</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section>
+      <div class="boundary-note action-boundary"><b>Propor não é executar</b>“Propor ação” registra intenção local. Não cria task, não envia mensagem, não publica e não altera Fonte.</div>
+      <div class="drawer-actions judgment-actions"><button class="action primary" data-judgment-action="approve">Aprovar</button><button class="action warn" data-judgment-action="changes">Pedir ajuste</button><button class="action" data-judgment-action="reject">Rejeitar</button><button class="action" data-judgment-action="propose-action">Propor ação</button></div>`;
+  } catch (error) {
+    $('#drawer-content').innerHTML = empty('Output indisponível', label(error.message));
+    toast(label(error.message), 'bad');
+  }
+}
+
+async function performJudgment(action) {
+  if (state.busy || !state.selectedJudgment) return;
+  const note = $('#judgment-note')?.value.trim() || '';
+  const payload = action === 'approve' ? { verdict: 'approved', action_intent: 'none' }
+    : action === 'changes' ? { verdict: 'changes-requested', action_intent: 'none' }
+      : action === 'reject' ? { verdict: 'rejected', action_intent: 'none' }
+        : { verdict: 'approved', action_intent: 'propose-action' };
+  if ((payload.verdict !== 'approved' || payload.action_intent === 'propose-action') && !note) {
+    toast('Explique o motivo antes de registrar.', 'bad');
+    return;
+  }
+  const approvedBy = window.prompt('Quem está julgando? Use uma referência sem dado pessoal.', 'role-founder') || '';
+  if (!approvedBy) return;
+  const message = payload.action_intent === 'propose-action'
+    ? 'Registrar esta intenção local? Nenhuma ação externa será executada.'
+    : `Registrar o julgamento “${label(payload.verdict)}”? O histórico anterior será preservado.`;
+  if (!window.confirm(message)) return;
+  state.busy = true;
+  document.querySelectorAll('[data-judgment-action]').forEach((button) => { button.disabled = true; });
+  try {
+    const result = await mutate(`/api/runs/${state.selectedJudgment}/judgments`, {
+      ...payload,
+      note,
+      approved_by: approvedBy,
+    });
+    toast(`${label(result.summary.verdict)} registrado. Nenhuma ação externa executada.`);
+    const receiptId = state.selectedJudgment;
+    await loadModel();
+    await openJudgment(receiptId);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
 }
 
 async function performAction(action) {
@@ -250,6 +353,10 @@ document.addEventListener('click', (event) => {
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
   const open = event.target.closest('[data-open-routine]');
   if (open) { openDrawer(open.dataset.openRoutine); return; }
+  const judgment = event.target.closest('[data-open-judgment]');
+  if (judgment) { openJudgment(judgment.dataset.openJudgment); return; }
+  const judgmentAction = event.target.closest('[data-judgment-action]');
+  if (judgmentAction) { performJudgment(judgmentAction.dataset.judgmentAction); return; }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
 });

@@ -16,7 +16,9 @@ Esta story abre a especificação executável do **Company Brain Console**: casc
 início, uma vertical real de ponta a ponta e enforcement honesto conforme a custódia do acesso.
 A camada protocolar foi implementada em v1.27.0. O engine mínimo de runtime entrou em v1.28.0
 e o substrato de Rotinas em v1.29.0. A entrega v1.30.0 abre a primeira superfície local do
-Console: Rotinas, migração segura de agendas legadas e dogfood do funil diário.
+Console: Rotinas, migração segura de agendas legadas e dogfood do funil diário. A v1.31.0 fecha
+o próximo elo: o output privado vira item de uma Caixa de Julgamento, sem contaminar o ledger nem
+autorizar ação externa por inferência.
 
 ## Decisões congeladas
 
@@ -226,6 +228,24 @@ O read model usa reason codes, não copy otimista: `legacy-schedule-not-paused`,
 `active`. Uma Fonte local/agent-direct aparece como `receipt-audited`; a UI nunca promove sua
 garantia para `runtime-enforced`.
 
+### Corte executável v1.31.0 — Caixa de Julgamento
+
+- output continua conteúdo privado e não entra em Routine Run Receipt, `/api/console`, log,
+  telemetria ou payload da Society; a UI só o abre por uma rota local autenticada e por gesto
+  explícito do dono;
+- a rota aceita somente `receipt_id` válido, resolve o `output_ref` registrado e bloqueia caminho
+  fora de `routineOutputs`, arquivo ausente, run não concluído, binário e payload acima do teto;
+- `Judgment Receipt V1` é evento privado e imutável: liga decisão, ator opaco, instante, verdict e
+  intenção de ação ao Routine Run Receipt sem copiar o output;
+- verdicts fechados: `approved`, `changes-requested` e `rejected`; comentário é uma nota privada
+  opcional no aprovado e obrigatória nos demais;
+- `action_intent` pode ser `none` ou `propose-action`; propor ação cria somente intenção local —
+  não publica, não cria task, não muda Fonte e não reexecuta modelo;
+- decisões posteriores não apagam as anteriores: a vista atual usa o evento mais recente e o
+  histórico permanece auditável;
+- a Caixa lista outputs pendentes primeiro, permite abrir o resultado e registrar julgamento com
+  confirmação humana. Abrir resultado ou navegar não consome assinatura.
+
 ### Primeira vertical
 
 Dogfood na operação de Marketing da INEVITA, usando dados já conectados e um fixture sanitizado
@@ -264,6 +284,17 @@ no repositório:
       humano reference-only de que a agenda anterior foi pausada.
 - [x] Abrir e navegar no Console não executa modelo; mutações exigem sessão local, CSRF,
       confirmação e deixam o estado/recibo canônico como única verdade.
+- [x] Judgment Receipt V1 possui schema fechado, exemplo sanitizado e validador determinístico;
+      output, prompt, segredo e erro cru são proibidos no envelope.
+- [x] Output privado só pode ser aberto por sessão local a partir do `output_ref` do recibo; path
+      traversal, symlink para fora, run incompleto, arquivo grande/binário e receipt ausente falham.
+- [x] `/api/console` continua reference-only; abrir a Caixa ou o output não chama modelo e não
+      adiciona conteúdo privado ao read model.
+- [x] Julgamentos são eventos imutáveis, preservam histórico e expõem apenas o estado atual no
+      read model; mudança/rejeição exigem nota.
+- [x] `propose-action` deixa intenção local explícita e nunca executa ação externa, publica output,
+      cria task ou altera a Fonte.
+- [ ] O dono consegue abrir o output real do funil e registrar um julgamento pelo Console.
 - [ ] Uma vertical de Marketing usa ao menos três papéis de Fonte, gera Run Record V2 com Context
       Snapshot, recebe julgamento humano e produz um segundo Run comparável.
 - [ ] Em menos de dois minutos, o dono consegue visualizar o contrato, abrir o contexto usado e
@@ -296,7 +327,9 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - integração de todas as Fontes;
 - oito áreas funcionais completas;
 - mudança de site/isca antes do teste real;
-- superfícies completas de Hoje, Julgamento, Society ou Analytics além do corte operacional de Rotinas;
+- superfícies completas de Hoje, Society ou Analytics além dos cortes operacionais de Rotinas e Julgamento;
+- execução automática da intenção de ação, integração com ClickUp/WhatsApp ou publicação do output;
+- edição do output, rerun com correção ou promoção automática para aprendizado;
 - migração automática das rotinas atuais de Codex, Claude, launchd ou GitHub Actions;
 - daemon/serviço instalado no sistema operacional; o worker V1 é invocado por comando/tick;
 - suporte genérico a qualquer provider ou uso de sessão web por scraping.
@@ -312,6 +345,10 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - [x] Implementar Routine Migration Readback V1 e gate de cutover no runtime/CLI.
 - [x] Implementar servidor local e read model reconstruível da superfície Rotinas.
 - [x] Migrar `funil-diario-cerebro` desativado e sem segundo relógio no cofre interno.
+- [x] Especificar e validar Judgment Receipt V1.
+- [x] Implementar leitura segura e explícita do output privado.
+- [x] Implementar eventos imutáveis de julgamento e estado atual derivado.
+- [x] Construir a Caixa de Julgamento e testar com o output real do funil.
 - [ ] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
 - [ ] Dogfood interno e implantação externa assistida.
 - [ ] Registrar as métricas e decidir continuar, corrigir ou matar o Console.
@@ -354,6 +391,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/examples/routine-contract.v1.json`
 - `protocol/examples/routine-run-receipt.v1.json`
 - `protocol/examples/routine-migration.v1.json`
+- `protocol/examples/judgment-receipt.v1.json`
 - `protocol/examples/run-record.v2.json`
 - `protocol/examples/source-contract.v1.json`
 - `protocol/examples/system-contract.v2.json`
@@ -362,6 +400,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/routine-contract.schema.json`
 - `protocol/routine-run-receipt.schema.json`
 - `protocol/routine-migration.schema.json`
+- `protocol/judgment-receipt.schema.json`
 - `protocol/source-contract.schema.json`
 - `protocol/system-contract-v2.schema.json`
 - `scripts/lib/company-brain-protocol-v2.mjs`
@@ -370,6 +409,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/lib/model-executors.mjs`
 - `scripts/lib/routine-protocol.mjs`
 - `scripts/lib/routine-runtime.mjs`
+- `scripts/lib/judgment-protocol.mjs`
 - `scripts/lib/secret-provider.mjs`
 - `scripts/lib/system-protocol.mjs`
 - `scripts/protocol-validate.mjs`
@@ -384,6 +424,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/test-company-brain-protocol-v2.mjs`
 - `scripts/test-company-brain-starter.mjs`
 - `scripts/test-routine-runtime.mjs`
+- `scripts/test-judgment-protocol.mjs`
 - `scripts/test-console-server.mjs`
 - `scripts/validate-product.mjs`
 - `console/app.js`
