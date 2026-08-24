@@ -67,7 +67,8 @@ node scripts/console-server.mjs
 Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
 exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
 Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,
-rejeitar ou propor uma ação. Propor nunca executa a ação.
+rejeitar ou propor uma ação. Um ajuste pode autorizar um novo Run, comparar baseline × resultado e
+criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa ação externa.
 
 ## O que vem dentro
 
@@ -82,8 +83,10 @@ console/        interface localhost opcional, derivada dos mesmos contratos e re
 
 ## Privacidade e telemetria — sem letra miúda
 
-**Local-first de verdade:** teu conteúdo, tuas fontes e teus outputs vivem na tua máquina
-e **nunca saem**. Nenhum arquivo teu é enviado a lugar nenhum.
+**Local-first de verdade:** teu conteúdo, tuas fontes e teus outputs vivem na tua máquina e nunca
+vão para a INEVITA. Quando tu executa um Sistema com Codex ou Claude, somente o contexto necessário
+atravessa o provider escolhido para inferência; esse envio exige gesto explícito e não entra no
+Git, na telemetria ou nos recibos.
 
 O que existe é telemetria **técnica de ativação** ([código aberto aqui](.agents/scripts/ping.mjs)):
 eventos como `instalou`/`comecou`/`system_activated`, versão e sistema operacional. Se tu

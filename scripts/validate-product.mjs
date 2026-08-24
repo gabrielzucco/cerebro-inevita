@@ -17,6 +17,10 @@ import {
   validateRoutineRunReceipt,
 } from './lib/routine-protocol.mjs';
 import { validateJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import {
+  validateCorrectionRunReceipt,
+  validateLearningCandidate,
+} from './lib/correction-loop.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -38,6 +42,8 @@ const required = [
   'protocol/routine-migration.schema.json',
   'protocol/collector-binding.schema.json',
   'protocol/judgment-receipt.schema.json',
+  'protocol/correction-run-receipt.schema.json',
+  'protocol/learning-candidate.schema.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'protocol/examples/access-receipt.v1.json',
@@ -46,6 +52,8 @@ const required = [
   'protocol/examples/routine-migration.v1.json',
   'protocol/examples/collector-binding.v1.json',
   'protocol/examples/judgment-receipt.v1.json',
+  'protocol/examples/correction-run-receipt.v1.json',
+  'protocol/examples/learning-candidate.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -87,12 +95,14 @@ const required = [
   'scripts/lib/routine-protocol.mjs', 'scripts/lib/model-executors.mjs',
   'scripts/lib/routine-runtime.mjs', 'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
+  'scripts/lib/correction-loop.mjs',
   'scripts/lib/console-read-model.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
   'console/index.html', 'console/app.js', 'console/styles.css',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
   'scripts/test-routine-runtime.mjs',
   'scripts/test-judgment-protocol.mjs',
+  'scripts/test-correction-loop.mjs',
   'scripts/test-console-server.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
@@ -132,6 +142,8 @@ for (const [label, path, validate] of [
   ['example routine migration v1', 'protocol/examples/routine-migration.v1.json', validateRoutineMigration],
   ['example collector binding v1', 'protocol/examples/collector-binding.v1.json', validateCollectorBinding],
   ['example judgment receipt v1', 'protocol/examples/judgment-receipt.v1.json', validateJudgmentReceipt],
+  ['example correction receipt v1', 'protocol/examples/correction-run-receipt.v1.json', validateCorrectionRunReceipt],
+  ['example learning candidate v1', 'protocol/examples/learning-candidate.v1.json', validateLearningCandidate],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -521,6 +533,7 @@ for (const key of [
   'accessGrants', 'accessReceipts', 'runLedger', 'learningRegister',
   'routineContracts', 'executorBindings', 'routineReceipts', 'routineState', 'routineOutputs',
   'routineJudgments',
+  'routineCorrections', 'learningCandidates',
 ]) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);
@@ -596,4 +609,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 12 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 14 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

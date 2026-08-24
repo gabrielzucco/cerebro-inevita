@@ -39,6 +39,8 @@ const labels = {
   pending: 'Pendente', decided: 'Julgado', approved: 'Aprovado',
   'changes-requested': 'Pedir ajuste', rejected: 'Rejeitado',
   'propose-action': 'Intenção de ação', none: 'Sem ação', unavailable: 'Indisponível',
+  candidate: 'Candidato', baseline: 'Baseline',
+  'not-eligible': 'Ainda não elegível',
 };
 
 function label(value) {
@@ -114,10 +116,14 @@ function judgmentCard(item) {
   const current = item.judgment;
   const status = current.status === 'pending' ? 'pending' : current.verdict || current.status;
   const action = current.action_intent === 'propose-action' ? badge('propose-action', 'neutral') : '';
+  const correction = item.correction ? badge(item.correction.role, 'neutral') : '';
+  const learning = item.correction?.learning_candidate
+    ? `Aprendizado ${item.correction.learning_candidate.occurrences}/${item.correction.learning_candidate.promotion_threshold}`
+    : '';
   return `<article class="judgment-card" data-open-judgment="${escapeHtml(item.receipt_id)}">
-    <div class="judgment-head"><div><p class="micro">${escapeHtml(item.system_ref)} · ${escapeHtml(item.trigger)}</p><h3>${escapeHtml(item.routine_name)}</h3></div><div class="judgment-badges">${badge(status)}${action}</div></div>
+    <div class="judgment-head"><div><p class="micro">${escapeHtml(item.system_ref)} · ${escapeHtml(item.trigger)}</p><h3>${escapeHtml(item.routine_name)}</h3></div><div class="judgment-badges">${badge(status)}${action}${correction}</div></div>
     <p>Output privado concluído em ${fmtDate(item.completed_at)}. Abrir não chama modelo nem publica conteúdo.</p>
-    <div class="judgment-meta"><code>${escapeHtml(item.receipt_ref)}</code><span>${current.history_count || 0} julgamento(s)</span></div>
+    <div class="judgment-meta"><code>${escapeHtml(item.receipt_ref)}</code><span>${learning || `${current.history_count || 0} julgamento(s)`}</span></div>
     <button data-open-judgment="${escapeHtml(item.receipt_id)}">Abrir resultado <b>→</b></button>
   </article>`;
 }
@@ -250,6 +256,27 @@ function judgmentHistory(history) {
   return history.slice().reverse().map((item) => `<div class="receipt-item"><span class="timeline-dot ${tone(item.verdict)}"></span><div><strong>${escapeHtml(label(item.verdict))}${item.action_intent === 'propose-action' ? ' · intenção de ação' : ''}</strong><span>${fmtDate(item.decided_at)} · ${escapeHtml(item.actor_ref)}</span>${item.note ? `<p class="judgment-note">${escapeHtml(item.note)}</p>` : ''}<code>${escapeHtml(item.judgment_id)}</code></div></div>`).join('') || '<p class="muted">Ainda não julgado.</p>';
 }
 
+function correctionSection(detail) {
+  const correction = detail.correction;
+  if (!correction) return '';
+  const learning = correction.learning_candidate;
+  return `<section class="drawer-section"><h3>Linhas de correção</h3>
+    <div class="correction-lineage"><div><span>Baseline</span><code>${escapeHtml(correction.baseline_receipt_ref)}</code></div><b>→</b><div><span>Novo Run</span><code>${escapeHtml(correction.resulting_receipt_ref)}</code></div></div>
+    <p class="section-help">O recibo aponta para o julgamento que originou a correção; não copia a nota nem os outputs.</p>
+    ${learning ? `<div class="learning-candidate"><div>${badge('candidate', 'neutral')}<strong>${learning.occurrences}/${learning.promotion_threshold}</strong></div><p>Ainda exige casos comparáveis, replay e novo martelo para mudar o Sistema.</p><code>${escapeHtml(learning.candidate_ref)}</code></div>` : ''}
+    <div id="comparison-slot"></div>
+  </section>`;
+}
+
+function correctionButtons(detail) {
+  const actions = detail.correction_actions || {};
+  const buttons = [];
+  if (actions.can_rerun_with_correction) buttons.push('<button class="action warn" data-correction-action="rerun">Reexecutar com correção</button>');
+  if (actions.can_compare) buttons.push('<button class="action" data-correction-action="compare">Comparar runs</button>');
+  if (actions.can_create_learning_candidate) buttons.push('<button class="action primary" data-correction-action="learn">Criar candidato 1/3</button>');
+  return buttons.join('');
+}
+
 async function openJudgment(receiptId) {
   state.selectedRoutine = null;
   state.selectedJudgment = receiptId;
@@ -263,10 +290,11 @@ async function openJudgment(receiptId) {
     $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">OUTPUT PRIVADO</p><h2>${escapeHtml(detail.receipt.routine_id)}</h2>${badge(current.status === 'pending' ? 'pending' : current.verdict)}</div>
       <div class="boundary-note"><b>Leitura local explícita</b>Este conteúdo não entrou no recibo, no read model ou na INEVITA. Abrir não executou modelo.</div>
       <section class="drawer-section"><div class="output-heading"><h3>Resultado</h3><span>${detail.output.bytes} bytes</span></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
+      ${correctionSection(detail)}
       <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p><textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
       <section class="drawer-section"><h3>Histórico imutável</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section>
       <div class="boundary-note action-boundary"><b>Propor não é executar</b>“Propor ação” registra intenção local. Não cria task, não envia mensagem, não publica e não altera Fonte.</div>
-      <div class="drawer-actions judgment-actions"><button class="action primary" data-judgment-action="approve">Aprovar</button><button class="action warn" data-judgment-action="changes">Pedir ajuste</button><button class="action" data-judgment-action="reject">Rejeitar</button><button class="action" data-judgment-action="propose-action">Propor ação</button></div>`;
+      <div class="drawer-actions judgment-actions">${correctionButtons(detail)}<button class="action primary" data-judgment-action="approve">Aprovar</button><button class="action warn" data-judgment-action="changes">Pedir ajuste</button><button class="action" data-judgment-action="reject">Rejeitar</button><button class="action" data-judgment-action="propose-action">Propor ação</button></div>`;
   } catch (error) {
     $('#drawer-content').innerHTML = empty('Output indisponível', label(error.message));
     toast(label(error.message), 'bad');
@@ -302,6 +330,48 @@ async function performJudgment(action) {
     const receiptId = state.selectedJudgment;
     await loadModel();
     await openJudgment(receiptId);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function performCorrectionAction(action) {
+  if (state.busy || !state.selectedJudgment) return;
+  if (action === 'compare') {
+    try {
+      const comparison = await getJson(`/api/runs/${state.selectedJudgment}/comparison`);
+      const slot = $('#comparison-slot');
+      if (!slot) return;
+      slot.innerHTML = `<div class="comparison-grid"><article><p class="micro">BASELINE</p><pre class="private-output">${escapeHtml(comparison.baseline.output.content)}</pre></article><article><p class="micro">NOVO RUN</p><pre class="private-output">${escapeHtml(comparison.candidate.output.content)}</pre></article></div>
+        <div class="boundary-note"><b>Comparação local</b>Abrir esta comparação não chamou modelo e não colocou os outputs no read model.</div>`;
+    } catch (error) {
+      toast(label(error.message), 'bad');
+    }
+    return;
+  }
+  const approvedBy = window.prompt('Quem está aprovando? Use uma referência sem dado pessoal.', 'role-founder') || '';
+  if (!approvedBy) return;
+  if (action === 'rerun') {
+    if (!window.confirm('Reexecutar usando esta correção humana?\n\nA nota privada será enviada por stdin ao provider configurado e pode consumir sua assinatura. Ela não irá para a INEVITA, Git, logs ou recibos. Nenhuma ação externa será executada.')) return;
+  } else if (!window.confirm('Criar candidato de aprendizado 1/3?\n\nIsso não altera o motor. Ainda serão necessários três casos comparáveis, replay e novo martelo humano.')) return;
+  state.busy = true;
+  document.querySelectorAll('[data-correction-action], [data-judgment-action]').forEach((button) => { button.disabled = true; });
+  try {
+    if (action === 'rerun') {
+      const result = await mutate(`/api/runs/${state.selectedJudgment}/rerun-with-correction`, { approved_by: approvedBy });
+      toast(`${label(result.status)} · novo output voltou para julgamento.`);
+      const nextReceiptId = result.resulting_receipt_ref.replace('routine-receipt:', '');
+      await loadModel();
+      await openJudgment(nextReceiptId);
+    } else {
+      const result = await mutate(`/api/runs/${state.selectedJudgment}/learning-candidates`, { approved_by: approvedBy });
+      toast(`Candidato ${result.occurrences}/${result.promotion_threshold} criado. Motor não alterado.`);
+      const receiptId = state.selectedJudgment;
+      await loadModel();
+      await openJudgment(receiptId);
+    }
   } catch (error) {
     toast(label(error.message), 'bad');
   } finally {
@@ -357,6 +427,8 @@ document.addEventListener('click', (event) => {
   if (judgment) { openJudgment(judgment.dataset.openJudgment); return; }
   const judgmentAction = event.target.closest('[data-judgment-action]');
   if (judgmentAction) { performJudgment(judgmentAction.dataset.judgmentAction); return; }
+  const correctionAction = event.target.closest('[data-correction-action]');
+  if (correctionAction) { performCorrectionAction(correctionAction.dataset.correctionAction); return; }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
 });

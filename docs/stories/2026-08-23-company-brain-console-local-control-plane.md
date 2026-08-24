@@ -18,7 +18,10 @@ A camada protocolar foi implementada em v1.27.0. O engine mínimo de runtime ent
 e o substrato de Rotinas em v1.29.0. A entrega v1.30.0 abre a primeira superfície local do
 Console: Rotinas, migração segura de agendas legadas e dogfood do funil diário. A v1.31.0 fecha
 o próximo elo: o output privado vira item de uma Caixa de Julgamento, sem contaminar o ledger nem
-autorizar ação externa por inferência.
+autorizar ação externa por inferência. A v1.32.0 fecha o loop de correção supervisionada: uma
+solicitação de ajuste pode gerar exatamente um novo Run ligado àquele julgamento, os dois outputs
+podem ser comparados por leitura local explícita e um resultado corrigido aprovado pode virar
+candidato de aprendizado — nunca alteração automática do motor.
 
 ## Decisões congeladas
 
@@ -246,6 +249,23 @@ garantia para `runtime-enforced`.
 - a Caixa lista outputs pendentes primeiro, permite abrir o resultado e registrar julgamento com
   confirmação humana. Abrir resultado ou navegar não consome assinatura.
 
+### Corte executável v1.32.0 — Loop de correção supervisionada
+
+- somente o julgamento atual `changes-requested`, com nota humana, habilita `Reexecutar com
+  correção`; cada Judgment Receipt autoriza no máximo um rerun e uma nova tentativa exige novo
+  julgamento sobre o novo output;
+- o runtime recompila o prompt em memória com a correção privada, envia por `stdin` ao mesmo
+  executor e registra no novo Routine Run Receipt apenas a referência do julgamento — nunca a
+  nota ou o prompt compilado;
+- `Correction Run Receipt V1` liga baseline, julgamento e novo Run por referências imutáveis,
+  declara a fronteira do provider e não carrega output, prompt, nota, segredo ou erro cru;
+- comparação abre baseline e candidato somente por rota local autenticada e gesto explícito; os
+  dois conteúdos continuam fora de `/api/console`, logs, recibos e INEVITA;
+- somente um Run de correção atualmente `approved` pode criar `Learning Candidate V1`; o candidato
+  referencia a evidência sem copiar conteúdo e nasce `1/3`, `not-eligible-for-replay`;
+- criar candidato não muda prompt, contrato, Fonte, rotina ou ação externa. Três ocorrências
+  comparáveis, replay e nova aprovação humana continuam obrigatórios para promover uma mudança.
+
 ### Primeira vertical
 
 Dogfood na operação de Marketing da INEVITA, usando dados já conectados e um fixture sanitizado
@@ -294,7 +314,15 @@ no repositório:
       read model; mudança/rejeição exigem nota.
 - [x] `propose-action` deixa intenção local explícita e nunca executa ação externa, publica output,
       cria task ou altera a Fonte.
-- [ ] O dono consegue abrir o output real do funil e registrar um julgamento pelo Console.
+- [x] O dono consegue abrir o output real do funil e registrar um julgamento pelo Console.
+- [x] Correction Run Receipt V1 e Learning Candidate V1 possuem schemas fechados, exemplos
+      sanitizados e validadores determinísticos.
+- [x] `changes-requested → rerun` usa a nota privada somente em memória/stdin, registra linhagem
+      reference-only e bloqueia segundo rerun para o mesmo Judgment Receipt.
+- [x] O Console compara baseline × candidato por leitura local explícita, sem colocar os conteúdos
+      no read model, e o novo output volta à Caixa de Julgamento.
+- [x] Um Run corrigido aprovado cria candidato `1/3` por confirmação explícita, sem alterar o motor;
+      rejeitado, pendente ou Run sem correção não pode virar candidato.
 - [ ] Uma vertical de Marketing usa ao menos três papéis de Fonte, gera Run Record V2 com Context
       Snapshot, recebe julgamento humano e produz um segundo Run comparável.
 - [ ] Em menos de dois minutos, o dono consegue visualizar o contrato, abrir o contexto usado e
@@ -329,7 +357,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - mudança de site/isca antes do teste real;
 - superfícies completas de Hoje, Society ou Analytics além dos cortes operacionais de Rotinas e Julgamento;
 - execução automática da intenção de ação, integração com ClickUp/WhatsApp ou publicação do output;
-- edição do output, rerun com correção ou promoção automática para aprendizado;
+- edição manual do output ou promoção automática de candidato para mudança do motor;
 - migração automática das rotinas atuais de Codex, Claude, launchd ou GitHub Actions;
 - daemon/serviço instalado no sistema operacional; o worker V1 é invocado por comando/tick;
 - suporte genérico a qualquer provider ou uso de sessão web por scraping.
@@ -349,7 +377,9 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - [x] Implementar leitura segura e explícita do output privado.
 - [x] Implementar eventos imutáveis de julgamento e estado atual derivado.
 - [x] Construir a Caixa de Julgamento e testar com o output real do funil.
-- [ ] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
+- [x] Especificar e validar Correction Run Receipt V1 e Learning Candidate V1.
+- [x] Implementar rerun corrigido, comparação privada e candidato de aprendizado no Console.
+- [x] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
 - [ ] Dogfood interno e implantação externa assistida.
 - [ ] Registrar as métricas e decidir continuar, corrigir ou matar o Console.
 
@@ -392,6 +422,8 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/examples/routine-run-receipt.v1.json`
 - `protocol/examples/routine-migration.v1.json`
 - `protocol/examples/judgment-receipt.v1.json`
+- `protocol/examples/correction-run-receipt.v1.json`
+- `protocol/examples/learning-candidate.v1.json`
 - `protocol/examples/run-record.v2.json`
 - `protocol/examples/source-contract.v1.json`
 - `protocol/examples/system-contract.v2.json`
@@ -401,6 +433,8 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/routine-run-receipt.schema.json`
 - `protocol/routine-migration.schema.json`
 - `protocol/judgment-receipt.schema.json`
+- `protocol/correction-run-receipt.schema.json`
+- `protocol/learning-candidate.schema.json`
 - `protocol/source-contract.schema.json`
 - `protocol/system-contract-v2.schema.json`
 - `scripts/lib/company-brain-protocol-v2.mjs`
@@ -410,6 +444,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/lib/routine-protocol.mjs`
 - `scripts/lib/routine-runtime.mjs`
 - `scripts/lib/judgment-protocol.mjs`
+- `scripts/lib/correction-loop.mjs`
 - `scripts/lib/secret-provider.mjs`
 - `scripts/lib/system-protocol.mjs`
 - `scripts/protocol-validate.mjs`
@@ -425,6 +460,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/test-company-brain-starter.mjs`
 - `scripts/test-routine-runtime.mjs`
 - `scripts/test-judgment-protocol.mjs`
+- `scripts/test-correction-loop.mjs`
 - `scripts/test-console-server.mjs`
 - `scripts/validate-product.mjs`
 - `console/app.js`

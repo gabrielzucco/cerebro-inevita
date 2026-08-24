@@ -1,6 +1,11 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { loadAccessGrant } from './access-runtime.mjs';
+import {
+  correctionActions,
+  correctionView,
+  listLearningCandidates,
+} from './correction-loop.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
 import {
   listRoutineContracts,
@@ -278,6 +283,12 @@ function judgmentInbox(root, routines, issues) {
     .filter((receipt) => receipt.status === 'completed' && receipt.output_ref)
     .map((receipt) => {
       let judgment;
+      let correction = null;
+      let actions = {
+        can_rerun_with_correction: false,
+        can_compare: false,
+        can_create_learning_candidate: false,
+      };
       try {
         judgment = judgmentView(root, receipt.receipt_id);
       } catch {
@@ -286,6 +297,12 @@ function judgmentInbox(root, routines, issues) {
           decided_at: null, history_count: 0,
         };
         issues.push({ reason_code: 'judgment-receipt-invalid', ref: `routine-receipt:${receipt.receipt_id}` });
+      }
+      try {
+        correction = correctionView(root, receipt.receipt_id);
+        actions = correctionActions(root, receipt.receipt_id);
+      } catch {
+        issues.push({ reason_code: 'correction-state-invalid', ref: `routine-receipt:${receipt.receipt_id}` });
       }
       return {
         receipt_id: receipt.receipt_id,
@@ -299,6 +316,8 @@ function judgmentInbox(root, routines, issues) {
         requested_model: receipt.requested_model,
         output_ref: receipt.output_ref,
         judgment,
+        correction,
+        actions,
       };
     })
     .sort((left, right) => {
@@ -329,10 +348,16 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
   const judgments = judgmentInbox(root, routines, issues);
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
+  let learningCandidates = 0;
+  try {
+    learningCandidates = listLearningCandidates(root).length;
+  } catch {
+    issues.push({ reason_code: 'learning-candidate-invalid', ref: '.cerebro/runtime/learning-candidates' });
+  }
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'judgments'] },
+    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'judgments', 'corrections', 'learning-candidates'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -346,6 +371,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       routines: routines.length,
       attention: attention.length,
       judgments: pendingJudgments.length,
+      learning_candidates: learningCandidates,
     },
     areas,
     systems,

@@ -16,6 +16,13 @@ import {
 } from './lib/routine-runtime.mjs';
 import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import {
+  correctionActions,
+  correctionView,
+  createLearningCandidate,
+  readCorrectionComparison,
+  rerunWithCorrection,
+} from './lib/correction-loop.mjs';
 
 const COOKIE_NAME = 'cerebro_console_session';
 const MAX_BODY_BYTES = 32 * 1024;
@@ -112,6 +119,16 @@ function judgmentReceiptFrom(pathname) {
   return match?.[1] || null;
 }
 
+function correctionActionFrom(pathname) {
+  const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/(rerun-with-correction|learning-candidates)$/);
+  return match ? { receiptId: match[1], action: match[2] } : null;
+}
+
+function comparisonReceiptFrom(pathname) {
+  const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/comparison$/);
+  return match?.[1] || null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
@@ -166,7 +183,17 @@ export function createConsoleServer({
       const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;
       if (outputReceiptId) {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
-        send(response, 200, readPrivateRoutineOutput(brainRoot, outputReceiptId));
+        send(response, 200, {
+          ...readPrivateRoutineOutput(brainRoot, outputReceiptId),
+          correction: correctionView(brainRoot, outputReceiptId),
+          correction_actions: correctionActions(brainRoot, outputReceiptId),
+        });
+        return;
+      }
+      const comparisonReceiptId = request.method === 'GET' ? comparisonReceiptFrom(url.pathname) : null;
+      if (comparisonReceiptId) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, readCorrectionComparison(brainRoot, comparisonReceiptId));
         return;
       }
       const judgmentReceiptId = request.method === 'POST' ? judgmentReceiptFrom(url.pathname) : null;
@@ -197,6 +224,37 @@ export function createConsoleServer({
           summary: result.summary,
           external_action_executed: false,
         });
+        return;
+      }
+      const correctionAction = request.method === 'POST' ? correctionActionFrom(url.pathname) : null;
+      if (correctionAction) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const approvedBy = actor(payload);
+        if (correctionAction.action === 'rerun-with-correction') {
+          const result = await rerunWithCorrection(brainRoot, correctionAction.receiptId, approvedBy, {
+            spawn, spawnCollector, clock,
+          });
+          send(response, 200, {
+            status: result.status,
+            correction_ref: result.correction_ref,
+            resulting_receipt_ref: result.result.receipt_ref,
+            reason_code: result.result.receipt.reason_code,
+            correction_shared_with_provider: result.correction.privacy.correction_shared_with_provider,
+            external_action_executed: false,
+          });
+        } else {
+          const result = createLearningCandidate(brainRoot, correctionAction.receiptId, approvedBy, { clock });
+          send(response, 200, {
+            status: result.status,
+            learning_candidate_ref: result.ref,
+            occurrences: result.value.occurrences,
+            promotion_threshold: result.value.promotion_threshold,
+            replay_status: result.value.replay_status,
+            motor_changed: false,
+            external_action_executed: false,
+          });
+        }
         return;
       }
       const action = request.method === 'POST' ? actionFrom(url.pathname) : null;

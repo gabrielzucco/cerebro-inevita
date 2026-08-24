@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/correction-run-receipt-v1.json",
+  "title": "INEVITA Correction Run Receipt V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "correction_id", "baseline_routine_receipt_ref",
+    "correction_judgment_ref", "resulting_routine_receipt_ref", "routine_id",
+    "system_ref", "requested_by", "requested_at", "completed_at", "status",
+    "reason_code", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "correction_id": { "$ref": "#/$defs/ref" },
+    "baseline_routine_receipt_ref": { "$ref": "#/$defs/local_ref" },
+    "correction_judgment_ref": { "$ref": "#/$defs/local_ref" },
+    "resulting_routine_receipt_ref": { "$ref": "#/$defs/local_ref" },
+    "routine_id": { "$ref": "#/$defs/id" },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "requested_by": { "$ref": "#/$defs/ref" },
+    "requested_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["completed", "failed", "denied", "skipped"] },
+    "reason_code": { "$ref": "#/$defs/id" },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_shared_with_inevita", "prompt_recorded", "output_recorded",
+        "judgment_note_recorded", "correction_shared_with_provider",
+        "external_action_executed"
+      ],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "prompt_recorded": { "const": false },
+        "output_recorded": { "const": false },
+        "judgment_note_recorded": { "const": false },
+        "correction_shared_with_provider": { "type": "boolean" },
+        "external_action_executed": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\.?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

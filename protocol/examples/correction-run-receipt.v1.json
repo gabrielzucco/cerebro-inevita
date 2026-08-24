@@ -1,0 +1,22 @@
+{
+  "protocol_version": 1,
+  "correction_id": "correction-funnel-001",
+  "baseline_routine_receipt_ref": "routine-receipt:routine-receipt-funnel-001",
+  "correction_judgment_ref": "judgment-receipt:judgment-funnel-change-001",
+  "resulting_routine_receipt_ref": "routine-receipt:routine-receipt-funnel-002",
+  "routine_id": "funil-diario-cerebro",
+  "system_ref": "analisar-funil",
+  "requested_by": "role-marketing-owner",
+  "requested_at": "2026-08-24T11:35:00.000Z",
+  "completed_at": "2026-08-24T11:35:30.000Z",
+  "status": "completed",
+  "reason_code": "executor-completed",
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "prompt_recorded": false,
+    "output_recorded": false,
+    "judgment_note_recorded": false,
+    "correction_shared_with_provider": true,
+    "external_action_executed": false
+  }
+}

@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os doze envelopes
+## Os quatorze envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -31,6 +31,10 @@ conteúdo bruto.
   da evidência humana de pausa antes do cutover; nunca carrega o payload da agenda antiga.
 - `judgment-receipt.schema.json`: evento privado e imutável que liga o julgamento humano ao run,
   sem copiar output ou executar a intenção de ação.
+- `correction-run-receipt.schema.json`: liga baseline, julgamento e novo Run por referência; a
+  correção atravessa o provider somente em memória e não entra no envelope.
+- `learning-candidate.schema.json`: registra que um Run corrigido e aprovado virou candidato
+  `1/3`, sem copiar conteúdo nem alterar automaticamente o motor.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -66,6 +70,8 @@ proveniência da recuperação. Toda execução V2 deixa o Context Snapshot corr
 | Routine Run Receipt | V1 privado | — |
 | Routine Migration Readback | V1 privado | — |
 | Judgment Receipt | V1 privado | — |
+| Correction Run Receipt | V1 privado | — |
+| Learning Candidate | V1 privado | — |
 
 Os readers são dual-read. Os writers antigos continuam V1 e não injetam campos nos schemas
 fechados. O runner file-only recusa executar um System Contract V2 porque ainda não consegue
@@ -107,6 +113,8 @@ node scripts/protocol-validate.mjs collector protocol/examples/collector-binding
 node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
 node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-migration.v1.json
 node scripts/protocol-validate.mjs judgment protocol/examples/judgment-receipt.v1.json
+node scripts/protocol-validate.mjs correction protocol/examples/correction-run-receipt.v1.json
+node scripts/protocol-validate.mjs learning protocol/examples/learning-candidate.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 
@@ -204,6 +212,13 @@ concorrente.
 A Caixa de Julgamento grava eventos imutáveis em `.cerebro/runtime/judgments/`. Aprovar, pedir
 ajuste ou rejeitar não altera a Fonte nem o output. `propose-action` registra apenas intenção local:
 criar task, publicar, enviar mensagem ou reexecutar continua exigindo outro contrato e outro gesto.
+
+Quando o julgamento atual pede ajuste, o dono pode autorizar um único rerun para aquele Judgment
+Receipt. A nota privada é anexada ao prompt apenas em memória e enviada por `stdin` ao mesmo
+provider; o novo Routine Run Receipt registra somente a referência do julgamento. Um Correction
+Run Receipt liga baseline e resultado e libera a comparação local explícita. Se o novo output for
+aprovado, outro gesto pode criar um Learning Candidate `1/3`. Isso ainda não muda o Sistema: três
+casos comparáveis, replay e novo martelo continuam obrigatórios.
 
 ```bash
 node scripts/console-server.mjs
