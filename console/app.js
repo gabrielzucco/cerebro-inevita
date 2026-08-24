@@ -55,8 +55,8 @@ function tone(reason) {
   return 'bad';
 }
 
-function badge(value, customTone = tone(value)) {
-  return `<span class="badge ${customTone}"><i></i>${escapeHtml(label(value))}</span>`;
+function badge(value, customTone = tone(value), customLabel = label(value)) {
+  return `<span class="badge ${customTone}"><i></i>${escapeHtml(customLabel)}</span>`;
 }
 
 function toast(message, kind = 'good') {
@@ -161,7 +161,15 @@ function renderAreas() {
 }
 
 function renderSystems() {
-  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div><p>Sistema define o resultado. Rotina define quando e com qual executor ele trabalha.</p></div><div class="object-grid">${state.model.systems.map((system) => `<article class="object-card"><div class="object-card-top">${badge(system.status, system.status === 'active' ? 'good' : 'neutral')}<code>v${escapeHtml(system.version)}</code></div><p class="micro">${escapeHtml(system.area_ref)}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p><div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span></div></article>`).join('') || empty('Nenhum Sistema contratado', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div><p>Mapeado tem contrato. Configurado tem recuperação declarada. Ativo já possui operação governada e recibo.</p></div><div class="object-grid">${state.model.systems.map((system) => {
+    const configured = system.migration_stage === 'configured';
+    const active = system.migration_stage === 'active';
+    const componentStatuses = Object.values(system.component_statuses || {});
+    const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
+    const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
+    const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
+    return `<article class="object-card"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
+  }).join('') || empty('Nenhum Sistema contratado', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}</div>`;
 }
 
 function renderSources() {

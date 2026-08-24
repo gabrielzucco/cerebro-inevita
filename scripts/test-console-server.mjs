@@ -156,7 +156,16 @@ try {
   const systemExample = example('system-contract.v2.json');
   write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), {
     ...systemExample,
-    extensions: { area_ref: 'marketing' },
+    extensions: {
+      area_ref: 'marketing',
+      portfolio_system_ref: 'funil-crescimento',
+      portfolio_name: 'Funil e Crescimento',
+      migration_stage: 'active',
+      human_maturity: 'instrumentado',
+      source_manifest_ref: 'sistemas/funil.md',
+      component_statuses: { pipeline: 'ativo', routines: 'ativo', evals: 'ativo' },
+      next_gate: 'julgar o próximo run',
+    },
   });
   write(join(root, '.cerebro', 'contracts', 'systems', 'projetar-vendas.json'), {
     ...systemExample,
@@ -261,6 +270,10 @@ try {
   assert.equal(consoleView.value.counts.routines, 2);
   assert.equal(consoleView.value.counts.judgments, 0);
   assert.equal(consoleView.value.cache.kind, 'none');
+  const mappedFunnel = consoleView.value.systems.find((system) => system.system_id === 'funil-crescimento');
+  assert.equal(mappedFunnel.contract_id, 'analisar-funil');
+  assert.equal(mappedFunnel.migration_stage, 'active');
+  assert.equal(mappedFunnel.source_manifest_ref, 'sistemas/funil.md');
   const funnel = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(funnel.health_reason_code, 'legacy-schedule-not-paused');
   assert.equal(funnel.preparation.status, 'ready');

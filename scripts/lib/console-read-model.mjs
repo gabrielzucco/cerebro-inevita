@@ -89,11 +89,20 @@ function listSystemContracts(root, issues) {
       if (errors.length) throw new Error(errors.join(' · '));
       const current = systems.get(contract.system_id);
       if (!current || String(current.version).localeCompare(String(contract.version), undefined, { numeric: true }) < 0) {
+        const portfolioSystemRef = contract.extensions?.portfolio_system_ref || contract.system_id;
+        const migrationStage = contract.extensions?.migration_stage
+          || (contract.status === 'active' ? 'active' : contract.status === 'proposed' ? 'mapped' : 'configured');
         systems.set(contract.system_id, {
-          system_id: contract.system_id,
-          name: contract.name,
+          contract_id: contract.system_id,
+          system_id: portfolioSystemRef,
+          name: contract.extensions?.portfolio_name || contract.name,
           version: contract.version,
           status: contract.status,
+          migration_stage: migrationStage,
+          human_maturity: contract.extensions?.human_maturity || null,
+          source_manifest_ref: contract.extensions?.source_manifest_ref || null,
+          component_statuses: contract.extensions?.component_statuses || null,
+          next_gate: contract.extensions?.next_gate || null,
           area_ref: contract.extensions?.area_ref || 'geral',
           result: contract.result.statement,
           human_gate: contract.result.human_gate,
@@ -361,7 +370,10 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   } catch {
     issues.push({ reason_code: 'routine-contract-invalid', ref: '.cerebro/contracts/routines' });
   }
-  const systemById = new Map(systems.map((system) => [system.system_id, system]));
+  const systemById = new Map(systems.flatMap((system) => [
+    [system.system_id, system],
+    [system.contract_id, system],
+  ]));
   const areas = [...new Set(systems.map((system) => system.area_ref))].sort().map((areaRef) => ({
     area_ref: areaRef,
     name: areaRef === 'geral' ? 'Geral' : areaRef.replaceAll('-', ' ').replace(/^./, (letter) => letter.toUpperCase()),

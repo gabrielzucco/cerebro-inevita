@@ -29,6 +29,12 @@ runtime valida isso antes do provider, persiste o artefato privado por hash e gr
 O Console lê somente o Context Snapshot reference-only e permite revogar Access Grants para Runs
 futuros. Este corte permanece local até ser publicado junto com o funil completo.
 
+O dogfood interno seguinte não cria outro Cérebro nem reorganiza o vault: um importador
+determinístico lê os manifestos humanos existentes, produz somente contratos privados em
+`.cerebro/` e liga uma vertical executável já existente ao Sistema de portfólio correspondente.
+O Console passa a distinguir `mapped`, `configured` e `active`, impedindo que mapa, recuperação
+declarada e operação com recibo apareçam como a mesma coisa.
+
 ## Decisões congeladas
 
 - **Console local:** a primeira interface é servida em `localhost`, sem enviar fontes, outputs,
@@ -357,6 +363,12 @@ no repositório:
 - [x] O starter EN, update, schemas V1, sistemas existentes, CI Linux/Windows e E2Es atuais não
       regridem.
 - [x] `.obsidian/graph.json`, `Sem título.md` e o draft local de Cockpit permanecem intocados.
+- [x] Manifestos humanos existentes podem virar contratos por preview + confirmação, sem mover,
+      copiar ou editar Fonte, manifesto ou pasta do Cérebro.
+- [x] Alias explícito preserva o System Contract e os recibos da vertical ativa sem criar um 15º
+      Sistema de portfólio ou sobrescrever contrato não gerenciado.
+- [x] O Console diferencia `mapped`, `configured` e `active`, exibe o próximo gate e reconstrói o
+      mapa plural do cérebro interno com 14 Sistemas, três Áreas e Fontes compartilhadas.
 
 ## O que medir
 
@@ -406,6 +418,10 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - [x] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
 - [x] Ligar Collector, Retrieval Contract, Context Snapshot e Run Record V2 no runtime de Rotinas.
 - [x] Expor seleção de contexto e revogação futura no Console sem abrir bruto.
+- [x] Implementar importação aditiva e idempotente dos manifestos humanos para System/Source
+      Contracts, com preview e garantias de uma única pasta.
+- [x] Migrar localmente o mapa do cérebro interno sem publicar release, mantendo apenas a vertical
+      do funil como ativa.
 - [ ] Dogfood interno e implantação externa assistida.
 - [ ] Registrar as métricas e decidir continuar, corrigir ou matar o Console.
 
@@ -471,6 +487,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/lib/routine-protocol.mjs`
 - `scripts/lib/routine-runtime.mjs`
 - `scripts/lib/judgment-protocol.mjs`
+- `scripts/lib/legacy-system-import.mjs`
 - `scripts/lib/correction-loop.mjs`
 - `scripts/lib/secret-provider.mjs`
 - `scripts/lib/system-protocol.mjs`
@@ -480,6 +497,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/routine-runtime.mjs`
 - `scripts/console-bootstrap.mjs`
 - `scripts/console-server.mjs`
+- `scripts/import-system-manifests.mjs`
 - `scripts/source-contract.mjs`
 - `scripts/system-run.mjs`
 - `scripts/test-access-runtime.mjs`
@@ -490,6 +508,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/test-correction-loop.mjs`
 - `scripts/test-console-server.mjs`
 - `scripts/test-context-snapshot-runtime.mjs`
+- `scripts/test-legacy-system-import.mjs`
 - `scripts/validate-product.mjs`
 - `console/app.js`
 - `console/index.html`
