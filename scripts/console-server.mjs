@@ -15,6 +15,7 @@ import {
   runRoutine,
 } from './lib/routine-runtime.mjs';
 import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
 
 const COOKIE_NAME = 'cerebro_console_session';
 const MAX_BODY_BYTES = 32 * 1024;
@@ -101,6 +102,16 @@ function actionFrom(pathname) {
   return match ? { routineId: match[1], action: match[2] } : null;
 }
 
+function outputReceiptFrom(pathname) {
+  const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/output$/);
+  return match?.[1] || null;
+}
+
+function judgmentReceiptFrom(pathname) {
+  const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/judgments$/);
+  return match?.[1] || null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
@@ -150,6 +161,42 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/api/console') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, buildConsoleReadModel(brainRoot, { now: clock() }));
+        return;
+      }
+      const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;
+      if (outputReceiptId) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, readPrivateRoutineOutput(brainRoot, outputReceiptId));
+        return;
+      }
+      const judgmentReceiptId = request.method === 'POST' ? judgmentReceiptFrom(url.pathname) : null;
+      if (judgmentReceiptId) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const approvedBy = actor(payload);
+        if (!['approved', 'changes-requested', 'rejected'].includes(payload.verdict)) {
+          throw new Error('judgment-verdict-invalid');
+        }
+        if (!['none', 'propose-action'].includes(payload.action_intent)) {
+          throw new Error('judgment-action-intent-invalid');
+        }
+        if (typeof payload.note !== 'string' || payload.note.length > 2000) throw new Error('judgment-note-invalid');
+        if ((payload.verdict !== 'approved' || payload.action_intent === 'propose-action') && !payload.note.trim()) {
+          throw new Error('judgment-note-required');
+        }
+        const result = writeJudgmentReceipt(brainRoot, judgmentReceiptId, {
+          verdict: payload.verdict,
+          actionIntent: payload.action_intent,
+          note: payload.note,
+          actorRef: approvedBy,
+          clock,
+        });
+        send(response, 200, {
+          status: 'recorded',
+          judgment_ref: result.ref,
+          summary: result.summary,
+          external_action_executed: false,
+        });
         return;
       }
       const action = request.method === 'POST' ? actionFrom(url.pathname) : null;

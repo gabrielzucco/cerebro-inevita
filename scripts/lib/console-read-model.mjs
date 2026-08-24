@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { loadAccessGrant } from './access-runtime.mjs';
+import { judgmentView } from './judgment-protocol.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -271,6 +272,41 @@ function routineView(root, contract, now) {
   };
 }
 
+function judgmentInbox(root, routines, issues) {
+  const names = new Map(routines.map((routine) => [routine.routine_id, routine.name]));
+  return listRoutineRunReceipts(root)
+    .filter((receipt) => receipt.status === 'completed' && receipt.output_ref)
+    .map((receipt) => {
+      let judgment;
+      try {
+        judgment = judgmentView(root, receipt.receipt_id);
+      } catch {
+        judgment = {
+          status: 'unavailable', verdict: null, action_intent: 'none', actor_ref: null,
+          decided_at: null, history_count: 0,
+        };
+        issues.push({ reason_code: 'judgment-receipt-invalid', ref: `routine-receipt:${receipt.receipt_id}` });
+      }
+      return {
+        receipt_id: receipt.receipt_id,
+        receipt_ref: `routine-receipt:${receipt.receipt_id}`,
+        routine_id: receipt.routine_id,
+        routine_name: names.get(receipt.routine_id) || receipt.routine_id,
+        system_ref: receipt.system_ref,
+        run_id: receipt.run_id,
+        trigger: receipt.trigger,
+        completed_at: receipt.completed_at,
+        requested_model: receipt.requested_model,
+        output_ref: receipt.output_ref,
+        judgment,
+      };
+    })
+    .sort((left, right) => {
+      const pending = Number(right.judgment.status === 'pending') - Number(left.judgment.status === 'pending');
+      return pending || Date.parse(right.completed_at) - Date.parse(left.completed_at);
+    });
+}
+
 export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const observedAt = new Date(now);
   if (!Number.isFinite(observedAt.getTime())) throw new Error('relógio inválido');
@@ -291,20 +327,36 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.area_ref === areaRef).map((routine) => routine.routine_id),
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
+  const judgments = judgmentInbox(root, routines, issues);
+  const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts'] },
-    privacy: { content_shared_with_inevita: false, raw_output_exposed: false, prompt_exposed: false },
-    counts: { areas: areas.length, systems: systems.length, sources: sources.length, routines: routines.length, attention: attention.length },
+    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'judgments'] },
+    privacy: {
+      content_shared_with_inevita: false,
+      raw_output_exposed: false,
+      prompt_exposed: false,
+      explicit_local_output_read: true,
+    },
+    counts: {
+      areas: areas.length,
+      systems: systems.length,
+      sources: sources.length,
+      routines: routines.length,
+      attention: attention.length,
+      judgments: pendingJudgments.length,
+    },
     areas,
     systems,
     sources,
     routines,
+    judgments,
     today: {
       needs_attention: attention.map((routine) => routine.routine_id),
       ready_to_work: routines.filter((routine) => ['ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code)).map((routine) => routine.routine_id),
       active: routines.filter((routine) => routine.health_reason_code === 'active').map((routine) => routine.routine_id),
+      pending_judgments: pendingJudgments.map((item) => item.receipt_id),
     },
     issues,
   };

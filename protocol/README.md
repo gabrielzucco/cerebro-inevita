@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os onze envelopes
+## Os doze envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -29,6 +29,8 @@ conteúdo bruto.
   adapter fica honestamente `unresolved` e a execução é negada antes de ler o prompt.
 - `routine-migration.schema.json`: readback privado da agenda legada, do risco de relógio duplo e
   da evidência humana de pausa antes do cutover; nunca carrega o payload da agenda antiga.
+- `judgment-receipt.schema.json`: evento privado e imutável que liga o julgamento humano ao run,
+  sem copiar output ou executar a intenção de ação.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -63,6 +65,7 @@ proveniência da recuperação. Toda execução V2 deixa o Context Snapshot corr
 | Collector Binding | V1 privado | — |
 | Routine Run Receipt | V1 privado | — |
 | Routine Migration Readback | V1 privado | — |
+| Judgment Receipt | V1 privado | — |
 
 Os readers são dual-read. Os writers antigos continuam V1 e não injetam campos nos schemas
 fechados. O runner file-only recusa executar um System Contract V2 porque ainda não consegue
@@ -103,6 +106,7 @@ node scripts/protocol-validate.mjs executor protocol/examples/executor-binding.v
 node scripts/protocol-validate.mjs collector protocol/examples/collector-binding.v1.json
 node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
 node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-migration.v1.json
+node scripts/protocol-validate.mjs judgment protocol/examples/judgment-receipt.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 
@@ -192,9 +196,14 @@ controla.
 ## Console local de Rotinas
 
 O Console V0 é uma vista derivada dos mesmos arquivos. Vincula somente em `127.0.0.1`, cria uma
-sessão efêmera HttpOnly, exige CSRF em toda mutação e não serve o conteúdo de prompt ou output.
-Abrir, navegar e atualizar recompila o estado sem chamar modelo. Não há telemetria de conteúdo nem
-banco concorrente.
+sessão efêmera HttpOnly e exige CSRF em toda mutação. `/api/console` continua reference-only; o
+output privado só é servido por rota autenticada quando o dono abre explicitamente um run. Abrir,
+navegar e atualizar recompila o estado sem chamar modelo. Não há telemetria de conteúdo nem banco
+concorrente.
+
+A Caixa de Julgamento grava eventos imutáveis em `.cerebro/runtime/judgments/`. Aprovar, pedir
+ajuste ou rejeitar não altera a Fonte nem o output. `propose-action` registra apenas intenção local:
+criar task, publicar, enviar mensagem ou reexecutar continua exigindo outro contrato e outro gesto.
 
 ```bash
 node scripts/console-server.mjs

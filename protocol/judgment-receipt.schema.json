@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/judgment-receipt-v1.json",
+  "title": "INEVITA Judgment Receipt V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "judgment_id", "routine_receipt_ref", "receipt_id",
+    "routine_id", "run_id", "verdict", "action_intent", "note", "actor_ref",
+    "decided_at", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "judgment_id": { "$ref": "#/$defs/ref" },
+    "routine_receipt_ref": { "$ref": "#/$defs/local_ref" },
+    "receipt_id": { "$ref": "#/$defs/ref" },
+    "routine_id": { "$ref": "#/$defs/id" },
+    "run_id": { "$ref": "#/$defs/ref" },
+    "verdict": { "enum": ["approved", "changes-requested", "rejected"] },
+    "action_intent": { "enum": ["none", "propose-action"] },
+    "note": { "type": "string", "maxLength": 2000 },
+    "actor_ref": { "$ref": "#/$defs/ref" },
+    "decided_at": { "type": "string", "format": "date-time" },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_shared_with_inevita", "output_recorded", "note_private",
+        "external_action_executed"
+      ],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "output_recorded": { "const": false },
+        "note_private": { "const": true },
+        "external_action_executed": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

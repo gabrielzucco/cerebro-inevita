@@ -65,7 +65,9 @@ node scripts/console-server.mjs
 ```
 
 Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
-exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada.
+exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
+Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,
+rejeitar ou propor uma ação. Propor nunca executa a ação.
 
 ## O que vem dentro
 

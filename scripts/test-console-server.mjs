@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { request as httpRequest } from 'node:http';
@@ -17,6 +17,7 @@ import { bootstrapLegacyConsole, previewLegacyConsoleBootstrap } from './console
 
 const root = mkdtempSync(join(tmpdir(), 'company-brain-console-'));
 const legacyRoot = mkdtempSync(join(tmpdir(), 'company-brain-legacy-console-'));
+const externalRuntimeRoot = mkdtempSync(join(tmpdir(), 'company-brain-external-runtime-'));
 const calls = [];
 const collectorCalls = [];
 
@@ -123,6 +124,7 @@ try {
     routineReceipts: '.cerebro/runtime/receipts/routines',
     routineState: '.cerebro/runtime/routines',
     routineOutputs: '.cerebro/runtime/outputs/routines',
+    routineJudgments: '.cerebro/runtime/judgments',
     routineMigrations: '.cerebro/runtime/migrations/routines',
   });
   write(join(root, '.cerebro', 'private-ignore.manifest'), '.cerebro/runtime\n.cerebro/contracts/\noperacao/execucoes/*\n');
@@ -168,6 +170,7 @@ try {
   const routineExample = example('routine-contract.v1.json');
   registerRoutineContract(root, {
     ...routineExample,
+    destination: { kind: 'runtime-output', ref: 'routine-output' },
     extensions: {
       preparation: {
         kind: 'trusted-local-command',
@@ -239,6 +242,7 @@ try {
   assert.equal(consoleView.value.counts.systems, 2);
   assert.equal(consoleView.value.counts.sources, 3);
   assert.equal(consoleView.value.counts.routines, 2);
+  assert.equal(consoleView.value.counts.judgments, 0);
   assert.equal(consoleView.value.cache.kind, 'none');
   const funnel = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(funnel.health_reason_code, 'legacy-schedule-not-paused');
@@ -267,10 +271,223 @@ try {
   assert.equal(collectorCalls.length, 1);
   assert.equal(JSON.stringify(run.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
 
+  const receiptId = run.value.receipt_ref.replace('routine-receipt:', '');
+  const receiptPath = join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${receiptId}.json`);
+  const receiptFixture = JSON.parse(readFileSync(receiptPath, 'utf8'));
+  assert.equal((await request(base, `/api/runs/${receiptId}/output`)).status, 403);
+  const output = await request(base, `/api/runs/${receiptId}/output`, { cookie });
+  assert.equal(output.status, 200, JSON.stringify({ response: output.value, output_ref: receiptFixture.output_ref, root }));
+  assert.equal(output.value.output.content, 'PRIVATE_OUTPUT_NOT_IN_API\n');
+  assert.equal(output.value.judgment.summary.status, 'pending');
+  assert.equal(calls.length, 1, 'abrir output não pode executar modelo');
+
   consoleView = await request(base, '/api/console', { cookie });
   const afterRun = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(afterRun.actions.can_activate, false, 'migração ainda bloqueia o segundo relógio');
+  assert.equal(consoleView.value.counts.judgments, 1);
+  assert.equal(consoleView.value.judgments[0].judgment.status, 'pending');
+  assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
   assert.equal(calls.length, 1, 'recompilar read model não executa modelo');
+
+  const outsideId = 'routine-receipt-outside';
+  write(join(root, 'private-outside.md'), 'OUTSIDE_RUNTIME\n');
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${outsideId}.json`), {
+    ...receiptFixture,
+    receipt_id: outsideId,
+    run_id: 'routine-run-outside',
+    slot_key: 'slot-outside',
+    output_ref: 'private-outside.md',
+  });
+  const outside = await request(base, `/api/runs/${outsideId}/output`, { cookie });
+  assert.equal(outside.status, 400);
+  assert.equal(outside.value.reason_code, 'output-outside-runtime');
+
+  const binaryId = 'routine-receipt-binary';
+  const binaryRef = '.cerebro/runtime/outputs/routines/private-binary.bin';
+  writeFileSync(join(root, binaryRef), Buffer.from([0, 1, 2, 3]));
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${binaryId}.json`), {
+    ...receiptFixture,
+    receipt_id: binaryId,
+    run_id: 'routine-run-binary',
+    slot_key: 'slot-binary',
+    output_ref: binaryRef,
+  });
+  const binary = await request(base, `/api/runs/${binaryId}/output`, { cookie });
+  assert.equal(binary.status, 400);
+  assert.equal(binary.value.reason_code, 'output-binary-blocked');
+
+  const encodingId = 'routine-receipt-invalid-encoding';
+  const encodingRef = '.cerebro/runtime/outputs/routines/private-invalid-encoding.md';
+  writeFileSync(join(root, encodingRef), Buffer.from([0xc3, 0x28]));
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${encodingId}.json`), {
+    ...receiptFixture,
+    receipt_id: encodingId,
+    run_id: 'routine-run-invalid-encoding',
+    slot_key: 'slot-invalid-encoding',
+    output_ref: encodingRef,
+  });
+  const encoding = await request(base, `/api/runs/${encodingId}/output`, { cookie });
+  assert.equal(encoding.status, 400);
+  assert.equal(encoding.value.reason_code, 'output-encoding-invalid');
+
+  const directoryId = 'routine-receipt-output-directory';
+  const directoryRef = '.cerebro/runtime/outputs/routines/private-directory';
+  mkdirSync(join(root, directoryRef));
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${directoryId}.json`), {
+    ...receiptFixture,
+    receipt_id: directoryId,
+    run_id: 'routine-run-output-directory',
+    slot_key: 'slot-output-directory',
+    output_ref: directoryRef,
+  });
+  const directoryOutput = await request(base, `/api/runs/${directoryId}/output`, { cookie });
+  assert.equal(directoryOutput.status, 400);
+  assert.equal(directoryOutput.value.reason_code, 'output-not-file');
+
+  if (process.platform !== 'win32') {
+    const symlinkId = 'routine-receipt-symlink';
+    const symlinkRef = '.cerebro/runtime/outputs/routines/private-symlink.md';
+    symlinkSync(join(root, 'private-outside.md'), join(root, symlinkRef));
+    write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${symlinkId}.json`), {
+      ...receiptFixture,
+      receipt_id: symlinkId,
+      run_id: 'routine-run-symlink',
+      slot_key: 'slot-symlink',
+      output_ref: symlinkRef,
+    });
+    const symlink = await request(base, `/api/runs/${symlinkId}/output`, { cookie });
+    assert.equal(symlink.status, 400);
+    assert.equal(symlink.value.reason_code, 'output-symlink-blocked');
+  }
+
+  const judgmentNoCsrf = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie,
+    body: { confirm: true, approved_by: 'role-owner', verdict: 'approved', action_intent: 'none', note: '' },
+  });
+  assert.equal(judgmentNoCsrf.status, 403);
+  const emptyChange = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', verdict: 'changes-requested', action_intent: 'none', note: '' },
+  });
+  assert.equal(emptyChange.status, 400);
+  assert.equal(emptyChange.value.reason_code, 'judgment-note-required');
+  const invalidVerdict = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', verdict: 'publish', action_intent: 'none', note: '' },
+  });
+  assert.equal(invalidVerdict.status, 400);
+  assert.equal(invalidVerdict.value.reason_code, 'judgment-verdict-invalid');
+  const invalidAction = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', verdict: 'approved', action_intent: 'execute', note: '' },
+  });
+  assert.equal(invalidAction.status, 400);
+  assert.equal(invalidAction.value.reason_code, 'judgment-action-intent-invalid');
+  const secretNote = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: {
+      confirm: true, approved_by: 'role-owner', verdict: 'changes-requested',
+      action_intent: 'none', note: 'Bearer token-nao-pode-ser-registrado',
+    },
+  });
+  assert.equal(secretNote.status, 400);
+  assert.equal(secretNote.value.reason_code, 'note-parece-conter-segredo');
+
+  const approval = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', verdict: 'approved', action_intent: 'none', note: '' },
+  });
+  assert.equal(approval.status, 200);
+  assert.equal(approval.value.summary.verdict, 'approved');
+  assert.equal(approval.value.external_action_executed, false);
+  consoleView = await request(base, '/api/console', { cookie });
+  assert.equal(consoleView.value.judgments.filter((item) => item.receipt_id === receiptId && item.judgment.status === 'pending').length, 0);
+  assert.equal(consoleView.value.judgments.find((item) => item.receipt_id === receiptId).judgment.verdict, 'approved');
+  assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+
+  const change = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: {
+      confirm: true, approved_by: 'role-owner', verdict: 'changes-requested',
+      action_intent: 'none', note: 'Separar melhor a inferência da recomendação.',
+    },
+  });
+  assert.equal(change.status, 200);
+  assert.equal(change.value.summary.history_count, 2);
+  const actionIntent = await request(base, `/api/runs/${receiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: {
+      confirm: true, approved_by: 'role-owner', verdict: 'approved',
+      action_intent: 'propose-action', note: 'Preparar uma hipótese de experimento para revisão.',
+    },
+  });
+  assert.equal(actionIntent.status, 200);
+  assert.equal(actionIntent.value.summary.action_intent, 'propose-action');
+  assert.equal(actionIntent.value.external_action_executed, false);
+  assert.equal(calls.length, 1, 'julgar ou propor ação não pode executar modelo');
+  const judgedOutput = await request(base, `/api/runs/${receiptId}/output`, { cookie });
+  assert.equal(judgedOutput.value.judgment.history.length, 3);
+  assert.equal(judgedOutput.value.judgment.summary.action_intent, 'propose-action');
+  assert.equal(judgedOutput.value.judgment.current.note, 'Preparar uma hipótese de experimento para revisão.');
+
+  assert.equal((await request(base, '/api/runs/receipt-does-not-exist/output', { cookie })).value.reason_code, 'routine-receipt-not-found');
+  const oversizedId = 'routine-receipt-oversized';
+  const oversizedRef = '.cerebro/runtime/outputs/routines/private-oversized.md';
+  writeFileSync(join(root, oversizedRef), Buffer.alloc(512 * 1024 + 1, 65));
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${oversizedId}.json`), {
+    ...receiptFixture,
+    receipt_id: oversizedId,
+    run_id: 'routine-run-oversized',
+    slot_key: 'slot-oversized',
+    output_ref: oversizedRef,
+  });
+  const oversized = await request(base, `/api/runs/${oversizedId}/output`, { cookie });
+  assert.equal(oversized.status, 400);
+  assert.equal(oversized.value.reason_code, 'output-too-large');
+
+  const failedId = 'routine-receipt-failed-output';
+  write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${failedId}.json`), {
+    ...receiptFixture,
+    receipt_id: failedId,
+    run_id: 'routine-run-failed-output',
+    slot_key: 'slot-failed-output',
+    status: 'failed',
+    reason_code: 'executor-failed',
+  });
+  const failedOutput = await request(base, `/api/runs/${failedId}/output`, { cookie });
+  assert.equal(failedOutput.status, 400);
+  assert.equal(failedOutput.value.reason_code, 'output-not-available');
+
+  if (process.platform !== 'win32') {
+    const layoutPath = join(root, '.cerebro', 'layout.json');
+    const originalLayout = JSON.parse(readFileSync(layoutPath, 'utf8'));
+    const linkedOutputs = '.cerebro/runtime/linked-outputs';
+    write(join(externalRuntimeRoot, 'private-linked.md'), 'EXTERNAL_OUTPUT_MUST_NOT_OPEN\n');
+    symlinkSync(externalRuntimeRoot, join(root, linkedOutputs));
+    write(layoutPath, { ...originalLayout, routineOutputs: linkedOutputs });
+    const linkedOutputId = 'routine-receipt-linked-output-root';
+    write(join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${linkedOutputId}.json`), {
+      ...receiptFixture,
+      receipt_id: linkedOutputId,
+      run_id: 'routine-run-linked-output-root',
+      slot_key: 'slot-linked-output-root',
+      output_ref: `${linkedOutputs}/private-linked.md`,
+    });
+    const linkedOutput = await request(base, `/api/runs/${linkedOutputId}/output`, { cookie });
+    assert.equal(linkedOutput.status, 400);
+    assert.equal(linkedOutput.value.reason_code, 'output-root-symlink-blocked');
+
+    const linkedJudgments = '.cerebro/runtime/linked-judgments';
+    symlinkSync(externalRuntimeRoot, join(root, linkedJudgments));
+    write(layoutPath, { ...originalLayout, routineJudgments: linkedJudgments });
+    const linkedJudgment = await request(base, `/api/runs/${receiptId}/judgments`, {
+      method: 'POST', cookie, csrf: 'fixed-csrf-token',
+      body: { confirm: true, approved_by: 'role-owner', verdict: 'approved', action_intent: 'none', note: '' },
+    });
+    assert.equal(linkedJudgment.status, 400);
+    assert.equal(linkedJudgment.value.reason_code, 'judgment-storage-symlink-blocked');
+    write(layoutPath, originalLayout);
+  }
 
   const pauseReadback = await request(base, '/api/routines/funil-diario-cerebro/confirm-legacy-pause', {
     method: 'POST', cookie, csrf: 'fixed-csrf-token',
@@ -293,4 +510,5 @@ try {
 } finally {
   rmSync(root, { recursive: true, force: true });
   rmSync(legacyRoot, { recursive: true, force: true });
+  rmSync(externalRuntimeRoot, { recursive: true, force: true });
 }

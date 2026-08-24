@@ -1,0 +1,19 @@
+{
+  "protocol_version": 1,
+  "judgment_id": "judgment-3fca7c52-5e7d-4bdf-960b-e724e3fbd355",
+  "routine_receipt_ref": "routine-receipt:routine-receipt-sanitized",
+  "receipt_id": "routine-receipt-sanitized",
+  "routine_id": "funil-diario-cerebro",
+  "run_id": "routine-run-sanitized",
+  "verdict": "approved",
+  "action_intent": "none",
+  "note": "A leitura separou fato, inferência e proposta.",
+  "actor_ref": "role-owner",
+  "decided_at": "2026-08-24T12:00:00.000Z",
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "output_recorded": false,
+    "note_private": true,
+    "external_action_executed": false
+  }
+}

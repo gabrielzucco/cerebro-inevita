@@ -22,6 +22,7 @@ const LEGACY_LAYOUT = Object.freeze({
   routineReceipts: '.cerebro/runtime/receipts/routines',
   routineState: '.cerebro/runtime/routines',
   routineOutputs: '.cerebro/runtime/outputs/routines',
+  routineJudgments: '.cerebro/runtime/judgments',
   routineMigrations: '.cerebro/runtime/migrations/routines',
   runLedger: '.cerebro/runtime/ledger/runs.jsonl',
 });
