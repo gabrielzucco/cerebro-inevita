@@ -15,12 +15,18 @@ import { tmpdir } from 'node:os';
 import { registerAccessGrant } from './lib/access-runtime.mjs';
 import { observeExecutor, runModelExecutor } from './lib/model-executors.mjs';
 import {
+  confirmLegacySchedulePaused,
   listRoutineRunReceipts,
+  loadRoutineMigration,
   registerRoutineContract,
+  registerRoutineMigration,
   routineOutputDirectory,
+  saveCollectorBinding,
   saveExecutorBinding,
+  validateCollectorBinding,
   validateExecutorBinding,
   validateRoutineContract,
+  validateRoutineMigration,
   validateRoutineRunReceipt,
 } from './lib/routine-protocol.mjs';
 import {
@@ -109,6 +115,7 @@ try {
     version: 3,
     routineContracts: '.cerebro/contracts/routines',
     executorBindings: '.cerebro/runtime/executors',
+    collectorBindings: '.cerebro/runtime/collectors',
     routineReceipts: '.cerebro/runtime/receipts/routines',
     routineState: '.cerebro/runtime/routines',
     routineOutputs: '.cerebro/runtime/outputs/routines',
@@ -125,9 +132,18 @@ try {
   const routineExample = json(new URL('../protocol/examples/routine-contract.v1.json', import.meta.url));
   const bindingExample = json(new URL('../protocol/examples/executor-binding.v1.json', import.meta.url));
   const receiptExample = json(new URL('../protocol/examples/routine-run-receipt.v1.json', import.meta.url));
+  const migrationExample = json(new URL('../protocol/examples/routine-migration.v1.json', import.meta.url));
+  const collectorExample = json(new URL('../protocol/examples/collector-binding.v1.json', import.meta.url));
   assert.deepEqual(validateRoutineContract(routineExample), []);
   assert.deepEqual(validateExecutorBinding(bindingExample), []);
   assert.deepEqual(validateRoutineRunReceipt(receiptExample), []);
+  assert.deepEqual(validateRoutineMigration(migrationExample), []);
+  assert.deepEqual(validateCollectorBinding(collectorExample), []);
+  assert(validateCollectorBinding({ ...collectorExample, args: ['-c', 'unsafe'] }).some((error) => error.includes('inseguro')));
+  assert(validateRoutineMigration({
+    ...migrationExample,
+    status: 'ready-for-activation',
+  }).some((error) => error.includes('readback')));
   assert(validateRoutineContract({ ...routineExample, prompt: promptMarker }).some((error) => error.includes('não é permitido')));
   assert(validateExecutorBinding({ ...bindingExample, oauth: 'xoxb-1234567890123456' }).length > 0);
   assert(validateRoutineRunReceipt({ ...receiptExample, output: outputMarker }).some((error) => error.includes('payload')));
@@ -191,7 +207,9 @@ try {
     receipts: { use_refs: [], revocation_ref: null },
   });
   registerRoutineContract(root, routineExample);
+  registerRoutineMigration(root, migrationExample);
   saveExecutorBinding(root, bindingExample);
+  saveCollectorBinding(root, collectorExample);
 
   const manualCalls = [];
   const manual = await runRoutine(root, 'funil-diario-cerebro', {
@@ -205,9 +223,17 @@ try {
   assert.equal(manual.receipt.access_receipt_refs.length, 1);
   assertReferenceOnly(manual.receipt);
 
+  assert.throws(() => activateRoutine(root, 'funil-diario-cerebro', manual.receipt_ref, 'role-marketing-owner', {
+    clock: fixed('2026-08-24T11:29:00.000Z'),
+  }), /legacy-schedule-not-paused/);
+  assert.equal(loadRoutineMigration(root, 'funil-diario-cerebro').migration.status, 'awaiting-legacy-pause');
+  confirmLegacySchedulePaused(root, 'funil-diario-cerebro', 'readback:owner-paused-legacy-task', 'role-marketing-owner', {
+    clock: fixed('2026-08-24T11:29:00.000Z'),
+  });
   activateRoutine(root, 'funil-diario-cerebro', manual.receipt_ref, 'role-marketing-owner', {
     clock: fixed('2026-08-24T11:29:00.000Z'),
   });
+  assert.equal(loadRoutineMigration(root, 'funil-diario-cerebro').migration.status, 'cutover-completed');
   const scheduledCalls = [];
   const scheduled = await tickRoutines(root, {
     spawn: fakeCodex({ calls: scheduledCalls }),
@@ -245,6 +271,59 @@ try {
   });
   assert.deepEqual(paused, []);
   assert.equal(scheduledCalls.length, 1);
+
+  const preparedRoutine = contract({
+    routine_id: 'funil-preparado',
+    trigger: { type: 'manual', schedule: null },
+    context: { access_requests: [] },
+    destination: { kind: 'runtime-output', ref: 'routine-output' },
+    extensions: {
+      preparation: {
+        kind: 'trusted-local-command',
+        binding_ref: 'collector-funnel-local',
+        output_ref: '.automacao/_FUNIL-ULTIMO.json',
+      },
+    },
+  });
+  registerRoutineContract(root, preparedRoutine);
+  const preparationStarted = new Date();
+  const collectorCalls = [];
+  const preparedModelCalls = [];
+  const prepared = await runRoutine(root, 'funil-preparado', {
+    spawnCollector: (command, args, options) => {
+      collectorCalls.push({ command, args, options });
+      assert.equal(command, 'python3');
+      assert.deepEqual(args, ['.automacao/funil_diario.py']);
+      write(join(root, '.automacao', '_FUNIL-ULTIMO.json'), '{"sanitized":true}\n');
+      return { status: 0, stdout: 'PRIVATE_COLLECTOR_STDOUT', stderr: '' };
+    },
+    spawn: fakeCodex({ calls: preparedModelCalls }),
+    clock: () => preparationStarted,
+  });
+  assert.equal(prepared.status, 'completed');
+  assert.equal(collectorCalls.length, 1);
+  assert.equal(preparedModelCalls.length, 1);
+  assert(prepared.receipt.input_refs.includes('collector-output:.automacao/_FUNIL-ULTIMO.json'));
+  assert.equal(JSON.stringify(prepared.receipt).includes('PRIVATE_COLLECTOR_STDOUT'), false);
+
+  const failedPreparationRoutine = contract({
+    routine_id: 'funil-preparo-falha',
+    trigger: { type: 'manual', schedule: null },
+    context: { access_requests: [] },
+    destination: { kind: 'runtime-output', ref: 'routine-output' },
+    extensions: preparedRoutine.extensions,
+  });
+  registerRoutineContract(root, failedPreparationRoutine);
+  let modelCalledAfterCollectorFailure = false;
+  const failedPreparation = await runRoutine(root, 'funil-preparo-falha', {
+    spawnCollector: () => ({ status: 1, stdout: 'PRIVATE_FAILURE', stderr: 'PRIVATE_FAILURE' }),
+    spawn: () => { modelCalledAfterCollectorFailure = true; throw new Error('não deveria chamar modelo'); },
+    clock: () => new Date(),
+  });
+  assert.equal(failedPreparation.status, 'failed');
+  assert.equal(failedPreparation.receipt.reason_code, 'collector-failed');
+  assert.equal(failedPreparation.receipt.content_shared_with_provider, false);
+  assert.equal(modelCalledAfterCollectorFailure, false);
 
   const retryRoutine = contract({
     routine_id: 'funil-retry',

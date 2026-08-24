@@ -10,8 +10,10 @@ import {
 } from './lib/system-protocol.mjs';
 import { validateAccessReceipt } from './lib/access-runtime.mjs';
 import {
+  validateCollectorBinding,
   validateExecutorBinding,
   validateRoutineContract,
+  validateRoutineMigration,
   validateRoutineRunReceipt,
 } from './lib/routine-protocol.mjs';
 
@@ -24,7 +26,9 @@ const validators = {
   receipt: validateAccessReceipt,
   routine: validateRoutineContract,
   executor: validateExecutorBinding,
+  collector: validateCollectorBinding,
   'routine-receipt': validateRoutineRunReceipt,
+  'routine-migration': validateRoutineMigration,
 };
 
 function fail(message) {
@@ -32,7 +36,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor ou routine-receipt');
+if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt ou routine-migration');
 if (!path) fail('informe o caminho do JSON');
 
 try {

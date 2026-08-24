@@ -1,0 +1,269 @@
+const state = { model: null, csrf: '', view: 'routines', selectedRoutine: null, busy: false };
+
+const $ = (selector) => document.querySelector(selector);
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+})[character]);
+const fmtDate = (value, withTime = true) => value ? new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'short', ...(withTime ? { timeStyle: 'short' } : {}),
+}).format(new Date(value)) : '—';
+
+const labels = {
+  active: 'Ativa',
+  'ready-manual-run': 'Pronta para replay',
+  'ready-to-activate': 'Pronta para ativar',
+  'legacy-schedule-not-paused': 'Agenda antiga não pausada',
+  'routine-paused': 'Pausada',
+  'routine-not-approved': 'Aguardando aprovação',
+  'routine-migration-cancelled': 'Migração cancelada',
+  'executor-missing': 'Executor ausente',
+  'executor-authentication-required': 'Login necessário',
+  'executor-degraded': 'Executor degradado',
+  'awaiting-legacy-pause': 'Aguardando pausa da agenda antiga',
+  'ready-for-activation': 'Agenda antiga pausada',
+  'cutover-completed': 'Migração concluída',
+  'future-only': 'Revogação vale para o futuro',
+  'receipt-only': 'Revogação apenas auditável',
+  'irreversible-export': 'Cópia não revogável',
+  manual: 'Manual', schedule: 'Agenda', read: 'Leitura',
+  completed: 'Concluída', failed: 'Falhou', denied: 'Negada', skipped: 'Pulada',
+  'runtime-enforced': 'Bloqueio pelo runtime',
+  'receipt-audited': 'Auditado por recibo', exported: 'Cópia exportada', unknown: 'Não verificado',
+};
+
+function label(value) {
+  return labels[value] || String(value || '—').replaceAll('-', ' ');
+}
+
+function tone(reason) {
+  if (['active', 'completed', 'ready-manual-run', 'ready-to-activate'].includes(reason)) return 'good';
+  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required'].includes(reason)) return 'warn';
+  return 'bad';
+}
+
+function badge(value, customTone = tone(value)) {
+  return `<span class="badge ${customTone}"><i></i>${escapeHtml(label(value))}</span>`;
+}
+
+function toast(message, kind = 'good') {
+  const element = $('#toast');
+  element.className = `toast visible ${kind}`;
+  element.textContent = message;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { element.className = 'toast'; }, 4200);
+}
+
+async function getJson(path) {
+  const response = await fetch(path, { credentials: 'same-origin' });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.reason_code || 'request-failed');
+  return value;
+}
+
+async function mutate(path, payload) {
+  const response = await fetch(path, {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Cerebro-CSRF': state.csrf },
+    body: JSON.stringify({ ...payload, confirm: true }),
+  });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.reason_code || 'request-failed');
+  return value;
+}
+
+function summaryCards() {
+  const model = state.model;
+  const active = model.today.active.length;
+  const ready = model.today.ready_to_work.length;
+  const attention = model.today.needs_attention.length;
+  return [
+    ['Rotinas ativas', active, 'Rodam apenas quando o estado canônico está ativo', 'signal'],
+    ['Prontas para trabalhar', ready, 'Replay manual não liga o agendamento', 'play'],
+    ['Pedem decisão', attention, 'Conflito, pausa, login ou contrato pendente', 'decision'],
+    ['Recibos privados', model.routines.reduce((total, routine) => total + routine.receipts.length, 0), 'Prompt e output não aparecem no ledger', 'receipt'],
+  ].map(([title, value, description, icon]) => `<article class="summary-card"><span class="summary-icon ${icon}"></span><div><small>${title}</small><strong>${value}</strong><p>${description}</p></div></article>`).join('');
+}
+
+function routineCard(routine) {
+  const access = routine.access.length ? routine.access.map((item) => badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')).join('') : '<span class="muted">Sem grants declarados</span>';
+  const next = routine.next_scheduled_at ? `Próxima ${fmtDate(routine.next_scheduled_at)}` : routine.state.status === 'disabled' ? 'Relógio desligado' : 'Sem próxima ocorrência';
+  return `<article class="routine-card" data-open-routine="${escapeHtml(routine.routine_id)}">
+    <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(routine.system_ref)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
+    <p class="routine-purpose">${escapeHtml(routine.schedule)}</p>
+    <div class="routine-meta"><span><b>Executor</b>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</span><span><b>Estado</b>${escapeHtml(next)}</span></div>
+    <div class="assurance-row">${access}</div>
+    <div class="card-footer"><span>${routine.receipts.length ? `Último recibo ${fmtDate(routine.receipts[0].completed_at)}` : 'Nenhuma execução registrada'}</span><button data-open-routine="${escapeHtml(routine.routine_id)}">Inspecionar <b>→</b></button></div>
+  </article>`;
+}
+
+function empty(title, body) {
+  return `<div class="empty"><div class="empty-mark">◇</div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p></div>`;
+}
+
+function renderRoutines() {
+  return `<div class="section-heading"><div><p class="eyebrow">CONTROL PLANE</p><h2>Todas as rotinas</h2></div><p>Abrir e inspecionar nunca executa modelos. O relógio só liga após replay e aprovação.</p></div>
+    <div class="routine-list">${state.model.routines.length ? state.model.routines.map(routineCard).join('') : empty('Nenhuma rotina instalada', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
+}
+
+function renderToday() {
+  const ids = [...state.model.today.needs_attention, ...state.model.today.ready_to_work, ...state.model.today.active];
+  const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean);
+  return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div><div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
+}
+
+function renderAreas() {
+  return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
+}
+
+function renderSystems() {
+  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div><p>Sistema define o resultado. Rotina define quando e com qual executor ele trabalha.</p></div><div class="object-grid">${state.model.systems.map((system) => `<article class="object-card"><div class="object-card-top">${badge(system.status, system.status === 'active' ? 'good' : 'neutral')}<code>v${escapeHtml(system.version)}</code></div><p class="micro">${escapeHtml(system.area_ref)}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p><div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span></div></article>`).join('') || empty('Nenhum Sistema contratado', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}</div>`;
+}
+
+function renderSources() {
+  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
+}
+
+function allReceipts() {
+  return state.model.routines.flatMap((routine) => routine.receipts.map((receipt) => ({ ...receipt, routine_name: routine.name, routine_id: routine.routine_id }))).sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at));
+}
+
+function renderRuns() {
+  const receipts = allReceipts();
+  return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Referências suficientes para auditoria, sem guardar prompt, output ou erro cru.</p></div><div class="table-wrap"><table><thead><tr><th>Rotina</th><th>Quando</th><th>Gatilho</th><th>Estado</th><th>Modelo</th><th>Output ref.</th></tr></thead><tbody>${receipts.map((receipt) => `<tr><td><strong>${escapeHtml(receipt.routine_name)}</strong><small>${escapeHtml(receipt.receipt_ref)}</small></td><td>${fmtDate(receipt.completed_at)}</td><td>${escapeHtml(label(receipt.trigger))}</td><td>${badge(receipt.status)}</td><td>${escapeHtml(receipt.requested_model)}<small>${escapeHtml(receipt.model_observation)}</small></td><td><code>${escapeHtml(receipt.output_ref || '—')}</code></td></tr>`).join('') || `<tr><td colspan="6">Nenhum recibo ainda.</td></tr>`}</tbody></table></div>`;
+}
+
+function renderGovernance() {
+  const grants = state.model.routines.flatMap((routine) => routine.access.map((access) => ({ ...access, routine })));
+  return `<div class="section-heading"><div><p class="eyebrow">AUTORIDADE</p><h2>Governança de acesso</h2></div><p>Revogação vale para o futuro; uma cópia já exportada nunca é apagada retroativamente.</p></div><div class="object-grid">${grants.map(({ routine, ...access }) => `<article class="object-card"><div class="object-card-top">${badge(access.grant_status, access.grant_status === 'granted' ? 'good' : 'bad')}${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(routine.name)}</p><h3>${escapeHtml(access.source_ref)}</h3><p>${escapeHtml(access.action)} · ${escapeHtml(access.requested_mode)}</p><div class="boundary-note"><b>Revogação</b>${escapeHtml(label(access.revocation_effect))}</div></article>`).join('') || empty('Nenhuma concessão declarada', 'A rotina pode existir sem grant quando trabalha apenas com instrução local.')}</div>`;
+}
+
+function renderHealth() {
+  const rows = state.model.routines.map((routine) => ({ name: routine.name, reason: routine.health_reason_code, binding: routine.binding.auth_status }));
+  return `<div class="section-heading"><div><p class="eyebrow">READBACK</p><h2>Saúde operacional</h2></div><p>Estado derivado de arquivos canônicos, nunca de um painel editorial paralelo.</p></div><div class="health-list">${rows.map((row) => `<article><span class="health-dot ${tone(row.reason)}"></span><div><h3>${escapeHtml(row.name)}</h3><p>${escapeHtml(label(row.reason))}</p></div><code>${escapeHtml(row.binding)}</code></article>`).join('')}${state.model.issues.map((issue) => `<article><span class="health-dot bad"></span><div><h3>${escapeHtml(label(issue.reason_code))}</h3><p>${escapeHtml(issue.ref)}</p></div></article>`).join('')}</div><div class="cache-note"><strong>Índice reconstruível</strong><p>Este V0 não mantém banco nem cache persistente. Cada atualização recompila contratos, bindings, estado e recibos locais.</p></div>`;
+}
+
+function renderSociety() {
+  return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
+}
+
+const renderers = { today: renderToday, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const titles = {
+  today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
+  areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
+  systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
+  sources: ['Fontes', 'Casas de verdade, autoridade, frescor e garantia de acesso.'],
+  routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
+  runs: ['Execuções', 'O rastro reference-only de cada tentativa.'],
+  governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
+  health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
+  society: ['Society', 'A rede distribui capacidade; o contexto da empresa não circula.'],
+};
+
+function render() {
+  if (!state.model) return;
+  const [title, subtitle] = titles[state.view];
+  $('#page-title').textContent = title;
+  $('#page-subtitle').textContent = subtitle;
+  $('#summary').innerHTML = summaryCards();
+  $('#content').innerHTML = renderers[state.view]();
+  $('#updated-at').textContent = `Estado local · ${fmtDate(state.model.generated_at)}`;
+  document.querySelectorAll('[data-count]').forEach((element) => { element.textContent = state.model.counts[element.dataset.count] ?? 0; });
+  document.querySelectorAll('[data-view]').forEach((element) => element.classList.toggle('active', element.dataset.view === state.view));
+}
+
+function drawerActions(routine) {
+  const buttons = [];
+  if (routine.actions.can_confirm_legacy_pause) buttons.push('<button class="action warn" data-routine-action="confirm-legacy-pause">Registrar pausa antiga</button>');
+  if (routine.actions.can_run) buttons.push('<button class="action primary" data-routine-action="run">Rodar agora</button>');
+  if (routine.actions.can_activate) buttons.push('<button class="action primary" data-routine-action="activate">Ativar agenda</button>');
+  if (routine.actions.can_pause) buttons.push('<button class="action" data-routine-action="pause">Pausar</button>');
+  if (routine.actions.can_resume) buttons.push('<button class="action primary" data-routine-action="resume">Retomar</button>');
+  return buttons.join('');
+}
+
+function openDrawer(routineId) {
+  const routine = state.model.routines.find((item) => item.routine_id === routineId);
+  if (!routine) return;
+  state.selectedRoutine = routineId;
+  const access = routine.access.map((item) => `<div class="access-item"><div><strong>${escapeHtml(item.source_ref)}</strong><span>${escapeHtml(item.action)} · ${escapeHtml(item.requested_mode)}</span></div>${badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')}<small>${escapeHtml(label(item.revocation_effect))}</small></div>`).join('') || '<p class="muted">Sem Access Grants declarados.</p>';
+  const receipts = routine.receipts.map((receipt) => `<div class="receipt-item"><span class="timeline-dot ${tone(receipt.status)}"></span><div><strong>${escapeHtml(label(receipt.status))} · ${escapeHtml(receipt.trigger)}</strong><span>${fmtDate(receipt.completed_at)} · ${escapeHtml(receipt.reason_code)}</span><code>${escapeHtml(receipt.receipt_ref)}</code>${receipt.output_ref ? `<code>output: ${escapeHtml(receipt.output_ref)}</code>` : ''}</div></div>`).join('') || '<p class="muted">Nenhuma execução registrada.</p>';
+  const migration = routine.migration ? `<div class="migration-box ${routine.migration.status === 'awaiting-legacy-pause' ? 'attention' : ''}"><p class="micro">MIGRAÇÃO DE AGENDA</p><strong>${escapeHtml(label(routine.migration.status))}</strong><p>${escapeHtml(routine.migration.source.schedule_summary)}</p><small>Fonte: ${escapeHtml(routine.migration.source.kind)} · o Console não pausa esse fornecedor sozinho.</small></div>` : '';
+  $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">ROTINA · v${escapeHtml(routine.version)}</p><h2>${escapeHtml(routine.name)}</h2>${badge(routine.health_reason_code)}</div>${migration}
+    <section class="drawer-section"><h3>Contrato operacional</h3><dl><div><dt>Agenda</dt><dd>${escapeHtml(routine.schedule)}</dd></div>${routine.preparation ? `<div><dt>Preparação</dt><dd>${escapeHtml(routine.preparation.executable || 'binding ausente')} → <code>${escapeHtml(routine.preparation.output_ref)}</code></dd></div>` : ''}<div><dt>Executor</dt><dd>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</dd></div><div><dt>Modelo</dt><dd>Solicitado, não verificado pelo provider</dd></div><div><dt>Permissão</dt><dd>${escapeHtml(routine.permission_mode)}</dd></div><div><dt>Prompt ref.</dt><dd><code>${escapeHtml(routine.prompt_ref)}</code></dd></div><div><dt>Destino</dt><dd><code>${escapeHtml(routine.destination.kind)}:${escapeHtml(routine.destination.ref)}</code></dd></div></dl></section>
+    <section class="drawer-section"><h3>Contexto e garantia</h3><p class="section-help">A interface mostra referências e a garantia real. Ela não abre o conteúdo da Fonte.</p>${access}</section>
+    <section class="drawer-section"><h3>Fronteira do provider</h3><div class="boundary-note"><b>${routine.receipts.some((receipt) => receipt.content_shared_with_provider) ? 'Já houve envio ao provider' : 'Nenhum envio registrado'}</b>O conteúdo necessário passa pelo ${escapeHtml(routine.binding.adapter)}, nunca pela INEVITA. Prompt e output não entram no recibo.</div></section>
+    <section class="drawer-section"><h3>Recibos recentes</h3><div class="timeline">${receipts}</div></section>
+    <div class="drawer-actions">${drawerActions(routine)}</div>`;
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#drawer-backdrop').hidden = false;
+}
+
+function closeDrawer() {
+  $('#drawer').classList.remove('open');
+  $('#drawer').setAttribute('aria-hidden', 'true');
+  $('#drawer-backdrop').hidden = true;
+  state.selectedRoutine = null;
+}
+
+async function performAction(action) {
+  if (state.busy || !state.selectedRoutine) return;
+  const routine = state.model.routines.find((item) => item.routine_id === state.selectedRoutine);
+  let approvedBy = '';
+  let evidenceRef = '';
+  if (action === 'run') {
+    if (!window.confirm(`Rodar “${routine.name}” agora?\n\nIsso usa a sessão ${routine.binding.adapter} e pode consumir sua assinatura. Não ativa a agenda.`)) return;
+  } else {
+    approvedBy = window.prompt('Quem está aprovando? Use uma referência sem dado pessoal.', 'role-founder') || '';
+    if (!approvedBy) return;
+    if (action === 'confirm-legacy-pause') {
+      if (!window.confirm('Confirme somente depois de pausar a agenda no fornecedor antigo. O Console registra o readback; ele não pausa o Claude por você.')) return;
+      evidenceRef = window.prompt('Referência opaca da evidência de pausa:', 'readback:legacy-schedule-paused') || '';
+      if (!evidenceRef) return;
+    } else if (action === 'activate') {
+      evidenceRef = routine.actions.activation_evidence_ref;
+      if (!evidenceRef || !window.confirm('Ativar o relógio desta rotina usando o último replay manual concluído?')) return;
+    } else if (!window.confirm(`${action === 'pause' ? 'Pausar' : 'Retomar'} esta rotina?`)) return;
+  }
+  state.busy = true;
+  document.querySelectorAll('[data-routine-action]').forEach((button) => { button.disabled = true; });
+  try {
+    const payload = action === 'run' ? {} : { approved_by: approvedBy, ...(evidenceRef ? { evidence_ref: evidenceRef } : {}) };
+    const result = await mutate(`/api/routines/${routine.routine_id}/${action}`, payload);
+    toast(action === 'run' ? `${label(result.status)} · ${result.reason_code}` : 'Estado canônico atualizado.');
+    await loadModel();
+    openDrawer(routine.routine_id);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function loadModel() {
+  state.model = await getJson('/api/console');
+  render();
+}
+
+document.addEventListener('click', (event) => {
+  const nav = event.target.closest('[data-view]');
+  if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
+  const open = event.target.closest('[data-open-routine]');
+  if (open) { openDrawer(open.dataset.openRoutine); return; }
+  const action = event.target.closest('[data-routine-action]');
+  if (action) performAction(action.dataset.routineAction);
+});
+$('#close-drawer').addEventListener('click', closeDrawer);
+$('#drawer-backdrop').addEventListener('click', closeDrawer);
+$('#refresh').addEventListener('click', async () => {
+  try { await loadModel(); toast('Estado local recompilado.'); } catch (error) { toast(label(error.message), 'bad'); }
+});
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer(); });
+
+try {
+  state.csrf = (await getJson('/api/session')).csrf_token;
+  await loadModel();
+} catch (error) {
+  $('#content').innerHTML = empty('Console indisponível', `Não foi possível compilar o estado local: ${label(error.message)}.`);
+  toast(label(error.message), 'bad');
+}

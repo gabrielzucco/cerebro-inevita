@@ -3,13 +3,17 @@
 import { resolve } from 'node:path';
 import { createExecutorBinding, observeExecutor, SUPPORTED_EXECUTOR_ADAPTERS } from './lib/model-executors.mjs';
 import {
+  confirmLegacySchedulePaused,
   listRoutineContracts,
+  loadRoutineMigration,
   listRoutineRunReceipts,
   loadExecutorBinding,
   loadRoutineContract,
   loadRoutineState,
   registerRoutineContract,
+  registerRoutineMigration,
   saveExecutorBinding,
+  saveCollectorBinding,
 } from './lib/routine-protocol.mjs';
 import {
   activateRoutine,
@@ -19,7 +23,8 @@ import {
   runRoutine,
   tickRoutines,
 } from './lib/routine-runtime.mjs';
-import { ensureBrain, readJson } from './lib/system-protocol.mjs';
+import { recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { readJson } from './lib/system-protocol.mjs';
 
 function fail(message, code = 1) {
   console.error(`✗ ${message}`);
@@ -44,12 +49,32 @@ const positional = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
 const [action = 'status', target = ''] = positional;
 
 try {
-  ensureBrain(root);
+  recognizeConsoleBrain(root);
   if (action === 'install') {
     confirm('instalação');
     if (!target) fail('informe o caminho do Routine Contract');
     const result = registerRoutineContract(root, readJson(resolve(root, target), target));
     present({ status: result.status, routine_ref: result.ref });
+    process.exit(0);
+  }
+  if (action === 'migration-install') {
+    confirm('instalação da migração');
+    if (!target) fail('informe o caminho do Routine Migration Readback');
+    const result = registerRoutineMigration(root, readJson(resolve(root, target), target));
+    present({ status: result.status, migration_ref: result.ref });
+    process.exit(0);
+  }
+  if (action === 'collector-install') {
+    confirm('instalação do collector binding');
+    if (!target) fail('informe o caminho do Collector Binding');
+    const result = saveCollectorBinding(root, readJson(resolve(root, target), target));
+    present({ status: result.status, collector_ref: result.ref });
+    process.exit(0);
+  }
+  if (action === 'migration-pause-confirm') {
+    confirm('readback da pausa legada');
+    if (!target) fail('informe routine_id');
+    present(confirmLegacySchedulePaused(root, target, option('evidence'), option('approved-by')));
     process.exit(0);
   }
   if (action === 'binding') {
@@ -90,6 +115,7 @@ try {
     present({
       contract: loadRoutineContract(root, target).contract,
       state: loadRoutineState(root, target).state,
+      migration: loadRoutineMigration(root, target, { optional: true }).migration,
       receipts: listRoutineRunReceipts(root, target),
     });
     process.exit(0);
@@ -151,7 +177,7 @@ try {
     if (results.some((result) => !['completed', 'no-change'].includes(result.status))) process.exitCode = 2;
     process.exit();
   }
-  fail('ação válida: install, binding, binding-refresh, show, status, run, activate, pause, resume, due ou tick');
+  fail('ação válida: install, migration-install, migration-pause-confirm, collector-install, binding, binding-refresh, show, status, run, activate, pause, resume, due ou tick');
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
