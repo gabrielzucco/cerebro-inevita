@@ -21,6 +21,7 @@ import {
   validateCorrectionRunReceipt,
   validateLearningCandidate,
 } from './lib/correction-loop.mjs';
+import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 
 const [kind = '', path = ''] = process.argv.slice(2);
 const validators = {
@@ -37,6 +38,7 @@ const validators = {
   judgment: validateJudgmentReceipt,
   correction: validateCorrectionRunReceipt,
   learning: validateLearningCandidate,
+  trace: validateExecutionTraceEvent,
 };
 
 function fail(message) {
@@ -44,7 +46,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration, judgment, correction ou learning');
+if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration, judgment, correction, learning ou trace');
 if (!path) fail('informe o caminho do JSON');
 
 try {

@@ -1,3 +1,5 @@
+import { mountOperationalCanvas } from '/canvas.bundle.js';
+
 const state = {
   model: null,
   csrf: '',
@@ -5,6 +7,9 @@ const state = {
   selectedRoutine: null,
   selectedJudgment: null,
   busy: false,
+  canvas: {
+    scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
+  },
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -43,6 +48,9 @@ const labels = {
   'not-eligible': 'Ainda não elegível',
   recorded: 'Contexto selecionado',
   'context-not-recorded': 'Contexto não registrado',
+  declared: 'Declarado', running: 'Em execução', gap: 'Lacuna',
+  'evaluation-passed': 'Gates passaram', 'evaluation-gate-failed': 'Gate falhou',
+  reconstructed: 'Reconstruído',
 };
 
 function label(value) {
@@ -51,7 +59,8 @@ function label(value) {
 
 function tone(reason) {
   if (['active', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided'].includes(reason)) return 'good';
-  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested'].includes(reason)) return 'warn';
+  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested', 'gap'].includes(reason)) return 'warn';
+  if (['declared', 'running', 'skipped'].includes(reason)) return 'neutral';
   return 'bad';
 }
 
@@ -74,9 +83,9 @@ async function getJson(path) {
   return value;
 }
 
-async function mutate(path, payload) {
+async function mutate(path, payload, method = 'POST') {
   const response = await fetch(path, {
-    method: 'POST', credentials: 'same-origin',
+    method, credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', 'X-Cerebro-CSRF': state.csrf },
     body: JSON.stringify({ ...payload, confirm: true }),
   });
@@ -148,6 +157,45 @@ function renderToday() {
     <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
 }
 
+function canvasRefOptions() {
+  if (state.canvas.scope === 'system') {
+    return state.model.systems.map((system) => `<option value="${escapeHtml(system.system_id)}"${state.canvas.ref === system.system_id ? ' selected' : ''}>${escapeHtml(system.name)}</option>`).join('');
+  }
+  if (state.canvas.scope === 'run') {
+    return allReceipts().map((receipt) => `<option value="${escapeHtml(receipt.receipt_id)}"${state.canvas.ref === receipt.receipt_id ? ' selected' : ''}>${escapeHtml(receipt.routine_name)} · ${fmtDate(receipt.completed_at)}</option>`).join('');
+  }
+  return '';
+}
+
+function renderCanvas() {
+  const hasRef = state.canvas.scope !== 'brain';
+  return `<div class="canvas-page">
+    <div class="section-heading canvas-heading"><div><p class="eyebrow">OPERATIONAL GRAPH</p><h2>O cérebro em movimento</h2></div><p>Contrato e execução no mesmo mapa. Nó aceso exige recibo ou evento real.</p></div>
+    <div class="canvas-toolbar" role="toolbar" aria-label="Controles do Canvas">
+      <div class="canvas-segmented" aria-label="Escala do mapa">
+        <button data-canvas-scope="brain" class="${state.canvas.scope === 'brain' ? 'active' : ''}">Cérebro</button>
+        <button data-canvas-scope="system" class="${state.canvas.scope === 'system' ? 'active' : ''}">Sistema</button>
+        <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Run</button>
+      </div>
+      ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : '<div class="canvas-spacer"></div>'}
+      <button class="canvas-tool" data-canvas-fit>Enquadrar</button>
+      <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
+      <button class="canvas-tool primary" data-canvas-save disabled>Salvar layout</button>
+    </div>
+    <div class="canvas-stage-shell">
+      <div class="canvas-ambient one"></div><div class="canvas-ambient two"></div>
+      <div id="operational-canvas" class="operational-canvas"><div class="loading"><i></i><span>Compilando grafo local…</span></div></div>
+      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">INSPECTOR</p><h3>Selecione um nó</h3><p>Clique em uma Fonte, Sistema, gate ou decisão para ler o contrato sem abrir conteúdo privado.</p></aside>
+      <div id="canvas-origin" class="canvas-origin"></div>
+      <div class="canvas-legend" aria-label="Legenda de estados">
+        <span class="declared"><i></i>Declarado</span><span class="running"><i></i>Executando</span><span class="completed"><i></i>Concluído</span><span class="gap"><i></i>Lacuna</span><span class="failed"><i></i>Falhou</span>
+      </div>
+    </div>
+    <details class="canvas-accessible"><summary>Ver equivalente em lista</summary><div id="canvas-list"></div></details>
+    <div class="boundary-note"><b>Layout ≠ arquitetura</b>Reorganizar salva apenas coordenadas privadas nesta máquina. Criar ou remover Fonte, Sistema, gate ou aresta continua exigindo mudança de contrato.</div>
+  </div>`;
+}
+
 function renderJudgments() {
   const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
   const decided = state.model.judgments.filter((item) => item.judgment.status !== 'pending');
@@ -204,9 +252,10 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { today: renderToday, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
+  canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
   sources: ['Fontes', 'Casas de verdade, autoridade, frescor e garantia de acesso.'],
@@ -224,10 +273,80 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   $('#summary').innerHTML = summaryCards();
+  if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
   $('#content').innerHTML = renderers[state.view]();
   $('#updated-at').textContent = `Estado local · ${fmtDate(state.model.generated_at)}`;
   document.querySelectorAll('[data-count]').forEach((element) => { element.textContent = state.model.counts[element.dataset.count] ?? 0; });
   document.querySelectorAll('[data-view]').forEach((element) => element.classList.toggle('active', element.dataset.view === state.view));
+  if (state.view === 'canvas') void mountCanvasView();
+}
+
+function canvasEndpoint() {
+  if (state.canvas.scope === 'brain') return '/api/graphs/brain';
+  if (state.canvas.scope === 'system') return `/api/graphs/systems/${state.canvas.ref}`;
+  return `/api/graphs/runs/${state.canvas.ref}`;
+}
+
+function canvasInspector(node) {
+  const inspector = $('#canvas-inspector');
+  if (!inspector) return;
+  const details = Object.entries(node.details || {}).filter(([, value]) => value !== null && value !== undefined);
+  inspector.innerHTML = `<p class="micro">${escapeHtml(node.kind)} · ${escapeHtml(node.state)}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>caminho real</span>' : '<span>contrato</span>'}</div><dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</dd></div>`).join('')}</dl>`;
+}
+
+function canvasList(graph) {
+  return `<table><thead><tr><th>Objeto</th><th>Tipo</th><th>Estado</th><th>Rastro</th></tr></thead><tbody>${graph.nodes.map((node) => `<tr><td><button class="table-action" data-canvas-inspect-node="${escapeHtml(node.id)}">${escapeHtml(node.label)} →</button></td><td>${escapeHtml(node.kind)}</td><td>${escapeHtml(label(node.state))}</td><td>${node.actual ? 'Run real' : 'Contrato'}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function mountCanvasView() {
+  if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id;
+  if (state.canvas.scope === 'run' && !state.canvas.ref) state.canvas.ref = allReceipts()[0]?.receipt_id;
+  const container = $('#operational-canvas');
+  if (!container || (state.canvas.scope !== 'brain' && !state.canvas.ref)) {
+    if (container) container.innerHTML = empty('Nada para desenhar', 'Ainda não existe objeto real nesta escala.');
+    return;
+  }
+  try {
+    const graph = await getJson(canvasEndpoint());
+    if (state.view !== 'canvas') return;
+    state.canvas.graph = graph;
+    state.canvas.positions = null;
+    $('#canvas-origin').innerHTML = graph.trace_origin
+      ? `<span>${graph.trace_origin === 'recorded' ? 'TRACE V1' : 'TRACE RECONSTRUÍDO'}</span><b>${escapeHtml(graph.trace_origin === 'recorded' ? `${graph.trace_events} eventos` : 'granularidade limitada')}</b>`
+      : `<span>CONTRATO</span><b>${graph.nodes.length} nós · ${graph.edges.length} arestas</b>`;
+    $('#canvas-list').innerHTML = canvasList(graph);
+    state.canvas.controller = await mountOperationalCanvas({
+      container,
+      model: graph,
+      editable: state.canvas.editable,
+      onInspect: canvasInspector,
+      onLayoutChange: (positions) => {
+        state.canvas.positions = positions;
+        const save = $('[data-canvas-save]');
+        if (save) save.disabled = false;
+      },
+    });
+  } catch (error) {
+    container.innerHTML = empty('Canvas indisponível', label(error.message));
+    toast(label(error.message), 'bad');
+  }
+}
+
+async function saveCanvasLayout() {
+  if (!state.canvas.graph || !state.canvas.positions) return;
+  const approvedBy = window.prompt('Quem está salvando o layout? Use uma referência sem dado pessoal.', 'role-founder') || '';
+  if (!approvedBy) return;
+  if (!window.confirm('Salvar somente as posições dos nós nesta máquina? A topologia e os contratos não serão alterados.')) return;
+  try {
+    const result = await mutate(`/api/graphs/layouts/${state.canvas.graph.layout.key}`, {
+      approved_by: approvedBy,
+      positions: state.canvas.positions,
+    }, 'PUT');
+    toast(`Layout salvo · ${result.node_count} posições · topologia intacta.`);
+    state.canvas.positions = null;
+    const save = $('[data-canvas-save]');
+    if (save) save.disabled = true;
+  } catch (error) { toast(label(error.message), 'bad'); }
 }
 
 function drawerActions(routine) {
@@ -483,6 +602,30 @@ async function loadModel() {
 document.addEventListener('click', (event) => {
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
+  const canvasScope = event.target.closest('[data-canvas-scope]');
+  if (canvasScope) {
+    state.canvas.scope = canvasScope.dataset.canvasScope;
+    state.canvas.ref = state.canvas.scope === 'system'
+      ? state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id || null
+      : state.canvas.scope === 'run' ? allReceipts()[0]?.receipt_id || null : null;
+    state.canvas.positions = null;
+    render();
+    return;
+  }
+  if (event.target.closest('[data-canvas-fit]')) { state.canvas.controller?.fit(); return; }
+  if (event.target.closest('[data-canvas-edit]')) {
+    state.canvas.editable = !state.canvas.editable;
+    state.canvas.positions = null;
+    render();
+    return;
+  }
+  if (event.target.closest('[data-canvas-save]')) { saveCanvasLayout(); return; }
+  const canvasNode = event.target.closest('[data-canvas-inspect-node]');
+  if (canvasNode && state.canvas.graph) {
+    const node = state.canvas.graph.nodes.find((item) => item.id === canvasNode.dataset.canvasInspectNode);
+    if (node) canvasInspector(node);
+    return;
+  }
   const open = event.target.closest('[data-open-routine]');
   if (open) { openDrawer(open.dataset.openRoutine); return; }
   const judgment = event.target.closest('[data-open-judgment]');
@@ -499,6 +642,12 @@ document.addEventListener('click', (event) => {
   if (revokeAction) { revokeGrant(revokeAction.dataset.revokeGrant); return; }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
+});
+document.addEventListener('change', (event) => {
+  if (event.target.id !== 'canvas-ref') return;
+  state.canvas.ref = event.target.value;
+  state.canvas.positions = null;
+  render();
 });
 $('#close-drawer').addEventListener('click', closeDrawer);
 $('#drawer-backdrop').addEventListener('click', closeDrawer);

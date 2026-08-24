@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os quatorze envelopes
+## Os quinze envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -35,6 +35,9 @@ conteúdo bruto.
   correção atravessa o provider somente em memória e não entra no envelope.
 - `learning-candidate.schema.json`: registra que um Run corrigido e aprovado virou candidato
   `1/3`, sem copiar conteúdo nem alterar automaticamente o motor.
+- `execution-trace-event.schema.json`: evento privado, ordenado e append-only do caminho real do
+  Run. Registra estados e referências, nunca prompt, output, payload ou erro cru. Skill concluída
+  exige evidência de leitura bem-sucedida e hash.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -72,6 +75,7 @@ proveniência da recuperação. Toda execução V2 deixa o Context Snapshot corr
 | Judgment Receipt | V1 privado | — |
 | Correction Run Receipt | V1 privado | — |
 | Learning Candidate | V1 privado | — |
+| Execution Trace Event | V1 privado | — |
 
 Os readers são dual-read. Os writers antigos continuam V1 e não injetam campos nos schemas
 fechados. O runner file-only recusa executar um System Contract V2 porque ainda não consegue
@@ -115,6 +119,7 @@ node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-m
 node scripts/protocol-validate.mjs judgment protocol/examples/judgment-receipt.v1.json
 node scripts/protocol-validate.mjs correction protocol/examples/correction-run-receipt.v1.json
 node scripts/protocol-validate.mjs learning protocol/examples/learning-candidate.v1.json
+node scripts/protocol-validate.mjs trace protocol/examples/execution-trace-event.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 
@@ -217,6 +222,18 @@ output privado só é servido por rota autenticada quando o dono abre explicitam
 navegar e atualizar recompila o estado sem chamar modelo. Não há telemetria de conteúdo nem banco
 concorrente.
 
+O Canvas Operacional usa três escalas sobre a mesma gramática: `/api/graphs/brain` compila Áreas,
+Sistemas, Fontes e Rotinas; `/api/graphs/systems/:system-id` mostra o contrato operacional;
+`/api/graphs/runs/:receipt-id` sobrepõe o Execution Trace. Cada resposta contém `nodes`, `edges` e
+`states` sem abrir conteúdo privado. Runs anteriores ao protocolo aparecem como `reconstructed`;
+Runs instrumentados aparecem como `recorded`. `PUT /api/graphs/layouts/:layout-key` persiste apenas
+coordenadas locais com sessão, CSRF e confirmação; não altera topologia.
+
+O runtime registra acesso, coleta, recuperação, capability, output, eval e julgamento. Uma skill
+declarada no Routine Contract só ganha evento `skill/completed` quando o cliente oficial reporta
+uma leitura local bem-sucedida daquele caminho. Gates registrados executam antes do Run Record
+final e guardam somente IDs, booleanos, contagem de problemas e hash de evidência.
+
 A tela de Execuções abre o Context Snapshot reference-only sem abrir o artefato privado nem chamar
 modelo. A tela de Governança revoga Access Grants com confirmação explícita e CSRF; o efeito é
 somente futuro, preserva o rastro passado e bloqueia o provider antes do próximo Run.
@@ -263,3 +280,6 @@ com configuração existente interrompe o processo; nada é sobrescrito silencio
 - o E2E do Console prova três papéis de Fonte, Context Snapshot sem bruto, correção com segundo Run
   e revogação futura bloqueando o modelo; o teste dedicado rejeita ponteiro obrigatório ausente,
   Fonte não declarada e diretório de artefatos redirecionado por symlink.
+- os testes de trace, evaluator e graph read model provam ordem append-only, ausência de payload,
+  skill observada versus apenas declarada, quatro gates de Calls e distinção entre caminho
+  `recorded` e `reconstructed`.

@@ -15,6 +15,13 @@ import {
   runRoutine,
 } from './lib/routine-runtime.mjs';
 import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { saveCanvasLayout } from './lib/canvas-layout-runtime.mjs';
+import {
+  buildBrainGraph,
+  buildRunGraph,
+  buildSystemGraph,
+  graphForLayout,
+} from './lib/graph-read-model.mjs';
 import { readRoutineRunContext } from './lib/context-snapshot-runtime.mjs';
 import { revokeAccessGrant } from './lib/access-runtime.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
@@ -141,6 +148,19 @@ function comparisonReceiptFrom(pathname) {
   return match?.[1] || null;
 }
 
+function graphRequestFrom(pathname) {
+  if (pathname === '/api/graphs/brain') return { type: 'brain', ref: null };
+  const system = pathname.match(/^\/api\/graphs\/systems\/([a-z0-9][a-z0-9-]{0,63})$/);
+  if (system) return { type: 'system', ref: system[1] };
+  const run = pathname.match(/^\/api\/graphs\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})$/);
+  return run ? { type: 'run', ref: run[1] } : null;
+}
+
+function graphLayoutFrom(pathname) {
+  const match = pathname.match(/^\/api\/graphs\/layouts\/([a-z0-9][a-z0-9-]{0,127})$/);
+  return match?.[1] || null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
@@ -173,6 +193,10 @@ export function createConsoleServer({
         sendStatic(response, 'app.js', 'text/javascript; charset=utf-8');
         return;
       }
+      if (request.method === 'GET' && url.pathname === '/canvas.bundle.js') {
+        sendStatic(response, 'canvas.bundle.js', 'text/javascript; charset=utf-8');
+        return;
+      }
       if (request.method === 'GET' && url.pathname === '/styles.css') {
         sendStatic(response, 'styles.css', 'text/css; charset=utf-8');
         return;
@@ -190,6 +214,35 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/api/console') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, buildConsoleReadModel(brainRoot, { now: clock() }));
+        return;
+      }
+      const graphRequest = request.method === 'GET' ? graphRequestFrom(url.pathname) : null;
+      if (graphRequest) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const graph = graphRequest.type === 'brain' ? buildBrainGraph(brainRoot, { now: clock() })
+          : graphRequest.type === 'system' ? buildSystemGraph(brainRoot, graphRequest.ref)
+            : buildRunGraph(brainRoot, graphRequest.ref);
+        send(response, 200, graph);
+        return;
+      }
+      const graphLayoutKey = request.method === 'PUT' ? graphLayoutFrom(url.pathname) : null;
+      if (graphLayoutKey) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const approvedBy = actor(payload);
+        const graph = graphForLayout(brainRoot, graphLayoutKey);
+        const allowedNodes = new Set(graph.nodes.map((node) => node.id));
+        if (!payload.positions || typeof payload.positions !== 'object' || Array.isArray(payload.positions)) {
+          throw new Error('canvas-layout-positions-invalid');
+        }
+        if (Object.keys(payload.positions).some((nodeId) => !allowedNodes.has(nodeId))) {
+          throw new Error('canvas-layout-node-unknown');
+        }
+        const saved = saveCanvasLayout(brainRoot, graphLayoutKey, payload.positions, approvedBy, { clock });
+        send(response, 200, {
+          status: 'saved', layout_key: saved.layout_key, node_count: Object.keys(saved.positions).length,
+          topology_changed: false,
+        });
         return;
       }
       const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;

@@ -151,8 +151,15 @@ export function validateRoutineContract(value) {
   }
   if (!object(value.context)) errors.push('context precisa ser objeto');
   else {
-    closed(errors, value.context, 'context', ['prompt_ref', 'access_requests']);
+    closed(errors, value.context, 'context', ['prompt_ref', 'skill_refs', 'access_requests']);
     localRef(errors, value.context.prompt_ref, 'context.prompt_ref', { relativePath: true });
+    if (value.context.skill_refs !== undefined) {
+      list(errors, value.context.skill_refs, 'context.skill_refs');
+      for (const ref of Array.isArray(value.context.skill_refs) ? value.context.skill_refs : []) {
+        localRef(errors, ref, 'context.skill_refs[]', { relativePath: true });
+      }
+      unique(errors, value.context.skill_refs, 'context.skill_refs');
+    }
     list(errors, value.context.access_requests, 'context.access_requests');
     const grantRefs = [];
     const accessRequests = Array.isArray(value.context.access_requests) ? value.context.access_requests : [];
@@ -253,6 +260,22 @@ export function validateRoutineContract(value) {
     }
   } else if (value.extensions?.preparation !== undefined) {
     errors.push('extensions.preparation precisa ser objeto');
+  }
+  if (object(value.extensions?.evaluation)) {
+    const evaluation = value.extensions.evaluation;
+    closed(errors, evaluation, 'extensions.evaluation', ['kind', 'evaluator_ref', 'source_pointer']);
+    if (evaluation.kind !== 'registered-evaluator') errors.push('extensions.evaluation.kind inválido');
+    if (evaluation.evaluator_ref !== 'calls-deterministic-v1') {
+      errors.push('extensions.evaluation.evaluator_ref inválido');
+    }
+    if (!JSON_POINTER_RE.test(evaluation.source_pointer || '')) {
+      errors.push('extensions.evaluation.source_pointer inválido');
+    }
+    if (!object(value.extensions?.preparation) || !Array.isArray(value.extensions.preparation.source_selections)) {
+      errors.push('extensions.evaluation exige preparation com source_selections');
+    }
+  } else if (value.extensions?.evaluation !== undefined) {
+    errors.push('extensions.evaluation precisa ser objeto');
   }
   referenceOnly(errors, value, 'routine_contract');
   return [...new Set(errors)];

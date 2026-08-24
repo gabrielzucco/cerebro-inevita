@@ -24,6 +24,8 @@
   "routineCorrections": ".cerebro/runtime/corrections",
   "learningCandidates": ".cerebro/runtime/learning-candidates",
   "contextArtifacts": ".cerebro/runtime/context-artifacts",
+  "executionTraces": ".cerebro/runtime/traces",
+  "canvasLayouts": ".cerebro/runtime/canvas-layouts",
   "routineMigrations": ".cerebro/runtime/migrations/routines",
   "runLedger": ".cerebro/ledger/runs.jsonl",
   "learningRegister": ".cerebro/learning"

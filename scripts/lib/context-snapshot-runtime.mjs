@@ -277,6 +277,9 @@ export function appendCompletedRunRecord(root, routineContract, context, {
   outputRef,
   accessReceiptRefs,
   correctionRef = null,
+  evaluation = null,
+  executionTraceRef = null,
+  skillLoadRefs = [],
 }) {
   if (context.status !== 'recorded') return null;
   const system = context.system;
@@ -296,7 +299,7 @@ export function appendCompletedRunRecord(root, routineContract, context, {
     source_refs: context.source_refs,
     output_refs: [outputRef],
     context_snapshot: context.context_snapshot,
-    eval: { version: system.eval.version, passed: null },
+    eval: { version: system.eval.version, passed: evaluation?.passed ?? null },
     human_decision: 'pending',
     correction_ref: correctionRef,
     outcomes: [],
@@ -306,6 +309,14 @@ export function appendCompletedRunRecord(root, routineContract, context, {
       routine_receipt_ref: `routine-receipt:${receiptId}`,
       context_artifact_ref: context.artifact_ref,
       access_receipt_refs: accessReceiptRefs,
+      execution_trace_ref: executionTraceRef,
+      skill_load_refs: skillLoadRefs,
+      evaluation: evaluation ? {
+        status: evaluation.status,
+        evaluator_ref: evaluation.evaluator_ref,
+        evidence_ref: evaluation.evidence_ref,
+        gate_results: evaluation.gate_results,
+      } : null,
     },
   };
   appendRunRecord(root, record);

@@ -130,6 +130,8 @@ try {
     routineMigrations: '.cerebro/runtime/migrations/routines',
     runLedger: '.cerebro/runtime/ledger/runs.jsonl',
     contextArtifacts: '.cerebro/runtime/context-artifacts',
+    executionTraces: '.cerebro/runtime/traces',
+    canvasLayouts: '.cerebro/runtime/canvas-layouts',
   });
   write(join(root, '.cerebro', 'private-ignore.manifest'), '.cerebro/runtime\n.cerebro/contracts/\noperacao/execucoes/*\n');
   write(join(root, 'operacao', 'rotinas', 'funil-diario.prompt.md'), 'PROMPT_ONLY_ON_STDIN\n');
@@ -262,6 +264,14 @@ try {
   const session = await request(base, '/api/session', { cookie });
   assert.equal(session.value.csrf_token, 'fixed-csrf-token');
 
+  assert.equal((await request(base, '/api/graphs/brain')).status, 403);
+  const brainGraph = await request(base, '/api/graphs/brain', { cookie });
+  assert.equal(brainGraph.status, 200);
+  assert.equal(brainGraph.value.graph_type, 'brain');
+  assert(Array.isArray(brainGraph.value.nodes));
+  assert(Array.isArray(brainGraph.value.edges));
+  assert.equal(brainGraph.value.privacy.payload_exposed, false);
+
   let consoleView = await request(base, '/api/console', { cookie });
   assert.equal(consoleView.status, 200);
   assert.equal(consoleView.value.counts.areas, 2);
@@ -302,6 +312,36 @@ try {
   assert.equal(JSON.stringify(run.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
 
   const receiptId = run.value.receipt_ref.replace('routine-receipt:', '');
+  const systemGraph = await request(base, '/api/graphs/systems/analisar-funil', { cookie });
+  assert.equal(systemGraph.status, 200);
+  assert.equal(systemGraph.value.graph_type, 'system');
+  const runGraph = await request(base, `/api/graphs/runs/${receiptId}`, { cookie });
+  assert.equal(runGraph.status, 200);
+  assert.equal(runGraph.value.graph_type, 'run');
+  assert.equal(runGraph.value.trace_origin, 'recorded');
+  assert(runGraph.value.trace_events > 0);
+  assert.equal(runGraph.value.nodes.find((node) => node.id === 'capability').state, 'completed');
+  assert.equal(JSON.stringify(runGraph.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+
+  const graphNodeId = brainGraph.value.nodes[0].id;
+  const layoutMissingCsrf = await request(base, '/api/graphs/layouts/brain', {
+    method: 'PUT', cookie,
+    body: { confirm: true, approved_by: 'role-founder', positions: { [graphNodeId]: { x: 100, y: 80 } } },
+  });
+  assert.equal(layoutMissingCsrf.status, 403);
+  const layoutUnknownNode = await request(base, '/api/graphs/layouts/brain', {
+    method: 'PUT', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-founder', positions: { unknown: { x: 100, y: 80 } } },
+  });
+  assert.equal(layoutUnknownNode.status, 400);
+  assert.equal(layoutUnknownNode.value.reason_code, 'canvas-layout-node-unknown');
+  const layoutSaved = await request(base, '/api/graphs/layouts/brain', {
+    method: 'PUT', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-founder', positions: { [graphNodeId]: { x: 100.125, y: 80.456 } } },
+  });
+  assert.equal(layoutSaved.status, 200);
+  assert.equal(layoutSaved.value.topology_changed, false);
+  assert.equal(layoutSaved.value.node_count, 1);
   const receiptPath = join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${receiptId}.json`);
   const receiptFixture = JSON.parse(readFileSync(receiptPath, 'utf8'));
   assert.equal((await request(base, `/api/runs/${receiptId}/output`)).status, 403);

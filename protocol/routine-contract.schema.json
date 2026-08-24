@@ -74,6 +74,11 @@
       "required": ["prompt_ref", "access_requests"],
       "properties": {
         "prompt_ref": { "$ref": "#/$defs/local_ref" },
+        "skill_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/local_ref" }
+        },
         "access_requests": {
           "type": "array",
           "items": {
@@ -164,6 +169,16 @@
                 }
               }
             }
+          }
+        },
+        "evaluation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "evaluator_ref", "source_pointer"],
+          "properties": {
+            "kind": { "const": "registered-evaluator" },
+            "evaluator_ref": { "enum": ["calls-deterministic-v1"] },
+            "source_pointer": { "$ref": "#/$defs/json_pointer" }
           }
         }
       }

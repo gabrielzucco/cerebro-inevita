@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -506,6 +507,46 @@ try {
     },
   });
   assert.equal(directClaude.ok, true);
+
+  const declaredSkillRef = '.claude/skills/calls/SKILL.md';
+  write(join(root, declaredSkillRef), '# Calls\n');
+  const skillRoutine = contract({
+    routine_id: 'funil-skill-observada',
+    trigger: { type: 'manual', schedule: null },
+    context: { access_requests: [], skill_refs: [declaredSkillRef] },
+    destination: { kind: 'runtime-output', ref: 'routine-output' },
+  });
+  const skillOutputTemp = join(root, '.cerebro', 'runtime', 'outputs', 'routines', '.skill-observation.tmp');
+  const observedSkill = runModelExecutor({ ...bindingExample, workspace_path: root }, skillRoutine, `${promptMarker}\n`, {
+    outputTempPath: skillOutputTemp,
+    spawn: (_command, args) => {
+      write(args[args.indexOf('-o') + 1], `${outputMarker}\n`);
+      return {
+        status: 0,
+        stdout: `${JSON.stringify({
+          type: 'item.completed',
+          item: { type: 'command_execution', command: `sed -n '1,220p' ${declaredSkillRef}`, status: 'completed', exit_code: 0 },
+        })}\n`,
+        stderr: '',
+      };
+    },
+  });
+  assert.equal(observedSkill.ok, true);
+  assert.equal(observedSkill.skill_loads.length, 1);
+  assert.equal(observedSkill.skill_loads[0].ref, declaredSkillRef);
+  assert.equal(observedSkill.skill_loads[0].evidence_ref,
+    `sha256:${createHash('sha256').update('# Calls\n').digest('hex')}`);
+
+  const merelyDeclaredOutputTemp = join(root, '.cerebro', 'runtime', 'outputs', 'routines', '.skill-not-observed.tmp');
+  const merelyDeclaredSkill = runModelExecutor({ ...bindingExample, workspace_path: root }, skillRoutine, `${promptMarker}\n`, {
+    outputTempPath: merelyDeclaredOutputTemp,
+    spawn: (_command, args) => {
+      write(args[args.indexOf('-o') + 1], `${outputMarker}\n`);
+      return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
+    },
+  });
+  assert.equal(merelyDeclaredSkill.ok, true);
+  assert.deepEqual(merelyDeclaredSkill.skill_loads, []);
 
   const receiptFiles = readdirSync(join(root, '.cerebro', 'runtime', 'receipts', 'routines'));
   assert(receiptFiles.length >= 10);

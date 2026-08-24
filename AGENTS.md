@@ -10,3 +10,9 @@ são opcionais e só podem rodar depois de uma primeira resposta útil, quando o
 funcional. Nunca procure Node, rode `which node`, altere `PATH`, instale dependências ou repita uma
 execução por causa de telemetria.
 Nunca envie o conteúdo privado para a INEVITA e nunca grave sem confirmação do dono.
+
+## Design do produto
+
+Antes de alterar o Company Brain Console, leia `DESIGN.md`. O Canvas é uma vista derivada de
+contratos, recibos e traces locais: beleza nunca autoriza inventar estado, copiar conteúdo privado
+ou criar uma segunda casa da verdade.
