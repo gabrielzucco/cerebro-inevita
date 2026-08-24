@@ -57,6 +57,7 @@ function installFoundation(root, profile = 'full') {
   write(root, '.cerebro/manifest.json', manifest(profile));
   write(root, '.cerebro/layout.json', baseLayout());
   write(root, 'VERSION', '1.32.0\n');
+  if (profile !== 'starter') write(root, '.cerebro/id', 'fixture-company-brain\n');
   write(root, 'COMECE-AQUI.md', '# technical entrypoint\n');
   write(root, 'AGENTS.md', '# technical entrypoint\n');
   write(root, 'company/map.md', '# private company map\n');
@@ -110,6 +111,15 @@ try {
   assert.equal(starter.manifest.status, 'valid');
   assert.equal(starter.inventory.runs.valid, 0);
   assert.equal(starter.system_readiness.ready.length, 0);
+
+  const brokenReferenceRoot = sandbox('brain-compat-broken-reference-');
+  installFoundation(brokenReferenceRoot);
+  rmSync(join(brokenReferenceRoot, '.cerebro', 'id'));
+  const brokenReference = buildCompatibilityDiagnostic(brokenReferenceRoot, { now: fixedNow });
+  assert.equal(brokenReference.target.classification, 'partial-brain');
+  assert.equal(brokenReference.manifest.status, 'invalid');
+  assert(brokenReference.issues.some((issue) => issue.reason_code === 'brain-manifest-reference-missing'
+    && issue.field === 'identity_ref'), 'Manifest full não pode apontar para identidade inexistente');
 
   const operationalRoot = sandbox('brain-compat-operational-');
   installFoundation(operationalRoot);

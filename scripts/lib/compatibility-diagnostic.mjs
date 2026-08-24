@@ -109,6 +109,34 @@ export function validateBrainManifest(value) {
   return errors;
 }
 
+function manifestReferenceErrors(root, manifest) {
+  const errors = [];
+  const required = [
+    ['version_ref', manifest.version_ref],
+    ['layout_ref', manifest.layout_ref],
+    ...((manifest.entrypoints || []).map((ref, index) => [`entrypoints[${index}]`, ref])),
+  ];
+  if (manifest.profile !== 'starter') required.push(['identity_ref', manifest.identity_ref]);
+
+  for (const [field, ref] of required) {
+    if (!relativeRef(ref)) continue;
+    const target = safeInside(root, ref, ref);
+    if (!target || !existsSync(target)) {
+      errors.push({ reason_code: 'brain-manifest-reference-missing', ref, field });
+      continue;
+    }
+    try {
+      const stat = lstatSync(target);
+      if (stat.isSymbolicLink() || !stat.isFile()) {
+        errors.push({ reason_code: 'brain-manifest-reference-invalid', ref, field });
+      }
+    } catch {
+      errors.push({ reason_code: 'brain-manifest-reference-invalid', ref, field });
+    }
+  }
+  return errors;
+}
+
 function technicalJson(path, label, issues) {
   if (!existsSync(path)) return null;
   try {
@@ -272,10 +300,14 @@ function recommendations(classification, checks) {
 export function readBrainManifest(root) {
   const issues = [];
   const ref = '.cerebro/manifest.json';
-  const value = technicalJson(join(resolve(root), ref), 'brain-manifest', issues);
+  const brainRoot = resolve(root);
+  const value = technicalJson(join(brainRoot, ref), 'brain-manifest', issues);
   if (!value) return { status: existsSync(join(resolve(root), ref)) ? 'invalid' : 'missing', ref, value: null, errors: issues };
-  const errors = validateBrainManifest(value);
-  return { status: errors.length ? 'invalid' : 'valid', ref, value, errors: errors.map((reason) => ({ reason_code: 'brain-manifest-invalid', ref, reason })) };
+  const schemaErrors = validateBrainManifest(value)
+    .map((reason) => ({ reason_code: 'brain-manifest-invalid', ref, reason }));
+  const referenceErrors = schemaErrors.length ? [] : manifestReferenceErrors(brainRoot, value);
+  const errors = [...schemaErrors, ...referenceErrors];
+  return { status: errors.length ? 'invalid' : 'valid', ref, value, errors };
 }
 
 export function buildCompatibilityDiagnostic(root, { now = new Date() } = {}) {

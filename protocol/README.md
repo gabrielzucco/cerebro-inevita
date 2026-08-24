@@ -82,6 +82,11 @@ declara versão do Manifest, perfil, referências para versão/identidade/layout
 fronteira de runtime e privacidade e versões de envelopes aceitas. Fontes, Sistemas, Runs,
 bindings e estados continuam nas suas casas canônicas.
 
+Compatibilidade exige integridade referencial: versão, layout e entrypoints precisam existir como
+arquivos locais reais, sem symlink. Perfis `full` e `legacy-compatible` também precisam possuir a
+identidade privada apontada por `identity_ref`; o starter pode permanecer `unassigned` até a
+ativação criar `.cerebro/id` fora do Git.
+
 O diagnóstico é local e somente leitura:
 
 ```bash

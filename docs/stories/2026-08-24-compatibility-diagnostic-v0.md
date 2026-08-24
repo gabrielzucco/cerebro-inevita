@@ -30,6 +30,8 @@ não migra nada e não transforma presença de pastas em execução observada.
       starter.
 - [x] Manifest aponta para versão, identidade, layout, entrypoints, runtime, privacidade e envelopes
       suportados sem listar objetos operacionais.
+- [x] Referências técnicas do Manifest precisam existir como arquivos reais; identidade ausente só
+      é permitida no starter ainda não ativado.
 - [x] Scanner classifica `new`, `organized-context`, `partial-brain` ou `inevita-compatible`.
 - [x] Scanner retorna checks com estado, razão e referências, além de `preserve`, `adapt`, `add` e
       `do_not_touch`.
@@ -58,6 +60,8 @@ não migra nada e não transforma presença de pastas em execução observada.
   Retrieval V2, 2 Runs com Context Snapshot e somente Funil + Calls prontos para trabalhar.
 - Scanner provado contra quatro rotas de entrada e fixture com arquivo humano sem permissão de
   leitura; o diagnóstico permaneceu somente técnico e não mutou o alvo.
+- Manifest `full` com `.cerebro/id` ausente agora regride para `partial-brain`; starter pode seguir
+  compatível em `foundation` com identidade ainda `unassigned` até a ativação local.
 - QA em Chromium local a 1280 px: nove checks, zero overflow horizontal, navegação de volta ao
   Canvas preservada e referências extensas compactadas sem perder a prova no read model.
 - Suíte completa passou, incluindo protocolo, starter, Compatibility Doctor e integração do
