@@ -98,6 +98,20 @@ try {
   expectValid('Source Contract V1', validateSourceContract, source);
   expectValid('System Contract V1', validateSystemContract, systemV1);
   expectValid('System Contract V2', validateSystemContract, systemV2);
+
+  if (!systemV2.artifacts) throw new Error('exemplo V2 precisa declarar artifacts como interface de máquina');
+  const artifactsExtraKey = clone(systemV2);
+  artifactsExtraKey.artifacts.negotiation = true;
+  expectInvalid('artifacts com chave estranha', validateSystemContract, artifactsExtraKey, 'não é permitido');
+  const artifactsBadRange = clone(systemV2);
+  artifactsBadRange.artifacts.consumes[0].accepted_versions = ['banana'];
+  expectInvalid('accepted_versions inválido', validateSystemContract, artifactsBadRange, 'accepted_versions');
+  const artifactsEmpty = clone(systemV2);
+  artifactsEmpty.artifacts = { produces: [], consumes: [] };
+  expectInvalid('artifacts vazio', validateSystemContract, artifactsEmpty, 'ao menos um');
+  const artifactsOnV1 = clone(systemV1);
+  artifactsOnV1.artifacts = clone(systemV2.artifacts);
+  expectInvalid('artifacts em V1', validateSystemContract, artifactsOnV1, 'não é permitido');
   expectValid('Run Record V1', validateRunRecord, runV1);
   expectValid('Run Record V2', validateRunRecord, runV2);
   expectValid('Access Grant V1', validateAccessGrant, grant);

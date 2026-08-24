@@ -13,8 +13,8 @@ const CONTRACT_KEYS = new Set([
 ]);
 const STATE_KEYS = new Set([
   'protocol_version', 'experiment_id', 'status', 'phase', 'started_on', 'read_on', 'closed_on',
-  'amendment_count', 'amendments', 'run_refs', 'measurement', 'verdict', 'learning', 'observed_at',
-  'privacy',
+  'amendment_count', 'amendments', 'run_refs', 'chain_refs', 'measurement', 'verdict', 'learning',
+  'observed_at', 'privacy',
 ]);
 const STATUSES = new Set(['queued', 'running', 'ready-for-read', 'decided', 'cancelled', 'blocked']);
 const PHASES = new Set(['contract', 'execution', 'measurement', 'decision', 'learning']);
@@ -145,6 +145,7 @@ export function validateExperimentState(value) {
     });
   }
   refList(errors, value.run_refs, 'run_refs', OPAQUE_REF_RE);
+  if (value.chain_refs !== undefined) refList(errors, value.chain_refs, 'chain_refs', OPAQUE_REF_RE);
   if (!object(value.measurement)) errors.push('measurement precisa ser objeto');
   else {
     if (!['not-started', 'collecting', 'ready', 'complete', 'blocked'].includes(value.measurement.status)) errors.push('measurement.status inválido');

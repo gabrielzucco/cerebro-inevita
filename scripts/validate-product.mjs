@@ -23,6 +23,7 @@ import {
 } from './lib/correction-loop.mjs';
 import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
+import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -48,6 +49,8 @@ const required = [
   'protocol/learning-candidate.schema.json',
   'protocol/execution-trace-event.schema.json',
   'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
+  'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
+  'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'protocol/examples/access-receipt.v1.json',
@@ -60,6 +63,7 @@ const required = [
   'protocol/examples/learning-candidate.v1.json',
   'protocol/examples/execution-trace-event.v1.json',
   'protocol/examples/experiment-contract.v1.json', 'protocol/examples/experiment-state.v1.json',
+  'protocol/examples/handoff-contract.v1.json', 'protocol/examples/handoff-receipt.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -102,6 +106,7 @@ const required = [
   'scripts/lib/routine-runtime.mjs', 'scripts/lib/context-snapshot-runtime.mjs',
   'scripts/lib/execution-trace-runtime.mjs', 'scripts/lib/evaluation-runtime.mjs',
   'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
+  'scripts/lib/handoff-protocol.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
   'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
@@ -120,6 +125,7 @@ const required = [
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   'scripts/test-experiment-protocol.mjs',
+  'scripts/test-handoff-protocol.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
@@ -161,6 +167,8 @@ for (const [label, path, validate] of [
   ['example execution trace event v1', 'protocol/examples/execution-trace-event.v1.json', validateExecutionTraceEvent],
   ['example experiment contract v1', 'protocol/examples/experiment-contract.v1.json', validateExperimentContract],
   ['example experiment state v1', 'protocol/examples/experiment-state.v1.json', validateExperimentState],
+  ['example handoff contract v1', 'protocol/examples/handoff-contract.v1.json', validateHandoffContract],
+  ['example handoff receipt v1', 'protocol/examples/handoff-receipt.v1.json', validateHandoffReceipt],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -628,4 +636,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 17 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 19 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

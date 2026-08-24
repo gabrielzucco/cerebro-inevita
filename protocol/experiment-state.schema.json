@@ -34,6 +34,11 @@
       "type": "array", "uniqueItems": true,
       "items": { "$ref": "#/$defs/ref" }
     },
+    "chain_refs": {
+      "type": "array", "uniqueItems": true,
+      "items": { "$ref": "#/$defs/ref" },
+      "description": "Chains de handoff que este Experimento atravessa. Opcional e aditivo: o chain_id é runtime e genérico; o Experimento apenas aponta para uma ou mais chains."
+    },
     "measurement": {
       "type": "object", "additionalProperties": false,
       "required": ["status", "primary_metric_ref", "diagnostic_refs"],

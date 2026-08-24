@@ -2,6 +2,7 @@ const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const REF_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const LOCAL_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
+const ACCEPTED_VERSION_RE = /^\d+(?:\.x|\.\d+(?:\.x|\.\d+)?)?$/;
 const ASSURANCES = new Set(['runtime-enforced', 'receipt-audited', 'exported']);
 const LOCAL_SOURCE_TYPES = new Set([
   'local-folder', 'local-file', 'obsidian', 'git-repository', 'meetings-folder',
@@ -97,7 +98,7 @@ function validateSystemShape(errors, value, version) {
     'capability', 'entities', 'sources', 'pipeline', 'permissions', 'eval', 'learning',
     'extensions',
   ];
-  if (version === 2) top.push('retrieval');
+  if (version === 2) top.push('retrieval', 'artifacts');
   closed(errors, value, 'system_contract', top);
   closed(errors, value.result, 'result', [
     'statement', 'non_success', 'output_type', 'definition_of_done', 'owner', 'human_gate',
@@ -211,6 +212,57 @@ function validateRetrieval(errors, retrieval, sources) {
   referenceOnly(errors, retrieval, 'retrieval');
 }
 
+function validateArtifacts(errors, artifacts) {
+  if (!object(artifacts)) {
+    errors.push('artifacts precisa ser objeto');
+    return;
+  }
+  closed(errors, artifacts, 'artifacts', ['produces', 'consumes']);
+  list(errors, artifacts.produces, 'artifacts.produces');
+  list(errors, artifacts.consumes, 'artifacts.consumes');
+  if (Array.isArray(artifacts.produces) && Array.isArray(artifacts.consumes)
+    && artifacts.produces.length + artifacts.consumes.length === 0) {
+    errors.push('artifacts precisa declarar ao menos um produces ou consumes');
+  }
+  const produceRoles = [];
+  for (const [index, item] of (Array.isArray(artifacts.produces) ? artifacts.produces : []).entries()) {
+    const path = `artifacts.produces[${index}]`;
+    if (!object(item)) {
+      errors.push(`${path} precisa ser objeto`);
+      continue;
+    }
+    closed(errors, item, path, ['role', 'artifact_type', 'schema_ref', 'schema_version', 'sensitivity']);
+    if (!ID_RE.test(item.role || '')) errors.push(`${path}.role inválido`);
+    produceRoles.push(item.role);
+    if (!ID_RE.test(item.artifact_type || '')) errors.push(`${path}.artifact_type inválido`);
+    if (!LOCAL_REF_RE.test(item.schema_ref || '')) errors.push(`${path}.schema_ref inválido`);
+    if (!VERSION_RE.test(item.schema_version || '')) errors.push(`${path}.schema_version precisa ser semver`);
+    if (!['private', 'team', 'public'].includes(item.sensitivity)) errors.push(`${path}.sensitivity inválido`);
+  }
+  unique(errors, produceRoles, 'artifacts.produces.role');
+  const consumeRoles = [];
+  for (const [index, item] of (Array.isArray(artifacts.consumes) ? artifacts.consumes : []).entries()) {
+    const path = `artifacts.consumes[${index}]`;
+    if (!object(item)) {
+      errors.push(`${path} precisa ser objeto`);
+      continue;
+    }
+    closed(errors, item, path, ['role', 'artifact_type', 'schema_ref', 'accepted_versions', 'required']);
+    if (!ID_RE.test(item.role || '')) errors.push(`${path}.role inválido`);
+    consumeRoles.push(item.role);
+    if (!ID_RE.test(item.artifact_type || '')) errors.push(`${path}.artifact_type inválido`);
+    if (!LOCAL_REF_RE.test(item.schema_ref || '')) errors.push(`${path}.schema_ref inválido`);
+    list(errors, item.accepted_versions, `${path}.accepted_versions`, 1);
+    for (const [rangeIndex, range] of (Array.isArray(item.accepted_versions) ? item.accepted_versions : []).entries()) {
+      if (!ACCEPTED_VERSION_RE.test(range || '')) errors.push(`${path}.accepted_versions[${rangeIndex}] inválido`);
+    }
+    unique(errors, item.accepted_versions, `${path}.accepted_versions`);
+    if (typeof item.required !== 'boolean') errors.push(`${path}.required precisa ser booleano`);
+  }
+  unique(errors, consumeRoles, 'artifacts.consumes.role');
+  referenceOnly(errors, artifacts, 'artifacts');
+}
+
 export function validateSystemContractVersion(value, validateV1) {
   if (!object(value)) return ['system contract precisa ser objeto'];
   if (value.protocol_version === 1) {
@@ -221,10 +273,12 @@ export function validateSystemContractVersion(value, validateV1) {
   if (value.protocol_version !== 2) return ['protocol_version de System Contract suportada: 1 ou 2'];
   const base = { ...value, protocol_version: 1 };
   delete base.retrieval;
+  delete base.artifacts;
   const errors = validateV1(base).filter((error) => error !== 'protocol_version precisa ser 1');
   validateSystemShape(errors, value, 2);
   list(errors, value.sources, 'sources', 1);
   validateRetrieval(errors, value.retrieval, value.sources);
+  if (value.artifacts !== undefined) validateArtifacts(errors, value.artifacts);
   return [...new Set(errors)];
 }
 

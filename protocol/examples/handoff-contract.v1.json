@@ -1,0 +1,40 @@
+{
+  "protocol_version": 1,
+  "handoff_id": "briefing-criativo-para-medicao",
+  "name": "Briefing de criativo segue do Sistema de Conteúdo para medição no Funil",
+  "version": "1.0.0",
+  "status": "active",
+  "producer": {
+    "system_ref": "conteudo",
+    "artifact_role": "briefing-editorial"
+  },
+  "consumer": {
+    "system_ref": "funil-crescimento",
+    "input_role": "experiment-brief",
+    "required": true
+  },
+  "artifact": {
+    "artifact_type": "creative-brief",
+    "schema_ref": "protocol/artifacts/creative-brief.schema.json",
+    "accepted_versions": ["1.x"]
+  },
+  "trigger": {
+    "type": "manual",
+    "description": "dispara após o julgamento humano aprovar o briefing produzido"
+  },
+  "acceptance_gate": {
+    "deterministic_checks": [
+      "artefato valida contra o schema declarado na versão aceita",
+      "sha256 do artefato confere com o registrado no recibo",
+      "experiment_ref presente quando a chain pertence a um experimento"
+    ],
+    "human_approval_required": true
+  },
+  "permissions": {
+    "transfer": "reference-only",
+    "external_actions": false
+  },
+  "privacy": {
+    "content_shared_with_inevita": false
+  }
+}

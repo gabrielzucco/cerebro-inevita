@@ -11,6 +11,7 @@
     { "amendment_id": "EXP-DEMO-001-A1", "on": "2026-08-05", "reason": "Janela estendida por indisponibilidade da fonte.", "change_count": 1 }
   ],
   "run_refs": ["run-record:routine-run-demo"],
+  "chain_refs": ["handoff-chain:chain-tarja-replay-001"],
   "measurement": {
     "status": "complete",
     "primary_metric_ref": "cpl-qualificado",

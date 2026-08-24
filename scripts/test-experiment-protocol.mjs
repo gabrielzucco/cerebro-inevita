@@ -46,6 +46,15 @@ try {
   const invalidState = { ...example('experiment-state.v1.json'), amendment_count: 9 };
   assert(validateExperimentState(invalidState).some((error) => error.includes('diverge')));
 
+  const exampleState = example('experiment-state.v1.json');
+  assert(Array.isArray(exampleState.chain_refs) && exampleState.chain_refs.length >= 1,
+    'exemplo de estado precisa apontar ao menos uma chain de handoff');
+  const withoutChains = { ...exampleState };
+  delete withoutChains.chain_refs;
+  assert.deepEqual(validateExperimentState(withoutChains), [], 'chain_refs é aditivo: estado legado sem chains continua válido');
+  const invalidChains = { ...exampleState, chain_refs: ['handoff-chain:ok', ''] };
+  assert(validateExperimentState(invalidChains).some((error) => error.includes('chain_refs')));
+
   write(join(root, 'legacy-experiments.json'), {
     experiments: [
       {

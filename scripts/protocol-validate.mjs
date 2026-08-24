@@ -23,6 +23,7 @@ import {
 } from './lib/correction-loop.mjs';
 import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
+import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
 
 const [kind = '', path = ''] = process.argv.slice(2);
 const validators = {
@@ -42,6 +43,8 @@ const validators = {
   trace: validateExecutionTraceEvent,
   experiment: validateExperimentContract,
   'experiment-state': validateExperimentState,
+  handoff: validateHandoffContract,
+  'handoff-receipt': validateHandoffReceipt,
 };
 
 function fail(message) {
@@ -49,7 +52,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration, judgment, correction, learning, trace, experiment ou experiment-state');
+if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration, judgment, correction, learning, trace, experiment, experiment-state, handoff ou handoff-receipt');
 if (!path) fail('informe o caminho do JSON');
 
 try {

@@ -41,7 +41,19 @@ conteúdo bruto.
 - `experiment-contract.schema.json`: pré-registro congelado de uma mudança controlada, ligado ao
   Sistema palco, Sistemas de leitura, braços, métrica, guardrails, janela e regra de decisão.
 - `experiment-state.schema.json`: estado privado pós-congelamento, com emendas, Runs ligados,
-  medição, martelo e referência da mudança que voltou para o Sistema.
+  chains de handoff atravessadas, medição, martelo e referência da mudança que voltou para o
+  Sistema.
+- `handoff-contract.schema.json`: declara que um Sistema produtor entrega um artefato versionado
+  a um Sistema consumidor, com schema, versões aceitas, trigger e gate de aceitação. A aresta
+  entre Sistemas só existe quando este contrato existe; Fonte compartilhada não é conexão.
+- `handoff-receipt.schema.json`: prova de um handoff real — `chain_id` genérico de runtime, Run
+  produtor, artefato com hash e schema validado, resultado do gate, Run consumidor e modo
+  `replay` ou `live` (replay nunca se apresenta como execução original). Reference-only.
+
+Os artefatos que atravessam handoffs têm schema próprio em `protocol/artifacts/` (por exemplo
+`creative-brief.schema.json` e `funnel-reading.schema.json`); o System Contract V2 declara em
+`artifacts.produces/consumes` a interface de máquina, enquanto `result.output_type` segue como
+descrição humana.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,

@@ -102,6 +102,26 @@
       "minimum_refs": 1
     }
   },
+  "artifacts": {
+    "produces": [
+      {
+        "role": "leitura-funil",
+        "artifact_type": "funnel-reading",
+        "schema_ref": "protocol/artifacts/funnel-reading.schema.json",
+        "schema_version": "1.0.0",
+        "sensitivity": "private"
+      }
+    ],
+    "consumes": [
+      {
+        "role": "experiment-brief",
+        "artifact_type": "creative-brief",
+        "schema_ref": "protocol/artifacts/creative-brief.schema.json",
+        "accepted_versions": ["1.x"],
+        "required": false
+      }
+    ]
+  },
   "pipeline": [
     {
       "state": "compilado",
