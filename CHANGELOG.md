@@ -1,5 +1,30 @@
 # Mudanças do cérebro INEVITA
 
+## v1.27.0 — 2026-08-23 · “o contexto usado agora deixa contrato e recibo”
+
+- **Source Contract V1:** cada Fonte pode declarar casa da verdade, autoridade, escopo,
+  sensibilidade, PII, modos, frescor, retenção, revogação, conector, consumidores e garantia sem
+  carregar credencial ou bruto.
+- **Retrieval Contract no System Contract V2:** papel, prioridade, seleção, filtros, janela,
+  frescor, conflito, fallback, parada, orçamento e proveniência deixam de ser convenção implícita.
+- **Context Snapshot no Run Record V2:** cada execução governada registra exatamente quais Fontes e
+  fragmentos sustentaram o output, com query, janela, frescor, lacunas, fallback, conflito e nível
+  de garantia — sempre por referência.
+- **Access Grant V1:** sujeito, escopo, ação, prazo, aprovador, custódia e recibos separam bloqueio
+  real do runtime, acesso direto apenas auditável e export irreversível. O nome não se mistura com
+  o grant de download da Society.
+- **Compatibilidade sem reescrita:** os schemas V1 permanecem byte a byte intactos e travados por
+  hash; leitores aceitam V1/V2 e mostram `retrieval-not-declared` / `context-not-recorded` em vez
+  de inventar governança ausente. O runner antigo recusa V2 se não puder gerar Context Snapshot.
+- **Migração aditiva de Fontes:** preview mostra antes/depois e rollback; `--confirm` cria Source
+  Contracts privados, sem abrir/copiar/alterar a Fonte nem reescrever o registro legado.
+- **A porta `/fonte` conhece o protocolo novo:** registro continua sendo ponteiro read-only; com
+  Node, a skill mostra o diff e pede readback antes de criar o Source Contract. Sem Node, o
+  primeiro valor continua file-only e sem pedágio.
+- **Harness nos dois sentidos:** exemplos bons passam; segredo, bruto, campo desconhecido, grant
+  sem aprovador, custódia incompatível, retrieval sem fallback/parada e snapshot sem proveniência
+  reprovam. A suíte antiga, o starter EN e os dois atualizadores continuam verdes.
+
 ## v1.26.0 — 2026-08-21 · “o gate parou de confiar em quem ele avalia”
 
 - **O gate determinístico do Calls em Decisões virou código executável**

@@ -23,6 +23,7 @@ CHANGELOG.md
 .cerebro/acesso.yaml
 .claude/settings.json
 .claude/skills/comecar
+.claude/skills/fonte
 .claude/skills/company-brain-sprint
 .claude/skills/arquiteto
 .claude/skills/sistematizar

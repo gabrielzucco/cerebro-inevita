@@ -11,6 +11,8 @@
   "corrections": "operacao/o-que-melhorou",
   "activationContract": "operacao/arquitetura/primeiro-sistema.json",
   "systemContract": "operacao/arquitetura/primeiro-sistema.json",
+  "sourceContracts": ".cerebro/contracts/sources",
+  "accessGrants": ".cerebro/contracts/access-grants",
   "runLedger": ".cerebro/ledger/runs.jsonl",
   "learningRegister": ".cerebro/learning"
 }

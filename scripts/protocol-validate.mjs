@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import {
+  validateAccessGrant,
+  validateRunRecord,
+  validateSourceContract,
+  validateSystemContract,
+} from './lib/system-protocol.mjs';
+
+const [kind = '', path = ''] = process.argv.slice(2);
+const validators = {
+  source: validateSourceContract,
+  system: validateSystemContract,
+  run: validateRunRecord,
+  grant: validateAccessGrant,
+};
+
+function fail(message) {
+  console.error(`✗ ${message}`);
+  process.exit(1);
+}
+
+if (!validators[kind]) fail('tipo válido: source, system, run ou grant');
+if (!path) fail('informe o caminho do JSON');
+
+try {
+  const value = JSON.parse(readFileSync(resolve(path), 'utf8'));
+  const errors = validators[kind](value);
+  if (errors.length) fail(errors.join(' · '));
+  console.log(`✓ ${kind} válido · protocol_version=${value.protocol_version}`);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}

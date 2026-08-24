@@ -18,7 +18,7 @@ A régua completa vive em `FONTES.md` — este é o executável dela. A regra-me
    - muda o próximo trabalho → **nível 4 · operacional** (régua/decisão/procedimento, com aprovação)
 3. **Recomende o nível e diga o custo** — em uma linha, ancorado na tabela por formato de `FONTES.md`. **Parar no nível 0 é saída legítima e boa**, não fracasso: comemore o que NÃO vai ser tratado. Número/planilha/CRM: aponte a casa certa (banco conta; o cérebro guarda o padrão lido nos números) — não vire nota o que é tabela.
 4. **Execute só até o nível acordado e PARE.**
-   - Nível 0: grave a nota de fonte em `meu-negocio/fontes/<id>.md` (formato no `_LEIA.md` da pasta); pasta local fora do cérebro → registre também via `node scripts/register-source.mjs` (read-only, sem cópia).
+   - Nível 0: grave a nota de fonte em `meu-negocio/fontes/<id>.md` (formato no `_LEIA.md` da pasta); pasta local fora do cérebro → registre também via `node scripts/register-source.mjs` (read-only, sem cópia). Registrar cria o ponteiro legado, não inventa governança. Se Node estiver disponível, rode `node scripts/source-contract.mjs migrate-registry` para mostrar o diff do Source Contract; explique autoridade, PII, retenção, custódia e garantia que ficaram não confirmadas e só aplique com `--confirm` depois do readback humano. Sem Node, siga file-only: o contrato novo não bloqueia o primeiro valor.
    - Nível 1: o legível vai pra `capturas/` com cabeçalho de origem; o original fica onde está, intocado.
    - Nível 2: etiqueta no topo do arquivo em `capturas/` + linha no índice da fonte.
    - Níveis 3-4: delegue (`/guardar`, `/call`) — não duplique o tratamento aqui.

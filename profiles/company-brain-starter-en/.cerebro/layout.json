@@ -11,6 +11,8 @@
   "corrections": "operations/corrections",
   "activationContract": "systems/first-system/contract.json",
   "systemContract": "systems/first-system/contract.json",
+  "sourceContracts": ".cerebro/contracts/sources",
+  "accessGrants": ".cerebro/contracts/access-grants",
   "runLedger": "operations/runs/ledger.jsonl",
   "learningRegister": "operations/learning"
 }

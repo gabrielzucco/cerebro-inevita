@@ -7,6 +7,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import {
+  validateAccessGrant,
+  validateRunRecordVersion,
+  validateSourceContract,
+  validateSystemContractVersion,
+} from './company-brain-protocol-v2.mjs';
+
+export { validateAccessGrant, validateSourceContract };
 
 export const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 export const REF_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
@@ -38,11 +46,20 @@ function requiredArray(errors, value, path, minimum = 0) {
   else if (value.length < minimum) errors.push(`${path} precisa ter pelo menos ${minimum} item(ns)`);
 }
 
+function allowedKeys(errors, value, path, keys) {
+  if (!object(value)) return;
+  const allowed = new Set(keys);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) errors.push(`${path}.${key} não é permitido`);
+  }
+}
+
 function validatePermissions(errors, permissions, path) {
   if (!object(permissions)) {
     errors.push(`${path} precisa ser objeto`);
     return;
   }
+  allowedKeys(errors, permissions, path, ['read', 'write', 'external_actions']);
   requiredArray(errors, permissions.read, `${path}.read`);
   requiredArray(errors, permissions.write, `${path}.write`);
   if (typeof permissions.external_actions !== 'boolean') {
@@ -79,7 +96,7 @@ export function validateCapabilityContract(value) {
   return errors;
 }
 
-export function validateSystemContract(value) {
+function validateSystemContractV1(value) {
   const errors = [];
   if (!object(value)) return ['system contract precisa ser objeto'];
   if (value.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
@@ -110,7 +127,7 @@ export function validateSystemContract(value) {
   }
 
   requiredArray(errors, value.entities, 'entities');
-  for (const [index, entity] of (value.entities || []).entries()) {
+  for (const [index, entity] of (Array.isArray(value.entities) ? value.entities : []).entries()) {
     if (!object(entity)) {
       errors.push(`entities[${index}] precisa ser objeto`);
       continue;
@@ -121,7 +138,7 @@ export function validateSystemContract(value) {
   }
 
   requiredArray(errors, value.sources, 'sources');
-  for (const [index, source] of (value.sources || []).entries()) {
+  for (const [index, source] of (Array.isArray(value.sources) ? value.sources : []).entries()) {
     if (!object(source)) {
       errors.push(`sources[${index}] precisa ser objeto`);
       continue;
@@ -139,7 +156,7 @@ export function validateSystemContract(value) {
   }
 
   requiredArray(errors, value.pipeline, 'pipeline', 1);
-  for (const [index, state] of (value.pipeline || []).entries()) {
+  for (const [index, state] of (Array.isArray(value.pipeline) ? value.pipeline : []).entries()) {
     if (!object(state)) {
       errors.push(`pipeline[${index}] precisa ser objeto`);
       continue;
@@ -170,14 +187,14 @@ export function validateSystemContract(value) {
 
 function validateRefList(errors, refs, path) {
   requiredArray(errors, refs, path);
-  for (const [index, ref] of (refs || []).entries()) {
+  for (const [index, ref] of (Array.isArray(refs) ? refs : []).entries()) {
     if (!object(ref) || !ID_RE.test(ref.role || '') || !REF_ID_RE.test(ref.id || '')) {
       errors.push(`${path}[${index}] precisa ter role e id válidos`);
     }
   }
 }
 
-export function validateRunRecord(value) {
+function validateRunRecordV1(value) {
   const errors = [];
   if (!object(value)) return ['run record precisa ser objeto'];
   if (value.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
@@ -198,6 +215,36 @@ export function validateRunRecord(value) {
     errors.push('privacy.content_shared_with_inevita precisa ser false');
   }
   return errors;
+}
+
+export function validateSystemContract(value) {
+  return validateSystemContractVersion(value, validateSystemContractV1);
+}
+
+export function systemContractView(value) {
+  const errors = validateSystemContract(value);
+  if (errors.length) throw new Error(`System Contract inválido: ${errors.join(' · ')}`);
+  return {
+    contract: value,
+    protocol_version: value.protocol_version,
+    retrieval_status: value.protocol_version === 2 ? 'declared' : 'retrieval-not-declared',
+    retrieval: value.protocol_version === 2 ? value.retrieval : null,
+  };
+}
+
+export function validateRunRecord(value) {
+  return validateRunRecordVersion(value, validateRunRecordV1);
+}
+
+export function runRecordView(value) {
+  const errors = validateRunRecord(value);
+  if (errors.length) throw new Error(`Run Record inválido: ${errors.join(' · ')}`);
+  return {
+    record: value,
+    protocol_version: value.protocol_version,
+    context_status: value.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+    context_snapshot: value.protocol_version === 2 ? value.context_snapshot : null,
+  };
 }
 
 export function parseRoleRefs(values, label) {

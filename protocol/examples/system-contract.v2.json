@@ -1,0 +1,137 @@
+{
+  "protocol_version": 2,
+  "system_id": "analisar-funil",
+  "name": "Analisar funil e propor experimento",
+  "version": "0.2.0",
+  "status": "confirmed",
+  "result": {
+    "statement": "transformar sinais do funil em uma oportunidade e um experimento proposto",
+    "non_success": "listar métricas sem implicação operacional",
+    "output_type": "experimento-proposto",
+    "definition_of_done": "o responsável compreende a evidência e decide se executa o experimento",
+    "owner": "responsavel-marketing",
+    "human_gate": "aprovar o diagnóstico e qualquer ação externa"
+  },
+  "trigger": {
+    "type": "schedule",
+    "description": "leitura semanal do funil"
+  },
+  "capability": {
+    "capability_id": "diagnosticar-funil",
+    "version": "0.2.0",
+    "origin": "local"
+  },
+  "entities": [
+    { "type": "experiment", "role": "experimento", "required": false }
+  ],
+  "sources": [
+    {
+      "role": "midia-paga",
+      "source_id": "paid-media",
+      "required": true,
+      "access": "read-only",
+      "freshness": "até vinte e quatro horas",
+      "purpose": "custos, impressões, cliques e conversões"
+    },
+    {
+      "role": "receita",
+      "source_id": "sales-ledger",
+      "required": true,
+      "access": "read-only",
+      "freshness": "até vinte e quatro horas",
+      "purpose": "compras e receita confirmadas"
+    },
+    {
+      "role": "experimentos",
+      "source_id": "experiment-ledger",
+      "required": true,
+      "access": "read-only",
+      "freshness": "última decisão registrada",
+      "purpose": "evitar repetir tentativa já julgada"
+    }
+  ],
+  "retrieval": {
+    "version": "0.1.0",
+    "source_roles": [
+      {
+        "role": "midia-paga",
+        "priority": 1,
+        "selection": "recent",
+        "filters": ["contas aprovadas", "campanhas ativas no período"],
+        "window": "últimos vinte e oito dias com comparação anterior",
+        "required_freshness": "até vinte e quatro horas",
+        "on_unavailable": "stop"
+      },
+      {
+        "role": "receita",
+        "priority": 2,
+        "selection": "recent",
+        "filters": ["vendas confirmadas"],
+        "window": "mesma janela da mídia paga",
+        "required_freshness": "até vinte e quatro horas",
+        "on_unavailable": "stop"
+      },
+      {
+        "role": "experimentos",
+        "priority": 3,
+        "selection": "relevant",
+        "filters": ["hipóteses ligadas ao gargalo observado"],
+        "window": "últimos cento e oitenta dias",
+        "required_freshness": "última decisão registrada",
+        "on_unavailable": "continue-with-gap"
+      }
+    ],
+    "conflict_policy": "a casa da verdade vence; divergência sem autoridade explícita para o run",
+    "fallback": {
+      "enabled": true,
+      "order": ["experimentos"],
+      "on_exhausted": "continue-with-gap"
+    },
+    "stop_conditions": [
+      "parar se mídia ou receita obrigatória estiver ausente",
+      "parar se a janela das fontes não for comparável"
+    ],
+    "context_budget": {
+      "unit": "items",
+      "maximum": 120,
+      "per_source_maximum": 60
+    },
+    "evidence": {
+      "required": true,
+      "provenance": "per-claim",
+      "minimum_refs": 1
+    }
+  },
+  "pipeline": [
+    {
+      "state": "compilado",
+      "input": "fontes autorizadas e comparáveis",
+      "output": "snapshot de contexto",
+      "gate": "proveniência e frescor presentes"
+    },
+    {
+      "state": "proposto",
+      "input": "snapshot de contexto",
+      "output": "oportunidade e experimento candidato",
+      "gate": "responsável humano julga antes de executar"
+    }
+  ],
+  "permissions": {
+    "read": ["fontes concedidas ao Sistema"],
+    "write": ["output e recibo locais"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.2.0",
+    "deterministic_gates": ["claims apontam selected_refs", "nenhuma ação externa foi executada"],
+    "human_questions": ["A oportunidade está sustentada pelas fontes usadas?"],
+    "outcome_measure": "experimento-aprovado",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  }
+}

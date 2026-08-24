@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { validateCapabilityContract, validateSystemContract } from './lib/system-protocol.mjs';
+import {
+  validateAccessGrant,
+  validateCapabilityContract,
+  validateRunRecord,
+  validateSourceContract,
+  validateSystemContract,
+} from './lib/system-protocol.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -15,6 +21,10 @@ const required = [
   'templates/sistema/contract.json', 'templates/sistema/capability.json',
   'protocol/README.md', 'protocol/capability-contract.schema.json',
   'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
+  'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
+  'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
+  'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
+  'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -26,6 +36,7 @@ const required = [
   'sistemas/cerebro-base/feedback.md', 'sistemas/cerebro-base/changelog.md',
   'sistemas/cerebro-base/capability.json', 'sistemas/cerebro-base/contract.json',
   '.claude/skills/operar/SKILL.md',
+  '.claude/skills/fonte/SKILL.md',
   '.claude/skills/arquiteto/SKILL.md',
   '.claude/skills/arquiteto/agents/openai.yaml',
   '.claude/skills/arquiteto/references/architect-spec.schema.json',
@@ -48,7 +59,9 @@ const required = [
   'scripts/install-system.mjs', 'scripts/system-state.mjs', 'scripts/test-install-system.mjs',
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
   'scripts/system-contract.mjs', 'scripts/entity.mjs', 'scripts/system-learn.mjs',
-  'scripts/lib/system-protocol.mjs', 'scripts/test-system-protocol.mjs',
+  'scripts/source-contract.mjs', 'scripts/protocol-validate.mjs',
+  'scripts/lib/system-protocol.mjs', 'scripts/lib/company-brain-protocol-v2.mjs',
+  'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
@@ -76,6 +89,10 @@ for (const [label, path, validate] of [
   ['cerebro-base capability', 'sistemas/cerebro-base/capability.json', validateCapabilityContract],
   ['cerebro-base system contract', 'sistemas/cerebro-base/contract.json', validateSystemContract],
   ['briefing capability', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/capability.json', validateCapabilityContract],
+  ['example source contract v1', 'protocol/examples/source-contract.v1.json', validateSourceContract],
+  ['example system contract v2', 'protocol/examples/system-contract.v2.json', validateSystemContract],
+  ['example run record v2', 'protocol/examples/run-record.v2.json', validateRunRecord],
+  ['example access grant v1', 'protocol/examples/access-grant.v1.json', validateAccessGrant],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -337,6 +354,7 @@ for (const contract of [
   '.claude/skills/arquiteto',
   '.claude/skills/sistematizar',
   '.claude/skills/company-brain-sprint',
+  '.claude/skills/fonte',
   '.cerebro/layout.json',
   'profiles/company-brain-starter-en',
   '.claude/skills/society',
@@ -392,6 +410,16 @@ for (const contract of [
 ]) {
   if (!register.includes(contract)) errors.push(`registro de fonte sem guarda: ${contract}`);
 }
+const sourceSkill = readFileSync(join(ROOT, '.claude', 'skills', 'fonte', 'SKILL.md'), 'utf8');
+for (const contract of [
+  'Registrar cria o ponteiro legado, não inventa governança',
+  'source-contract.mjs migrate-registry',
+  'autoridade, PII, retenção, custódia e garantia',
+  'só aplique com `--confirm` depois do readback humano',
+  'o contrato novo não bloqueia o primeiro valor',
+]) {
+  if (!sourceSkill.includes(contract)) errors.push(`fonte sem Source Contract honesto: ${contract}`);
+}
 
 const ignore = readFileSync(join(ROOT, '.gitignore'), 'utf8');
 if (!ignore.includes('conexoes/configuradas/*')) {
@@ -417,7 +445,10 @@ for (const contract of ['fonte real', 'artefato aprovado', 'T0', 'T4', 'segunda 
 
 const layout = JSON.parse(readFileSync(join(ROOT, '.cerebro', 'layout.json'), 'utf8'));
 if (layout.version !== 3) errors.push('layout precisa estar no protocolo v3');
-for (const key of ['activationBrief', 'configuration', 'activationContract', 'systemContract', 'runLedger', 'learningRegister']) {
+for (const key of [
+  'activationBrief', 'configuration', 'activationContract', 'systemContract', 'sourceContracts',
+  'accessGrants', 'runLedger', 'learningRegister',
+]) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);
   }

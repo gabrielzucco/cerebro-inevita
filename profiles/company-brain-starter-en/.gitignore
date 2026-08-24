@@ -10,4 +10,5 @@ operations/learning/*
 !operations/learning/.gitkeep
 .cerebro/ledger/
 .cerebro/learning/
+.cerebro/contracts/
 .DS_Store

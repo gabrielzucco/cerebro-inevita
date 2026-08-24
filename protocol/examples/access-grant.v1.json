@@ -1,0 +1,28 @@
+{
+  "protocol_version": 1,
+  "grant_id": "grant-funnel-read-001",
+  "subject": {
+    "type": "system",
+    "ref": "analisar-funil"
+  },
+  "scope": {
+    "company_ref": "company-local",
+    "unit_ref": "marketing",
+    "system_refs": ["analisar-funil"],
+    "source_refs": ["paid-media", "sales-ledger"],
+    "actions": ["read-metrics"]
+  },
+  "mode": "read",
+  "assurance": "runtime-enforced",
+  "custody": "runtime-exclusive",
+  "reason": "compilar o contexto mínimo do funil aprovado pelo responsável",
+  "issued_at": "2026-08-23T17:55:00.000Z",
+  "expires_at": "2026-08-23T18:15:00.000Z",
+  "revoked_at": null,
+  "approved_by": "role-marketing-owner",
+  "credential_ref": "os-keychain:funnel-read-session",
+  "receipts": {
+    "use_refs": ["run:run-funnel-20260823-001"],
+    "revocation_ref": null
+  }
+}

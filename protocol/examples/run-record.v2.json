@@ -1,0 +1,71 @@
+{
+  "protocol_version": 2,
+  "run_id": "run-funnel-20260823-001",
+  "system_id": "analisar-funil",
+  "system_version": "0.2.0",
+  "capability": {
+    "capability_id": "diagnosticar-funil",
+    "version": "0.2.0"
+  },
+  "status": "completed",
+  "started_at": "2026-08-23T18:00:00.000Z",
+  "completed_at": "2026-08-23T18:03:00.000Z",
+  "entity_refs": [
+    { "role": "experimento", "id": "experiment-candidate-001" }
+  ],
+  "source_refs": [
+    { "role": "midia-paga", "id": "paid-media" },
+    { "role": "receita", "id": "sales-ledger" },
+    { "role": "experimentos", "id": "experiment-ledger" }
+  ],
+  "output_refs": ["operacao/execucoes/funnel-001.md"],
+  "context_snapshot": {
+    "system_contract_version": "0.2.0",
+    "retrieval_version": "0.1.0",
+    "observed_at": "2026-08-23T18:01:00.000Z",
+    "accesses": [
+      {
+        "source_ref": { "role": "midia-paga", "id": "paid-media" },
+        "selected_refs": ["snapshot:paid-media:2026-08-23"],
+        "query": "campanhas ativas na janela comparável",
+        "filters": ["contas aprovadas"],
+        "window": "2026-07-27 até 2026-08-23",
+        "freshness_marker": "observed:2026-08-23T17:50:00.000Z",
+        "assurance": "runtime-enforced"
+      },
+      {
+        "source_ref": { "role": "receita", "id": "sales-ledger" },
+        "selected_refs": ["snapshot:sales-ledger:2026-08-23"],
+        "query": "vendas confirmadas na janela comparável",
+        "filters": ["status confirmado"],
+        "window": "2026-07-27 até 2026-08-23",
+        "freshness_marker": "version:sales-ledger-184",
+        "assurance": "runtime-enforced"
+      },
+      {
+        "source_ref": { "role": "experimentos", "id": "experiment-ledger" },
+        "selected_refs": ["experiment:previous-014"],
+        "query": "tentativas anteriores ligadas ao gargalo",
+        "filters": ["decisão humana registrada"],
+        "window": "últimos cento e oitenta dias",
+        "freshness_marker": "decision:previous-014",
+        "assurance": "receipt-audited"
+      }
+    ],
+    "gaps": [],
+    "fallbacks": [],
+    "conflicts": []
+  },
+  "eval": {
+    "version": "0.2.0",
+    "passed": true
+  },
+  "human_decision": "approved",
+  "correction_ref": null,
+  "outcomes": [
+    { "measure": "experimento-aprovado", "value": true }
+  ],
+  "privacy": {
+    "content_shared_with_inevita": false
+  }
+}

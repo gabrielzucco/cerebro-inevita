@@ -22,13 +22,15 @@ try {
     'skills/company-brain-sprint/references/output-contract.md', 'raw/.gitkeep',
     'systems/first-system/contract.template.json', 'systems/first-system/capability.template.json',
     'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
+    'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
+    'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
   ];
   for (const file of required) if (!existsSync(join(output, file))) errors.push(`missing: ${file}`);
   if (!existsSync(zip)) errors.push('missing zip');
 
   if (existsSync(join(output, '.cerebro', 'layout.json'))) {
     const layout = JSON.parse(readFileSync(join(output, '.cerebro', 'layout.json'), 'utf8'));
-    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'runLedger', 'learningRegister']) {
+    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'sourceContracts', 'accessGrants', 'runLedger', 'learningRegister']) {
       const value = layout[key];
       if (!value || value.startsWith('/') || value.includes('..')) errors.push(`unsafe layout path: ${key}`);
     }
@@ -54,7 +56,7 @@ try {
     if (!activationBrief.includes(contract)) errors.push(`activation brief seed missing contract: ${contract}`);
   }
   const ignore = readFileSync(join(output, '.gitignore'), 'utf8');
-  for (const contract of ['raw/*', 'private/*', 'operations/runs/*', 'operations/learning/*']) {
+  for (const contract of ['raw/*', 'private/*', 'operations/runs/*', 'operations/learning/*', '.cerebro/contracts/']) {
     if (!ignore.includes(contract)) errors.push(`ignore missing: ${contract}`);
   }
 

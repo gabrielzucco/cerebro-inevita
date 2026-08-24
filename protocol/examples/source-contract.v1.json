@@ -1,0 +1,52 @@
+{
+  "protocol_version": 1,
+  "source_id": "paid-media",
+  "name": "Mídia paga",
+  "type": "paid-media-api",
+  "status": "active",
+  "truth": {
+    "home_ref": "provider:paid-media/account-primary",
+    "source_of_truth": true
+  },
+  "authority": {
+    "owner_ref": "role-marketing-owner",
+    "status": "confirmed"
+  },
+  "scope": {
+    "purpose": "medir aquisição e custo por campanha",
+    "entity_types": ["campaign", "experiment"],
+    "boundaries": ["somente contas aprovadas", "sem edição de campanha"]
+  },
+  "sensitivity": "private",
+  "pii": {
+    "classification": "none",
+    "handling": "not-applicable"
+  },
+  "modes": ["read"],
+  "freshness": {
+    "policy": "até vinte e quatro horas",
+    "observed_at": "2026-08-22T21:00:00.000Z"
+  },
+  "retention": {
+    "policy": "referências de execução por cento e oitenta dias",
+    "until": null
+  },
+  "revocation": {
+    "method": "revogar credencial no provider local",
+    "effect": "future-only",
+    "revocable": true
+  },
+  "connector": {
+    "kind": "provider-api",
+    "binding_ref": "connector:paid-media-readonly",
+    "credential_ref": "os-keychain:paid-media-primary",
+    "custody": "runtime-exclusive"
+  },
+  "authorized_consumers": [
+    {
+      "subject_type": "system",
+      "subject_ref": "analisar-funil"
+    }
+  ],
+  "assurance": "runtime-enforced"
+}

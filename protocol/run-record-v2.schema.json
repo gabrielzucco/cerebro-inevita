@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/run-record-v2.json",
+  "title": "INEVITA Run Record V2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "run_id",
+    "system_id",
+    "system_version",
+    "status",
+    "started_at",
+    "entity_refs",
+    "source_refs",
+    "output_refs",
+    "context_snapshot",
+    "eval",
+    "human_decision",
+    "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 2 },
+    "run_id": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "system_id": { "$ref": "#/$defs/id" },
+    "system_version": { "type": "string", "minLength": 1 },
+    "capability": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "required": ["capability_id", "version"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/id" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "status": { "enum": ["started", "completed"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "entity_refs": { "type": "array", "items": { "$ref": "#/$defs/ref_object" } },
+    "source_refs": { "type": "array", "items": { "$ref": "#/$defs/ref_object" } },
+    "output_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "context_snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["system_contract_version", "retrieval_version", "observed_at", "accesses", "gaps", "fallbacks", "conflicts"],
+      "properties": {
+        "system_contract_version": { "type": "string", "minLength": 1 },
+        "retrieval_version": { "type": "string", "minLength": 1 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "accesses": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["source_ref", "selected_refs", "query", "filters", "window", "freshness_marker", "assurance"],
+            "properties": {
+              "source_ref": { "$ref": "#/$defs/ref_object" },
+              "selected_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+              "query": { "type": "string", "minLength": 1 },
+              "filters": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "window": { "type": "string", "minLength": 1 },
+              "freshness_marker": { "type": ["string", "null"], "minLength": 1 },
+              "assurance": { "enum": ["runtime-enforced", "receipt-audited", "exported"] }
+            }
+          }
+        },
+        "gaps": { "type": "array", "items": { "$ref": "#/$defs/gap" } },
+        "fallbacks": { "type": "array", "items": { "$ref": "#/$defs/fallback" } },
+        "conflicts": { "type": "array", "items": { "$ref": "#/$defs/conflict" } }
+      }
+    },
+    "eval": {
+      "type": "object", "additionalProperties": false, "required": ["version", "passed"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "passed": { "type": ["boolean", "null"] }
+      }
+    },
+    "human_decision": { "enum": ["pending", "approved", "changes_requested", "rejected"] },
+    "correction_ref": { "type": ["string", "null"] },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["measure", "value"],
+        "properties": {
+          "measure": { "$ref": "#/$defs/id" },
+          "value": { "type": ["number", "string", "boolean"] }
+        }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false, "required": ["content_shared_with_inevita"],
+      "properties": { "content_shared_with_inevita": { "const": false } }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "ref_object": {
+      "type": "object", "additionalProperties": false, "required": ["role", "id"],
+      "properties": {
+        "role": { "$ref": "#/$defs/id" },
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" }
+      }
+    },
+    "gap": {
+      "type": "object", "additionalProperties": false, "required": ["source_role", "reason_code", "detail_ref"],
+      "properties": {
+        "source_role": { "$ref": "#/$defs/id" },
+        "reason_code": { "$ref": "#/$defs/id" },
+        "detail_ref": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "fallback": {
+      "type": "object", "additionalProperties": false, "required": ["from_role", "to_role", "reason_code"],
+      "properties": {
+        "from_role": { "$ref": "#/$defs/id" },
+        "to_role": { "$ref": "#/$defs/id" },
+        "reason_code": { "$ref": "#/$defs/id" }
+      }
+    },
+    "conflict": {
+      "type": "object", "additionalProperties": false, "required": ["source_roles", "resolution", "decision_ref"],
+      "properties": {
+        "source_roles": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/id" } },
+        "resolution": { "enum": ["authority-wins", "freshest-wins", "human-decision", "unresolved"] },
+        "decision_ref": { "type": ["string", "null"], "minLength": 1 }
+      }
+    }
+  }
+}

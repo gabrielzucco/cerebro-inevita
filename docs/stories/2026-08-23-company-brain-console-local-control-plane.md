@@ -14,7 +14,7 @@ transformar runtime, nuvem ou Obsidian em requisito.
 
 Esta story abre a especificação executável do **Company Brain Console**: casca plural desde o
 início, uma vertical real de ponta a ponta e enforcement honesto conforme a custódia do acesso.
-Ela não implementa o Console ainda.
+A camada protocolar foi implementada em v1.27.0; Console e runtime continuam fora desta entrega.
 
 ## Decisões congeladas
 
@@ -170,15 +170,15 @@ no repositório:
 
 ## Acceptance criteria
 
-- [ ] Source Contract V1, System Contract V2, Run Record V2 e Access Grant V1 possuem schemas
+- [x] Source Contract V1, System Contract V2, Run Record V2 e Access Grant V1 possuem schemas
       versionados, exemplos sanitizados e validadores determinísticos.
-- [ ] Leitores aceitam contratos/runs V1 e V2; V1 permanece válido e não é reescrito sem
+- [x] Leitores aceitam contratos/runs V1 e V2; V1 permanece válido e não é reescrito sem
       confirmação.
-- [ ] O harness reprova segredo, bruto, grant sem aprovador, garantia incompatível com a custódia,
+- [x] O harness reprova segredo, bruto, grant sem aprovador, garantia incompatível com a custódia,
       snapshot sem proveniência e retrieval sem fallback/parada.
-- [ ] O registro atual de fontes possui preview/diff de migração para Source Contract, sem abrir,
+- [x] O registro atual de fontes possui preview/diff de migração para Source Contract, sem abrir,
       copiar ou alterar a Fonte.
-- [ ] File-only mode continua entregando `/comecar`, `/arquiteto`, `/sistematizar` e `/operar` sem
+- [x] File-only mode continua entregando `/comecar`, `/arquiteto`, `/sistematizar` e `/operar` sem
       Node ou Console.
 - [ ] Runtime local pode negar um acesso externo não concedido, revogar um acesso futuro e deixar
       recibo sem persistir a credencial.
@@ -189,11 +189,11 @@ no repositório:
 - [ ] Em menos de dois minutos, o dono consegue visualizar o contrato, abrir o contexto usado e
       revogar a conexão futura.
 - [ ] Cache/índice do Console pode ser apagado e reconstruído sem perder estado canônico.
-- [ ] Nenhum conteúdo privado é enviado à INEVITA; telemetria e Society preservam os contratos
+- [x] Nenhum conteúdo privado é enviado à INEVITA; telemetria e Society preservam os contratos
       atuais de consentimento.
-- [ ] O starter EN, update, schemas V1, sistemas existentes, CI Linux/Windows e E2Es atuais não
+- [x] O starter EN, update, schemas V1, sistemas existentes, CI Linux/Windows e E2Es atuais não
       regridem.
-- [ ] `.obsidian/graph.json`, `Sem título.md` e o draft local de Cockpit permanecem intocados.
+- [x] `.obsidian/graph.json`, `Sem título.md` e o draft local de Cockpit permanecem intocados.
 
 ## O que medir
 
@@ -216,13 +216,13 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - integração de todas as Fontes;
 - oito áreas funcionais completas;
 - mudança de site/isca antes do teste real;
-- implementação nesta story de abertura.
+- implementação do Console ou runtime nesta entrega protocolar.
 
 ## Tasks
 
-- [ ] Fechar nomes canônicos e compatibilidade no Glossário/protocolo.
-- [ ] Especificar schemas, exemplos e migrations dos quatro deltas.
-- [ ] Estender validators e harness anti-slop com dual-read.
+- [x] Fechar nomes canônicos e compatibilidade no Glossário/protocolo.
+- [x] Especificar schemas, exemplos e migrations dos quatro deltas.
+- [x] Estender validators e harness anti-slop com dual-read.
 - [ ] Especificar provider de segredos, enforcement e degradação do runtime.
 - [ ] Construir o fluxo vertical do Console sobre contratos reais.
 - [ ] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
@@ -241,4 +241,31 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 
 ## File List
 
+- `.cerebro/layout.json`
+- `.cerebro/motor.manifest`
+- `.agents/skills/fonte/SKILL.md`
+- `.claude/skills/fonte/SKILL.md`
+- `CHANGELOG.md`
+- `GLOSSARIO.md`
+- `VERSION`
+- `dist/company-brain-starter-en.zip`
 - `docs/stories/2026-08-23-company-brain-console-local-control-plane.md`
+- `profiles/company-brain-starter-en/.cerebro/layout.json`
+- `profiles/company-brain-starter-en/.gitignore`
+- `protocol/README.md`
+- `protocol/access-grant.schema.json`
+- `protocol/examples/access-grant.v1.json`
+- `protocol/examples/run-record.v2.json`
+- `protocol/examples/source-contract.v1.json`
+- `protocol/examples/system-contract.v2.json`
+- `protocol/run-record-v2.schema.json`
+- `protocol/source-contract.schema.json`
+- `protocol/system-contract-v2.schema.json`
+- `scripts/lib/company-brain-protocol-v2.mjs`
+- `scripts/lib/system-protocol.mjs`
+- `scripts/protocol-validate.mjs`
+- `scripts/source-contract.mjs`
+- `scripts/system-run.mjs`
+- `scripts/test-company-brain-protocol-v2.mjs`
+- `scripts/test-company-brain-starter.mjs`
+- `scripts/validate-product.mjs`

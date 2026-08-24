@@ -137,6 +137,13 @@ if (action === 'show') {
   process.exit(0);
 }
 
+// O executor file-only atual escreve Run Record V1. Aceitar um System Contract V2 e omitir
+// o Context Snapshot seria uma promoção silenciosa e um recibo falso; V2 fica legível, mas só
+// executa quando um runner governado fornecer o snapshot reference-only completo.
+if (contract?.protocol_version === 2) {
+  fail('System Contract V2 exige runner governado com Context Snapshot; o executor file-only permanece em V1');
+}
+
 if (action === 'start') {
   if (!['configuring', 'first_run', 'active'].includes(state.status)) {
     fail(`o sistema está em ${state.status}; configure ou resolva a atenção antes do run`);
