@@ -35,6 +35,11 @@ recibos e eventos; não armazena uma arquitetura editorial concorrente.
 - [x] Console mantém lista equivalente e não expõe conteúdo privado.
 - [x] Runs reais de Funil e Calls abrem no Canvas e seus estados batem com recibos/Run Records.
 - [x] Testes, validação de produto, build e QA visual passam.
+- [x] Fontes usam logos reais quando identificáveis; objetos internos usam ícones funcionais.
+- [x] Tipo e estado possuem sinais independentes e rótulos legíveis dentro de cada nó.
+- [x] Inspector ocupa coluna própria; foco de vizinhança apaga ruído sem alterar a topologia.
+- [x] Controles do Canvas têm alvo mínimo de 44px e a coluna do inspector não sobrepõe o grafo em
+      1920px nem em 1280px.
 
 ## Tarefas
 
@@ -44,6 +49,7 @@ recibos e eventos; não armazena uma arquitetura editorial concorrente.
 - [x] Canvas G6 e layout local
 - [x] Backfill/validação real
 - [x] Testes e documentação
+- [x] Refino visual: identidade, leitura, foco e responsividade
 
 ## Evidência
 
@@ -55,6 +61,11 @@ recibos e eventos; não armazena uma arquitetura editorial concorrente.
   o mesmo inspector por teclado.
 - Harness: trace, evaluator, graph read model, routine runtime, Context Snapshot, protocolo,
   bundle e Console E2E passaram.
+- QA visual de 24/08: 32 nós do Cérebro, Sistema de Calls, Run real de Funil e Run real de Calls
+  renderizados com logos/ícones, rótulos completos, estados textuais e zero erro de console.
+- Foco validado: seleção do Fathom preserva 1 nó focado + 1 vizinho e reduz 11 objetos não
+  relacionados; `Ver mapa inteiro` remove integralmente o foco.
+- Responsividade validada em 1280×900: inspector empilha abaixo do grafo, sem interseção.
 
 ## File List
 
@@ -81,6 +92,7 @@ recibos e eventos; não armazena uma arquitetura editorial concorrente.
 - `console/app.js`
 - `console/canvas.js`
 - `console/styles.css`
+- `console/canvas.bundle.js`
 - `package.json`
 - `package-lock.json`
 - `scripts/test-execution-trace.mjs`

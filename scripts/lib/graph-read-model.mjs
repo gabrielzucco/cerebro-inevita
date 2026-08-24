@@ -122,13 +122,17 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
 export function buildSystemGraph(root, systemRef) {
   const system = findSystem(root, systemRef);
   const routines = routinesForSystem(root, system.system_id);
+  const sourceContracts = new Map(buildConsoleReadModel(root).sources.map((source) => [source.source_id, source]));
   const nodes = [];
   const edges = [];
   const sourceNodeByRole = new Map();
   for (const source of system.sources) {
     const id = `source:${source.source_id || source.role}`;
+    const sourceContract = source.source_id ? sourceContracts.get(source.source_id) : null;
     sourceNodeByRole.set(source.role, id);
-    nodes.push(graphNode(id, 'source', source.source_id || source.role, 'declared', {
+    nodes.push(graphNode(id, 'source', sourceContract?.name || source.source_id || source.role, 'declared', {
+      ref: source.source_id || null,
+      type: sourceContract?.type || null,
       role: source.role,
       required: source.required,
       freshness: source.freshness,

@@ -1,16 +1,31 @@
 import { Graph, NodeEvent } from '@antv/g6';
-
-const COLORS = {
-  declared: { fill: '#151b25', stroke: '#536078', glow: 'rgba(83, 96, 120, .18)' },
-  active: { fill: '#10243b', stroke: '#4da3ff', glow: 'rgba(77, 163, 255, .32)' },
-  running: { fill: '#10243b', stroke: '#4da3ff', glow: 'rgba(77, 163, 255, .42)' },
-  completed: { fill: '#102b24', stroke: '#42d392', glow: 'rgba(66, 211, 146, .3)' },
-  gap: { fill: '#302612', stroke: '#f6bd4a', glow: 'rgba(246, 189, 74, .3)' },
-  pending: { fill: '#302612', stroke: '#f6bd4a', glow: 'rgba(246, 189, 74, .24)' },
-  failed: { fill: '#351722', stroke: '#ff647c', glow: 'rgba(255, 100, 124, .34)' },
-  denied: { fill: '#351722', stroke: '#ff647c', glow: 'rgba(255, 100, 124, .34)' },
-  skipped: { fill: '#1b1d24', stroke: '#667085', glow: 'rgba(102, 112, 133, .2)' },
-};
+import {
+  AppWindow,
+  BookOpenText,
+  Boxes,
+  BrainCircuit,
+  Building2,
+  FileChartColumn,
+  FileOutput,
+  Gavel,
+  RefreshCw,
+  Search,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  Video,
+  Webhook,
+} from '@lucide/icons';
+import { buildLucideDataUri } from '@lucide/icons/build';
+import {
+  siClickup,
+  siFathom,
+  siGithub,
+  siGoogledrive,
+  siMeta,
+  siSupabase,
+  siWhatsapp,
+} from 'simple-icons';
 
 const KIND_ACCENT = {
   source: '#4fd1c5', area: '#67a7ff', system: '#9b8cff', routine: '#5e7ce2',
@@ -18,29 +33,107 @@ const KIND_ACCENT = {
   output: '#e2e8f0', gate: '#f6bd4a', judgment: '#f6bd4a',
 };
 
-function color(node) {
-  return COLORS[node.data.state] || COLORS.declared;
+const KIND_LABEL = {
+  source: 'Fonte',
+  area: 'Área',
+  system: 'Sistema',
+  routine: 'Rotina',
+  collector: 'Coleta',
+  retrieval: 'Contexto',
+  skill: 'Skill',
+  capability: 'Capability',
+  output: 'Output',
+  gate: 'Gate',
+  judgment: 'Julgamento',
+};
+
+const STATE_LABEL = {
+  declared: 'Declarado',
+  active: 'Ativo',
+  running: 'Executando',
+  completed: 'Concluído',
+  gap: 'Lacuna',
+  pending: 'Pendente',
+  failed: 'Falhou',
+  denied: 'Negado',
+  skipped: 'Pulado',
+};
+
+const KIND_ICON = {
+  area: Building2,
+  system: Boxes,
+  routine: RefreshCw,
+  collector: Webhook,
+  retrieval: Search,
+  skill: Sparkles,
+  capability: BrainCircuit,
+  output: FileOutput,
+  gate: ShieldCheck,
+  judgment: Gavel,
+};
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+  })[character]);
 }
 
-function nodeType(datum) {
-  const kind = datum.data.kind;
-  if (kind === 'source') return 'circle';
-  if (kind === 'capability') return 'hexagon';
-  if (kind === 'gate') return 'diamond';
-  if (kind === 'judgment') return 'star';
-  return 'rect';
+function simpleIconDataUri(icon, color = `#${icon.hex}`) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="${escapeHtml(icon.title)}"><path fill="${color}" d="${icon.path}"/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function functionalIconDataUri(icon, color) {
+  return buildLucideDataUri(icon, { size: 24, color, strokeWidth: 1.8, absoluteStrokeWidth: true });
+}
+
+function sourceIcon(node) {
+  const ref = `${node.id} ${node.details?.ref || ''} ${node.details?.type || ''}`.toLowerCase();
+  if (ref.includes('clickup')) return simpleIconDataUri(siClickup);
+  if (ref.includes('drive')) return simpleIconDataUri(siGoogledrive);
+  if (ref.includes('fathom')) return simpleIconDataUri(siFathom);
+  if (ref.includes('github') || ref.includes('git-repository')) return simpleIconDataUri(siGithub, '#f3f7fb');
+  if (ref.includes('meta-marketing')) return simpleIconDataUri(siMeta);
+  if (ref.includes('supabase')) return simpleIconDataUri(siSupabase);
+  if (ref.includes('whatsapp')) return simpleIconDataUri(siWhatsapp);
+  if (ref.includes('funnel') || ref.includes('experiment')) return functionalIconDataUri(FileChartColumn, '#8cc8ff');
+  if (ref.includes('platform')) return functionalIconDataUri(AppWindow, '#8cc8ff');
+  if (ref.includes('social')) return functionalIconDataUri(Share2, '#8cc8ff');
+  if (ref.includes('vault') || ref.includes('knowledge')) return functionalIconDataUri(BookOpenText, '#8cc8ff');
+  if (ref.includes('video') || ref.includes('vturb')) return functionalIconDataUri(Video, '#8cc8ff');
+  return functionalIconDataUri(BookOpenText, '#8cc8ff');
+}
+
+function nodeIcon(node) {
+  if (node.kind === 'source') return sourceIcon(node);
+  return functionalIconDataUri(KIND_ICON[node.kind] || Boxes, KIND_ACCENT[node.kind] || '#91a0b5');
+}
+
+function nodeType() {
+  return 'html';
 }
 
 function nodeSize(datum) {
   const kind = datum.data.kind;
-  if (kind === 'source') return 84;
-  if (kind === 'gate') return 94;
-  if (kind === 'capability') return 112;
-  if (kind === 'judgment') return 104;
-  if (kind === 'area') return [160, 66];
-  if (kind === 'system') return [210, 72];
-  if (kind === 'routine') return [190, 66];
-  return [176, 64];
+  if (kind === 'source') return [194, 76];
+  if (kind === 'area') return [190, 72];
+  if (kind === 'system') return [224, 78];
+  if (kind === 'routine') return [212, 74];
+  if (kind === 'capability') return [216, 78];
+  if (kind === 'judgment') return [204, 78];
+  return [204, 74];
+}
+
+function nodeMarkup(datum) {
+  const node = datum.data;
+  const kind = KIND_LABEL[node.kind] || node.kind;
+  const state = STATE_LABEL[node.state] || node.state;
+  const trace = node.actual ? '<span class="brain-node-trace">RUN</span>' : '';
+  return `<div class="brain-node brain-node--${escapeHtml(node.kind)} brain-node--state-${escapeHtml(node.state)}${node.actual ? ' is-actual' : ''}" data-node-id="${escapeHtml(node.id)}" title="${escapeHtml(node.label)}">
+    <span class="brain-node-icon"><img src="${nodeIcon(node)}" alt="" /></span>
+    <span class="brain-node-copy"><small>${escapeHtml(kind)} <i></i> ${escapeHtml(state)}</small><strong>${escapeHtml(node.label)}</strong></span>
+    ${trace}
+  </div>`;
 }
 
 function distribute(nodes, { x, centerY, gap = 126 }) {
@@ -201,66 +294,107 @@ export async function mountOperationalCanvas({
     behaviors: [
       'drag-canvas',
       'zoom-canvas',
-      'click-select',
       ...(editable ? ['drag-element'] : []),
     ],
     node: {
       type: nodeType,
       style: {
         size: nodeSize,
-        radius: 16,
-        fill: (datum) => color(datum).fill,
-        stroke: (datum) => color(datum).stroke,
-        lineWidth: (datum) => datum.data.actual ? 2.4 : 1.2,
-        shadowColor: (datum) => color(datum).glow,
-        shadowBlur: (datum) => datum.data.actual ? 24 : 10,
-        labelText: (datum) => datum.data.label,
-        labelFill: '#f3f7fb',
-        labelFontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        labelFontWeight: 650,
-        labelFontSize: (datum) => ['source', 'gate'].includes(datum.data.kind) ? 11 : 12,
-        labelWordWrap: true,
-        labelMaxWidth: (datum) => ['source', 'gate'].includes(datum.data.kind) ? 76 : 160,
+        dx: (datum) => -(nodeSize(datum)[0] / 2),
+        dy: (datum) => -(nodeSize(datum)[1] / 2),
+        innerHTML: nodeMarkup,
         cursor: 'pointer',
       },
       state: {
-        selected: { lineWidth: 3, shadowBlur: 30 },
-        actual: { lineWidth: 2.4 },
+        selected: { opacity: 1, halo: true, haloStroke: '#f3f7fb', haloStrokeOpacity: 0.2, haloLineWidth: 7 },
+        neighbor: { opacity: 1 },
+        inactive: { opacity: 0.18 },
+        actual: { opacity: 1 },
       },
       animation: { enter: 'fade', update: 'translate' },
     },
     edge: {
       type: model.graph_type === 'brain' ? 'line' : 'cubic-horizontal',
       style: {
-        stroke: (datum) => datum.data.actual ? '#4da3ff' : '#344055',
+        stroke: (datum) => datum.data.actual ? '#4da3ff' : '#334057',
         lineWidth: (datum) => datum.data.actual ? 2.1 : 1,
-        opacity: (datum) => datum.data.actual ? 0.9 : 0.42,
+        opacity: (datum) => datum.data.actual ? 0.92 : model.graph_type === 'brain' ? 0.16 : 0.3,
         lineDash: (datum) => datum.data.actual ? [8, 4] : [3, 7],
-        endArrow: true,
+        endArrow: (datum) => datum.data.actual || model.graph_type !== 'brain',
         cursor: 'pointer',
       },
       state: {
         actual: { stroke: '#4da3ff', lineWidth: 2.1, opacity: 0.9 },
-        selected: { stroke: '#f3f7fb', lineWidth: 2.6 },
+        selected: { stroke: '#f3f7fb', lineWidth: 2.4, opacity: 0.94 },
+        neighbor: { stroke: '#6db6ff', lineWidth: 1.8, opacity: 0.78 },
+        inactive: { opacity: 0.035 },
       },
       animation: { enter: 'path-in', update: 'fade' },
     },
   });
+  const baselineStates = () => Object.fromEntries([
+    ...model.nodes.map((node) => [node.id, node.actual ? ['actual'] : []]),
+    ...model.edges.map((edge) => [edge.id, edge.actual ? ['actual'] : []]),
+  ]);
+  const clearDomFocus = () => {
+    for (const element of container.querySelectorAll('.brain-node')) {
+      element.classList.remove('is-focused', 'is-neighbor', 'is-dimmed');
+    }
+  };
+  const focusNode = async (id) => {
+    const relatedEdges = graph.getRelatedEdgesData(id);
+    const relatedEdgeIds = new Set(relatedEdges.map((edge) => edge.id));
+    const relatedNodeIds = new Set([id]);
+    for (const edge of relatedEdges) {
+      relatedNodeIds.add(edge.source);
+      relatedNodeIds.add(edge.target);
+    }
+    const states = {};
+    for (const node of model.nodes) {
+      states[node.id] = [
+        ...(node.actual ? ['actual'] : []),
+        node.id === id ? 'selected' : relatedNodeIds.has(node.id) ? 'neighbor' : 'inactive',
+      ];
+    }
+    for (const edge of model.edges) {
+      states[edge.id] = [
+        ...(edge.actual ? ['actual'] : []),
+        relatedEdgeIds.has(edge.id) ? 'neighbor' : 'inactive',
+      ];
+    }
+    clearDomFocus();
+    for (const element of container.querySelectorAll('.brain-node')) {
+      const nodeId = element.dataset.nodeId;
+      element.classList.add(nodeId === id ? 'is-focused' : relatedNodeIds.has(nodeId) ? 'is-neighbor' : 'is-dimmed');
+    }
+    await graph.setElementState(states, true);
+  };
   graph.on(NodeEvent.CLICK, (event) => {
     const id = event.target?.id;
     if (!id) return;
     const node = model.nodes.find((item) => item.id === id);
-    if (node) onInspect(node);
+    if (node) {
+      void focusNode(id);
+      onInspect(node);
+    }
   });
   if (editable) {
     graph.on(NodeEvent.DRAG_END, () => onLayoutChange(allPositions(graph)));
   }
   await graph.render();
+  const readableZoom = model.graph_type === 'brain' ? 0.82 : 0.78;
+  if (graph.getZoom() < readableZoom) {
+    await graph.zoomTo(readableZoom, { duration: 360, easing: 'ease-out' });
+  }
   for (const node of model.nodes) {
     if (node.actual) await graph.setElementState(node.id, ['actual'], false);
   }
   return {
-    fit: () => graph.fitView({ when: 'always', direction: 'both' }, { duration: 420 }),
+    fit: async () => {
+      clearDomFocus();
+      await graph.setElementState(baselineStates(), false);
+      await graph.fitView({ when: 'always', direction: 'both' }, { duration: 420 });
+    },
     positions: () => allPositions(graph),
     destroy: () => graph.destroy(),
     accentFor: (kind) => KIND_ACCENT[kind] || '#91a0b5',

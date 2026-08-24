@@ -24,11 +24,17 @@ try {
   write(join(root, '.cerebro', 'layout.json'), {
     version: 3,
     systemContracts: '.cerebro/contracts/systems',
+    sourceContracts: '.cerebro/contracts/sources',
     routineContracts: '.cerebro/contracts/routines',
     routineReceipts: '.cerebro/runtime/receipts/routines',
     runLedger: '.cerebro/runtime/ledger/runs.jsonl',
     executionTraces: '.cerebro/runtime/traces',
     canvasLayouts: '.cerebro/runtime/canvas-layouts'
+  });
+  const source = example('source-contract.v1.json');
+  write(join(root, '.cerebro', 'contracts', 'sources', `${source.source_id}.json`), {
+    ...source,
+    name: 'Métricas reais do funil',
   });
   write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), example('system-contract.v2.json'));
   registerRoutineContract(root, example('routine-contract.v1.json'));
@@ -47,6 +53,7 @@ try {
   assert.equal(system.graph_type, 'system');
   assert(system.nodes.some((node) => node.id === 'retrieval'));
   assert(system.nodes.some((node) => node.id === 'gate:1'));
+  assert.equal(system.nodes.find((node) => node.id === `source:${source.source_id}`)?.label, 'Métricas reais do funil');
 
   const reconstructed = buildRunGraph(root, receipt.receipt_id);
   assert.equal(reconstructed.trace_origin, 'reconstructed');

@@ -51,6 +51,9 @@ const labels = {
   declared: 'Declarado', running: 'Em execução', gap: 'Lacuna',
   'evaluation-passed': 'Gates passaram', 'evaluation-gate-failed': 'Gate falhou',
   reconstructed: 'Reconstruído',
+  source: 'Fonte', area: 'Área', system: 'Sistema', routine: 'Rotina',
+  collector: 'Coleta', retrieval: 'Contexto', skill: 'Skill', capability: 'Capability',
+  output: 'Output', gate: 'Gate', judgment: 'Julgamento',
 };
 
 function label(value) {
@@ -178,18 +181,20 @@ function renderCanvas() {
         <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Run</button>
       </div>
       ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : '<div class="canvas-spacer"></div>'}
-      <button class="canvas-tool" data-canvas-fit>Enquadrar</button>
+      <button class="canvas-tool" data-canvas-fit>Ver mapa inteiro</button>
       <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
       <button class="canvas-tool primary" data-canvas-save disabled>Salvar layout</button>
     </div>
     <div class="canvas-stage-shell">
-      <div class="canvas-ambient one"></div><div class="canvas-ambient two"></div>
-      <div id="operational-canvas" class="operational-canvas"><div class="loading"><i></i><span>Compilando grafo local…</span></div></div>
-      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">INSPECTOR</p><h3>Selecione um nó</h3><p>Clique em uma Fonte, Sistema, gate ou decisão para ler o contrato sem abrir conteúdo privado.</p></aside>
-      <div id="canvas-origin" class="canvas-origin"></div>
-      <div class="canvas-legend" aria-label="Legenda de estados">
-        <span class="declared"><i></i>Declarado</span><span class="running"><i></i>Executando</span><span class="completed"><i></i>Concluído</span><span class="gap"><i></i>Lacuna</span><span class="failed"><i></i>Falhou</span>
+      <div class="canvas-graph-pane">
+        <div class="canvas-ambient one"></div><div class="canvas-ambient two"></div>
+        <div id="operational-canvas" class="operational-canvas"><div class="loading"><i></i><span>Compilando grafo local…</span></div></div>
+        <div id="canvas-origin" class="canvas-origin"></div>
+        <div class="canvas-legend" aria-label="Legenda de estados">
+          <span class="declared"><i></i>Declarado</span><span class="running"><i></i>Executando</span><span class="completed"><i></i>Concluído</span><span class="gap"><i></i>Lacuna</span><span class="failed"><i></i>Falhou</span>
+        </div>
       </div>
+      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>O logo mostra a Fonte; o ícone mostra a função. O contorno e o texto mostram o estado real.</p></aside>
     </div>
     <details class="canvas-accessible"><summary>Ver equivalente em lista</summary><div id="canvas-list"></div></details>
     <div class="boundary-note"><b>Layout ≠ arquitetura</b>Reorganizar salva apenas coordenadas privadas nesta máquina. Criar ou remover Fonte, Sistema, gate ou aresta continua exigindo mudança de contrato.</div>
@@ -291,11 +296,11 @@ function canvasInspector(node) {
   const inspector = $('#canvas-inspector');
   if (!inspector) return;
   const details = Object.entries(node.details || {}).filter(([, value]) => value !== null && value !== undefined);
-  inspector.innerHTML = `<p class="micro">${escapeHtml(node.kind)} · ${escapeHtml(node.state)}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>caminho real</span>' : '<span>contrato</span>'}</div><dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</dd></div>`).join('')}</dl>`;
+  inspector.innerHTML = `<p class="micro">${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>caminho real</span>' : '<span>contrato</span>'}</div><dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</dd></div>`).join('')}</dl>`;
 }
 
 function canvasList(graph) {
-  return `<table><thead><tr><th>Objeto</th><th>Tipo</th><th>Estado</th><th>Rastro</th></tr></thead><tbody>${graph.nodes.map((node) => `<tr><td><button class="table-action" data-canvas-inspect-node="${escapeHtml(node.id)}">${escapeHtml(node.label)} →</button></td><td>${escapeHtml(node.kind)}</td><td>${escapeHtml(label(node.state))}</td><td>${node.actual ? 'Run real' : 'Contrato'}</td></tr>`).join('')}</tbody></table>`;
+  return `<table><thead><tr><th>Objeto</th><th>Tipo</th><th>Estado</th><th>Rastro</th></tr></thead><tbody>${graph.nodes.map((node) => `<tr><td><button class="table-action" data-canvas-inspect-node="${escapeHtml(node.id)}">${escapeHtml(node.label)} →</button></td><td>${escapeHtml(label(node.kind))}</td><td>${escapeHtml(label(node.state))}</td><td>${node.actual ? 'Run real' : 'Contrato'}</td></tr>`).join('')}</tbody></table>`;
 }
 
 async function mountCanvasView() {
