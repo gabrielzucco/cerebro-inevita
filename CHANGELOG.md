@@ -1,5 +1,25 @@
 # Mudanças do cérebro INEVITA
 
+## v1.28.0 — 2026-08-23 · “permissão agora bloqueia de verdade quando tem custódia”
+
+- **Runtime local mínimo, sem inventar Console:** engine + CLI aplicam Access Grant antes do
+  conector. Servidor e interface continuam como próxima camada; file-only permanece operacional.
+- **Segredo fica no sistema operacional:** Keychain no macOS, Secret Service no Linux e DPAPI no
+  Windows. A CLI nunca aceita segredo em argumento; contratos e recibos guardam só referência
+  namespaced.
+- **Allow, deny e revoke executáveis:** escopo, sujeito, ação, modo, prazo e revogação são gates
+  reais. Acesso negado ou revogado não chama o conector; revogar é idempotente e não apaga uma
+  credencial possivelmente compartilhada.
+- **Access Receipt V1:** cada checagem deixa recibo privado e reference-only, distinguindo
+  credencial presente, ausente ou não consultada. A revogação representa o grant inteiro, sem
+  fingir que inspecionou uma Fonte específica.
+- **Barreira de exfiltração:** resultado que tente devolver a própria credencial é descartado e
+  registrado como falha sanitizada; erro cru, payload e segredo nunca entram no recibo.
+- **Degradação honesta:** provider indisponível nega `runtime-enforced`; acesso direto auditável e
+  export declaram file-only sem prometer ACL preventiva ou revogação retroativa.
+- **Harness cross-platform:** prova allow/deny/falha/revoke, namespaces, armazenamento via stdin,
+  ausência de plaintext no sandbox e compatibilidade do starter/protocolo.
+
 ## v1.27.0 — 2026-08-23 · “o contexto usado agora deixa contrato e recibo”
 
 - **Source Contract V1:** cada Fonte pode declarar casa da verdade, autoridade, escopo,

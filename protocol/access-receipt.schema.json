@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/access-receipt-v1.json",
+  "title": "INEVITA Access Receipt V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "receipt_id",
+    "decision",
+    "occurred_at",
+    "grant_ref",
+    "grant_id",
+    "subject_ref",
+    "system_ref",
+    "source_ref",
+    "action",
+    "mode",
+    "assurance",
+    "reason_code",
+    "credential_ref",
+    "credential_status",
+    "operation_ref",
+    "approved_by",
+    "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "receipt_id": { "$ref": "#/$defs/ref" },
+    "decision": { "enum": ["allowed", "denied", "failed", "revoked", "file-only"] },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "grant_ref": { "$ref": "#/$defs/local_ref" },
+    "grant_id": { "$ref": "#/$defs/ref" },
+    "subject_ref": { "$ref": "#/$defs/ref" },
+    "system_ref": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "source_ref": { "anyOf": [{ "$ref": "#/$defs/ref" }, { "type": "null" }] },
+    "action": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "mode": { "enum": ["read", "propose", "write-with-approval", "external-action"] },
+    "assurance": { "enum": ["runtime-enforced", "receipt-audited", "exported"] },
+    "reason_code": { "$ref": "#/$defs/id" },
+    "credential_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "credential_status": { "enum": ["present", "missing", "not-checked"] },
+    "operation_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "approved_by": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_shared_with_inevita"],
+      "properties": { "content_shared_with_inevita": { "const": false } }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

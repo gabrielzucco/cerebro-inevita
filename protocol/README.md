@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os cinco envelopes
+## Os seis envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -16,6 +16,8 @@ conteúdo bruto.
   acrescenta o Context Snapshot exato do que foi selecionado por referência.
 - `access-grant.schema.json`: a concessão local que autoriza sujeito, Fontes, Sistemas, ações,
   prazo e garantia. Não é o grant de download de pacote da Society.
+- `access-receipt.schema.json`: o recibo reference-only de allow, deny, falha, revogação ou
+  degradação; registra se a credencial estava presente, ausente ou sequer foi consultada.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -79,6 +81,7 @@ node scripts/protocol-validate.mjs source protocol/examples/source-contract.v1.j
 node scripts/protocol-validate.mjs system protocol/examples/system-contract.v2.json
 node scripts/protocol-validate.mjs run protocol/examples/run-record.v2.json
 node scripts/protocol-validate.mjs grant protocol/examples/access-grant.v1.json
+node scripts/protocol-validate.mjs receipt protocol/examples/access-receipt.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 
@@ -93,9 +96,38 @@ node scripts/source-contract.mjs migrate-registry --confirm
 A migração cria `.cerebro/contracts/sources/<source-id>.json`, nunca reescreve
 `conexoes/configuradas/fontes.json` e bloqueia conflito com contrato já existente.
 
+## Runtime local mínimo
+
+O runtime opcional desta versão é um engine local com CLI e biblioteca de conectores confiáveis;
+ainda não é o servidor nem a interface do Console. Arquivos e agente continuam funcionando sem
+ele. Quando o Sistema exige `runtime-enforced`, o engine aplica o Access Grant antes de entregar a
+credencial ao conector e deixa um Access Receipt privado em `.cerebro/runtime/receipts/access/`.
+
+```bash
+node scripts/runtime-secret.mjs status
+node scripts/runtime-secret.mjs set os-keychain:minha-fonte
+node scripts/runtime-secret.mjs has os-keychain:minha-fonte
+node scripts/runtime-access.mjs install caminho/access-grant.json --confirm
+node scripts/runtime-access.mjs check grant-id --subject=sistema-id --system=sistema-id \
+  --source=fonte-id --action=read-data --mode=read
+node scripts/runtime-access.mjs revoke grant-id --approved-by=role-owner --confirm
+node scripts/runtime-secret.mjs delete os-keychain:minha-fonte --confirm
+```
+
+- macOS usa Keychain; Linux usa Secret Service (`secret-tool`); Windows usa DPAPI do usuário;
+- o segredo nunca é aceito em argumento de linha de comando e não entra em grant, recibo ou log;
+- `credential_ref` de acesso gerenciado precisa ser namespaced, como `os-keychain:fonte`;
+- não existe comando genérico de execução: só um conector confiável chama `executeWithGrant`, e
+  resultado que tente devolver a própria credencial é bloqueado;
+- revogar impede usos futuros daquele grant, mas não apaga uma credencial que outros grants podem
+  compartilhar;
+- sem provider, `runtime-enforced` é negado; `receipt-audited` e `exported` degradam honestamente
+  para file-only, sem prometer ACL ou revogação retroativa.
+
 ## Harness
 
-`node scripts/test-company-brain-protocol-v2.mjs` prova os dois sentidos:
+`node scripts/test-company-brain-protocol-v2.mjs` e `node scripts/test-access-runtime.mjs` provam
+os dois sentidos:
 
 - exemplos bons dos quatro deltas passam;
 - System Contract e Run Record V1 continuam válidos e não ganham contexto inventado;
@@ -103,3 +135,5 @@ A migração cria `.cerebro/contracts/sources/<source-id>.json`, nunca reescreve
   fallback/parada e snapshot sem proveniência reprovam;
 - preview não escreve; confirmação cria uma vez; repetição não duplica; arquivo da Fonte e registro
   legado permanecem byte a byte intactos.
+- grant válido executa uma vez; escopo negado e revogação nunca chamam o conector; falha e tentativa
+  de exfiltração deixam recibo sanitizado; nenhum segredo persiste no sandbox.

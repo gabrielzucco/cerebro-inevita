@@ -36,6 +36,7 @@
 | **Run Record** | Recibo estruturado de um Run: IDs e referências de entidade, fonte, output, eval, decisão e correção, nunca o conteúdo bruto. |
 | **Context Snapshot** | Bloco reference-only do Run Record V2 que registra a versão da recuperação, Fontes e fragmentos selecionados, consulta, filtros, janela, frescor, lacunas, fallbacks, conflitos e garantia aplicada. |
 | **Access Grant** | Concessão local, aprovada por humano, que autoriza um sujeito a usar Fontes e ações por escopo e prazo; declara se o acesso é bloqueado pelo runtime, apenas auditado por recibo ou já exportado. Não é o grant de download da Society. |
+| **Access Receipt** | Recibo local e reference-only de acesso permitido, negado, falho, revogado ou degradado; registra a garantia aplicada sem carregar credencial, conteúdo ou resultado privado. |
 | **Entidade** | Objeto canônico que atravessa Sistemas, como lead, cliente, oferta ou experimento; usa ID opaco para costurar a jornada sem duplicar o dado. |
 | **Gate** | Regra objetiva que impede um estado de avançar quando uma condição obrigatória falha. |
 | **Sensor** | Sinal real que o Sistema consegue observar para avaliar uma execução ou resultado. |

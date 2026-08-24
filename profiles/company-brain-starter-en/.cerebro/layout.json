@@ -13,6 +13,7 @@
   "systemContract": "systems/first-system/contract.json",
   "sourceContracts": ".cerebro/contracts/sources",
   "accessGrants": ".cerebro/contracts/access-grants",
+  "accessReceipts": ".cerebro/runtime/receipts/access",
   "runLedger": "operations/runs/ledger.jsonl",
   "learningRegister": "operations/learning"
 }

@@ -8,6 +8,7 @@ import {
   validateSourceContract,
   validateSystemContract,
 } from './lib/system-protocol.mjs';
+import { validateAccessReceipt } from './lib/access-runtime.mjs';
 
 const [kind = '', path = ''] = process.argv.slice(2);
 const validators = {
@@ -15,6 +16,7 @@ const validators = {
   system: validateSystemContract,
   run: validateRunRecord,
   grant: validateAccessGrant,
+  receipt: validateAccessReceipt,
 };
 
 function fail(message) {
@@ -22,7 +24,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: source, system, run ou grant');
+if (!validators[kind]) fail('tipo válido: source, system, run, grant ou receipt');
 if (!path) fail('informe o caminho do JSON');
 
 try {

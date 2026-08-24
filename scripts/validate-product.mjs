@@ -8,6 +8,7 @@ import {
   validateSourceContract,
   validateSystemContract,
 } from './lib/system-protocol.mjs';
+import { validateAccessReceipt } from './lib/access-runtime.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -23,8 +24,10 @@ const required = [
   'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
   'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
   'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
+  'protocol/access-receipt.schema.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
+  'protocol/examples/access-receipt.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -60,8 +63,11 @@ const required = [
   'scripts/system-run.mjs', 'scripts/generate-operating-brief.mjs',
   'scripts/system-contract.mjs', 'scripts/entity.mjs', 'scripts/system-learn.mjs',
   'scripts/source-contract.mjs', 'scripts/protocol-validate.mjs',
+  'scripts/runtime-secret.mjs', 'scripts/runtime-access.mjs',
   'scripts/lib/system-protocol.mjs', 'scripts/lib/company-brain-protocol-v2.mjs',
+  'scripts/lib/secret-provider.mjs', 'scripts/lib/access-runtime.mjs',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
+  'scripts/test-access-runtime.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
@@ -93,6 +99,7 @@ for (const [label, path, validate] of [
   ['example system contract v2', 'protocol/examples/system-contract.v2.json', validateSystemContract],
   ['example run record v2', 'protocol/examples/run-record.v2.json', validateRunRecord],
   ['example access grant v1', 'protocol/examples/access-grant.v1.json', validateAccessGrant],
+  ['example access receipt v1', 'protocol/examples/access-receipt.v1.json', validateAccessReceipt],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -431,11 +438,29 @@ if (!ignore.includes('.cerebro/concierge-runs/')) {
 if (!ignore.includes('.cerebro/sistemas/')) {
   errors.push('estado privado dos sistemas não está protegido pelo .gitignore');
 }
-for (const privatePath of ['.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
+for (const privatePath of ['.cerebro/runtime', '.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
   if (!ignore.includes(privatePath)) errors.push(`estado privado sem ignore: ${privatePath}`);
 }
+const privateIgnore = readFileSync(join(ROOT, '.cerebro', 'private-ignore.manifest'), 'utf8');
+if (!privateIgnore.includes('.cerebro/runtime')) errors.push('manifesto privado não protege runtime');
 if (!ignore.includes('operacao/arquitetura/*')) {
   errors.push('mapas privados do Architect não estão protegidos pelo .gitignore');
+}
+
+const secretProvider = readFileSync(join(ROOT, 'scripts', 'lib', 'secret-provider.mjs'), 'utf8');
+for (const contract of [
+  'macos-keychain', 'linux-secret-service', 'windows-dpapi',
+  'memory-provider-forbidden', "input: secret", "join(this.root, '.cerebro', 'runtime', 'secrets'",
+]) {
+  if (!secretProvider.includes(contract)) errors.push(`provider de segredos sem guarda: ${contract}`);
+}
+const accessRuntime = readFileSync(join(ROOT, 'scripts', 'lib', 'access-runtime.mjs'), 'utf8');
+for (const contract of [
+  'credential-exfiltration-blocked', 'runtime-enforced exige credential_ref namespaced',
+  'direct-access-not-runtime-enforced', 'export-not-revocable', 'human-revocation',
+  "credential_status: 'not-checked'",
+]) {
+  if (!accessRuntime.includes(contract)) errors.push(`runtime de acesso sem guarda: ${contract}`);
 }
 
 const baseManifest = readFileSync(join(ROOT, 'sistemas', 'cerebro-base', 'manifest.md'), 'utf8');
@@ -447,7 +472,7 @@ const layout = JSON.parse(readFileSync(join(ROOT, '.cerebro', 'layout.json'), 'u
 if (layout.version !== 3) errors.push('layout precisa estar no protocolo v3');
 for (const key of [
   'activationBrief', 'configuration', 'activationContract', 'systemContract', 'sourceContracts',
-  'accessGrants', 'runLedger', 'learningRegister',
+  'accessGrants', 'accessReceipts', 'runLedger', 'learningRegister',
 ]) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);

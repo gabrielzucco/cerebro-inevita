@@ -14,7 +14,8 @@ transformar runtime, nuvem ou Obsidian em requisito.
 
 Esta story abre a especificação executável do **Company Brain Console**: casca plural desde o
 início, uma vertical real de ponta a ponta e enforcement honesto conforme a custódia do acesso.
-A camada protocolar foi implementada em v1.27.0; Console e runtime continuam fora desta entrega.
+A camada protocolar foi implementada em v1.27.0. O engine mínimo de runtime entra em v1.28.0;
+servidor e Console continuam fora desta entrega.
 
 ## Decisões congeladas
 
@@ -128,7 +129,8 @@ o grant é auditável; para export, a UI informa irreversibilidade.
 
 ## Runtime local opcional
 
-- servidor vinculado apenas a `127.0.0.1` por padrão;
+- o V0 entregue é engine + CLI, sem servidor; quando houver servidor, será vinculado apenas a
+  `127.0.0.1` por padrão;
 - sessão local autenticada e sem segredo em URL, log, contrato ou Run Record;
 - provider de segredos do sistema operacional; plaintext no Git é falha crítica;
 - conectores declaram capacidades e passam pelo mesmo gate de Access Grant;
@@ -180,7 +182,7 @@ no repositório:
       copiar ou alterar a Fonte.
 - [x] File-only mode continua entregando `/comecar`, `/arquiteto`, `/sistematizar` e `/operar` sem
       Node ou Console.
-- [ ] Runtime local pode negar um acesso externo não concedido, revogar um acesso futuro e deixar
+- [x] Runtime local pode negar um acesso externo não concedido, revogar um acesso futuro e deixar
       recibo sem persistir a credencial.
 - [ ] A UI nunca chama arquivo local de `runtime-enforced`; cada acesso mostra garantia real.
 - [ ] A casca renderiza várias Áreas, Sistemas e Fontes sem hardcode de singleton.
@@ -216,14 +218,14 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - integração de todas as Fontes;
 - oito áreas funcionais completas;
 - mudança de site/isca antes do teste real;
-- implementação do Console ou runtime nesta entrega protocolar.
+- implementação do Console, servidor local ou conectores reais nesta entrega do runtime mínimo.
 
 ## Tasks
 
 - [x] Fechar nomes canônicos e compatibilidade no Glossário/protocolo.
 - [x] Especificar schemas, exemplos e migrations dos quatro deltas.
 - [x] Estender validators e harness anti-slop com dual-read.
-- [ ] Especificar provider de segredos, enforcement e degradação do runtime.
+- [x] Especificar e implementar provider de segredos, enforcement e degradação do runtime.
 - [ ] Construir o fluxo vertical do Console sobre contratos reais.
 - [ ] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
 - [ ] Dogfood interno e implantação externa assistida.
@@ -241,6 +243,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 
 ## File List
 
+- `.github/workflows/ci.yml`
 - `.cerebro/layout.json`
 - `.cerebro/motor.manifest`
 - `.agents/skills/fonte/SKILL.md`
@@ -254,7 +257,9 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `profiles/company-brain-starter-en/.gitignore`
 - `protocol/README.md`
 - `protocol/access-grant.schema.json`
+- `protocol/access-receipt.schema.json`
 - `protocol/examples/access-grant.v1.json`
+- `protocol/examples/access-receipt.v1.json`
 - `protocol/examples/run-record.v2.json`
 - `protocol/examples/source-contract.v1.json`
 - `protocol/examples/system-contract.v2.json`
@@ -262,10 +267,15 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/source-contract.schema.json`
 - `protocol/system-contract-v2.schema.json`
 - `scripts/lib/company-brain-protocol-v2.mjs`
+- `scripts/lib/access-runtime.mjs`
+- `scripts/lib/secret-provider.mjs`
 - `scripts/lib/system-protocol.mjs`
 - `scripts/protocol-validate.mjs`
+- `scripts/runtime-access.mjs`
+- `scripts/runtime-secret.mjs`
 - `scripts/source-contract.mjs`
 - `scripts/system-run.mjs`
+- `scripts/test-access-runtime.mjs`
 - `scripts/test-company-brain-protocol-v2.mjs`
 - `scripts/test-company-brain-starter.mjs`
 - `scripts/validate-product.mjs`

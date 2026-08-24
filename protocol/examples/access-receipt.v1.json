@@ -1,0 +1,22 @@
+{
+  "protocol_version": 1,
+  "receipt_id": "access-run-funnel-001",
+  "decision": "allowed",
+  "occurred_at": "2026-08-23T18:01:00.000Z",
+  "grant_ref": "access-grant:grant-funnel-read-001",
+  "grant_id": "grant-funnel-read-001",
+  "subject_ref": "analisar-funil",
+  "system_ref": "analisar-funil",
+  "source_ref": "paid-media",
+  "action": "read-metrics",
+  "mode": "read",
+  "assurance": "runtime-enforced",
+  "reason_code": "grant-valid",
+  "credential_ref": "os-keychain:funnel-read-session",
+  "credential_status": "present",
+  "operation_ref": "connector:paid-media/read-001",
+  "approved_by": null,
+  "privacy": {
+    "content_shared_with_inevita": false
+  }
+}
