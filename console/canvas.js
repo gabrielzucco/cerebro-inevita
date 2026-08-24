@@ -30,7 +30,7 @@ import {
 const KIND_ACCENT = {
   source: '#4fd1c5', area: '#67a7ff', system: '#9b8cff', routine: '#5e7ce2',
   collector: '#5eead4', retrieval: '#4da3ff', skill: '#d98cff', capability: '#9b8cff',
-  output: '#e2e8f0', gate: '#f6bd4a', judgment: '#f6bd4a',
+  stage: '#78a9ff', artifact: '#e2e8f0', output: '#e2e8f0', gate: '#f6bd4a', judgment: '#f6bd4a',
 };
 
 const KIND_LABEL = {
@@ -42,6 +42,8 @@ const KIND_LABEL = {
   retrieval: 'Contexto',
   skill: 'Skill',
   capability: 'Capability',
+  stage: 'Etapa',
+  artifact: 'Artefato',
   output: 'Output',
   gate: 'Gate',
   judgment: 'Julgamento',
@@ -67,6 +69,8 @@ const KIND_ICON = {
   retrieval: Search,
   skill: Sparkles,
   capability: BrainCircuit,
+  stage: RefreshCw,
+  artifact: FileOutput,
   output: FileOutput,
   gate: ShieldCheck,
   judgment: Gavel,
@@ -120,6 +124,8 @@ function nodeSize(datum) {
   if (kind === 'system') return [224, 78];
   if (kind === 'routine') return [212, 74];
   if (kind === 'capability') return [216, 78];
+  if (kind === 'stage') return [222, 78];
+  if (kind === 'artifact') return [232, 78];
   if (kind === 'judgment') return [204, 78];
   return [204, 74];
 }
@@ -128,7 +134,7 @@ function nodeMarkup(datum) {
   const node = datum.data;
   const kind = KIND_LABEL[node.kind] || node.kind;
   const state = STATE_LABEL[node.state] || node.state;
-  const trace = node.actual ? '<span class="brain-node-trace">RUN</span>' : '';
+  const trace = node.actual ? '<span class="brain-node-trace">REAL</span>' : '';
   return `<div class="brain-node brain-node--${escapeHtml(node.kind)} brain-node--state-${escapeHtml(node.state)}${node.actual ? ' is-actual' : ''}" data-node-id="${escapeHtml(node.id)}" title="${escapeHtml(node.label)}">
     <span class="brain-node-icon"><img src="${nodeIcon(node)}" alt="" /></span>
     <span class="brain-node-copy"><small>${escapeHtml(kind)} <i></i> ${escapeHtml(state)}</small><strong>${escapeHtml(node.label)}</strong></span>
@@ -203,35 +209,33 @@ function brainPositions(model) {
 
 function operationalPositions(model) {
   const positions = {};
-  const sources = model.nodes.filter((node) => node.kind === 'source');
-  const collectors = model.nodes.filter((node) => node.kind === 'collector');
-  const retrievals = model.nodes.filter((node) => node.kind === 'retrieval');
-  const skills = model.nodes.filter((node) => node.kind === 'skill');
-  const capabilities = model.nodes.filter((node) => node.kind === 'capability');
-  const outputs = model.nodes.filter((node) => node.kind === 'output');
-  const gates = model.nodes.filter((node) => node.kind === 'gate');
-  const judgments = model.nodes.filter((node) => node.kind === 'judgment');
-  const centerY = 330;
-  let x = 90;
-  Object.assign(positions, distribute(sources, { x, centerY, gap: 116 }));
-  x += 225;
-  if (collectors.length) {
-    Object.assign(positions, distribute(collectors, { x, centerY }));
-    x += 225;
+  const depth = new Map(model.nodes.map((node) => [node.id, 0]));
+  for (let pass = 0; pass < model.nodes.length; pass += 1) {
+    let changed = false;
+    for (const edge of model.edges) {
+      if (!depth.has(edge.source) || !depth.has(edge.target)) continue;
+      const candidate = depth.get(edge.source) + 1;
+      if (candidate > depth.get(edge.target) && candidate <= model.nodes.length) {
+        depth.set(edge.target, candidate);
+        changed = true;
+      }
+    }
+    if (!changed) break;
   }
-  Object.assign(positions, distribute(retrievals, { x, centerY }));
-  x += 225;
-  if (skills.length) {
-    Object.assign(positions, distribute(skills, { x, centerY }));
-    x += 225;
+  const gateDepths = model.nodes.filter((node) => node.kind === 'gate').map((node) => depth.get(node.id) || 0);
+  if (gateDepths.length) {
+    const gateDepth = Math.min(...gateDepths);
+    for (const node of model.nodes.filter((item) => item.kind === 'gate')) depth.set(node.id, gateDepth);
+    for (const node of model.nodes.filter((item) => item.kind === 'judgment')) depth.set(node.id, gateDepth + 1);
   }
-  Object.assign(positions, distribute(capabilities, { x, centerY }));
-  x += 225;
-  Object.assign(positions, distribute(outputs, { x, centerY }));
-  x += 225;
-  Object.assign(positions, distribute(gates, { x, centerY, gap: 120 }));
-  x += 240;
-  Object.assign(positions, distribute(judgments, { x, centerY }));
+  const layers = new Map();
+  for (const node of model.nodes) {
+    const level = depth.get(node.id) || 0;
+    layers.set(level, [...(layers.get(level) || []), node]);
+  }
+  for (const [level, nodes] of [...layers.entries()].sort(([a], [b]) => a - b)) {
+    Object.assign(positions, distribute(nodes, { x: 95 + (level * 248), centerY: 340, gap: 112 }));
+  }
   return positions;
 }
 
@@ -382,8 +386,8 @@ export async function mountOperationalCanvas({
     graph.on(NodeEvent.DRAG_END, () => onLayoutChange(allPositions(graph)));
   }
   await graph.render();
-  const readableZoom = model.graph_type === 'brain' ? 0.82 : 0.78;
-  if (graph.getZoom() < readableZoom) {
+  const readableZoom = 0.82;
+  if (model.graph_type === 'brain' && graph.getZoom() < readableZoom) {
     await graph.zoomTo(readableZoom, { duration: 360, easing: 'ease-out' });
   }
   for (const node of model.nodes) {

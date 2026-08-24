@@ -349,12 +349,23 @@ try {
   const systemGraph = await request(base, '/api/graphs/systems/analisar-funil', { cookie });
   assert.equal(systemGraph.status, 200);
   assert.equal(systemGraph.value.graph_type, 'system');
+  assert(systemGraph.value.nodes.some((node) => node.kind === 'stage'));
   const runGraph = await request(base, `/api/graphs/runs/${receiptId}`, { cookie });
   assert.equal(runGraph.status, 200);
   assert.equal(runGraph.value.graph_type, 'run');
   assert.equal(runGraph.value.trace_origin, 'recorded');
   assert(runGraph.value.trace_events > 0);
   assert.equal(runGraph.value.nodes.find((node) => node.id === 'capability').state, 'completed');
+  assert.equal(runGraph.value.nodes.some((node) => node.kind === 'stage'), false);
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact' && node.actual));
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact'
+    && node.details.artifact_type === 'instruction'));
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact'
+    && node.details.artifact_type === 'context-snapshot'));
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact'
+    && node.details.artifact_type === 'deliverable'));
+  assert(runGraph.value.edges.some((edge) => edge.actual && edge.relation === 'produces'));
+  assert.equal(runGraph.value.nodes.some((node) => node.details?.external_url), false);
   assert.equal(JSON.stringify(runGraph.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
 
   const graphNodeId = brainGraph.value.nodes[0].id;

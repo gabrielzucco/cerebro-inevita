@@ -53,6 +53,9 @@ try {
   assert.equal(system.graph_type, 'system');
   assert(system.nodes.some((node) => node.id === 'retrieval'));
   assert(system.nodes.some((node) => node.id === 'gate:1'));
+  assert.equal(system.nodes.filter((node) => node.kind === 'stage').length, 2);
+  assert(system.nodes.some((node) => node.id === 'artifact-contract:produce:leitura-funil'));
+  assert(system.nodes.some((node) => node.id === 'artifact-contract:consume:experiment-brief'));
   assert.equal(system.nodes.find((node) => node.id === `source:${source.source_id}`)?.label, 'Métricas reais do funil');
 
   const reconstructed = buildRunGraph(root, receipt.receipt_id);
@@ -66,8 +69,20 @@ try {
     routineRef: receipt.routine_ref,
     clock: () => new Date('2026-08-24T10:00:00.000Z'),
   });
-  tracer.emit({ stepId: 'run', stepType: 'run', state: 'running', parentStepId: null });
-  tracer.emit({ stepId: 'capability', stepType: 'capability', state: 'completed' });
+  const contextRef = 'context-artifact:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const collectorRef = 'collector-output:.automacao/_FUNIL-ULTIMO.json';
+  const deliveryRef = '.cerebro/runtime/outputs/routines/funil-diario.md';
+  tracer.emit({
+    stepId: 'run', stepType: 'run', state: 'running', parentStepId: null,
+    inputRefs: ['operacao/rotinas/funil-diario.prompt.md'],
+  });
+  tracer.emit({ stepId: 'collector', stepType: 'collector', state: 'completed', outputRefs: [collectorRef] });
+  tracer.emit({ stepId: 'retrieval', stepType: 'retrieval', state: 'completed', outputRefs: [contextRef] });
+  tracer.emit({
+    stepId: 'capability', stepType: 'capability', state: 'completed',
+    inputRefs: [collectorRef, contextRef],
+  });
+  tracer.emit({ stepId: 'output', stepType: 'output', state: 'completed', outputRefs: [deliveryRef] });
   tracer.emit({
     stepId: 'eval', stepType: 'eval', state: 'failed', reasonCode: 'evaluation-gate-failed',
     extensions: { gate_results: [
@@ -75,14 +90,20 @@ try {
       { gate_id: 'external-action', passed: false, not_applicable: false, issue_count: 1 },
     ] },
   });
-  tracer.emit({ stepId: 'judgment', stepType: 'judgment', state: 'pending' });
+  tracer.emit({ stepId: 'judgment', stepType: 'judgment', state: 'pending', inputRefs: [deliveryRef] });
   tracer.emit({ stepId: 'run', stepType: 'run', state: 'completed', parentStepId: null });
 
   const recorded = buildRunGraph(root, receipt.receipt_id);
   assert.equal(recorded.trace_origin, 'recorded');
-  assert.equal(recorded.trace_events, 5);
+  assert.equal(recorded.trace_events, 8);
   assert.equal(recorded.nodes.find((node) => node.id === 'gate:1').state, 'completed');
   assert.equal(recorded.nodes.find((node) => node.id === 'gate:2').state, 'failed');
+  assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'instruction' && node.actual));
+  assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'collector-output' && node.actual));
+  assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'context-snapshot' && node.actual));
+  assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'deliverable' && node.actual));
+  assert(recorded.edges.some((edge) => edge.relation === 'consumed-by' && edge.target === 'capability' && edge.actual));
+  assert(recorded.edges.some((edge) => edge.relation === 'awaits-judgment' && edge.target === 'judgment' && edge.actual));
   assert.equal(graphForLayout(root, `run-${receipt.run_id}`).graph_ref, receipt.run_id);
   assert.equal(JSON.stringify(recorded).includes('PRIVATE'), false);
   console.log('✓ Canvas read model separa contrato, trace reconstruído e caminho realmente registrado');

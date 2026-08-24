@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { readCanvasLayout } from './canvas-layout-runtime.mjs';
 import { buildConsoleReadModel } from './console-read-model.mjs';
 import { latestStepStates, readExecutionTrace } from './execution-trace-runtime.mjs';
@@ -16,12 +17,24 @@ import {
   validateSystemContract,
 } from './system-protocol.mjs';
 
+const ARTIFACT_REFS = Symbol('artifact-refs');
+const ARTIFACT_POINTERS = Symbol('artifact-pointers');
+
 function graphNode(id, kind, label, state = 'declared', details = {}) {
   return { id, kind, label, state, actual: false, details };
 }
 
 function graphEdge(id, source, target, relation, state = 'declared') {
   return { id, source, target, relation, state, actual: false };
+}
+
+function readableRef(value) {
+  return String(value || '').replaceAll('_', ' ').replaceAll('-', ' ').replace(/\s+/g, ' ').trim()
+    .replace(/(^|\s)\S/g, (character) => character.toUpperCase());
+}
+
+function stableId(prefix, value) {
+  return `${prefix}:${createHash('sha256').update(String(value)).digest('hex').slice(0, 16)}`;
 }
 
 function applyLayout(root, key, graph) {
@@ -149,15 +162,45 @@ export function buildSystemGraph(root, systemRef) {
   }));
   const skillRefs = [...new Set(routines.flatMap((routine) => routine.context.skill_refs || []))];
   for (const ref of skillRefs) nodes.push(graphNode(`skill:${ref}`, 'skill', ref.split('/').slice(-2, -1)[0] || ref, 'declared', { ref }));
+  const consumedArtifacts = system.artifacts?.consumes || [];
+  const producedArtifacts = system.artifacts?.produces || [];
+  for (const artifact of consumedArtifacts) nodes.push(graphNode(
+    `artifact-contract:consume:${artifact.role}`, 'artifact', readableRef(artifact.role), 'declared', {
+      direction: 'consumes',
+      artifact_type: artifact.artifact_type,
+      schema_ref: artifact.schema_ref,
+      accepted_versions: artifact.accepted_versions,
+      required: artifact.required,
+    },
+  ));
   nodes.push(graphNode('capability', 'capability', system.capability.capability_id, 'declared', {
     version: system.capability.version,
     origin: system.capability.origin,
-    pipeline: system.pipeline,
   }));
+  const stageIds = system.pipeline.map((stage, index) => {
+    const id = `stage:${index + 1}:${stage.state}`;
+    nodes.push(graphNode(id, 'stage', readableRef(stage.state), 'declared', {
+      order: index + 1,
+      state_ref: stage.state,
+      input: stage.input,
+      output: stage.output,
+      gate: stage.gate,
+    }));
+    return id;
+  });
   nodes.push(graphNode('output', 'output', system.result.output_type, 'declared', {
     result: system.result.statement,
     done: system.result.definition_of_done,
   }));
+  for (const artifact of producedArtifacts) nodes.push(graphNode(
+    `artifact-contract:produce:${artifact.role}`, 'artifact', readableRef(artifact.role), 'declared', {
+      direction: 'produces',
+      artifact_type: artifact.artifact_type,
+      schema_ref: artifact.schema_ref,
+      schema_version: artifact.schema_version,
+      sensitivity: artifact.sensitivity,
+    },
+  ));
   system.eval.deterministic_gates.forEach((gate, index) => nodes.push(
     graphNode(`gate:${index + 1}`, 'gate', gate, 'declared', { index: index + 1 }),
   ));
@@ -174,7 +217,21 @@ export function buildSystemGraph(root, systemRef) {
     for (const ref of skillRefs) edges.push(graphEdge(`edge:retrieval:skill:${ref}`, 'retrieval', `skill:${ref}`, 'loads'));
     for (const ref of skillRefs) edges.push(graphEdge(`edge:skill:${ref}:capability`, `skill:${ref}`, 'capability', 'instructs'));
   } else edges.push(graphEdge('edge:retrieval:capability', 'retrieval', 'capability', 'grounds'));
-  edges.push(graphEdge('edge:capability:output', 'capability', 'output', 'produces'));
+  for (const artifact of consumedArtifacts) edges.push(graphEdge(
+    `edge:artifact-contract:consume:${artifact.role}:capability`,
+    `artifact-contract:consume:${artifact.role}`, 'capability', 'consumed-by',
+  ));
+  if (stageIds.length) {
+    edges.push(graphEdge(`edge:capability:${stageIds[0]}`, 'capability', stageIds[0], 'starts'));
+    stageIds.slice(1).forEach((stageId, index) => edges.push(
+      graphEdge(`edge:${stageIds[index]}:${stageId}`, stageIds[index], stageId, 'advances'),
+    ));
+    edges.push(graphEdge(`edge:${stageIds.at(-1)}:output`, stageIds.at(-1), 'output', 'produces'));
+  } else edges.push(graphEdge('edge:capability:output', 'capability', 'output', 'produces'));
+  for (const artifact of producedArtifacts) edges.push(graphEdge(
+    `edge:output:artifact-contract:produce:${artifact.role}`,
+    'output', `artifact-contract:produce:${artifact.role}`, 'materializes',
+  ));
   system.eval.deterministic_gates.forEach((_gate, index) => {
     const source = index === 0 ? 'output' : `gate:${index}`;
     edges.push(graphEdge(`edge:${source}:gate:${index + 1}`, source, `gate:${index + 1}`, 'evaluates'));
@@ -234,6 +291,159 @@ function applyRecordedTrace(graph, events) {
   }
 }
 
+function canonicalArtifactRef(ref) {
+  const value = String(ref || '');
+  if (value.startsWith('context-artifact:')) return value.split(':json-pointer:', 1)[0];
+  return value;
+}
+
+function artifactReference(ref) {
+  const value = String(ref || '');
+  return Boolean(value)
+    && !value.startsWith('source:')
+    && !value.startsWith('access-receipt:')
+    && !value.startsWith('routine-receipt:')
+    && !value.startsWith('execution-trace:');
+}
+
+function artifactType(ref) {
+  const value = String(ref || '').toLowerCase();
+  if (value.startsWith('context-artifact:')) return 'context-snapshot';
+  if (value.startsWith('collector-output:')) return 'collector-output';
+  if (value.includes('.prompt.')) return 'instruction';
+  if (value.includes('/outputs/')) return 'deliverable';
+  if (value.startsWith('https://')) return 'external-object';
+  return 'artifact';
+}
+
+function artifactLabel(ref, system) {
+  const value = canonicalArtifactRef(ref);
+  const kind = artifactType(value);
+  if (kind === 'context-snapshot') return 'Context Snapshot';
+  if (kind === 'collector-output') return `Coleta · ${readableRef(basename(value.slice('collector-output:'.length)).replace(/\.[^.]+$/, ''))}`;
+  if (kind === 'instruction') return 'Instrução da rotina';
+  if (kind === 'deliverable') return `Entrega · ${readableRef(system.result.output_type)}`;
+  if (value.includes('app.clickup.com/')) return 'Objeto no ClickUp';
+  if (value.includes('drive.google.com/')) return 'Objeto no Drive';
+  const file = basename(value).replace(/\.[^.]+$/, '');
+  return file && file !== '.' ? readableRef(file) : 'Artefato observado';
+}
+
+function artifactState(current, candidate) {
+  const rank = { declared: 0, gap: 1, pending: 2, running: 3, skipped: 4, denied: 5, failed: 6, completed: 7 };
+  return (rank[candidate] ?? 0) >= (rank[current] ?? 0) ? candidate : current;
+}
+
+function ensureArtifact(graph, ref, system, state = 'completed', { selected = false } = {}) {
+  const canonical = canonicalArtifactRef(ref);
+  const id = stableId('artifact', canonical);
+  const existing = graph.nodes.find((node) => node.id === id);
+  const pointer = String(ref).includes(':json-pointer:');
+  if (existing) {
+    existing.state = artifactState(existing.state, state);
+    existing.actual = true;
+    existing[ARTIFACT_REFS].add(String(ref));
+    if (pointer || selected) existing[ARTIFACT_POINTERS].add(String(ref));
+    existing.details.reference_count = existing[ARTIFACT_REFS].size;
+    existing.details.selected_pointer_count = existing[ARTIFACT_POINTERS].size;
+    return id;
+  }
+  const node = graphNode(id, 'artifact', artifactLabel(canonical, system), state, {
+    ref: canonical,
+    artifact_type: artifactType(canonical),
+    reference_count: 1,
+    selected_pointer_count: pointer || selected ? 1 : 0,
+    ...(canonical.startsWith('https://') ? { external_url: canonical } : {}),
+  });
+  node.actual = true;
+  node[ARTIFACT_REFS] = new Set([String(ref)]);
+  node[ARTIFACT_POINTERS] = new Set(pointer || selected ? [String(ref)] : []);
+  graph.nodes.push(node);
+  return id;
+}
+
+function addActualEdge(graph, source, target, relation, state = 'completed') {
+  if (!source || !target || source === target) return;
+  const existing = graph.edges.find((edge) => edge.source === source && edge.target === target && edge.relation === relation);
+  if (existing) {
+    existing.actual = true;
+    existing.state = state;
+    return;
+  }
+  const edge = graphEdge(stableId('edge', `${source}|${target}|${relation}`), source, target, relation, state);
+  edge.actual = true;
+  graph.edges.push(edge);
+}
+
+function traceNodeId(event) {
+  if (event.source_ref) return `source:${event.source_ref}`;
+  if (event.step_type === 'collector') return 'collector';
+  if (event.step_type === 'retrieval') return 'retrieval';
+  if (event.step_type === 'skill' && event.skill_ref) return `skill:${event.skill_ref}`;
+  if (event.step_type === 'capability' || event.step_type === 'run') return 'capability';
+  if (event.step_type === 'output') return 'output';
+  if (event.step_type === 'judgment') return 'judgment';
+  return null;
+}
+
+function materializeRecordedArtifacts(graph, events, system) {
+  const accessBySource = new Map();
+  for (const event of events) {
+    const stepNode = traceNodeId(event);
+    if (event.source_ref) {
+      const accessRefs = [...event.input_refs, ...event.output_refs].filter((ref) => ref.startsWith('access-receipt:'));
+      const refs = new Set([...(accessBySource.get(event.source_ref) || []), ...accessRefs]);
+      accessBySource.set(event.source_ref, refs);
+      setNode(graph, `source:${event.source_ref}`, event.state, true, { access_receipt_count: refs.size });
+    }
+    if (event.step_type === 'collector') {
+      const bindingRefs = event.input_refs.filter((ref) => /^collector-[a-z0-9-]+$/.test(ref));
+      if (bindingRefs.length) setNode(graph, 'collector', event.state, true, { binding_refs: bindingRefs });
+    }
+    for (const ref of event.input_refs.filter((value) => artifactReference(value)
+      && !(event.step_type === 'collector' && /^collector-[a-z0-9-]+$/.test(value)))) {
+      const artifactId = ensureArtifact(graph, ref, system, event.state, { selected: Boolean(event.source_ref) });
+      if (event.source_ref && event.step_type === 'retrieval') {
+        addActualEdge(graph, `source:${event.source_ref}`, artifactId, 'selects', event.state);
+      } else addActualEdge(graph, artifactId, stepNode, 'consumed-by', event.state);
+    }
+    if (event.step_type === 'run') continue;
+    for (const ref of event.output_refs.filter(artifactReference)) {
+      const artifactId = ensureArtifact(graph, ref, system, event.state);
+      addActualEdge(graph, stepNode, artifactId, 'produces', event.state);
+    }
+  }
+}
+
+function materializeRecordArtifacts(graph, record, receipt, system) {
+  if (record?.protocol_version === 2) {
+    for (const access of record.context_snapshot.accesses) {
+      const sourceId = `source:${access.source_ref.id}`;
+      setNode(graph, sourceId, 'completed', true, { selected_ref_count: access.selected_refs.length });
+      for (const ref of access.selected_refs.filter(artifactReference)) {
+        const artifactId = ensureArtifact(graph, ref, system, 'completed', { selected: true });
+        addActualEdge(graph, sourceId, artifactId, 'selects');
+        addActualEdge(graph, artifactId, 'capability', 'grounds');
+      }
+    }
+    for (const ref of record.output_refs.filter(artifactReference)) {
+      const artifactId = ensureArtifact(graph, ref, system);
+      addActualEdge(graph, 'output', artifactId, 'produces');
+      addActualEdge(graph, artifactId, 'judgment', 'awaits-judgment', record.human_decision === 'pending' ? 'pending' : 'completed');
+    }
+  }
+  for (const ref of (receipt.input_refs || []).filter(artifactReference)) {
+    const artifactId = ensureArtifact(graph, ref, system);
+    if (ref.startsWith('collector-output:')) addActualEdge(graph, 'collector', artifactId, 'produces');
+    addActualEdge(graph, artifactId, 'capability', 'consumed-by');
+  }
+  if (receipt.output_ref && artifactReference(receipt.output_ref)) {
+    const artifactId = ensureArtifact(graph, receipt.output_ref, system, receipt.status === 'completed' ? 'completed' : receipt.status);
+    addActualEdge(graph, 'output', artifactId, 'produces', receipt.status === 'completed' ? 'completed' : receipt.status);
+    addActualEdge(graph, artifactId, 'judgment', 'awaits-judgment', 'pending');
+  }
+}
+
 function applyReconstructedTrace(root, graph, receipt, record) {
   for (const ref of receipt.input_refs || []) {
     if (ref.startsWith('source:')) setNode(graph, `source:${ref.slice('source:'.length)}`, 'completed');
@@ -261,10 +471,24 @@ function applyReconstructedTrace(root, graph, receipt, record) {
   }
 }
 
+function executionGraphBase(base) {
+  const stageIds = new Set(base.nodes.filter((node) => node.kind === 'stage').map((node) => node.id));
+  if (!stageIds.size) return base;
+  return {
+    ...base,
+    nodes: base.nodes.filter((node) => !stageIds.has(node.id)),
+    edges: [
+      ...base.edges.filter((edge) => !stageIds.has(edge.source) && !stageIds.has(edge.target)),
+      graphEdge('edge:capability:output', 'capability', 'output', 'produces'),
+    ],
+  };
+}
+
 export function buildRunGraph(root, receiptId) {
   const receipt = receiptById(root, receiptId);
   const record = latestRunRecords(root).find((item) => item.run_id === receipt.run_id) || null;
-  const base = buildSystemGraph(root, receipt.system_ref);
+  const system = findSystem(root, receipt.system_ref);
+  const base = executionGraphBase(buildSystemGraph(root, receipt.system_ref));
   const graph = {
     ...base,
     graph_type: 'run',
@@ -303,6 +527,8 @@ export function buildRunGraph(root, receiptId) {
           decided_at: judgment.decided_at,
         });
   } catch { setNode(graph, 'judgment', 'pending', true); }
+  materializeRecordArtifacts(graph, record, receipt, system);
+  if (events.length) materializeRecordedArtifacts(graph, events, system);
   activateEdges(graph);
   return applyLayout(root, `run-${receipt.run_id}`, graph);
 }

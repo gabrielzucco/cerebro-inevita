@@ -58,7 +58,7 @@ const labels = {
   'not-executed': 'Não executado', linked: 'Ligado', unlinked: 'Não ligado', 'not-applicable': 'Não se aplica',
   source: 'Fonte', area: 'Área', system: 'Sistema', routine: 'Rotina',
   collector: 'Coleta', retrieval: 'Contexto', skill: 'Skill', capability: 'Capability',
-  output: 'Output', gate: 'Gate', judgment: 'Julgamento',
+  stage: 'Etapa', artifact: 'Artefato', output: 'Output', gate: 'Gate', judgment: 'Julgamento',
   met: 'Atendido', partial: 'Parcial', missing: 'Ausente',
   new: 'Começando do zero', 'organized-context': 'Contexto organizado',
   'partial-brain': 'Cérebro parcial', 'inevita-compatible': 'Compatível com INEVITA',
@@ -276,7 +276,7 @@ function renderCanvas() {
       <div class="canvas-segmented" aria-label="Escala do mapa">
         <button data-canvas-scope="brain" class="${state.canvas.scope === 'brain' ? 'active' : ''}">Cérebro</button>
         <button data-canvas-scope="system" class="${state.canvas.scope === 'system' ? 'active' : ''}">Sistema</button>
-        <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Run</button>
+        <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
       </div>
       ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : '<div class="canvas-spacer"></div>'}
       <button class="canvas-tool" data-canvas-fit>Ver mapa inteiro</button>
@@ -292,7 +292,7 @@ function renderCanvas() {
           <span class="declared"><i></i>Declarado</span><span class="running"><i></i>Executando</span><span class="completed"><i></i>Concluído</span><span class="gap"><i></i>Lacuna</span><span class="failed"><i></i>Falhou</span>
         </div>
       </div>
-      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>O logo mostra a Fonte; o ícone mostra a função. O contorno e o texto mostram o estado real.</p></aside>
+      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>Fontes são casas de verdade. Etapas são contrato. Artefatos são os objetos que realmente atravessaram uma execução.</p></aside>
     </div>
     <details class="canvas-accessible"><summary>Ver equivalente em lista</summary><div id="canvas-list"></div></details>
     <div class="boundary-note"><b>Layout ≠ arquitetura</b>Reorganizar salva apenas coordenadas privadas nesta máquina. Criar ou remover Fonte, Sistema, gate ou aresta continua exigindo mudança de contrato.</div>
@@ -423,15 +423,45 @@ function canvasEndpoint() {
   return `/api/graphs/runs/${state.canvas.ref}`;
 }
 
+function safeCanvasExternalUrl(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const allowedHosts = new Set([
+      'app.clickup.com', 'drive.google.com', 'docs.google.com',
+      'business.facebook.com', 'adsmanager.facebook.com', 'www.facebook.com', 'facebook.com',
+    ]);
+    return url.protocol === 'https:' && allowedHosts.has(url.hostname) ? url.href : null;
+  } catch { return null; }
+}
+
+function externalProvider(value) {
+  const hostname = new URL(value).hostname;
+  if (hostname === 'app.clickup.com') return 'ClickUp';
+  if (hostname === 'drive.google.com' || hostname === 'docs.google.com') return 'Drive';
+  return 'Meta';
+}
+
+function canvasDetailValue(value) {
+  if (Array.isArray(value)) {
+    return value.length
+      ? `<ul class="canvas-detail-list">${value.map((item) => `<li>${escapeHtml(typeof item === 'object' ? JSON.stringify(item) : item)}</li>`).join('')}</ul>`
+      : '<span class="muted">nenhum</span>';
+  }
+  if (value && typeof value === 'object') return `<pre class="canvas-detail-json">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+  return escapeHtml(value);
+}
+
 function canvasInspector(node) {
   const inspector = $('#canvas-inspector');
   if (!inspector) return;
-  const details = Object.entries(node.details || {}).filter(([, value]) => value !== null && value !== undefined);
-  inspector.innerHTML = `<p class="micro">${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>caminho real</span>' : '<span>contrato</span>'}</div><dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${escapeHtml(typeof value === 'object' ? JSON.stringify(value) : value)}</dd></div>`).join('')}</dl>`;
+  const externalUrl = safeCanvasExternalUrl(node.details?.external_url);
+  const details = Object.entries(node.details || {}).filter(([key, value]) => key !== 'external_url' && value !== null && value !== undefined);
+  inspector.innerHTML = `<p class="micro">${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>objeto observado</span>' : '<span>contrato</span>'}</div>${externalUrl ? `<a class="canvas-open-link" href="${escapeHtml(externalUrl)}" target="_blank" rel="noopener noreferrer">Abrir no ${escapeHtml(externalProvider(externalUrl))} <b>↗</b></a>` : ''}<dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${canvasDetailValue(value)}</dd></div>`).join('')}</dl>`;
 }
 
 function canvasList(graph) {
-  return `<table><thead><tr><th>Objeto</th><th>Tipo</th><th>Estado</th><th>Rastro</th></tr></thead><tbody>${graph.nodes.map((node) => `<tr><td><button class="table-action" data-canvas-inspect-node="${escapeHtml(node.id)}">${escapeHtml(node.label)} →</button></td><td>${escapeHtml(label(node.kind))}</td><td>${escapeHtml(label(node.state))}</td><td>${node.actual ? 'Run real' : 'Contrato'}</td></tr>`).join('')}</tbody></table>`;
+  return `<table><thead><tr><th>Objeto</th><th>Tipo</th><th>Estado</th><th>Rastro</th></tr></thead><tbody>${graph.nodes.map((node) => `<tr><td><button class="table-action" data-canvas-inspect-node="${escapeHtml(node.id)}">${escapeHtml(node.label)} →</button></td><td>${escapeHtml(label(node.kind))}</td><td>${escapeHtml(label(node.state))}</td><td>${node.actual ? 'Observado' : 'Contrato'}</td></tr>`).join('')}</tbody></table>`;
 }
 
 async function mountCanvasView() {
