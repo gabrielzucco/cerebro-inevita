@@ -8,6 +8,7 @@ import {
 } from './correction-loop.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
 import { buildExperimentReadModel } from './experiment-protocol.mjs';
+import { buildCompatibilityDiagnostic, readBrainManifest } from './compatibility-diagnostic.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -355,6 +356,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const observedAt = new Date(now);
   if (!Number.isFinite(observedAt.getTime())) throw new Error('relógio inválido');
   const issues = [];
+  const compatibility = buildCompatibilityDiagnostic(root, { now: observedAt });
   const sources = listSourceContracts(root, issues);
   const systems = listSystemContracts(root, issues);
   let runRecords = [];
@@ -395,7 +397,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['manifest', 'contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -411,6 +413,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       attention: attention.length,
       judgments: pendingJudgments.length,
       learning_candidates: learningCandidates,
+      compatibility_gaps: compatibility.checks.filter((item) => item.status !== 'met').length,
     },
     areas,
     systems,
@@ -418,6 +421,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     experiments: experimentModel.experiments,
     routines,
     judgments,
+    compatibility,
     today: {
       needs_attention: attention.map((routine) => routine.routine_id),
       ready_to_work: routines.filter((routine) => ['ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code)).map((routine) => routine.routine_id),
@@ -429,9 +433,19 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
 }
 
 export function recognizeConsoleBrain(root) {
+  const manifest = readBrainManifest(root);
+  if (manifest.status === 'valid') {
+    const entrypoint = manifest.value.entrypoints.some((ref) => {
+      try { return statSync(join(root, ref)).isFile(); } catch { return false; }
+    });
+    if (!entrypoint || !existsSync(join(root, manifest.value.layout_ref))) {
+      throw new Error('Brain Manifest válido, mas referências essenciais estão ausentes');
+    }
+    return { kind: 'inevita-installation', profile: manifest.value.profile, manifest_version: 1 };
+  }
   const standard = existsSync(join(root, '.cerebro')) && existsSync(join(root, 'VERSION'))
     && (existsSync(join(root, 'COMECE-AQUI.md')) || existsSync(join(root, 'START-HERE.md')));
-  if (standard) return { kind: 'inevita-installation' };
+  if (standard) return { kind: 'inevita-installation-unmanifested' };
   const markerPath = join(root, '.cerebro', 'legacy-brain.json');
   if (!existsSync(markerPath) || !existsSync(join(root, '.cerebro', 'layout.json'))) {
     throw new Error('a pasta não é um Cérebro reconhecido pelo Console');

@@ -1,17 +1,17 @@
 {
   "protocol": "company-brain",
   "manifest_version": 1,
-  "profile": "starter",
+  "profile": "full",
   "distribution": "inevita",
   "version_ref": "VERSION",
   "identity_ref": ".cerebro/id",
   "layout_ref": ".cerebro/layout.json",
   "entrypoints": [
-    "START-HERE.md",
+    "COMECE-AQUI.md",
     "AGENTS.md"
   ],
   "runtime": {
-    "mode": "file-only",
+    "mode": "local-optional",
     "provider_control": "owner-controlled"
   },
   "privacy": {

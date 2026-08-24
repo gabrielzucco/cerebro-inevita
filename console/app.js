@@ -3,7 +3,7 @@ import { mountOperationalCanvas } from '/canvas.bundle.js';
 const state = {
   model: null,
   csrf: '',
-  view: 'routines',
+  view: 'compatibility',
   selectedRoutine: null,
   selectedJudgment: null,
   selectedExperiment: null,
@@ -59,6 +59,11 @@ const labels = {
   source: 'Fonte', area: 'Área', system: 'Sistema', routine: 'Rotina',
   collector: 'Coleta', retrieval: 'Contexto', skill: 'Skill', capability: 'Capability',
   output: 'Output', gate: 'Gate', judgment: 'Julgamento',
+  met: 'Atendido', partial: 'Parcial', missing: 'Ausente',
+  new: 'Começando do zero', 'organized-context': 'Contexto organizado',
+  'partial-brain': 'Cérebro parcial', 'inevita-compatible': 'Compatível com INEVITA',
+  foundation: 'Fundação', contracted: 'Contratado', operational: 'Operacional',
+  valid: 'Válido', invalid: 'Inválido', unassigned: 'Ainda não atribuído', assigned: 'Atribuído',
 };
 
 function label(value) {
@@ -104,6 +109,15 @@ async function mutate(path, payload, method = 'POST') {
 
 function summaryCards() {
   const model = state.model;
+  if (state.view === 'compatibility') {
+    const diagnostic = model.compatibility;
+    return [
+      ['Compatibilidade', `${diagnostic.score.percent}%`, `${diagnostic.score.met}/${diagnostic.score.applicable} checks atendidos`, 'signal'],
+      ['Fontes governadas', diagnostic.inventory.sources.valid, 'Contrato válido; presença não significa conexão', 'receipt'],
+      ['Sistemas declarados', diagnostic.inventory.systems.valid, `${diagnostic.inventory.systems.retrieval_v2} com recuperação V2`, 'play'],
+      ['Runs com contexto', diagnostic.inventory.runs.context_snapshot_v2, `${diagnostic.inventory.runs.valid} execuções observadas`, 'decision'],
+    ].map(([title, value, description, icon]) => `<article class="summary-card"><span class="summary-icon ${icon}"></span><div><small>${title}</small><strong>${value}</strong><p>${description}</p></div></article>`).join('');
+  }
   const active = model.today.active.length;
   const ready = model.today.ready_to_work.length;
   const judgments = model.counts.judgments;
@@ -129,6 +143,85 @@ function routineCard(routine) {
 
 function empty(title, body) {
   return `<div class="empty"><div class="empty-mark">◇</div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p></div>`;
+}
+
+const compatibilityReasons = {
+  'canonical-manifest-valid': 'A instalação declara protocolo, referências e capacidades sem duplicar o inventário.',
+  'canonical-manifest-missing': 'Ainda não existe um Brain Manifest V1 canônico.',
+  'legacy-marker-only': 'O Console reconhece o legado, mas ele ainda não declara o Manifest V1.',
+  'layout-compatible': 'Os caminhos canônicos são relativos, seguros e suficientes para o read model.',
+  'layout-incompatible': 'O layout está ausente, incompleto ou contém uma referência incompatível.',
+  'local-privacy-declared': 'Dados permanecem locais e recibos são reference-only.',
+  'legacy-privacy-boundary': 'A fronteira existe no legado, mas ainda não está formalizada no Manifest V1.',
+  'privacy-profile-missing': 'A instalação ainda não declara sua fronteira de dados.',
+  'company-map-present': 'Existe uma referência canônica para o mapa da empresa.',
+  'organized-context-without-canonical-map': 'Existe estrutura útil, mas ela ainda não está costurada a um mapa canônico.',
+  'company-context-missing': 'Ainda não há mapa nem estrutura de contexto reconhecível.',
+  'source-contracts-valid': 'Fontes possuem casa de verdade, autoridade e política declaradas.',
+  'source-contracts-missing': 'Nenhuma Fonte possui contrato válido ainda.',
+  'system-contracts-valid': 'Existem resultados executáveis declarados por contrato.',
+  'system-contracts-missing': 'Nenhum Sistema foi contratado ainda.',
+  'retrieval-v2-complete': 'Todos os Sistemas declaram seleção, frescor, conflito e fallback.',
+  'retrieval-v2-partial': 'Somente parte dos Sistemas usa o Retrieval Contract V2.',
+  'retrieval-v2-missing': 'Ainda não existe recuperação de contexto V2 declarada.',
+  'run-records-valid': 'Existe execução observada com Run Record válido.',
+  'run-records-missing': 'Ainda não existe execução observada.',
+  'context-snapshots-complete': 'Todos os Runs observados registram o contexto exato usado.',
+  'context-snapshots-partial': 'Somente parte dos Runs registra Context Snapshot V2.',
+  'context-snapshots-missing': 'Ainda não existe recibo exato do contexto usado.',
+};
+
+function compatibilityReason(value) {
+  return compatibilityReasons[value] || label(value);
+}
+
+function diagnosticList(items, emptyText, { limit = 8, raw = false } = {}) {
+  const visible = items.slice(0, limit);
+  return items.length
+    ? `<ul>${visible.map((item) => `<li>${escapeHtml(raw ? item : compatibilityReason(item))}</li>`).join('')}${items.length > limit ? `<li class="more-items">+ ${items.length - limit} item(ns) preservado(s)</li>` : ''}</ul>`
+    : `<p class="muted">${escapeHtml(emptyText)}</p>`;
+}
+
+function evidenceMarkup(refs) {
+  const visible = refs.slice(0, 2);
+  return `${visible.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}${refs.length > 2 ? `<span>+ ${refs.length - 2} evidências</span>` : ''}` || '<span>sem evidência técnica</span>';
+}
+
+function readinessReason(value) {
+  if (value === 'system-not-active:configured') return 'Configurado; falta evidência para ativar';
+  if (value === 'system-not-active:mapped') return 'Mapeado; contrato ainda não configurado';
+  if (value === 'retrieval-not-declared') return 'Recuperação de contexto ainda não declarada';
+  if (value.startsWith('source-role-unbound:')) return `Papel de Fonte sem vínculo: ${value.split(':').at(-1)}`;
+  if (value.startsWith('source-contract-missing:')) return `Contrato de Fonte ausente: ${value.split(':').at(-1)}`;
+  return label(value);
+}
+
+function renderCompatibility() {
+  const diagnostic = state.model.compatibility;
+  const readiness = diagnostic.system_readiness;
+  const checks = diagnostic.checks.map((item) => `<article class="compat-check ${escapeHtml(item.status)}">
+    <div>${badge(item.status, item.status === 'met' ? 'good' : item.status === 'partial' ? 'warn' : 'bad')}<code>${escapeHtml(item.id)}</code></div>
+    <h3>${escapeHtml(item.label)}</h3>
+    <p>${escapeHtml(compatibilityReason(item.reason_code))}</p>
+    <div class="compat-evidence">${evidenceMarkup(item.evidence_refs)}</div>
+  </article>`).join('');
+  const ready = readiness.ready.map((item) => `<li><code>${escapeHtml(item.system_id)}</code><span>pode receber Run pelo protocolo atual</span></li>`).join('');
+  const blocked = readiness.blocked.map((item) => `<li><code>${escapeHtml(item.system_id)}</code><span>${item.blockers.map((reason) => escapeHtml(readinessReason(reason))).join(' · ')}</span></li>`).join('');
+  const profile = diagnostic.manifest.profile ? `${diagnostic.manifest.profile} · Manifest V${diagnostic.manifest.version}` : 'manifesto canônico ausente';
+  return `<div class="compat-page">
+    <section class="compat-hero">
+      <div class="compat-score"><strong>${diagnostic.score.percent}</strong><span>% compatível</span></div>
+      <div><p class="eyebrow">COMPATIBILITY DOCTOR · READ-ONLY</p><h2>${escapeHtml(label(diagnostic.target.classification))}</h2><p>Estágio ${escapeHtml(label(diagnostic.target.activation_stage))} · ${escapeHtml(profile)}</p><progress max="${diagnostic.score.applicable}" value="${diagnostic.score.met}">${diagnostic.score.percent}%</progress></div>
+      <div class="compat-guarantee"><span>Não abriu conteúdo</span><span>Não conectou Fonte</span><span>Não migrou nada</span></div>
+    </section>
+    <div class="section-heading"><div><p class="eyebrow">9 CONTRATOS DE COMPATIBILIDADE</p><h2>O que existe de verdade</h2></div><p>Presença técnica é declaração. Só Run e recibo válido contam como observado.</p></div>
+    <div class="compat-grid">${checks}</div>
+    <div class="compat-lower-grid">
+      <section class="compat-panel"><div class="section-heading"><div><p class="eyebrow">SYSTEM READINESS</p><h2>Sistemas instalados</h2></div></div><div class="readiness-group"><h3>Prontos pelo protocolo</h3><ul>${ready || '<li><span>Nenhum Sistema pronto ainda.</span></li>'}</ul></div><div class="readiness-group blocked"><h3>Bloqueados honestamente</h3><ul>${blocked || '<li><span>Nenhum bloqueio protocolar.</span></li>'}</ul></div></section>
+      <section class="compat-panel"><div class="section-heading"><div><p class="eyebrow">PLANO SEM DESTRUIÇÃO</p><h2>Preservar, adaptar e adicionar</h2></div></div><div class="migration-plan"><article><span>Preservar</span>${diagnosticList(diagnostic.recommendations.preserve, 'Nenhuma evidência canônica ainda.', { limit: 6, raw: true })}</article><article><span>Adaptar</span>${diagnosticList(diagnostic.recommendations.adapt, 'Nada precisa ser adaptado.')}</article><article><span>Adicionar</span>${diagnosticList(diagnostic.recommendations.add, 'Fundação protocolar completa.')}</article><article class="do-not-touch"><span>Não tocar</span>${diagnosticList(diagnostic.recommendations.do_not_touch, '')}</article></div></section>
+    </div>
+    <div class="boundary-note compat-boundary"><b>Diagnóstico não é migração</b>O próximo passo continua sendo preview → diff → confirmação. Este readback não criou outro cérebro, não moveu Fontes e não alterou nenhum contrato.</div>
+  </div>`;
 }
 
 function judgmentCard(item) {
@@ -293,8 +386,9 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { compatibility: renderCompatibility, today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
+  compatibility: ['Compatibilidade', 'O que preservar, o que falta e quais Sistemas já podem trabalhar.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],

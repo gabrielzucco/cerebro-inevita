@@ -24,6 +24,7 @@ import {
 import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
 import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
+import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -35,7 +36,7 @@ const required = [
   'templates/sistema/skill-contract.md', 'templates/sistema/evals.md',
   'templates/sistema/feedback.md', 'templates/sistema/changelog.md',
   'templates/sistema/contract.json', 'templates/sistema/capability.json',
-  'protocol/README.md', 'protocol/capability-contract.schema.json',
+  'protocol/README.md', 'protocol/brain-manifest.schema.json', 'protocol/capability-contract.schema.json',
   'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
   'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
   'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
@@ -51,6 +52,7 @@ const required = [
   'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
   'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
   'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
+  'protocol/examples/brain-manifest.v1.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'protocol/examples/access-receipt.v1.json',
@@ -67,6 +69,7 @@ const required = [
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
+  '.cerebro/manifest.json',
   'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
   'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
   'sistemas/calls/capability.json', 'sistemas/calls/contract.json',
@@ -106,7 +109,8 @@ const required = [
   'scripts/lib/routine-runtime.mjs', 'scripts/lib/context-snapshot-runtime.mjs',
   'scripts/lib/execution-trace-runtime.mjs', 'scripts/lib/evaluation-runtime.mjs',
   'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
-  'scripts/lib/handoff-protocol.mjs',
+  'scripts/lib/handoff-protocol.mjs', 'scripts/lib/compatibility-diagnostic.mjs',
+  'scripts/compatibility-diagnostic.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
   'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
@@ -125,7 +129,7 @@ const required = [
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   'scripts/test-experiment-protocol.mjs',
-  'scripts/test-handoff-protocol.mjs',
+  'scripts/test-handoff-protocol.mjs', 'scripts/test-compatibility-diagnostic.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
@@ -144,6 +148,9 @@ for (const item of required) {
 }
 
 for (const [label, path, validate] of [
+  ['example Brain Manifest v1', 'protocol/examples/brain-manifest.v1.json', validateBrainManifest],
+  ['Brain Manifest do produto', '.cerebro/manifest.json', validateBrainManifest],
+  ['Brain Manifest do starter', 'profiles/company-brain-starter-en/.cerebro/manifest.json', validateBrainManifest],
   ['template capability', 'templates/sistema/capability.json', validateCapabilityContract],
   ['template system contract', 'templates/sistema/contract.json', validateSystemContract],
   ['calls capability', 'sistemas/calls/capability.json', validateCapabilityContract],

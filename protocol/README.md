@@ -75,6 +75,28 @@ Todo Sistema pode ter implementação própria. Para entrar no control plane, pr
 Sistema V2 também declara prioridade, seleção, frescor, conflito, fallback, parada, orçamento e
 proveniência da recuperação. Toda execução V2 deixa o Context Snapshot correspondente.
 
+## Brain Manifest V1 + diagnóstico de compatibilidade
+
+`.cerebro/manifest.json` identifica uma instalação compatível sem virar inventário paralelo. Ele
+declara versão do Manifest, perfil, referências para versão/identidade/layout, entrypoints,
+fronteira de runtime e privacidade e versões de envelopes aceitas. Fontes, Sistemas, Runs,
+bindings e estados continuam nas suas casas canônicas.
+
+O diagnóstico é local e somente leitura:
+
+```bash
+node scripts/compatibility-diagnostic.mjs --root=/caminho/do/cerebro
+```
+
+Ele classifica `new`, `organized-context`, `partial-brain` ou `inevita-compatible` e separa isso
+do estágio `foundation`, `contracted` ou `operational`. Uma instalação starter pode ser compatível
+e ainda não possuir uma Fonte ou um Run; um vault legado pode operar Sistemas reais e ainda dever
+formalizar seu Manifest. O scanner lê apenas marcadores técnicos, contratos e recibos: não abre
+conteúdo humano, não conecta Fonte e não migra o alvo.
+
+O plano sempre preserva o que já é canônico e mantém migração em
+`preview → diff → confirmação`.
+
 ## Compatibilidade sem mentira
 
 | Envelope | V1 | V2 |

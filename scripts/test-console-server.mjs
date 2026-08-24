@@ -273,6 +273,7 @@ try {
   const page = await request(base, '/');
   assert.equal(page.status, 200);
   assert(page.value.includes('Company Brain'));
+  assert(page.value.includes('data-view="compatibility"'));
   assert.equal(calls.length, 0, 'abrir a UI não pode executar modelo');
   assert.equal(await requestWithHost(base, 'attacker.example'), 421, 'DNS rebinding host precisa ser negado');
   const cookie = page.cookie.split(';', 1)[0];
@@ -296,6 +297,11 @@ try {
   assert.equal(consoleView.value.counts.experiments, 1);
   assert.equal(consoleView.value.counts.routines, 2);
   assert.equal(consoleView.value.counts.judgments, 0);
+  assert.equal(consoleView.value.compatibility.target.classification, 'partial-brain');
+  assert.equal(consoleView.value.compatibility.target.activation_stage, 'contracted');
+  assert.equal(consoleView.value.compatibility.inventory.sources.valid, 3);
+  assert.equal(consoleView.value.compatibility.guarantees.content_files_opened, false);
+  assert(consoleView.value.counts.compatibility_gaps > 0);
   assert.equal(consoleView.value.cache.kind, 'none');
   const mappedFunnel = consoleView.value.systems.find((system) => system.system_id === 'funil-crescimento');
   assert.equal(mappedFunnel.contract_id, 'analisar-funil');
