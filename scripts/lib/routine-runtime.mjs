@@ -39,6 +39,8 @@ const UNAVAILABLE_SECRET_PROVIDER = Object.freeze({
   available: false,
   status: () => ({ reason_code: 'secret-provider-unavailable' }),
 });
+const LOCAL_REF_RE = /^(?!\.?\.?$)(?!\.?\.?\/)(?!.*\/\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
+const MAX_SUPPLEMENTAL_PROMPT_CHARS = 8 * 1024;
 
 function clockValue(clock) {
   const value = typeof clock === 'function' ? clock() : clock;
@@ -69,6 +71,7 @@ function buildReceipt(contract, binding, {
   outputRef = null,
   accessReceiptRefs = [],
   preparationInputRefs = [],
+  supplementalInputRefs = [],
 }) {
   return {
     protocol_version: 1,
@@ -93,6 +96,7 @@ function buildReceipt(contract, binding, {
     input_refs: [
       contract.context.prompt_ref,
       ...preparationInputRefs,
+      ...supplementalInputRefs,
       ...contract.context.access_requests.map((request) => `source:${request.source_ref}`),
     ],
     output_ref: outputRef,
@@ -276,6 +280,8 @@ export async function runRoutine(root, routineId, {
   clock = () => new Date(),
   wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds)),
   secretProvider = UNAVAILABLE_SECRET_PROVIDER,
+  supplementalPrompt = '',
+  supplementalInputRefs = [],
 } = {}) {
   const { contract } = loadRoutineContract(root, routineId);
   const startedAt = clockValue(clock);
@@ -285,7 +291,19 @@ export async function runRoutine(root, routineId, {
   const slotKey = createSlotKey(routineId, trigger, scheduledIso);
   const runId = `routine-run-${randomUUID()}`;
   const receiptId = `routine-receipt-${randomUUID()}`;
-  const base = { runId, receiptId, trigger, slotKey, scheduledFor: scheduledIso, startedAt };
+  if (typeof supplementalPrompt !== 'string' || supplementalPrompt.length > MAX_SUPPLEMENTAL_PROMPT_CHARS
+    || /\u0000|\r/.test(supplementalPrompt)) throw new Error('supplemental-prompt-invalid');
+  if (!Array.isArray(supplementalInputRefs)
+    || supplementalInputRefs.some((ref) => !LOCAL_REF_RE.test(ref || ''))) {
+    throw new Error('supplemental-input-refs-invalid');
+  }
+  if (Boolean(supplementalPrompt) !== Boolean(supplementalInputRefs.length)) {
+    throw new Error('supplemental-context-incomplete');
+  }
+  if (supplementalPrompt && trigger !== 'manual') throw new Error('supplemental-context-manual-only');
+  const base = {
+    runId, receiptId, trigger, slotKey, scheduledFor: scheduledIso, startedAt, supplementalInputRefs,
+  };
 
   if (trigger === 'schedule') {
     const existing = existingScheduledReceipt(root, routineId, slotKey);
@@ -367,6 +385,7 @@ export async function runRoutine(root, routineId, {
       const promptRef = safeRelativePath(root, contract.context.prompt_ref, { mustExist: true });
       prompt = readFileSync(resolve(root, promptRef), 'utf8');
       if (!prompt.trim()) return deny('prompt-empty', access.receipt_refs);
+      prompt += supplementalPrompt;
     } catch {
       return deny('prompt-read-failed', access.receipt_refs);
     }

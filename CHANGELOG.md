@@ -1,5 +1,20 @@
 # Mudanças do cérebro INEVITA
 
+## v1.32.0 — 2026-08-24 · “correção humana virou replay comparável, não autoaprendizado”
+
+- **Loop supervisionado completo:** `changes-requested` habilita um único rerun por Judgment
+  Receipt; o novo output volta à Caixa para outro julgamento.
+- **Correção privada e rastreável:** a nota atravessa o provider escolhido somente em memória e por
+  `stdin`. Routine Run Receipt e Correction Run Receipt guardam referências, nunca a nota, o
+  prompt compilado ou o output.
+- **Baseline × candidato:** a comparação abre os dois outputs apenas por gesto local autenticado.
+  `/api/console`, logs, recibos, Git e INEVITA continuam sem o conteúdo.
+- **Aprendizado candidato `1/3`:** só um Run corrigido e aprovado pode virar Learning Candidate.
+  Criá-lo não altera prompt, contrato, Fonte, rotina ou motor; três casos comparáveis, replay e
+  novo martelo continuam obrigatórios.
+- **Harness sem assinatura:** E2E com provider fake prova rerun único, correção somente em `stdin`,
+  novo julgamento, comparação privada e candidato sem ação externa.
+
 ## v1.31.0 — 2026-08-24 · “output virou julgamento humano, não automação cega”
 
 - **Caixa de Julgamento local:** outputs concluídos aparecem pendentes, abrem somente por gesto

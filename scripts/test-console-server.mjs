@@ -125,6 +125,8 @@ try {
     routineState: '.cerebro/runtime/routines',
     routineOutputs: '.cerebro/runtime/outputs/routines',
     routineJudgments: '.cerebro/runtime/judgments',
+    routineCorrections: '.cerebro/runtime/corrections',
+    learningCandidates: '.cerebro/runtime/learning-candidates',
     routineMigrations: '.cerebro/runtime/migrations/routines',
   });
   write(join(root, '.cerebro', 'private-ignore.manifest'), '.cerebro/runtime\n.cerebro/contracts/\noperacao/execucoes/*\n');
@@ -216,10 +218,13 @@ try {
     spawn: (command, args, options) => {
       calls.push({ command, args, options });
       assert.equal(command, 'codex');
-      assert.equal(options.input, 'PROMPT_ONLY_ON_STDIN\n');
+      if (calls.length === 1) assert.equal(options.input, 'PROMPT_ONLY_ON_STDIN\n');
+      else assert(options.input.includes('Separar melhor a inferência da recomendação.'));
       assert.equal(args.includes('PROMPT_ONLY_ON_STDIN'), false);
       const outputIndex = args.indexOf('-o');
-      write(args[outputIndex + 1], 'PRIVATE_OUTPUT_NOT_IN_API\n');
+      write(args[outputIndex + 1], calls.length === 1
+        ? 'PRIVATE_OUTPUT_NOT_IN_API\n'
+        : 'CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL\n');
       return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
     },
   });
@@ -404,6 +409,12 @@ try {
   assert.equal(consoleView.value.judgments.filter((item) => item.receipt_id === receiptId && item.judgment.status === 'pending').length, 0);
   assert.equal(consoleView.value.judgments.find((item) => item.receipt_id === receiptId).judgment.verdict, 'approved');
   assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  const learningWithoutCorrection = await request(base, `/api/runs/${receiptId}/learning-candidates`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(learningWithoutCorrection.status, 400);
+  assert.equal(learningWithoutCorrection.value.reason_code, 'completed-correction-required');
 
   const change = await request(base, `/api/runs/${receiptId}/judgments`, {
     method: 'POST', cookie, csrf: 'fixed-csrf-token',
@@ -414,6 +425,68 @@ try {
   });
   assert.equal(change.status, 200);
   assert.equal(change.value.summary.history_count, 2);
+  const correctionRerun = await request(base, `/api/runs/${receiptId}/rerun-with-correction`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(correctionRerun.status, 200);
+  assert.equal(correctionRerun.value.status, 'completed');
+  assert.equal(correctionRerun.value.correction_shared_with_provider, true);
+  assert.equal(correctionRerun.value.external_action_executed, false);
+  assert.equal(calls.length, 2);
+  const correctedReceiptId = correctionRerun.value.resulting_receipt_ref.replace('routine-receipt:', '');
+  const duplicateCorrection = await request(base, `/api/runs/${receiptId}/rerun-with-correction`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(duplicateCorrection.status, 400);
+  assert.equal(duplicateCorrection.value.reason_code, 'correction-already-rerun');
+  assert.equal(calls.length, 2, 'o mesmo Judgment Receipt só autoriza um rerun');
+
+  const correctedOutput = await request(base, `/api/runs/${correctedReceiptId}/output`, { cookie });
+  assert.equal(correctedOutput.status, 200);
+  assert.equal(correctedOutput.value.output.content, 'CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL\n');
+  assert.equal(correctedOutput.value.judgment.summary.status, 'pending');
+  assert.equal(correctedOutput.value.correction.role, 'candidate');
+  assert.equal(correctedOutput.value.correction_actions.can_compare, true);
+  assert.equal(correctedOutput.value.correction_actions.can_create_learning_candidate, false);
+  const comparisonWithoutSession = await request(base, `/api/runs/${correctedReceiptId}/comparison`);
+  assert.equal(comparisonWithoutSession.status, 403);
+  const comparison = await request(base, `/api/runs/${correctedReceiptId}/comparison`, { cookie });
+  assert.equal(comparison.status, 200);
+  assert.equal(comparison.value.baseline.output.content, 'PRIVATE_OUTPUT_NOT_IN_API\n');
+  assert.equal(comparison.value.candidate.output.content, 'CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL\n');
+  assert.equal(comparison.value.privacy.model_executed, false);
+  const learningBeforeApproval = await request(base, `/api/runs/${correctedReceiptId}/learning-candidates`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(learningBeforeApproval.status, 400);
+  assert.equal(learningBeforeApproval.value.reason_code, 'approved-correction-required');
+
+  consoleView = await request(base, '/api/console', { cookie });
+  assert.equal(consoleView.value.judgments.find((item) => item.receipt_id === correctedReceiptId).judgment.status, 'pending');
+  assert.equal(JSON.stringify(consoleView.value).includes('CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL'), false);
+  assert.equal(JSON.stringify(consoleView.value).includes('Separar melhor a inferência da recomendação.'), false);
+  const correctedApproval = await request(base, `/api/runs/${correctedReceiptId}/judgments`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', verdict: 'approved', action_intent: 'none', note: '' },
+  });
+  assert.equal(correctedApproval.status, 200);
+  const learning = await request(base, `/api/runs/${correctedReceiptId}/learning-candidates`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(learning.status, 200);
+  assert.equal(learning.value.occurrences, 1);
+  assert.equal(learning.value.promotion_threshold, 3);
+  assert.equal(learning.value.replay_status, 'not-eligible');
+  assert.equal(learning.value.motor_changed, false);
+  assert.equal(learning.value.external_action_executed, false);
+  consoleView = await request(base, '/api/console', { cookie });
+  assert.equal(consoleView.value.counts.learning_candidates, 1);
+  assert.equal(consoleView.value.judgments.find((item) => item.receipt_id === correctedReceiptId).correction.learning_candidate.occurrences, 1);
+
   const actionIntent = await request(base, `/api/runs/${receiptId}/judgments`, {
     method: 'POST', cookie, csrf: 'fixed-csrf-token',
     body: {
@@ -424,7 +497,7 @@ try {
   assert.equal(actionIntent.status, 200);
   assert.equal(actionIntent.value.summary.action_intent, 'propose-action');
   assert.equal(actionIntent.value.external_action_executed, false);
-  assert.equal(calls.length, 1, 'julgar ou propor ação não pode executar modelo');
+  assert.equal(calls.length, 2, 'julgar, comparar, candidatar ou propor ação não pode executar modelo');
   const judgedOutput = await request(base, `/api/runs/${receiptId}/output`, { cookie });
   assert.equal(judgedOutput.value.judgment.history.length, 3);
   assert.equal(judgedOutput.value.judgment.summary.action_intent, 'propose-action');
@@ -503,10 +576,10 @@ try {
   const active = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(active.health_reason_code, 'active');
   assert.equal(active.migration.status, 'cutover-completed');
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
 
   await new Promise((resolveClose) => instance.server.close(resolveClose));
-  console.log('✓ Console local plural, read-only on open, CSRF-gated and legacy-cutover-safe');
+  console.log('✓ Console local fecha julgamento → correção → comparação → candidato sem ação externa');
 } finally {
   rmSync(root, { recursive: true, force: true });
   rmSync(legacyRoot, { recursive: true, force: true });

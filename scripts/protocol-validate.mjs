@@ -17,6 +17,10 @@ import {
   validateRoutineRunReceipt,
 } from './lib/routine-protocol.mjs';
 import { validateJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import {
+  validateCorrectionRunReceipt,
+  validateLearningCandidate,
+} from './lib/correction-loop.mjs';
 
 const [kind = '', path = ''] = process.argv.slice(2);
 const validators = {
@@ -31,6 +35,8 @@ const validators = {
   'routine-receipt': validateRoutineRunReceipt,
   'routine-migration': validateRoutineMigration,
   judgment: validateJudgmentReceipt,
+  correction: validateCorrectionRunReceipt,
+  learning: validateLearningCandidate,
 };
 
 function fail(message) {
@@ -38,7 +44,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration ou judgment');
+if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration, judgment, correction ou learning');
 if (!path) fail('informe o caminho do JSON');
 
 try {
