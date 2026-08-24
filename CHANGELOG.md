@@ -1,5 +1,16 @@
 # Mudanças do cérebro INEVITA
 
+## v1.33.0 — 2026-08-24 · “instalação ganhou recibo próprio e identidade opaca”
+
+- **Ativação determinística:** `activate.mjs` cria ou reutiliza o `install_id`, registra o início
+  antes da validação e distingue conclusão de reconexão sem depender de instrução de ping no prompt.
+- **Identidade sem PII no instalador:** claim de uso único vira credencial privada da instalação;
+  e-mail e `member_id` não precisam atravessar o prompt nem ficar na pasta nova.
+- **Retry sem bloquear valor:** falha de rede fica numa outbox `0600`, fora do Git, e é retomada
+  pelo ativador ou pelo próximo ping. Conteúdo, fonte, output e erro cru continuam locais.
+- **Promessa do funil preservada:** instalação termina apresentando o acervo do Vale para consulta
+  ou aplicação ao negócio; nenhuma tarefa de negócio é escolhida automaticamente.
+
 ## v1.32.0 — 2026-08-24 · “correção humana virou replay comparável, não autoaprendizado”
 
 - **Loop supervisionado completo:** `changes-requested` habilita um único rerun por Judgment

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { platform } from 'node:os';
+import { flushPendingActivation } from './activate.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EVENTOS = new Set([
@@ -46,6 +47,10 @@ async function main() {
     return;
   }
 
+  // O recibo de instalação tem prioridade e usa uma outbox privada. A falha
+  // continua silenciosa e nunca interrompe o trabalho atual.
+  await flushPendingActivation({ root: ROOT, endpoint: ENDPOINT, timeoutMs: 2000 });
+
   let event = args[0] || 'sessao';
   if (!EVENTOS.has(event)) {
     if (diagnose) {
@@ -78,14 +83,17 @@ async function main() {
 
   const email = read('.cerebro/acesso-email').toLowerCase();
   const memberId = read('.cerebro/member-id').toLowerCase();
+  const installCredential = read('.cerebro/install-credential');
   const runtime = read('.cerebro/runtime').toLowerCase();
+  const hasCredential = /^[A-Za-z0-9_-]{43}$/.test(installCredential);
   const payload = {
     install_id: installId,
     event,
     version: read('VERSION').slice(0, 20) || null,
     os: platform().slice(0, 20),
-    ...(EMAIL_RE.test(email) ? { email } : {}),
-    ...(UUID_RE.test(memberId) ? { member_id: memberId } : {}),
+    ...(hasCredential ? { install_credential: installCredential } : {}),
+    ...(!hasCredential && EMAIL_RE.test(email) ? { email } : {}),
+    ...(!hasCredential && UUID_RE.test(memberId) ? { member_id: memberId } : {}),
     ...(RUNTIMES.has(runtime) ? { runtime } : {}),
     ...(SYSTEM_ID_RE.test(systemId) ? { system_id: systemId } : {}),
     ...(UUID_RE.test(runId) ? { run_id: runId } : {}),
