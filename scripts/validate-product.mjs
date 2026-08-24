@@ -22,6 +22,7 @@ import {
   validateLearningCandidate,
 } from './lib/correction-loop.mjs';
 import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
+import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -46,6 +47,7 @@ const required = [
   'protocol/correction-run-receipt.schema.json',
   'protocol/learning-candidate.schema.json',
   'protocol/execution-trace-event.schema.json',
+  'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'protocol/examples/access-receipt.v1.json',
@@ -57,6 +59,7 @@ const required = [
   'protocol/examples/correction-run-receipt.v1.json',
   'protocol/examples/learning-candidate.v1.json',
   'protocol/examples/execution-trace-event.v1.json',
+  'protocol/examples/experiment-contract.v1.json', 'protocol/examples/experiment-state.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -98,6 +101,7 @@ const required = [
   'scripts/lib/routine-protocol.mjs', 'scripts/lib/model-executors.mjs',
   'scripts/lib/routine-runtime.mjs', 'scripts/lib/context-snapshot-runtime.mjs',
   'scripts/lib/execution-trace-runtime.mjs', 'scripts/lib/evaluation-runtime.mjs',
+  'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
   'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
@@ -115,6 +119,7 @@ const required = [
   'scripts/test-console-server.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
+  'scripts/test-experiment-protocol.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
@@ -154,6 +159,8 @@ for (const [label, path, validate] of [
   ['example correction receipt v1', 'protocol/examples/correction-run-receipt.v1.json', validateCorrectionRunReceipt],
   ['example learning candidate v1', 'protocol/examples/learning-candidate.v1.json', validateLearningCandidate],
   ['example execution trace event v1', 'protocol/examples/execution-trace-event.v1.json', validateExecutionTraceEvent],
+  ['example experiment contract v1', 'protocol/examples/experiment-contract.v1.json', validateExperimentContract],
+  ['example experiment state v1', 'protocol/examples/experiment-state.v1.json', validateExperimentState],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -545,6 +552,7 @@ for (const key of [
   'routineJudgments',
   'routineCorrections', 'learningCandidates',
   'executionTraces', 'canvasLayouts',
+  'experimentContracts', 'experimentStates',
 ]) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);
@@ -620,4 +628,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 15 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 17 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

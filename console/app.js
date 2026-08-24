@@ -6,6 +6,7 @@ const state = {
   view: 'routines',
   selectedRoutine: null,
   selectedJudgment: null,
+  selectedExperiment: null,
   busy: false,
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
@@ -18,7 +19,7 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character
 })[character]);
 const fmtDate = (value, withTime = true) => value ? new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short', ...(withTime ? { timeStyle: 'short' } : {}),
-}).format(new Date(value)) : '—';
+}).format(new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value)) : '—';
 
 const labels = {
   active: 'Ativa',
@@ -51,6 +52,10 @@ const labels = {
   declared: 'Declarado', running: 'Em execução', gap: 'Lacuna',
   'evaluation-passed': 'Gates passaram', 'evaluation-gate-failed': 'Gate falhou',
   reconstructed: 'Reconstruído',
+  queued: 'Na fila', 'ready-for-read': 'Pronto para leitura', decided: 'Decidido', cancelled: 'Cancelado', blocked: 'Bloqueado',
+  contract: 'Contrato', execution: 'Execução', measurement: 'Medição', decision: 'Martelo', learning: 'Aprendizado',
+  'not-started': 'Não iniciado', collecting: 'Coletando', ready: 'Pronto', complete: 'Completo',
+  'not-executed': 'Não executado', linked: 'Ligado', unlinked: 'Não ligado', 'not-applicable': 'Não se aplica',
   source: 'Fonte', area: 'Área', system: 'Sistema', routine: 'Rotina',
   collector: 'Coleta', retrieval: 'Contexto', skill: 'Skill', capability: 'Capability',
   output: 'Output', gate: 'Gate', judgment: 'Julgamento',
@@ -62,8 +67,8 @@ function label(value) {
 
 function tone(reason) {
   if (['active', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided'].includes(reason)) return 'good';
-  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested', 'gap'].includes(reason)) return 'warn';
-  if (['declared', 'running', 'skipped'].includes(reason)) return 'neutral';
+  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested', 'gap', 'ready-for-read', 'unlinked'].includes(reason)) return 'warn';
+  if (['declared', 'running', 'skipped', 'queued', 'collecting', 'not-started'].includes(reason)) return 'neutral';
   return 'bad';
 }
 
@@ -229,6 +234,37 @@ function renderSources() {
   return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
 }
 
+function experimentProgress(experiment) {
+  const states = experiment.status === 'decided'
+    ? ['done', 'done', experiment.run_count ? 'done' : 'gap', 'done', 'done', experiment.learning_status === 'linked' ? 'done' : 'gap']
+    : experiment.status === 'running'
+      ? ['done', 'done', 'active', 'active', 'pending', 'pending']
+      : experiment.status === 'ready-for-read'
+        ? ['done', 'done', experiment.run_count ? 'done' : 'gap', 'done', 'active', 'pending']
+        : experiment.status === 'cancelled'
+          ? ['done', 'done', 'failed', 'failed', 'failed', 'muted']
+          : ['done', 'done', 'pending', 'pending', 'pending', 'pending'];
+  const labels = ['Hipótese', 'Contrato', 'Execução', 'Medição', 'Martelo', 'Aprendizado'];
+  return `<div class="experiment-mini-flow" aria-label="Progresso do experimento">${labels.map((item, index) => `<span class="${states[index]}"><i></i><small>${item}</small></span>`).join('')}</div>`;
+}
+
+function renderExperiments() {
+  const experiments = state.model.experiments || [];
+  const running = experiments.filter((item) => item.status === 'running').length;
+  const ready = experiments.filter((item) => item.status === 'ready-for-read').length;
+  const decided = experiments.filter((item) => item.status === 'decided').length;
+  const unlinked = experiments.filter((item) => item.learning_status === 'unlinked').length;
+  return `<div class="section-heading"><div><p class="eyebrow">DECISÃO ANTES DO DADO</p><h2>Experimentos</h2></div><p>Uma mudança controlada atravessa Sistemas, Runs, medição e martelo. Contrato congelado não se edita depois do dado.</p></div>
+    <div class="experiment-kpis"><span><b>${running}</b> coletando</span><span><b>${ready}</b> prontos para leitura</span><span><b>${decided}</b> decididos</span><span class="${unlinked ? 'attention' : ''}"><b>${unlinked}</b> aprendizados sem vínculo</span></div>
+    <div class="experiment-grid">${experiments.map((experiment) => `<article class="experiment-card" data-open-experiment="${escapeHtml(experiment.experiment_id)}">
+      <div class="experiment-card-head"><div><p class="micro">${escapeHtml(experiment.experiment_id)} · ${escapeHtml(experiment.system_ref)}</p><h3>${escapeHtml(experiment.name)}</h3></div>${badge(experiment.status, experiment.status === 'decided' ? 'good' : experiment.status === 'running' ? 'neutral' : experiment.status === 'ready-for-read' ? 'warn' : tone(experiment.status))}</div>
+      ${experimentProgress(experiment)}
+      <div class="experiment-card-stats"><span><b>${experiment.arm_count || '—'}</b> braços${experiment.arms_status === 'not-structured' ? ' não estruturados' : ''}</span><span><b>${experiment.run_count}</b> Runs ligados</span><span><b>${experiment.amendment_count}</b> emendas</span>${experiment.contract_gap_count ? `<span class="warn-text"><b>${experiment.contract_gap_count}</b> lacunas legadas</span>` : ''}</div>
+      <div class="experiment-card-footer"><div><span>Métrica primária</span><code>${escapeHtml(experiment.primary_metric_ref)}</code></div><button data-open-experiment="${escapeHtml(experiment.experiment_id)}">Abrir contrato <b>→</b></button></div>
+    </article>`).join('') || empty('Nenhum Experimento contratado', 'Congele um pré-registro ou importe um ledger existente para criar o primeiro objeto.')}</div>
+    <div class="boundary-note"><b>Experimento ≠ execução</b>Um experimento pode produzir vários briefings, criativos e Runs em mais de um Sistema. Cada Run se liga por entity_ref; sem essa referência, o Console mostra a lacuna.</div>`;
+}
+
 function allReceipts() {
   return state.model.routines.flatMap((routine) => routine.receipts.map((receipt) => ({ ...receipt, routine_name: routine.name, routine_id: routine.routine_id }))).sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at));
 }
@@ -257,13 +293,14 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
   sources: ['Fontes', 'Casas de verdade, autoridade, frescor e garantia de acesso.'],
+  experiments: ['Experimentos', 'Hipótese, execução, medição, martelo e aprendizado ligados ao Sistema.'],
   routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
   judgments: ['Julgamento', 'Outputs privados esperando decisão humana rastreável.'],
   runs: ['Execuções', 'O rastro reference-only de cada tentativa.'],
@@ -369,6 +406,7 @@ function openDrawer(routineId) {
   if (!routine) return;
   state.selectedRoutine = routineId;
   state.selectedJudgment = null;
+  state.selectedExperiment = null;
   const access = routine.access.map((item) => `<div class="access-item"><div><strong>${escapeHtml(item.source_ref)}</strong><span>${escapeHtml(item.action)} · ${escapeHtml(item.requested_mode)}</span></div>${badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')}<small>${escapeHtml(label(item.revocation_effect))}</small></div>`).join('') || '<p class="muted">Sem Access Grants declarados.</p>';
   const receipts = routine.receipts.map((receipt) => `<div class="receipt-item"><span class="timeline-dot ${tone(receipt.status)}"></span><div><strong>${escapeHtml(label(receipt.status))} · ${escapeHtml(receipt.trigger)}</strong><span>${fmtDate(receipt.completed_at)} · ${escapeHtml(receipt.reason_code)}</span><code>${escapeHtml(receipt.receipt_ref)}</code>${receipt.output_ref ? `<code>output: ${escapeHtml(receipt.output_ref)}</code>` : ''}</div></div>`).join('') || '<p class="muted">Nenhuma execução registrada.</p>';
   const migration = routine.migration ? `<div class="migration-box ${routine.migration.status === 'awaiting-legacy-pause' ? 'attention' : ''}"><p class="micro">MIGRAÇÃO DE AGENDA</p><strong>${escapeHtml(label(routine.migration.status))}</strong><p>${escapeHtml(routine.migration.source.schedule_summary)}</p><small>Fonte: ${escapeHtml(routine.migration.source.kind)} · o Console não pausa esse fornecedor sozinho.</small></div>` : '';
@@ -389,6 +427,48 @@ function closeDrawer() {
   $('#drawer-backdrop').hidden = true;
   state.selectedRoutine = null;
   state.selectedJudgment = null;
+  state.selectedExperiment = null;
+}
+
+function experimentPipeline(detail) {
+  return `<div class="experiment-pipeline">${detail.pipeline.map((item, index) => `<div class="experiment-step ${escapeHtml(item.state)}"><span>${String(index + 1).padStart(2, '0')}</span><div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(label(item.state))} · ${escapeHtml(item.detail)}</small></div></div>`).join('<b>→</b>')}</div>`;
+}
+
+async function openExperiment(experimentId) {
+  state.selectedRoutine = null;
+  state.selectedJudgment = null;
+  state.selectedExperiment = experimentId;
+  $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo contrato privado local…</span></div>';
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#drawer-backdrop').hidden = false;
+  try {
+    const detail = await getJson(`/api/experiments/${experimentId}`);
+    if (state.selectedExperiment !== experimentId) return;
+    const contract = detail.contract;
+    const experimentState = detail.state;
+    const arms = contract.arms.length ? contract.arms.map((arm) => `<article><span>${escapeHtml(label(arm.role))}</span><strong>${escapeHtml(arm.label || arm.arm_id)}</strong><code>${escapeHtml(arm.arm_id)}</code></article>`).join('') : '<div class="experiment-gap">Braços não estruturados no ledger de origem. O Console não inferiu controle e variação pela descrição.</div>';
+    const amendments = experimentState?.amendments.length ? experimentState.amendments.map((item) => `<div class="receipt-item"><span class="timeline-dot warn"></span><div><strong>${escapeHtml(item.amendment_id)}</strong><span>${fmtDate(item.on, false)} · ${item.change_count} mudança(s)</span><p class="judgment-note">${escapeHtml(item.reason)}</p></div></div>`).join('') : '<p class="muted">Nenhuma emenda registrada.</p>';
+    const runs = experimentState?.run_refs.length ? experimentState.run_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('') : '<div class="experiment-gap">Nenhum Run Record contém entity_ref deste experimento.</div>';
+    const verdict = experimentState?.verdict.status === 'recorded' ? `<pre class="private-output">${escapeHtml(experimentState.verdict.summary)}</pre>` : `<div class="experiment-gap">${escapeHtml(label(experimentState?.verdict.status || 'pending'))}. O martelo continua humano.</div>`;
+    const learning = experimentState?.learning.status === 'linked'
+      ? `<code>${escapeHtml(experimentState.learning.ref)}</code>`
+      : `<div class="experiment-gap">${experimentState?.learning.status === 'unlinked' ? 'Há decisão, mas nenhuma mudança versionada do Sistema foi ligada a ela.' : 'O aprendizado ainda não chegou à próxima execução.'}</div>`;
+    $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">EXPERIMENTO · ${escapeHtml(contract.experiment_id)}</p><h2>${escapeHtml(contract.name)}</h2>${badge(experimentState?.status || 'queued')}</div>
+      <div class="boundary-note"><b>Leitura local explícita</b>Hipótese, régua e veredito não entraram no resumo do Console. Abrir não executou modelo nem ação externa.</div>
+      <section class="drawer-section experiment-flow-section"><h3>Ciclo completo</h3>${experimentPipeline(detail)}</section>
+      <section class="drawer-section"><div class="output-heading"><h3>Pré-registro congelado</h3><span>${escapeHtml(contract.freeze.kind)}</span></div>${contract.gaps.length ? `<div class="experiment-gap">Contrato legado incompleto: ${contract.gaps.map(label).map(escapeHtml).join(' · ')}</div>` : ''}<dl><div><dt>Hipótese</dt><dd>${escapeHtml(contract.hypothesis)}</dd></div><div><dt>Mudança única</dt><dd>${escapeHtml(contract.change)}</dd></div><div><dt>Condições</dt><dd>${escapeHtml(contract.preconditions || 'não estruturadas')}</dd></div><div><dt>Regra de decisão</dt><dd>${escapeHtml(contract.decision_rule || 'não estruturada no legado')}</dd></div></dl></section>
+      <section class="drawer-section"><h3>Braços</h3><div class="experiment-arms">${arms}</div></section>
+      <section class="drawer-section"><h3>Medição</h3><dl><div><dt>Primária</dt><dd><code>${escapeHtml(contract.primary_metric.metric_id)}</code><br>${escapeHtml(contract.primary_metric.definition)}</dd></div><div><dt>Guardrails</dt><dd>${escapeHtml(contract.guardrails.rule || 'não estruturados no legado')}</dd></div><div><dt>Janela</dt><dd>${fmtDate(contract.window.started_on, false)} → ${fmtDate(contract.window.read_on, false)}</dd></div></dl></section>
+      <section class="drawer-section"><div class="output-heading"><h3>Sistemas envolvidos</h3><button class="table-action" data-open-experiment-system="${escapeHtml(contract.system_ref)}">Abrir no Canvas →</button></div><div class="experiment-system-map"><span><b>Palco</b><code>${escapeHtml(contract.system_ref)}</code></span><span><b>Leitura</b>${contract.measurement_system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</span></div></section>
+      <section class="drawer-section"><h3>Runs ligados</h3><div class="ref-list">${runs}</div></section>
+      <section class="drawer-section"><h3>Emendas append-only</h3><div class="timeline">${amendments}</div></section>
+      <section class="drawer-section"><h3>Martelo humano</h3>${verdict}</section>
+      <section class="drawer-section"><h3>Mudança na próxima execução</h3>${learning}</section>`;
+  } catch (error) {
+    $('#drawer-content').innerHTML = empty('Experimento indisponível', label(error.message));
+    toast(label(error.message), 'bad');
+  }
 }
 
 function judgmentHistory(history) {
@@ -438,6 +518,7 @@ async function loadContext(receiptId, slot) {
 async function openContextDrawer(receiptId) {
   state.selectedRoutine = null;
   state.selectedJudgment = receiptId;
+  state.selectedExperiment = null;
   $('#drawer-content').innerHTML = '<div class="drawer-head"><p class="eyebrow">RUN RECORD V2</p><h2>Contexto selecionado</h2></div><div id="context-slot"><p class="muted">Lendo referências locais…</p></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
@@ -448,6 +529,7 @@ async function openContextDrawer(receiptId) {
 async function openJudgment(receiptId) {
   state.selectedRoutine = null;
   state.selectedJudgment = receiptId;
+  state.selectedExperiment = null;
   $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo output privado local…</span></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
@@ -635,6 +717,17 @@ document.addEventListener('click', (event) => {
   if (open) { openDrawer(open.dataset.openRoutine); return; }
   const judgment = event.target.closest('[data-open-judgment]');
   if (judgment) { openJudgment(judgment.dataset.openJudgment); return; }
+  const experiment = event.target.closest('[data-open-experiment]');
+  if (experiment) { openExperiment(experiment.dataset.openExperiment); return; }
+  const experimentSystem = event.target.closest('[data-open-experiment-system]');
+  if (experimentSystem) {
+    state.canvas.scope = 'system';
+    state.canvas.ref = experimentSystem.dataset.openExperimentSystem;
+    state.view = 'canvas';
+    closeDrawer();
+    render();
+    return;
+  }
   const judgmentAction = event.target.closest('[data-judgment-action]');
   if (judgmentAction) { performJudgment(judgmentAction.dataset.judgmentAction); return; }
   const correctionAction = event.target.closest('[data-correction-action]');

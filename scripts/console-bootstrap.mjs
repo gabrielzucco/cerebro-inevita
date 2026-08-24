@@ -14,6 +14,8 @@ const LEGACY_LAYOUT = Object.freeze({
   version: 3,
   systemContracts: '.cerebro/contracts/systems',
   sourceContracts: '.cerebro/contracts/sources',
+  experimentContracts: '.cerebro/contracts/experiments',
+  experimentStates: '.cerebro/runtime/experiments',
   accessGrants: '.cerebro/contracts/access-grants',
   accessReceipts: '.cerebro/runtime/receipts/access',
   routineContracts: '.cerebro/contracts/routines',

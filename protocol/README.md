@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os quinze envelopes
+## Os dezessete envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -38,6 +38,10 @@ conteúdo bruto.
 - `execution-trace-event.schema.json`: evento privado, ordenado e append-only do caminho real do
   Run. Registra estados e referências, nunca prompt, output, payload ou erro cru. Skill concluída
   exige evidência de leitura bem-sucedida e hash.
+- `experiment-contract.schema.json`: pré-registro congelado de uma mudança controlada, ligado ao
+  Sistema palco, Sistemas de leitura, braços, métrica, guardrails, janela e regra de decisão.
+- `experiment-state.schema.json`: estado privado pós-congelamento, com emendas, Runs ligados,
+  medição, martelo e referência da mudança que voltou para o Sistema.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -237,6 +241,34 @@ final e guardam somente IDs, booleanos, contagem de problemas e hash de evidênc
 A tela de Execuções abre o Context Snapshot reference-only sem abrir o artefato privado nem chamar
 modelo. A tela de Governança revoga Access Grants com confirmação explícita e CSRF; o efeito é
 somente futuro, preserva o rastro passado e bloqueia o provider antes do próximo Run.
+
+### Experimentos como objeto transversal
+
+Experimento não é uma Fonte nem um Run. O contrato define a pergunta e a régua antes do dado; o
+estado operacional registra o que aconteceu depois. Um Experimento pode atravessar vários Sistemas
+e ligar vários Runs por `entity_refs[{ "role": "experiment", "id": "EXP-..." }]`.
+
+O Console mantém hipótese, mudança, regra e veredito fora do read model resumido. A lista recebe
+somente referências, contagens e estados; `/api/experiments/:id` faz a leitura privada explícita.
+Se o martelo existe mas nenhuma `learning.ref` aponta para uma mudança versionada, a última etapa
+permanece como lacuna. O painel não transforma uma frase de veredito em configuração por inferência.
+
+Ledgers legados podem ganhar projeção privada sem trocar de casa da verdade:
+
+```bash
+node scripts/import-legacy-experiments.mjs \
+  --root=/caminho/do/cerebro \
+  --registry=.automacao/experimentos_funil.json
+
+# depois do readback do preview
+node scripts/import-legacy-experiments.mjs \
+  --root=/caminho/do/cerebro \
+  --registry=.automacao/experimentos_funil.json \
+  --confirm
+```
+
+O importador não edita nem remove o ledger humano e marca congelamentos antigos como
+`legacy-attested`; somente um freeze novo pode afirmar hash temporal verificável.
 
 A Caixa de Julgamento grava eventos imutáveis em `.cerebro/runtime/judgments/`. Aprovar, pedir
 ajuste ou rejeitar não altera a Fonte nem o output. `propose-action` registra apenas intenção local:

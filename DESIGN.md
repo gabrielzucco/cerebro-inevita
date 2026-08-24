@@ -47,6 +47,16 @@ ele torna contratos, contexto selecionado, execução, gates e julgamento legív
 - V0 abre bloqueado. `Reorganizar` permite mover nós e salvar apenas `{x,y}` localmente.
 - Criar/remover nó ou aresta não existe no V0: arquitetura muda por contrato, revisão e aprovação.
 
+## Experimentos
+
+- A lista mostra somente nome, estado, Sistemas, métrica e contagens. Hipótese, regra e veredito
+  exigem abertura explícita no drawer privado.
+- O fluxo visual é fixo: Hipótese → Contrato → Execução → Medição → Martelo → Aprendizado.
+- Uma lacuna é parte do produto. Run sem `entity_ref` e decisão sem mudança versionada permanecem
+  âmbar; a interface não completa o encadeamento por semelhança textual.
+- Experimento atravessa Sistemas. O Sistema palco executa a mudança; Sistemas de leitura medem o
+  efeito; Runs deixam o recibo; o humano continua com o martelo.
+
 ## Movimento
 
 - Aresta ativa: fluxo de dash suave, nunca animação infinita em todo o mapa.

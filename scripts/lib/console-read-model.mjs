@@ -7,6 +7,7 @@ import {
   listLearningCandidates,
 } from './correction-loop.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
+import { buildExperimentReadModel } from './experiment-protocol.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -363,6 +364,8 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     issues.push({ reason_code: 'run-ledger-invalid', ref: '.cerebro/runtime/ledger/runs.jsonl' });
   }
   const runRecordsById = new Map(runRecords.map((record) => [record.run_id, record]));
+  const experimentModel = buildExperimentReadModel(root, { runRecords });
+  issues.push(...experimentModel.issues);
   let routines = [];
   try {
     routines = listRoutineContracts(root)
@@ -392,7 +395,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -403,6 +406,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       areas: areas.length,
       systems: systems.length,
       sources: sources.length,
+      experiments: experimentModel.experiments.length,
       routines: routines.length,
       attention: attention.length,
       judgments: pendingJudgments.length,
@@ -411,6 +415,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     areas,
     systems,
     sources,
+    experiments: experimentModel.experiments,
     routines,
     judgments,
     today: {

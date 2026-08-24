@@ -1,0 +1,46 @@
+{
+  "protocol_version": 1,
+  "experiment_id": "EXP-DEMO-001",
+  "name": "Call-out visual no início do anúncio",
+  "version": "1.0.0",
+  "lifecycle": "frozen",
+  "contract_status": "complete",
+  "gaps": [],
+  "system_ref": "funil-crescimento",
+  "measurement_system_refs": ["funil-crescimento"],
+  "owner_ref": "role-growth-owner",
+  "offer_ref": "OFR-DEMO",
+  "baseline": "Custo por lead qualificado do controle na janela anterior.",
+  "hypothesis": "Nomear o público nos primeiros segundos reduz o custo por lead qualificado.",
+  "change": "Adicionar apenas a tarja visual; áudio, público, copy e página permanecem iguais.",
+  "preconditions": "Controle e variação recebem orçamento comparável.",
+  "arms_status": "structured",
+  "arms": [
+    { "arm_id": "AD-CONTROLE", "role": "control", "label": "Sem tarja" },
+    { "arm_id": "AD-TARJA", "role": "variation", "label": "Com tarja" }
+  ],
+  "primary_metric": {
+    "metric_id": "cpl-qualificado",
+    "definition": "Custo por lead qualificado, deduplicado por identificador interno.",
+    "query_ref": "query:exp-demo-cpl"
+  },
+  "guardrails": {
+    "rule": "Custo geral não pode superar duas vezes o baseline depois da entrega mínima.",
+    "metric_refs": ["cpl-geral", "pct-qualificado"]
+  },
+  "diagnostic_refs": ["spend-share", "ctr-link"],
+  "decision_rule": "Adotar a variação apenas se a métrica primária vencer e os guardrails passarem.",
+  "window": { "started_on": "2026-08-03", "read_on": "2026-08-10" },
+  "source_refs": ["experiment-ledger"],
+  "freeze": {
+    "kind": "sha256",
+    "frozen_at": "2026-08-02T12:00:00.000Z",
+    "source_ref": "sistemas/funil/experimentos/EXP-DEMO-001.md",
+    "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "summary_safe": true,
+    "detail_requires_explicit_read": true
+  }
+}

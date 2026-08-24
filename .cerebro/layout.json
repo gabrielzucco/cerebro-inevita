@@ -12,6 +12,8 @@
   "activationContract": "operacao/arquitetura/primeiro-sistema.json",
   "systemContract": "operacao/arquitetura/primeiro-sistema.json",
   "sourceContracts": ".cerebro/contracts/sources",
+  "experimentContracts": ".cerebro/contracts/experiments",
+  "experimentStates": ".cerebro/runtime/experiments",
   "accessGrants": ".cerebro/contracts/access-grants",
   "accessReceipts": ".cerebro/runtime/receipts/access",
   "routineContracts": ".cerebro/contracts/routines",

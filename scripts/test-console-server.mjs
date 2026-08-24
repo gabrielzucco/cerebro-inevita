@@ -116,6 +116,8 @@ try {
     version: 3,
     systemContracts: '.cerebro/contracts/systems',
     sourceContracts: '.cerebro/contracts/sources',
+    experimentContracts: '.cerebro/contracts/experiments',
+    experimentStates: '.cerebro/runtime/experiments',
     accessGrants: '.cerebro/contracts/access-grants',
     accessReceipts: '.cerebro/runtime/receipts/access',
     routineContracts: '.cerebro/contracts/routines',
@@ -154,6 +156,20 @@ try {
     }),
   ];
   for (const item of sources) write(join(root, '.cerebro', 'contracts', 'sources', `${item.source_id}.json`), item);
+
+  const experimentContract = {
+    ...example('experiment-contract.v1.json'),
+    system_ref: 'funil-crescimento',
+    measurement_system_refs: ['funil-crescimento'],
+  };
+  const experimentState = {
+    ...example('experiment-state.v1.json'),
+    run_refs: [],
+    verdict: { status: 'recorded', decided_on: '2026-08-10', summary: 'PRIVATE_EXPERIMENT_VERDICT_NOT_IN_SUMMARY' },
+    learning: { status: 'unlinked', ref: null },
+  };
+  write(join(root, '.cerebro', 'contracts', 'experiments', 'exp-demo-001.json'), experimentContract);
+  write(join(root, '.cerebro', 'runtime', 'experiments', 'exp-demo-001.json'), experimentState);
 
   const systemExample = example('system-contract.v2.json');
   write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), {
@@ -277,6 +293,7 @@ try {
   assert.equal(consoleView.value.counts.areas, 2);
   assert.equal(consoleView.value.counts.systems, 2);
   assert.equal(consoleView.value.counts.sources, 3);
+  assert.equal(consoleView.value.counts.experiments, 1);
   assert.equal(consoleView.value.counts.routines, 2);
   assert.equal(consoleView.value.counts.judgments, 0);
   assert.equal(consoleView.value.cache.kind, 'none');
@@ -289,7 +306,18 @@ try {
   assert.equal(funnel.preparation.status, 'ready');
   assert.equal(funnel.access.find((item) => item.source_ref === 'sales-ledger').assurance, 'receipt-audited');
   assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  assert.equal(JSON.stringify(consoleView.value).includes(experimentContract.hypothesis), false);
+  assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_EXPERIMENT_VERDICT_NOT_IN_SUMMARY'), false);
   assert.equal(calls.length, 0);
+
+  assert.equal((await request(base, '/api/experiments/EXP-DEMO-001')).status, 403);
+  const experimentDetail = await request(base, '/api/experiments/EXP-DEMO-001', { cookie });
+  assert.equal(experimentDetail.status, 200);
+  assert.equal(experimentDetail.value.contract.hypothesis, experimentContract.hypothesis);
+  assert.equal(experimentDetail.value.state.verdict.summary, 'PRIVATE_EXPERIMENT_VERDICT_NOT_IN_SUMMARY');
+  assert.equal(experimentDetail.value.pipeline.at(-1).state, 'gap');
+  assert.equal(experimentDetail.value.privacy.explicit_local_detail_read, true);
+  assert.equal(calls.length, 0, 'abrir Experimento não pode executar modelo');
 
   const missingCsrf = await request(base, '/api/routines/funil-diario-cerebro/run', {
     method: 'POST', cookie, body: { confirm: true },

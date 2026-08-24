@@ -25,6 +25,7 @@ import {
 import { readRoutineRunContext } from './lib/context-snapshot-runtime.mjs';
 import { revokeAccessGrant } from './lib/access-runtime.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import { readExperimentDetail } from './lib/experiment-protocol.mjs';
 import {
   correctionActions,
   correctionView,
@@ -161,6 +162,11 @@ function graphLayoutFrom(pathname) {
   return match?.[1] || null;
 }
 
+function experimentDetailFrom(pathname) {
+  const match = pathname.match(/^\/api\/experiments\/(EXP-[A-Za-z0-9_-]{1,48})$/);
+  return match?.[1] || null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
@@ -214,6 +220,12 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/api/console') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, buildConsoleReadModel(brainRoot, { now: clock() }));
+        return;
+      }
+      const experimentId = request.method === 'GET' ? experimentDetailFrom(url.pathname) : null;
+      if (experimentId) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, readExperimentDetail(brainRoot, experimentId));
         return;
       }
       const graphRequest = request.method === 'GET' ? graphRequestFrom(url.pathname) : null;
