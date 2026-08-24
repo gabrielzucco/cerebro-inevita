@@ -14,6 +14,11 @@
   "sourceContracts": ".cerebro/contracts/sources",
   "accessGrants": ".cerebro/contracts/access-grants",
   "accessReceipts": ".cerebro/runtime/receipts/access",
+  "routineContracts": ".cerebro/contracts/routines",
+  "executorBindings": ".cerebro/runtime/executors",
+  "routineReceipts": ".cerebro/runtime/receipts/routines",
+  "routineState": ".cerebro/runtime/routines",
+  "routineOutputs": ".cerebro/runtime/outputs/routines",
   "runLedger": ".cerebro/ledger/runs.jsonl",
   "learningRegister": ".cerebro/learning"
 }

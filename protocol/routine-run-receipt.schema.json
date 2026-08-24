@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/routine-run-receipt-v1.json",
+  "title": "INEVITA Routine Run Receipt V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "receipt_id", "run_id", "routine_ref", "routine_id",
+    "routine_version", "system_ref", "binding_ref", "adapter", "requested_model",
+    "model_observation", "trigger", "slot_key", "scheduled_for", "attempts", "status",
+    "reason_code", "started_at", "completed_at", "input_refs", "output_ref",
+    "access_receipt_refs", "content_shared_with_provider", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "receipt_id": { "$ref": "#/$defs/ref" },
+    "run_id": { "$ref": "#/$defs/ref" },
+    "routine_ref": { "$ref": "#/$defs/local_ref" },
+    "routine_id": { "$ref": "#/$defs/id" },
+    "routine_version": { "$ref": "#/$defs/version" },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "binding_ref": { "$ref": "#/$defs/ref" },
+    "adapter": { "enum": ["codex-cli", "claude-code", "unresolved"] },
+    "requested_model": { "$ref": "#/$defs/local_ref" },
+    "model_observation": { "const": "requested-not-verified" },
+    "trigger": { "enum": ["manual", "schedule"] },
+    "slot_key": { "$ref": "#/$defs/ref" },
+    "scheduled_for": { "type": ["string", "null"], "format": "date-time" },
+    "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "status": { "enum": ["completed", "failed", "denied", "skipped"] },
+    "reason_code": { "$ref": "#/$defs/id" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "input_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" } },
+    "output_ref": { "type": ["string", "null"], "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "access_receipt_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" } },
+    "content_shared_with_provider": { "type": "boolean" },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "content_shared_with_inevita", "prompt_recorded", "output_recorded", "raw_error_recorded"
+      ],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "prompt_recorded": { "const": false },
+        "output_recorded": { "const": false },
+        "raw_error_recorded": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

@@ -9,6 +9,11 @@ import {
   validateSystemContract,
 } from './lib/system-protocol.mjs';
 import { validateAccessReceipt } from './lib/access-runtime.mjs';
+import {
+  validateExecutorBinding,
+  validateRoutineContract,
+  validateRoutineRunReceipt,
+} from './lib/routine-protocol.mjs';
 
 const [kind = '', path = ''] = process.argv.slice(2);
 const validators = {
@@ -17,6 +22,9 @@ const validators = {
   run: validateRunRecord,
   grant: validateAccessGrant,
   receipt: validateAccessReceipt,
+  routine: validateRoutineContract,
+  executor: validateExecutorBinding,
+  'routine-receipt': validateRoutineRunReceipt,
 };
 
 function fail(message) {
@@ -24,7 +32,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: source, system, run, grant ou receipt');
+if (!validators[kind]) fail('tipo válido: source, system, run, grant, receipt, routine, executor ou routine-receipt');
 if (!path) fail('informe o caminho do JSON');
 
 try {

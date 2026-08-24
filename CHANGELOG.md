@@ -1,5 +1,27 @@
 # Mudanças do cérebro INEVITA
 
+## v1.29.0 — 2026-08-23 · “rotina virou objeto governado do Cérebro”
+
+- **Sistema ≠ Rotina:** Routine Contract V1 declara gatilho, placement, executor/modelo, contexto,
+  grants, destino, timeout, retry, idempotência e concorrência sem duplicar o resultado do Sistema.
+- **A assinatura continua com o dono:** adapters fechados chamam `codex exec` ou `claude -p` já
+  autenticados na máquina. OAuth e API key nunca são copiados; o prompt entra por `stdin`, não nos
+  argumentos do processo.
+- **Binding e estado privados:** Executor Binding, agenda ativa/pausada, outputs e recibos vivem em
+  `.cerebro/runtime/`, fora do Git. Contrato compartilhável não leva caminho absoluto, sessão ou
+  conteúdo privado.
+- **Run manual antes do automático:** uma rotina agendada só ativa com recibo concluído da mesma
+  versão e aprovação humana. `tick` respeita timezone, execução perdida, pausa, concorrência e slot
+  idempotente; repetir o mesmo slot não chama o modelo de novo.
+- **Routine Run Receipt V1:** sucesso, retry, timeout, cliente/binding ausente e autenticação
+  requerida deixam recibo reference-only; prompt, output, erro cru e conteúdo enviado ao provider
+  não entram nele nem vão para a INEVITA.
+- **Garantia sem teatro:** acesso local `receipt-audited` continua auditável; um grant
+  `runtime-enforced` sem conector dedicado é negado em vez de entregar credencial ao modelo.
+- **Harness sem gastar assinatura:** o E2E injeta processos fake para Codex e Claude e prova
+  `rodar agora → concluir → ativar → due → pausar`, retry, timeout e idempotência. Console e daemon
+  do sistema operacional continuam fora desta entrega.
+
 ## v1.28.0 — 2026-08-23 · “permissão agora bloqueia de verdade quando tem custódia”
 
 - **Runtime local mínimo, sem inventar Console:** engine + CLI aplicam Access Grant antes do
