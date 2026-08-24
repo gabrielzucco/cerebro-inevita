@@ -1,0 +1,28 @@
+{
+  "protocol_version": 1,
+  "migration_id": "migration-funil-diario-claude",
+  "routine_id": "funil-diario-cerebro",
+  "routine_ref": "routine:funil-diario-cerebro:1.0.0",
+  "source": {
+    "kind": "claude-scheduled-task",
+    "schedule_ref": "legacy-schedule:claude/funil-diario-cerebro",
+    "schedule_summary": "diária às 08:38 em America/Sao_Paulo"
+  },
+  "status": "awaiting-legacy-pause",
+  "duplicate_run_risk": true,
+  "observed_at": "2026-08-23T14:00:00.000Z",
+  "legacy_pause": {
+    "status": "unknown",
+    "evidence_ref": null,
+    "confirmed_by": null,
+    "confirmed_at": null
+  },
+  "cutover": {
+    "activation_receipt_ref": null,
+    "completed_at": null
+  },
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "legacy_payload_recorded": false
+  }
+}

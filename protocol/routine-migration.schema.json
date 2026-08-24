@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/routine-migration-v1.json",
+  "title": "INEVITA Routine Migration Readback V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "migration_id", "routine_id", "routine_ref", "source",
+    "status", "duplicate_run_risk", "observed_at", "legacy_pause", "cutover", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "migration_id": { "$ref": "#/$defs/ref" },
+    "routine_id": { "$ref": "#/$defs/id" },
+    "routine_ref": { "type": "string", "pattern": "^routine:[a-z0-9][a-z0-9-]{0,63}:\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "schedule_ref", "schedule_summary"],
+      "properties": {
+        "kind": { "enum": ["claude-scheduled-task", "codex-automation", "launchd", "cron", "github-actions", "other"] },
+        "schedule_ref": { "$ref": "#/$defs/local_ref" },
+        "schedule_summary": { "type": "string", "minLength": 1, "maxLength": 240 }
+      }
+    },
+    "status": { "enum": ["awaiting-legacy-pause", "ready-for-activation", "cutover-completed", "cancelled"] },
+    "duplicate_run_risk": { "type": "boolean" },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "legacy_pause": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_ref", "confirmed_by", "confirmed_at"],
+      "properties": {
+        "status": { "enum": ["unknown", "confirmed", "not-required"] },
+        "evidence_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+        "confirmed_by": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+        "confirmed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "cutover": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activation_receipt_ref", "completed_at"],
+      "properties": {
+        "activation_receipt_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+        "completed_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_shared_with_inevita", "legacy_payload_recorded"],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "legacy_payload_recorded": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

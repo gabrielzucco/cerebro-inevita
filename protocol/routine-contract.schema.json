@@ -129,7 +129,21 @@
       "required": ["content_shared_with_inevita"],
       "properties": { "content_shared_with_inevita": { "const": false } }
     },
-    "extensions": { "type": "object" }
+    "extensions": {
+      "type": "object",
+      "properties": {
+        "preparation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "binding_ref", "output_ref"],
+          "properties": {
+            "kind": { "const": "trusted-local-command" },
+            "binding_ref": { "$ref": "#/$defs/ref" },
+            "output_ref": { "$ref": "#/$defs/local_ref" }
+          }
+        }
+      }
+    }
   },
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },

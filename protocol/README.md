@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os nove envelopes
+## Os onze envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -22,9 +22,13 @@ conteúdo bruto.
   consulta, onde entrega e quais políticas de timeout, retry e idempotência aplica.
 - `executor-binding.schema.json`: binding privado entre a Rotina e um cliente oficial local
   (`codex` ou `claude`) já autenticado pelo dono; nunca contém OAuth ou API key.
+- `collector-binding.schema.json`: binding privado para uma preparação determinística confiável
+  (`python3` ou `node` por argv fechado) produzir um snapshot antes da interpretação do modelo.
 - `routine-run-receipt.schema.json`: recibo privado de cada tentativa, com status, reason code e
   referências de entrada/saída, mas sem prompt, output ou erro cru. Se o binding nem existe, o
   adapter fica honestamente `unresolved` e a execução é negada antes de ler o prompt.
+- `routine-migration.schema.json`: readback privado da agenda legada, do risco de relógio duplo e
+  da evidência humana de pausa antes do cutover; nunca carrega o payload da agenda antiga.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -56,7 +60,9 @@ proveniência da recuperação. Toda execução V2 deixa o Context Snapshot corr
 | Access Grant | V1 | — |
 | Routine Contract | V1 | — |
 | Executor Binding | V1 privado | — |
+| Collector Binding | V1 privado | — |
 | Routine Run Receipt | V1 privado | — |
+| Routine Migration Readback | V1 privado | — |
 
 Os readers são dual-read. Os writers antigos continuam V1 e não injetam campos nos schemas
 fechados. O runner file-only recusa executar um System Contract V2 porque ainda não consegue
@@ -94,7 +100,9 @@ node scripts/protocol-validate.mjs grant protocol/examples/access-grant.v1.json
 node scripts/protocol-validate.mjs receipt protocol/examples/access-receipt.v1.json
 node scripts/protocol-validate.mjs routine protocol/examples/routine-contract.v1.json
 node scripts/protocol-validate.mjs executor protocol/examples/executor-binding.v1.json
+node scripts/protocol-validate.mjs collector protocol/examples/collector-binding.v1.json
 node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
+node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-migration.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 
@@ -111,10 +119,10 @@ A migração cria `.cerebro/contracts/sources/<source-id>.json`, nunca reescreve
 
 ## Runtime local mínimo
 
-O runtime opcional desta versão é um engine local com CLI e biblioteca de conectores confiáveis;
-ainda não é o servidor nem a interface do Console. Arquivos e agente continuam funcionando sem
-ele. Quando o Sistema exige `runtime-enforced`, o engine aplica o Access Grant antes de entregar a
-credencial ao conector e deixa um Access Receipt privado em `.cerebro/runtime/receipts/access/`.
+O runtime opcional é um engine local com CLI e biblioteca de conectores confiáveis. Arquivos e
+agente continuam funcionando sem ele. Quando o Sistema exige `runtime-enforced`, o engine aplica o
+Access Grant antes de entregar a credencial ao conector e deixa um Access Receipt privado em
+`.cerebro/runtime/receipts/access/`.
 
 ```bash
 node scripts/runtime-secret.mjs status
@@ -149,12 +157,21 @@ promete modelo fora do plano. O prompt entra por `stdin`, nunca em `argv`; `cwd`
 timeout vêm do contrato. O conteúdo necessário atravessa o provider escolhido, mas nunca a
 INEVITA.
 
+Quando a Rotina declara `extensions.preparation`, o runtime primeiro executa um Collector Binding
+local confiável, sem shell e sem guardar stdout. O coletor determinístico acessa as Fontes já
+concedidas e grava um snapshot por referência; só então o modelo recebe a instrução para interpretar
+esse snapshot. Falha, timeout ou output ausente impedem a chamada ao modelo.
+
 ```bash
 node scripts/routine-runtime.mjs install caminho/routine-contract.json --confirm
 node scripts/routine-runtime.mjs binding executor-codex-local --adapter=codex-cli \
   --host=host-owner-local --workspace-ref=company-brain-local --workspace=. \
   --model=gpt-5.6-sol --permission=read-only --confirm
 node scripts/routine-runtime.mjs run funil-diario-cerebro --confirm
+node scripts/routine-runtime.mjs collector-install caminho/collector-binding.json --confirm
+node scripts/routine-runtime.mjs migration-install caminho/routine-migration.json --confirm
+node scripts/routine-runtime.mjs migration-pause-confirm funil-diario-cerebro \
+  --evidence=readback:agenda-antiga-pausada --approved-by=role-owner --confirm
 node scripts/routine-runtime.mjs activate funil-diario-cerebro \
   --evidence=routine-receipt:RECIBO --approved-by=role-owner --confirm
 node scripts/routine-runtime.mjs due
@@ -166,6 +183,30 @@ Ativar exige um run manual concluído da mesma versão. Pausa impede ocorrência
 uma execução consumada. O slot agendado é idempotente e a concorrência é `forbid`. Nesta versão,
 um Access Grant `runtime-enforced` sem conector dedicado continua negado; a sessão do modelo não
 recebe a credencial.
+
+Rotina importada de Claude, Codex, launchd, cron ou GitHub Actions nasce desativada. Quando existe
+risco de relógio duplo, ativar ou retomar falha com `legacy-schedule-not-paused` até o dono registrar
+um readback reference-only da pausa legada. O runtime não declara que pausou uma agenda que não
+controla.
+
+## Console local de Rotinas
+
+O Console V0 é uma vista derivada dos mesmos arquivos. Vincula somente em `127.0.0.1`, cria uma
+sessão efêmera HttpOnly, exige CSRF em toda mutação e não serve o conteúdo de prompt ou output.
+Abrir, navegar e atualizar recompila o estado sem chamar modelo. Não há telemetria de conteúdo nem
+banco concorrente.
+
+```bash
+node scripts/console-server.mjs
+# em um cofre legado, primeiro veja o preview e confirme a compatibilidade local:
+node scripts/console-bootstrap.mjs --root=/caminho/do/cofre
+node scripts/console-bootstrap.mjs --root=/caminho/do/cofre --confirm
+node scripts/console-server.mjs --root=/caminho/do/cofre
+```
+
+O bootstrap legado não cria outro Cérebro: instala marcador/layout no próprio cofre e exclui
+`.cerebro/contracts/` e `.cerebro/runtime/` apenas no clone local (`.git/info/exclude`). Conflito
+com configuração existente interrompe o processo; nada é sobrescrito silenciosamente.
 
 ## Harness
 

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { spawnSync as nodeSpawnSync } from 'node:child_process';
 import {
   closeSync,
   existsSync,
@@ -15,13 +16,16 @@ import { checkAccess } from './access-runtime.mjs';
 import { runModelExecutor } from './model-executors.mjs';
 import {
   createSlotKey,
+  completeRoutineMigration,
   executorBindingPath,
   listRoutineContracts,
   listRoutineRunReceipts,
   loadExecutorBinding,
+  loadCollectorBinding,
   loadRoutineContract,
   loadRoutineState,
   readRoutineRunReceipt,
+  routineMigrationBlocker,
   routineOutputDirectory,
   routineStatePath,
   safeRoutineDestination,
@@ -64,6 +68,7 @@ function buildReceipt(contract, binding, {
   completedAt,
   outputRef = null,
   accessReceiptRefs = [],
+  preparationInputRefs = [],
 }) {
   return {
     protocol_version: 1,
@@ -87,6 +92,7 @@ function buildReceipt(contract, binding, {
     completed_at: completedAt.toISOString(),
     input_refs: [
       contract.context.prompt_ref,
+      ...preparationInputRefs,
       ...contract.context.access_requests.map((request) => `source:${request.source_ref}`),
     ],
     output_ref: outputRef,
@@ -157,6 +163,59 @@ function resolveExecutorWorkspace(root, binding) {
   return absolute;
 }
 
+function prepareRoutineInput(root, contract, workspacePath, startedAt, {
+  spawnCollector = nodeSpawnSync,
+  env = process.env,
+} = {}) {
+  const preparation = contract.extensions?.preparation;
+  if (!preparation) return { ok: true, input_refs: [] };
+  let binding;
+  try {
+    binding = loadCollectorBinding(root, preparation.binding_ref).binding;
+  } catch {
+    return { ok: false, reason_code: 'collector-binding-missing', input_refs: [] };
+  }
+  if (binding.status !== 'ready') return { ok: false, reason_code: `collector-${binding.status}`, input_refs: [] };
+  if (binding.workspace_ref !== contract.placement.workspace_ref) {
+    return { ok: false, reason_code: 'collector-workspace-mismatch', input_refs: [] };
+  }
+  const collectorWorkspace = resolve(root, binding.workspace_path);
+  if (collectorWorkspace !== workspacePath) return { ok: false, reason_code: 'collector-workspace-mismatch', input_refs: [] };
+  if (binding.output_ref !== preparation.output_ref) return { ok: false, reason_code: 'collector-output-mismatch', input_refs: [] };
+  let outputRef;
+  try {
+    outputRef = safeRelativePath(root, binding.output_ref);
+  } catch {
+    return { ok: false, reason_code: 'collector-output-invalid', input_refs: [] };
+  }
+  let result;
+  try {
+    result = spawnCollector(binding.executable, binding.args, {
+      cwd: collectorWorkspace,
+      encoding: 'utf8',
+      env,
+      timeout: binding.timeout_seconds * 1000,
+      maxBuffer: 2 * 1024 * 1024,
+      windowsHide: true,
+    });
+  } catch {
+    return { ok: false, reason_code: 'collector-failed', input_refs: [] };
+  }
+  if (result?.error?.code === 'ETIMEDOUT' || result?.signal === 'SIGTERM') {
+    return { ok: false, reason_code: 'collector-timeout', input_refs: [] };
+  }
+  if (result?.status !== 0 || result?.error) return { ok: false, reason_code: 'collector-failed', input_refs: [] };
+  try {
+    const output = statSync(resolve(root, outputRef));
+    if (!output.isFile() || output.mtimeMs + 1000 < startedAt.getTime()) {
+      return { ok: false, reason_code: 'collector-output-stale', input_refs: [] };
+    }
+  } catch {
+    return { ok: false, reason_code: 'collector-output-missing', input_refs: [] };
+  }
+  return { ok: true, input_refs: [`collector-output:${outputRef}`] };
+}
+
 function runDestination(root, contract, runId) {
   if (contract.destination.kind === 'runtime-output') {
     const absolute = resolve(routineOutputDirectory(root), `${runId}.md`);
@@ -212,6 +271,7 @@ export async function runRoutine(root, routineId, {
   trigger = 'manual',
   scheduledFor = null,
   spawn,
+  spawnCollector,
   env = process.env,
   clock = () => new Date(),
   wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait, milliseconds)),
@@ -287,6 +347,21 @@ export async function runRoutine(root, routineId, {
       return deny('destination-not-private', access.receipt_refs);
     }
 
+    const preparation = prepareRoutineInput(root, contract, workspacePath, startedAt, {
+      spawnCollector, env,
+    });
+    if (!preparation.ok) {
+      const recorded = recordTerminal(root, contract, binding, {
+        ...base,
+        attempts: 0,
+        status: 'failed',
+        reasonCode: preparation.reason_code,
+        completedAt: clockValue(clock),
+        accessReceiptRefs: access.receipt_refs,
+      });
+      return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
+    }
+
     let prompt;
     try {
       const promptRef = safeRelativePath(root, contract.context.prompt_ref, { mustExist: true });
@@ -316,6 +391,7 @@ export async function runRoutine(root, routineId, {
         reasonCode: execution.reason_code,
         completedAt: clockValue(clock),
         accessReceiptRefs: access.receipt_refs,
+        preparationInputRefs: preparation.input_refs,
       });
       if (attempt < contract.operations.retry.max_attempts) {
         await wait(contract.operations.retry.backoff_seconds * 1000);
@@ -332,6 +408,7 @@ export async function runRoutine(root, routineId, {
       const recorded = recordTerminal(root, contract, binding, {
         ...base, attempts, status: 'failed', reasonCode: 'destination-write-failed',
         completedAt: clockValue(clock), accessReceiptRefs: access.receipt_refs,
+        preparationInputRefs: preparation.input_refs,
       });
       return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
     }
@@ -340,6 +417,7 @@ export async function runRoutine(root, routineId, {
       ...base, attempts, status: 'completed', reasonCode: 'executor-completed',
       completedAt: clockValue(clock), outputRef: destination.ref,
       accessReceiptRefs: access.receipt_refs,
+      preparationInputRefs: preparation.input_refs,
     });
     return { status: 'completed', receipt: recorded.value, receipt_ref: recorded.ref };
   } finally {
@@ -359,6 +437,8 @@ export function activateRoutine(root, routineId, evidenceReceiptRef, approvedBy,
     || evidence.trigger !== 'manual' || evidence.status !== 'completed') {
     throw new Error('activation-evidence-invalid');
   }
+  const migrationBlocker = routineMigrationBlocker(root, routineId);
+  if (migrationBlocker) throw new Error(migrationBlocker);
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(approvedBy || '')) throw new Error('approved_by inválido');
   const now = clockValue(clock).toISOString();
   const state = {
@@ -372,6 +452,7 @@ export function activateRoutine(root, routineId, evidenceReceiptRef, approvedBy,
     last_checked_at: now,
   };
   saveRoutineState(root, state);
+  completeRoutineMigration(root, routineId, evidenceReceiptRef, { clock });
   return state;
 }
 
@@ -396,6 +477,8 @@ export function resumeRoutine(root, routineId, approvedBy, { clock = () => new D
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(approvedBy || '')) throw new Error('approved_by inválido');
   const current = loadRoutineState(root, routineId).state;
   if (current.status !== 'paused') throw new Error('routine-not-paused');
+  const migrationBlocker = routineMigrationBlocker(root, routineId);
+  if (migrationBlocker) throw new Error(migrationBlocker);
   const now = clockValue(clock).toISOString();
   const state = {
     ...current,

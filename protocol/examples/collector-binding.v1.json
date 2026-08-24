@@ -1,0 +1,18 @@
+{
+  "protocol_version": 1,
+  "binding_id": "collector-funnel-local",
+  "kind": "trusted-local-command",
+  "executable": "python3",
+  "args": [".automacao/funil_diario.py"],
+  "workspace_ref": "company-brain-local",
+  "workspace_path": ".",
+  "output_ref": ".automacao/_FUNIL-ULTIMO.json",
+  "timeout_seconds": 180,
+  "status": "ready",
+  "observed_at": "2026-08-23T14:00:00.000Z",
+  "privacy": {
+    "credential_stored": false,
+    "stdout_recorded": false,
+    "content_shared_with_inevita": false
+  }
+}

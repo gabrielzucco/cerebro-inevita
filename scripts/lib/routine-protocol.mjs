@@ -20,6 +20,14 @@ const REASONING = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
 const RUN_STATUSES = new Set(['completed', 'failed', 'denied', 'skipped']);
 const MODES = new Set(['read', 'propose', 'write-with-approval']);
 const WEEKDAYS = new Set(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']);
+const MIGRATION_SOURCES = new Set([
+  'claude-scheduled-task', 'codex-automation', 'launchd', 'cron', 'github-actions', 'other',
+]);
+const MIGRATION_STATUSES = new Set([
+  'awaiting-legacy-pause', 'ready-for-activation', 'cutover-completed', 'cancelled',
+]);
+const COLLECTOR_EXECUTABLES = new Set(['python3', 'node']);
+const COLLECTOR_ARG_RE = /^(?!-c$)(?!.*[;&|`$<>])[A-Za-z0-9._/:=-]{1,255}$/;
 const WEEKDAY_FROM_INTL = { Mon: 'MO', Tue: 'TU', Wed: 'WE', Thu: 'TH', Fri: 'FR', Sat: 'SA', Sun: 'SU' };
 const SECRET_RE = /Bearer\s+|-----BEGIN .*PRIVATE KEY-----|\b(?:sk|ghp|xoxb)[-_A-Za-z0-9]{12,}/i;
 const MAX_SCHEDULE_LOOKBACK_MINUTES = 62 * 24 * 60;
@@ -207,6 +215,15 @@ export function validateRoutineContract(value) {
     errors.push('privacy inválida');
   }
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
+  if (object(value.extensions?.preparation)) {
+    const preparation = value.extensions.preparation;
+    closed(errors, preparation, 'extensions.preparation', ['kind', 'binding_ref', 'output_ref']);
+    if (preparation.kind !== 'trusted-local-command') errors.push('extensions.preparation.kind inválido');
+    if (!REF_ID_RE.test(preparation.binding_ref || '')) errors.push('extensions.preparation.binding_ref inválido');
+    localRef(errors, preparation.output_ref, 'extensions.preparation.output_ref', { relativePath: true });
+  } else if (value.extensions?.preparation !== undefined) {
+    errors.push('extensions.preparation precisa ser objeto');
+  }
   referenceOnly(errors, value, 'routine_contract');
   return [...new Set(errors)];
 }
@@ -250,6 +267,40 @@ export function validateExecutorBinding(value) {
     errors.push('privacy inválida');
   }
   referenceOnly(errors, value, 'executor_binding');
+  return [...new Set(errors)];
+}
+
+export function validateCollectorBinding(value) {
+  const errors = [];
+  if (!object(value)) return ['collector binding precisa ser objeto'];
+  closed(errors, value, 'collector_binding', [
+    'protocol_version', 'binding_id', 'kind', 'executable', 'args', 'workspace_ref',
+    'workspace_path', 'output_ref', 'timeout_seconds', 'status', 'observed_at', 'privacy',
+  ]);
+  if (value.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
+  if (!REF_ID_RE.test(value.binding_id || '')) errors.push('binding_id inválido');
+  if (value.kind !== 'trusted-local-command') errors.push('kind inválido');
+  if (!COLLECTOR_EXECUTABLES.has(value.executable)) errors.push('executable inválido');
+  list(errors, value.args, 'args');
+  if (!Array.isArray(value.args) || value.args.length < 1 || value.args.length > 16) errors.push('args exige 1 a 16 itens');
+  for (const argument of Array.isArray(value.args) ? value.args : []) {
+    if (!COLLECTOR_ARG_RE.test(argument || '') || isAbsolute(argument)
+      || argument.split(/[\\/]/).includes('..')) errors.push('args contém item inseguro');
+  }
+  if (!REF_ID_RE.test(value.workspace_ref || '')) errors.push('workspace_ref inválido');
+  localRef(errors, value.workspace_path, 'workspace_path', { relativePath: true, allowDot: true });
+  localRef(errors, value.output_ref, 'output_ref', { relativePath: true });
+  if (!Number.isInteger(value.timeout_seconds) || value.timeout_seconds < 10 || value.timeout_seconds > 1800) {
+    errors.push('timeout_seconds inválido');
+  }
+  if (!['ready', 'missing', 'degraded'].includes(value.status)) errors.push('status inválido');
+  date(errors, value.observed_at, 'observed_at');
+  if (!object(value.privacy) || value.privacy.credential_stored !== false
+    || value.privacy.stdout_recorded !== false || value.privacy.content_shared_with_inevita !== false
+    || Object.keys(value.privacy || {}).some((key) => ![
+      'credential_stored', 'stdout_recorded', 'content_shared_with_inevita',
+    ].includes(key))) errors.push('privacy inválida');
+  referenceOnly(errors, value, 'collector_binding');
   return [...new Set(errors)];
 }
 
@@ -306,6 +357,75 @@ export function validateRoutineRunReceipt(value) {
   return [...new Set(errors)];
 }
 
+export function validateRoutineMigration(value) {
+  const errors = [];
+  if (!object(value)) return ['routine migration precisa ser objeto'];
+  closed(errors, value, 'routine_migration', [
+    'protocol_version', 'migration_id', 'routine_id', 'routine_ref', 'source', 'status',
+    'duplicate_run_risk', 'observed_at', 'legacy_pause', 'cutover', 'privacy',
+  ]);
+  if (value.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
+  if (!REF_ID_RE.test(value.migration_id || '')) errors.push('migration_id inválido');
+  if (!ID_RE.test(value.routine_id || '')) errors.push('routine_id inválido');
+  const routineMatch = String(value.routine_ref || '').match(/^routine:([a-z0-9][a-z0-9-]{0,63}):(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?)$/);
+  if (!routineMatch || routineMatch[1] !== value.routine_id) errors.push('routine_ref inválido');
+  if (!object(value.source)) errors.push('source precisa ser objeto');
+  else {
+    closed(errors, value.source, 'source', ['kind', 'schedule_ref', 'schedule_summary']);
+    if (!MIGRATION_SOURCES.has(value.source.kind)) errors.push('source.kind inválido');
+    localRef(errors, value.source.schedule_ref, 'source.schedule_ref');
+    text(errors, value.source.schedule_summary, 'source.schedule_summary');
+    if (typeof value.source.schedule_summary === 'string' && value.source.schedule_summary.length > 240) {
+      errors.push('source.schedule_summary excede 240 caracteres');
+    }
+  }
+  if (!MIGRATION_STATUSES.has(value.status)) errors.push('status inválido');
+  if (typeof value.duplicate_run_risk !== 'boolean') errors.push('duplicate_run_risk precisa ser booleano');
+  date(errors, value.observed_at, 'observed_at');
+
+  if (!object(value.legacy_pause)) errors.push('legacy_pause precisa ser objeto');
+  else {
+    closed(errors, value.legacy_pause, 'legacy_pause', ['status', 'evidence_ref', 'confirmed_by', 'confirmed_at']);
+    const pause = value.legacy_pause;
+    if (!['unknown', 'confirmed', 'not-required'].includes(pause.status)) errors.push('legacy_pause.status inválido');
+    if (pause.evidence_ref !== null) localRef(errors, pause.evidence_ref, 'legacy_pause.evidence_ref');
+    if (pause.confirmed_by !== null && !REF_ID_RE.test(pause.confirmed_by || '')) errors.push('legacy_pause.confirmed_by inválido');
+    date(errors, pause.confirmed_at, 'legacy_pause.confirmed_at', true);
+    const hasReadback = pause.evidence_ref && pause.confirmed_by && pause.confirmed_at;
+    if (pause.status === 'confirmed' && !hasReadback) errors.push('pausa confirmada exige evidência, autor e data');
+    if (pause.status === 'unknown' && [pause.evidence_ref, pause.confirmed_by, pause.confirmed_at].some((item) => item !== null)) {
+      errors.push('pausa desconhecida não pode fingir readback');
+    }
+    if (value.duplicate_run_risk && pause.status === 'not-required') errors.push('risco de duplicidade exige pausa confirmada');
+    if (value.status === 'awaiting-legacy-pause' && pause.status !== 'unknown') errors.push('status awaiting exige pausa desconhecida');
+    if (value.status === 'ready-for-activation' && !['confirmed', 'not-required'].includes(pause.status)) {
+      errors.push('status ready exige readback da agenda legada');
+    }
+  }
+
+  if (!object(value.cutover)) errors.push('cutover precisa ser objeto');
+  else {
+    closed(errors, value.cutover, 'cutover', ['activation_receipt_ref', 'completed_at']);
+    if (value.cutover.activation_receipt_ref !== null) localRef(errors, value.cutover.activation_receipt_ref, 'cutover.activation_receipt_ref');
+    date(errors, value.cutover.completed_at, 'cutover.completed_at', true);
+    if (value.status === 'cutover-completed'
+      && (!value.cutover.activation_receipt_ref || !value.cutover.completed_at)) {
+      errors.push('cutover concluído exige recibo de ativação e data');
+    }
+    if (value.status !== 'cutover-completed'
+      && (value.cutover.activation_receipt_ref !== null || value.cutover.completed_at !== null)) {
+      errors.push('cutover pendente não pode fingir conclusão');
+    }
+  }
+  if (!object(value.privacy) || value.privacy.content_shared_with_inevita !== false
+    || value.privacy.legacy_payload_recorded !== false
+    || Object.keys(value.privacy || {}).some((key) => ![
+      'content_shared_with_inevita', 'legacy_payload_recorded',
+    ].includes(key))) errors.push('privacy inválida');
+  referenceOnly(errors, value, 'routine_migration');
+  return [...new Set(errors)];
+}
+
 function safeDirectory(root, configured, fallback, privateBase) {
   const brainRoot = resolve(root);
   const target = resolve(root, configured || fallback);
@@ -329,6 +449,12 @@ export function executorBindingPath(root, bindingId) {
     join('.cerebro', 'runtime', 'executors'), join('.cerebro', 'runtime')), `${bindingId}.json`);
 }
 
+export function collectorBindingPath(root, bindingId) {
+  if (!REF_ID_RE.test(bindingId || '')) throw new Error('binding_id inválido');
+  return join(safeDirectory(root, layout(root).collectorBindings,
+    join('.cerebro', 'runtime', 'collectors'), join('.cerebro', 'runtime')), `${bindingId}.json`);
+}
+
 function routineReceiptDirectory(root) {
   return safeDirectory(root, layout(root).routineReceipts,
     join('.cerebro', 'runtime', 'receipts', 'routines'), join('.cerebro', 'runtime'));
@@ -337,6 +463,11 @@ function routineReceiptDirectory(root) {
 function routineStateDirectory(root) {
   return safeDirectory(root, layout(root).routineState,
     join('.cerebro', 'runtime', 'routines'), join('.cerebro', 'runtime'));
+}
+
+function routineMigrationDirectory(root) {
+  return safeDirectory(root, layout(root).routineMigrations,
+    join('.cerebro', 'runtime', 'migrations', 'routines'), join('.cerebro', 'runtime'));
 }
 
 export function routineOutputDirectory(root) {
@@ -417,6 +548,29 @@ export function loadExecutorBinding(root, bindingId) {
   const errors = validateExecutorBinding(binding);
   if (errors.length) throw new Error(`Executor Binding inválido: ${errors.join(' · ')}`);
   return { binding, path, ref: `executor-binding:${binding.binding_id}` };
+}
+
+export function saveCollectorBinding(root, binding, { replace = false } = {}) {
+  const errors = validateCollectorBinding(binding);
+  if (errors.length) throw new Error(`Collector Binding inválido: ${errors.join(' · ')}`);
+  const path = collectorBindingPath(root, binding.binding_id);
+  if (existsSync(path) && !replace) {
+    const current = readJson(path, `Collector Binding ${binding.binding_id}`);
+    if (JSON.stringify(current) === JSON.stringify(binding)) return { status: 'no-change', binding: current, path };
+    throw new Error('Collector Binding existente diverge; substituição silenciosa bloqueada');
+  }
+  const existed = existsSync(path);
+  writeJsonAtomic(path, binding);
+  return { status: existed && replace ? 'updated' : 'created', binding, path, ref: `collector-binding:${binding.binding_id}` };
+}
+
+export function loadCollectorBinding(root, bindingId) {
+  const path = collectorBindingPath(root, bindingId);
+  if (!existsSync(path)) throw new Error(`Collector Binding não encontrado: ${bindingId}`);
+  const binding = readJson(path, `Collector Binding ${bindingId}`);
+  const errors = validateCollectorBinding(binding);
+  if (errors.length) throw new Error(`Collector Binding inválido: ${errors.join(' · ')}`);
+  return { binding, path, ref: `collector-binding:${binding.binding_id}` };
 }
 
 export function routineStatePath(root, routineId) {
@@ -512,6 +666,113 @@ export function listRoutineRunReceipts(root, routineId = null) {
     if (errors.length) throw new Error(`Routine Run Receipt ${name} inválido: ${errors.join(' · ')}`);
     return value;
   }).filter((value) => routineId === null || value.routine_id === routineId);
+}
+
+export function routineMigrationPath(root, routineId) {
+  if (!ID_RE.test(routineId || '')) throw new Error('routine_id inválido');
+  return join(routineMigrationDirectory(root), `${routineId}.json`);
+}
+
+export function registerRoutineMigration(root, migration) {
+  const errors = validateRoutineMigration(migration);
+  if (errors.length) throw new Error(`Routine Migration inválido: ${errors.join(' · ')}`);
+  const contract = loadRoutineContract(root, migration.routine_id).contract;
+  if (migration.routine_ref !== `routine:${contract.routine_id}:${contract.version}`) {
+    throw new Error('Routine Migration aponta para versão diferente do contrato instalado');
+  }
+  const path = routineMigrationPath(root, migration.routine_id);
+  if (existsSync(path)) {
+    const current = readJson(path, `Routine Migration ${migration.routine_id}`);
+    if (JSON.stringify(current) === JSON.stringify(migration)) return { status: 'no-change', migration: current, path };
+    throw new Error('Routine Migration existente diverge; transição silenciosa bloqueada');
+  }
+  writeJsonAtomic(path, migration);
+  return { status: 'created', migration, path, ref: `routine-migration:${migration.migration_id}` };
+}
+
+export function loadRoutineMigration(root, routineId, { optional = false } = {}) {
+  const path = routineMigrationPath(root, routineId);
+  if (!existsSync(path)) {
+    if (optional) return { migration: null, path, ref: null };
+    throw new Error(`Routine Migration não encontrada: ${routineId}`);
+  }
+  const migration = readJson(path, `Routine Migration ${routineId}`);
+  const errors = validateRoutineMigration(migration);
+  if (errors.length) throw new Error(`Routine Migration inválido: ${errors.join(' · ')}`);
+  return { migration, path, ref: `routine-migration:${migration.migration_id}` };
+}
+
+export function listRoutineMigrations(root) {
+  const directory = routineMigrationDirectory(root);
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory).filter((name) => name.endsWith('.json')).sort().map((name) => {
+    const migration = readJson(join(directory, name), `Routine Migration ${name}`);
+    const errors = validateRoutineMigration(migration);
+    if (errors.length) throw new Error(`Routine Migration ${name} inválido: ${errors.join(' · ')}`);
+    return migration;
+  });
+}
+
+export function confirmLegacySchedulePaused(root, routineId, evidenceRef, confirmedBy, {
+  clock = () => new Date(),
+} = {}) {
+  if (!LOCAL_REF_RE.test(evidenceRef || '')) throw new Error('evidence_ref inválido');
+  if (!REF_ID_RE.test(confirmedBy || '')) throw new Error('confirmed_by inválido');
+  const loaded = loadRoutineMigration(root, routineId);
+  if (loaded.migration.status === 'cutover-completed') return loaded.migration;
+  if (loaded.migration.status === 'cancelled') throw new Error('routine-migration-cancelled');
+  const now = typeof clock === 'function' ? clock() : clock;
+  const confirmedAt = new Date(now);
+  if (!Number.isFinite(confirmedAt.getTime())) throw new Error('relógio inválido');
+  const migration = {
+    ...loaded.migration,
+    status: 'ready-for-activation',
+    legacy_pause: {
+      status: 'confirmed',
+      evidence_ref: evidenceRef,
+      confirmed_by: confirmedBy,
+      confirmed_at: confirmedAt.toISOString(),
+    },
+  };
+  const errors = validateRoutineMigration(migration);
+  if (errors.length) throw new Error(`Routine Migration inválido: ${errors.join(' · ')}`);
+  writeJsonAtomic(loaded.path, migration);
+  return migration;
+}
+
+export function routineMigrationBlocker(root, routineId) {
+  const { migration } = loadRoutineMigration(root, routineId, { optional: true });
+  if (!migration) return null;
+  if (migration.status === 'cancelled') return 'routine-migration-cancelled';
+  if (migration.duplicate_run_risk && migration.legacy_pause.status !== 'confirmed') {
+    return 'legacy-schedule-not-paused';
+  }
+  return null;
+}
+
+export function completeRoutineMigration(root, routineId, activationReceiptRef, {
+  clock = () => new Date(),
+} = {}) {
+  const loaded = loadRoutineMigration(root, routineId, { optional: true });
+  if (!loaded.migration) return null;
+  const blocker = routineMigrationBlocker(root, routineId);
+  if (blocker) throw new Error(blocker);
+  if (loaded.migration.status === 'cutover-completed') return loaded.migration;
+  const now = typeof clock === 'function' ? clock() : clock;
+  const completedAt = new Date(now);
+  if (!Number.isFinite(completedAt.getTime())) throw new Error('relógio inválido');
+  const migration = {
+    ...loaded.migration,
+    status: 'cutover-completed',
+    cutover: {
+      activation_receipt_ref: activationReceiptRef,
+      completed_at: completedAt.toISOString(),
+    },
+  };
+  const errors = validateRoutineMigration(migration);
+  if (errors.length) throw new Error(`Routine Migration inválido: ${errors.join(' · ')}`);
+  writeJsonAtomic(loaded.path, migration);
+  return migration;
 }
 
 export function createSlotKey(routineId, trigger, scheduledFor = null, nonce = randomUUID()) {

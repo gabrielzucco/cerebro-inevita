@@ -1,5 +1,28 @@
 # Mudanças do cérebro INEVITA
 
+## v1.30.0 — 2026-08-23 · “as rotinas ganharam mesa de controle local”
+
+- **Primeira superfície do Console:** servidor stdlib em `127.0.0.1` compila Áreas, Sistemas,
+  Fontes, Rotinas, concessões, saúde e recibos direto dos contratos canônicos. Não existe banco ou
+  índice editorial paralelo; abrir a página não executa modelo.
+- **Controle explícito da assinatura:** `Rodar agora` chama Codex ou Claude somente depois de
+  confirmação; ativar, pausar e retomar também exigem sessão local, CSRF e autoridade humana.
+  Prompt, output e erro cru não aparecem na API nem nos recibos.
+- **Coleta antes da interpretação:** Collector Binding privado roda um comando determinístico
+  confiável por argv fechado, exige snapshot fresco e só então chama o modelo. Falha ou timeout na
+  coleta bloqueia a assinatura; stdout e credenciais não entram no recibo.
+- **Migração sem relógio duplo:** Routine Migration Readback V1 registra a agenda legada e bloqueia
+  ativação/retomada com `legacy-schedule-not-paused` até o dono comprovar a pausa no fornecedor
+  anterior. O Console nunca finge pausar uma agenda externa que não controla.
+- **Cofre legado, um só Cérebro:** bootstrap explícito adiciona apenas marcador/layout e exclusões
+  locais para contratos/runtime privados. Não cria segunda pasta, não move Fonte e não transforma o
+  cofre interno num starter novo.
+- **Plural desde o primeiro frame:** o fixture sanitizado prova duas Áreas, dois Sistemas, três
+  Fontes e duas Rotinas; uma Fonte local permanece `receipt-audited`, sem teatro de
+  `runtime-enforced`.
+- **Harness sem consumo real:** E2E HTTP prova sessão, CSRF, read-only on open, replay fake, bloqueio
+  de cutover, readback da pausa e ativação posterior. Nenhum teste chama a assinatura do dono.
+
 ## v1.29.0 — 2026-08-23 · “rotina virou objeto governado do Cérebro”
 
 - **Sistema ≠ Rotina:** Routine Contract V1 declara gatilho, placement, executor/modelo, contexto,

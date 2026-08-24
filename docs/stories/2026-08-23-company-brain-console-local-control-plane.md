@@ -14,8 +14,9 @@ transformar runtime, nuvem ou Obsidian em requisito.
 
 Esta story abre a especificação executável do **Company Brain Console**: casca plural desde o
 início, uma vertical real de ponta a ponta e enforcement honesto conforme a custódia do acesso.
-A camada protocolar foi implementada em v1.27.0. O engine mínimo de runtime entra em v1.28.0;
-o substrato de Rotinas entra na entrega seguinte; servidor e Console continuam fora.
+A camada protocolar foi implementada em v1.27.0. O engine mínimo de runtime entrou em v1.28.0
+e o substrato de Rotinas em v1.29.0. A entrega v1.30.0 abre a primeira superfície local do
+Console: Rotinas, migração segura de agendas legadas e dogfood do funil diário.
 
 ## Decisões congeladas
 
@@ -169,8 +170,7 @@ Cada tentativa deixa recibo privado, reference-only e sem prompt/output/erro cru
 
 ## Runtime local opcional
 
-- o V0 entregue é engine + CLI, sem servidor; quando houver servidor, será vinculado apenas a
-  `127.0.0.1` por padrão;
+- o servidor V0 é opcional e vinculado apenas a `127.0.0.1` por padrão;
 - sessão local autenticada e sem segredo em URL, log, contrato ou Run Record;
 - provider de segredos do sistema operacional; plaintext no Git é falha crítica;
 - conectores declaram capacidades e passam pelo mesmo gate de Access Grant;
@@ -202,6 +202,29 @@ selecionar Sistema
 A casca lista vários Sistemas e Fontes reais pelos contratos e mostra estados honestos: `mapped`,
 `missing-contract`, `awaiting-approval`, `ready`, `active`, `degraded` ou `incompatible`. O estado
 não vem de um arquivo editorial curado para parecer saúde operacional.
+
+### Corte executável v1.30.0 — Rotinas
+
+- servidor stdlib local vinculado somente a `127.0.0.1`, com sessão HttpOnly, CSRF e nenhuma
+  credencial, prompt, output ou erro cru em URL/log/API;
+- read model reconstruível derivado de Routine Contracts, Executor Bindings, Access Grants,
+  estados e recibos canônicos; apagar cache nunca apaga verdade operacional;
+- shell plural de Áreas, Sistemas, Fontes e Rotinas, com a primeira operação completa concentrada
+  em Rotinas;
+- ações explícitas `rodar agora`, `ativar`, `pausar` e `retomar`, todas com confirmação humana e
+  recibo; abrir a página nunca consome assinatura nem executa trabalho;
+- `Routine Migration Readback V1` privado registra a agenda legada observada, o risco de relógio
+  duplo e a evidência humana de pausa; ativação e retomada são negadas enquanto o cutover não
+  estiver liberado;
+- o cofre interno é instalado como cérebro legado compatível por marcador explícito, sem duplicar
+  arquivos, sem mover fontes e sem se declarar um starter novo;
+- `funil-diario-cerebro` entra aprovado, porém desativado, com saída em runtime privado até o
+  primeiro replay e o julgamento humano; a agenda antiga do Claude não é pausada por inferência.
+
+O read model usa reason codes, não copy otimista: `legacy-schedule-not-paused`,
+`executor-authentication-required`, `routine-disabled`, `routine-paused`, `ready-manual-run` e
+`active`. Uma Fonte local/agent-direct aparece como `receipt-audited`; a UI nunca promove sua
+garantia para `runtime-enforced`.
 
 ### Primeira vertical
 
@@ -235,8 +258,12 @@ no repositório:
 - [x] O harness prova `rodar agora → concluir → agendar/due → pausar`, retry idempotente, timeout,
       binding ausente/auth requerida e recibo sem conteúdo.
 - [x] Nenhum adapter ou teste consome a assinatura real; execução E2E usa processo fake injetado.
-- [ ] A UI nunca chama arquivo local de `runtime-enforced`; cada acesso mostra garantia real.
-- [ ] A casca renderiza várias Áreas, Sistemas e Fontes sem hardcode de singleton.
+- [x] A UI nunca chama arquivo local de `runtime-enforced`; cada acesso mostra garantia real.
+- [x] A casca renderiza várias Áreas, Sistemas, Fontes e Rotinas sem hardcode de singleton.
+- [x] Migração legada com risco de relógio duplo bloqueia ativação e retomada até existir readback
+      humano reference-only de que a agenda anterior foi pausada.
+- [x] Abrir e navegar no Console não executa modelo; mutações exigem sessão local, CSRF,
+      confirmação e deixam o estado/recibo canônico como única verdade.
 - [ ] Uma vertical de Marketing usa ao menos três papéis de Fonte, gera Run Record V2 com Context
       Snapshot, recebe julgamento humano e produz um segundo Run comparável.
 - [ ] Em menos de dois minutos, o dono consegue visualizar o contrato, abrir o contexto usado e
@@ -269,7 +296,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - integração de todas as Fontes;
 - oito áreas funcionais completas;
 - mudança de site/isca antes do teste real;
-- implementação do Console, servidor local ou conectores reais nesta entrega do runtime mínimo.
+- superfícies completas de Hoje, Julgamento, Society ou Analytics além do corte operacional de Rotinas;
 - migração automática das rotinas atuais de Codex, Claude, launchd ou GitHub Actions;
 - daemon/serviço instalado no sistema operacional; o worker V1 é invocado por comando/tick;
 - suporte genérico a qualquer provider ou uso de sessão web por scraping.
@@ -281,7 +308,10 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - [x] Estender validators e harness anti-slop com dual-read.
 - [x] Especificar e implementar provider de segredos, enforcement e degradação do runtime.
 - [x] Implementar Routine Contract, Executor Binding, Routine Run Receipt e worker local.
-- [ ] Construir o fluxo vertical do Console sobre contratos reais.
+- [x] Construir o fluxo vertical de Rotinas do Console sobre contratos reais.
+- [x] Implementar Routine Migration Readback V1 e gate de cutover no runtime/CLI.
+- [x] Implementar servidor local e read model reconstruível da superfície Rotinas.
+- [x] Migrar `funil-diario-cerebro` desativado e sem segundo relógio no cofre interno.
 - [ ] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
 - [ ] Dogfood interno e implantação externa assistida.
 - [ ] Registrar as métricas e decidir continuar, corrigir ou matar o Console.
@@ -307,6 +337,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `CHANGELOG.md`
 - `GLOSSARIO.md`
 - `METODO-SISTEMAS.md`
+- `README.md`
 - `VERSION`
 - `dist/company-brain-starter-en.zip`
 - `docs/stories/2026-08-23-company-brain-console-local-control-plane.md`
@@ -315,11 +346,14 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/README.md`
 - `protocol/access-grant.schema.json`
 - `protocol/access-receipt.schema.json`
+- `protocol/collector-binding.schema.json`
 - `protocol/examples/access-grant.v1.json`
 - `protocol/examples/access-receipt.v1.json`
 - `protocol/examples/executor-binding.v1.json`
+- `protocol/examples/collector-binding.v1.json`
 - `protocol/examples/routine-contract.v1.json`
 - `protocol/examples/routine-run-receipt.v1.json`
+- `protocol/examples/routine-migration.v1.json`
 - `protocol/examples/run-record.v2.json`
 - `protocol/examples/source-contract.v1.json`
 - `protocol/examples/system-contract.v2.json`
@@ -327,9 +361,11 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/executor-binding.schema.json`
 - `protocol/routine-contract.schema.json`
 - `protocol/routine-run-receipt.schema.json`
+- `protocol/routine-migration.schema.json`
 - `protocol/source-contract.schema.json`
 - `protocol/system-contract-v2.schema.json`
 - `scripts/lib/company-brain-protocol-v2.mjs`
+- `scripts/lib/console-read-model.mjs`
 - `scripts/lib/access-runtime.mjs`
 - `scripts/lib/model-executors.mjs`
 - `scripts/lib/routine-protocol.mjs`
@@ -340,10 +376,16 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/runtime-access.mjs`
 - `scripts/runtime-secret.mjs`
 - `scripts/routine-runtime.mjs`
+- `scripts/console-bootstrap.mjs`
+- `scripts/console-server.mjs`
 - `scripts/source-contract.mjs`
 - `scripts/system-run.mjs`
 - `scripts/test-access-runtime.mjs`
 - `scripts/test-company-brain-protocol-v2.mjs`
 - `scripts/test-company-brain-starter.mjs`
 - `scripts/test-routine-runtime.mjs`
+- `scripts/test-console-server.mjs`
 - `scripts/validate-product.mjs`
+- `console/app.js`
+- `console/index.html`
+- `console/styles.css`

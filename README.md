@@ -55,6 +55,18 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 - **Transformar uma call em trabalho** — decisões, pendências com dono, contexto que volta na próxima.
 - **Criar com a minha voz** — a peça nasce do teu contexto, tu ajusta em vez de reescrever.
 
+## Console local (opcional)
+
+Depois que existirem contratos reais, a primeira superfície visual mostra Sistemas, Fontes,
+Rotinas, garantias e recibos sem criar outro banco nem enviar teu contexto para a INEVITA:
+
+```bash
+node scripts/console-server.mjs
+```
+
+Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
+exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada.
+
 ## O que vem dentro
 
 ```
@@ -63,6 +75,7 @@ sistemas/       trabalho recorrente vira Sistema: roda, deixa rastro, melhora
 skills/         os comandos que o agente executa (/comecar, /daily, /sistematizar…)
 meu-negocio/    TEU contexto — nasce vazio, é o que dá vida ao resto
 protocol/       contratos que mantêm tudo auditável (Capability, Run Record…)
+console/        interface localhost opcional, derivada dos mesmos contratos e recibos
 ```
 
 ## Privacidade e telemetria — sem letra miúda
