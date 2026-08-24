@@ -9,6 +9,11 @@ import {
   validateSystemContract,
 } from './lib/system-protocol.mjs';
 import { validateAccessReceipt } from './lib/access-runtime.mjs';
+import {
+  validateExecutorBinding,
+  validateRoutineContract,
+  validateRoutineRunReceipt,
+} from './lib/routine-protocol.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -25,9 +30,13 @@ const required = [
   'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
   'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
   'protocol/access-receipt.schema.json',
+  'protocol/routine-contract.schema.json', 'protocol/executor-binding.schema.json',
+  'protocol/routine-run-receipt.schema.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'protocol/examples/access-receipt.v1.json',
+  'protocol/examples/routine-contract.v1.json', 'protocol/examples/executor-binding.v1.json',
+  'protocol/examples/routine-run-receipt.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -66,8 +75,11 @@ const required = [
   'scripts/runtime-secret.mjs', 'scripts/runtime-access.mjs',
   'scripts/lib/system-protocol.mjs', 'scripts/lib/company-brain-protocol-v2.mjs',
   'scripts/lib/secret-provider.mjs', 'scripts/lib/access-runtime.mjs',
+  'scripts/lib/routine-protocol.mjs', 'scripts/lib/model-executors.mjs',
+  'scripts/lib/routine-runtime.mjs', 'scripts/routine-runtime.mjs',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
+  'scripts/test-routine-runtime.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
@@ -100,6 +112,9 @@ for (const [label, path, validate] of [
   ['example run record v2', 'protocol/examples/run-record.v2.json', validateRunRecord],
   ['example access grant v1', 'protocol/examples/access-grant.v1.json', validateAccessGrant],
   ['example access receipt v1', 'protocol/examples/access-receipt.v1.json', validateAccessReceipt],
+  ['example routine contract v1', 'protocol/examples/routine-contract.v1.json', validateRoutineContract],
+  ['example executor binding v1', 'protocol/examples/executor-binding.v1.json', validateExecutorBinding],
+  ['example routine run receipt v1', 'protocol/examples/routine-run-receipt.v1.json', validateRoutineRunReceipt],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -462,6 +477,20 @@ for (const contract of [
 ]) {
   if (!accessRuntime.includes(contract)) errors.push(`runtime de acesso sem guarda: ${contract}`);
 }
+const routineRuntime = readFileSync(join(ROOT, 'scripts', 'lib', 'routine-runtime.mjs'), 'utf8');
+for (const contract of [
+  'runtime-connector-not-bound', 'routine-already-running', 'activation-evidence-invalid',
+  'destination-not-private', 'scheduledSlotsBetween',
+]) {
+  if (!routineRuntime.includes(contract)) errors.push(`runtime de Rotinas sem guarda: ${contract}`);
+}
+const modelExecutors = readFileSync(join(ROOT, 'scripts', 'lib', 'model-executors.mjs'), 'utf8');
+for (const contract of [
+  "'codex-cli': 'codex'", "'claude-code': 'claude'", 'input: prompt',
+  'executor-timeout', '--no-session-persistence',
+]) {
+  if (!modelExecutors.includes(contract)) errors.push(`adapter de modelo sem guarda: ${contract}`);
+}
 
 const baseManifest = readFileSync(join(ROOT, 'sistemas', 'cerebro-base', 'manifest.md'), 'utf8');
 for (const contract of ['fonte real', 'artefato aprovado', 'T0', 'T4', 'segunda utilização']) {
@@ -473,6 +502,7 @@ if (layout.version !== 3) errors.push('layout precisa estar no protocolo v3');
 for (const key of [
   'activationBrief', 'configuration', 'activationContract', 'systemContract', 'sourceContracts',
   'accessGrants', 'accessReceipts', 'runLedger', 'learningRegister',
+  'routineContracts', 'executorBindings', 'routineReceipts', 'routineState', 'routineOutputs',
 ]) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);
@@ -548,4 +578,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 6 superfícies · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 9 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

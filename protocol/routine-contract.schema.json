@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/routine-contract-v1.json",
+  "title": "INEVITA Routine Contract V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "routine_id", "version", "name", "lifecycle", "system_ref",
+    "trigger", "placement", "executor", "context", "permission_mode", "destination",
+    "operations", "approval", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "routine_id": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/version" },
+    "name": { "type": "string", "minLength": 1 },
+    "lifecycle": { "enum": ["draft", "approved", "retired"] },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "schedule"],
+      "properties": {
+        "type": { "enum": ["manual", "schedule"] },
+        "schedule": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cadence", "time", "timezone", "weekdays", "month_days", "not_before",
+                "missed_run_policy"
+              ],
+              "properties": {
+                "cadence": { "enum": ["daily", "weekly", "monthly"] },
+                "time": { "type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$" },
+                "timezone": { "type": "string", "minLength": 1, "maxLength": 80 },
+                "weekdays": {
+                  "type": "array", "uniqueItems": true,
+                  "items": { "enum": ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] }
+                },
+                "month_days": {
+                  "type": "array", "uniqueItems": true,
+                  "items": { "type": "integer", "minimum": 1, "maximum": 28 }
+                },
+                "not_before": { "type": "string", "format": "date-time" },
+                "missed_run_policy": { "enum": ["run-on-wake", "skip"] }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "placement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["host_ref", "workspace_ref"],
+      "properties": {
+        "host_ref": { "$ref": "#/$defs/ref" },
+        "workspace_ref": { "$ref": "#/$defs/ref" }
+      }
+    },
+    "executor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["binding_ref", "requested_model", "reasoning_effort"],
+      "properties": {
+        "binding_ref": { "$ref": "#/$defs/ref" },
+        "requested_model": { "$ref": "#/$defs/local_ref" },
+        "reasoning_effort": { "enum": ["low", "medium", "high", "xhigh", "max"] }
+      }
+    },
+    "context": {
+      "type": "object", "additionalProperties": false,
+      "required": ["prompt_ref", "access_requests"],
+      "properties": {
+        "prompt_ref": { "$ref": "#/$defs/local_ref" },
+        "access_requests": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["grant_ref", "source_ref", "action", "mode"],
+            "properties": {
+              "grant_ref": { "$ref": "#/$defs/ref" },
+              "source_ref": { "$ref": "#/$defs/ref" },
+              "action": { "$ref": "#/$defs/id" },
+              "mode": { "enum": ["read", "propose", "write-with-approval"] }
+            }
+          }
+        }
+      }
+    },
+    "permission_mode": { "enum": ["read-only", "workspace-write"] },
+    "destination": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": { "enum": ["runtime-output", "local-file"] },
+        "ref": { "$ref": "#/$defs/local_ref" }
+      }
+    },
+    "operations": {
+      "type": "object", "additionalProperties": false,
+      "required": ["timeout_seconds", "retry", "concurrency"],
+      "properties": {
+        "timeout_seconds": { "type": "integer", "minimum": 10, "maximum": 7200 },
+        "retry": {
+          "type": "object", "additionalProperties": false,
+          "required": ["max_attempts", "backoff_seconds", "idempotency_scope"],
+          "properties": {
+            "max_attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "backoff_seconds": { "type": "integer", "minimum": 0, "maximum": 900 },
+            "idempotency_scope": { "const": "scheduled-slot" }
+          }
+        },
+        "concurrency": { "const": "forbid" }
+      }
+    },
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required_before_schedule", "approved_by", "approved_at"],
+      "properties": {
+        "required_before_schedule": { "const": true },
+        "approved_by": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content_shared_with_inevita"],
+      "properties": { "content_shared_with_inevita": { "const": false } }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

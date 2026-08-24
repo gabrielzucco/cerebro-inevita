@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os seis envelopes
+## Os nove envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -18,6 +18,13 @@ conteúdo bruto.
   prazo e garantia. Não é o grant de download de pacote da Society.
 - `access-receipt.schema.json`: o recibo reference-only de allow, deny, falha, revogação ou
   degradação; registra se a credencial estava presente, ausente ou sequer foi consultada.
+- `routine-contract.schema.json`: quando, onde e com qual executor um Sistema roda, quais grants
+  consulta, onde entrega e quais políticas de timeout, retry e idempotência aplica.
+- `executor-binding.schema.json`: binding privado entre a Rotina e um cliente oficial local
+  (`codex` ou `claude`) já autenticado pelo dono; nunca contém OAuth ou API key.
+- `routine-run-receipt.schema.json`: recibo privado de cada tentativa, com status, reason code e
+  referências de entrada/saída, mas sem prompt, output ou erro cru. Se o binding nem existe, o
+  adapter fica honestamente `unresolved` e a execução é negada antes de ler o prompt.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -47,6 +54,9 @@ proveniência da recuperação. Toda execução V2 deixa o Context Snapshot corr
 | Run Record | válido e imutável; leitura mostra `context-not-recorded` | válido; Context Snapshot obrigatório |
 | Source Contract | V1 | — |
 | Access Grant | V1 | — |
+| Routine Contract | V1 | — |
+| Executor Binding | V1 privado | — |
+| Routine Run Receipt | V1 privado | — |
 
 Os readers são dual-read. Os writers antigos continuam V1 e não injetam campos nos schemas
 fechados. O runner file-only recusa executar um System Contract V2 porque ainda não consegue
@@ -82,6 +92,9 @@ node scripts/protocol-validate.mjs system protocol/examples/system-contract.v2.j
 node scripts/protocol-validate.mjs run protocol/examples/run-record.v2.json
 node scripts/protocol-validate.mjs grant protocol/examples/access-grant.v1.json
 node scripts/protocol-validate.mjs receipt protocol/examples/access-receipt.v1.json
+node scripts/protocol-validate.mjs routine protocol/examples/routine-contract.v1.json
+node scripts/protocol-validate.mjs executor protocol/examples/executor-binding.v1.json
+node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 
@@ -124,10 +137,40 @@ node scripts/runtime-secret.mjs delete os-keychain:minha-fonte --confirm
 - sem provider, `runtime-enforced` é negado; `receipt-audited` e `exported` degradam honestamente
   para file-only, sem prometer ACL ou revogação retroativa.
 
+## Rotinas e assinatura do dono
+
+Rotina não é um segundo Sistema. O Sistema define o resultado; a Rotina define gatilho,
+placement, executor, contexto, destino e política operacional. O contrato pode circular sem
+conteúdo. Binding, estado, outputs e recibos ficam em `.cerebro/runtime/`, fora do Git.
+
+O worker V1 chama somente os clientes oficiais `codex exec` e `claude -p`. Ele usa a sessão que o
+dono já autenticou no próprio cliente: não copia OAuth, não transforma assinatura em API key e não
+promete modelo fora do plano. O prompt entra por `stdin`, nunca em `argv`; `cwd`, permissão e
+timeout vêm do contrato. O conteúdo necessário atravessa o provider escolhido, mas nunca a
+INEVITA.
+
+```bash
+node scripts/routine-runtime.mjs install caminho/routine-contract.json --confirm
+node scripts/routine-runtime.mjs binding executor-codex-local --adapter=codex-cli \
+  --host=host-owner-local --workspace-ref=company-brain-local --workspace=. \
+  --model=gpt-5.6-sol --permission=read-only --confirm
+node scripts/routine-runtime.mjs run funil-diario-cerebro --confirm
+node scripts/routine-runtime.mjs activate funil-diario-cerebro \
+  --evidence=routine-receipt:RECIBO --approved-by=role-owner --confirm
+node scripts/routine-runtime.mjs due
+node scripts/routine-runtime.mjs tick
+node scripts/routine-runtime.mjs pause funil-diario-cerebro --approved-by=role-owner --confirm
+```
+
+Ativar exige um run manual concluído da mesma versão. Pausa impede ocorrências futuras; não desfaz
+uma execução consumada. O slot agendado é idempotente e a concorrência é `forbid`. Nesta versão,
+um Access Grant `runtime-enforced` sem conector dedicado continua negado; a sessão do modelo não
+recebe a credencial.
+
 ## Harness
 
-`node scripts/test-company-brain-protocol-v2.mjs` e `node scripts/test-access-runtime.mjs` provam
-os dois sentidos:
+`node scripts/test-company-brain-protocol-v2.mjs`, `node scripts/test-access-runtime.mjs` e
+`node scripts/test-routine-runtime.mjs` provam os dois sentidos:
 
 - exemplos bons dos quatro deltas passam;
 - System Contract e Run Record V1 continuam válidos e não ganham contexto inventado;
@@ -137,3 +180,6 @@ os dois sentidos:
   legado permanecem byte a byte intactos.
 - grant válido executa uma vez; escopo negado e revogação nunca chamam o conector; falha e tentativa
   de exfiltração deixam recibo sanitizado; nenhum segredo persiste no sandbox.
+- o E2E de Rotinas usa processos fake injetados: prova `run now → complete → activate → due →
+  pause`, retry, slot idempotente, timeout, cliente ausente, autenticação requerida e os dois
+  adapters sem consumir nenhuma assinatura real.

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/executor-binding-v1.json",
+  "title": "INEVITA Executor Binding V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "binding_id", "adapter", "host_ref", "workspace_ref",
+    "workspace_path", "auth", "model_policy", "permission_profile", "observed_at", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "binding_id": { "$ref": "#/$defs/ref" },
+    "adapter": { "enum": ["codex-cli", "claude-code"] },
+    "host_ref": { "$ref": "#/$defs/ref" },
+    "workspace_ref": { "$ref": "#/$defs/ref" },
+    "workspace_path": {
+      "oneOf": [
+        { "const": "." },
+        { "$ref": "#/$defs/local_ref" }
+      ]
+    },
+    "auth": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "status"],
+      "properties": {
+        "type": { "const": "provider-session" },
+        "status": { "enum": ["ready", "missing", "authentication-required", "degraded"] }
+      }
+    },
+    "model_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["default_model", "allowed_models"],
+      "properties": {
+        "default_model": { "$ref": "#/$defs/local_ref" },
+        "allowed_models": {
+          "type": "array", "uniqueItems": true,
+          "items": { "$ref": "#/$defs/local_ref" }
+        }
+      }
+    },
+    "permission_profile": { "enum": ["read-only", "workspace-write"] },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["credential_stored", "content_shared_with_inevita"],
+      "properties": {
+        "credential_stored": { "const": false },
+        "content_shared_with_inevita": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

@@ -15,7 +15,7 @@ transformar runtime, nuvem ou Obsidian em requisito.
 Esta story abre a especificação executável do **Company Brain Console**: casca plural desde o
 início, uma vertical real de ponta a ponta e enforcement honesto conforme a custódia do acesso.
 A camada protocolar foi implementada em v1.27.0. O engine mínimo de runtime entra em v1.28.0;
-servidor e Console continuam fora desta entrega.
+o substrato de Rotinas entra na entrega seguinte; servidor e Console continuam fora.
 
 ## Decisões congeladas
 
@@ -37,6 +37,10 @@ servidor e Console continuam fora desta entrega.
   antes de oferecer runtime, telemetria, conta ou interface.
 - **Julgamento permanece central:** a UX de Casos/Mesa de Julgamento é uma superfície do mesmo
   Console. Esta story especifica o substrato de contratos, autoridade e execução, não outro produto.
+- **Rotina é objeto do Cérebro:** Sistema define o resultado; Rotina declara quando, onde e com
+  qual executor/modelo rodá-lo. Agenda escondida no fornecedor não é fonte de verdade.
+- **Assinatura via cliente oficial:** o runtime pode chamar um CLI já autenticado pelo dono; nunca
+  copia OAuth, converte assinatura em API key ou promete compatibilidade sem adapter verificável.
 
 ## Modelo plural
 
@@ -45,6 +49,7 @@ Company Brain
 ├── Áreas (navegação humana: Marketing, Vendas, Operação...)
 ├── Sistemas (resultados executáveis)
 ├── Fontes (casas de verdade compartilhadas)
+├── Rotinas (gatilho, host/workspace, executor, contexto, destino e política operacional)
 ├── Concessões (quem/o que pode fazer o quê, onde e até quando)
 ├── Runs (execução, contexto usado, eval e decisão)
 └── Saúde (vista derivada de contratos, concessões e runs)
@@ -115,6 +120,41 @@ Não confundir com o grant efêmero que autoriza download de pacote Society. O n
 V1 promete controle duro somente quando o runtime possui custódia exclusiva. Para arquivo local,
 o grant é auditável; para export, a UI informa irreversibilidade.
 
+### 5. Routine Contract V1 — schema novo
+
+Contrato canônico e compartilhável por Rotina, sem prompt privado, token ou caminho absoluto:
+
+- `routine_id`, versão, estado e `system_ref`;
+- gatilho manual ou calendário estruturado com timezone e política de execução perdida;
+- referências opacas de host, workspace e Executor Binding;
+- modelo/effort solicitados, sem alegar disponibilidade antes do readback do executor;
+- referência do prompt/contexto, Access Grants e modo de permissão;
+- destino local reference-only;
+- timeout, retry, idempotência e concorrência;
+- aprovação exigida antes do primeiro agendamento e antes de ações externas.
+
+### 6. Executor Binding V1 — privado
+
+Binding local em `.cerebro/runtime/executors/`, sempre fora do Git:
+
+- adapter fechado: `codex-cli` ou `claude-code` nesta versão;
+- binário resolvido localmente, argumentos de política permitidos e workspace real;
+- tipo de autenticação declarado como `provider-session`; nunca token ou credencial;
+- status observado (`ready`, `missing`, `authentication-required`, `degraded`) e heartbeat;
+- modelos permitidos são observação local e podem mudar conforme o plano do dono.
+
+O binding não prova inferência local: o contexto selecionado atravessa o provider escolhido.
+
+### 7. Routine Run Receipt V1 — schema novo
+
+Cada tentativa deixa recibo privado, reference-only e sem prompt/output/erro cru:
+
+- Rotina, Sistema, binding, adapter e modelo solicitados, sem fingir verificar o modelo efetivo;
+- instante agendado, início, fim, status e reason code;
+- referências do Access Receipt, Run Record, input e output;
+- timeout/retry e decisão sobre próxima ocorrência;
+- fronteira de dados declarando que conteúdo foi enviado ao provider, nunca à INEVITA.
+
 ## Compatibilidade
 
 - `system-contract-v1` e `run-record-v1` permanecem imutáveis.
@@ -137,6 +177,10 @@ o grant é auditável; para export, a UI informa irreversibilidade.
 - acesso negado e revogação deixam recibo reference-only;
 - ausência ou falha do runtime degrada para file-only mode quando o trabalho não exige conexão;
 - nenhuma telemetria de produto recebe conteúdo, fonte, output, consulta, erro cru ou decisão.
+- o worker chama apenas adapters fechados, envia prompt por `stdin`, limita cwd/timeout e nunca
+  entrega OAuth ao processo filho;
+- o scheduler mantém estado privado reconstruível; pausar no contrato impede novos Runs e uma
+  execução já consumada não é desfeita.
 
 ## V0 do Console
 
@@ -184,6 +228,13 @@ no repositório:
       Node ou Console.
 - [x] Runtime local pode negar um acesso externo não concedido, revogar um acesso futuro e deixar
       recibo sem persistir a credencial.
+- [x] Routine Contract V1 e Routine Run Receipt V1 possuem schemas fechados, exemplos sanitizados
+      e validadores determinísticos; prompt, output, erro cru e segredo reprovam.
+- [x] Executor Binding privado detecta Codex/Claude local sem armazenar OAuth e o worker passa o
+      prompt por stdin, nunca argv.
+- [x] O harness prova `rodar agora → concluir → agendar/due → pausar`, retry idempotente, timeout,
+      binding ausente/auth requerida e recibo sem conteúdo.
+- [x] Nenhum adapter ou teste consome a assinatura real; execução E2E usa processo fake injetado.
 - [ ] A UI nunca chama arquivo local de `runtime-enforced`; cada acesso mostra garantia real.
 - [ ] A casca renderiza várias Áreas, Sistemas e Fontes sem hardcode de singleton.
 - [ ] Uma vertical de Marketing usa ao menos três papéis de Fonte, gera Run Record V2 com Context
@@ -219,6 +270,9 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - oito áreas funcionais completas;
 - mudança de site/isca antes do teste real;
 - implementação do Console, servidor local ou conectores reais nesta entrega do runtime mínimo.
+- migração automática das rotinas atuais de Codex, Claude, launchd ou GitHub Actions;
+- daemon/serviço instalado no sistema operacional; o worker V1 é invocado por comando/tick;
+- suporte genérico a qualquer provider ou uso de sessão web por scraping.
 
 ## Tasks
 
@@ -226,6 +280,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - [x] Especificar schemas, exemplos e migrations dos quatro deltas.
 - [x] Estender validators e harness anti-slop com dual-read.
 - [x] Especificar e implementar provider de segredos, enforcement e degradação do runtime.
+- [x] Implementar Routine Contract, Executor Binding, Routine Run Receipt e worker local.
 - [ ] Construir o fluxo vertical do Console sobre contratos reais.
 - [ ] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
 - [ ] Dogfood interno e implantação externa assistida.
@@ -237,6 +292,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - contract tests V1↔V2 e fixtures negativos;
 - E2E file-only sem Node;
 - E2E managed mode com fonte externa fake, segredo efêmero, deny e revoke;
+- E2E de Rotina com adapters fake, prompt em stdin, agenda, pausa e recibos sanitizados;
 - E2E visual do fluxo vertical com múltiplos Sistemas/Fontes listados;
 - replay do primeiro caso e segundo Run comparável;
 - `scripts/validate-product.mjs`, `scripts/test-*.mjs`, build do starter e `git diff --check`.
@@ -250,6 +306,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `.claude/skills/fonte/SKILL.md`
 - `CHANGELOG.md`
 - `GLOSSARIO.md`
+- `METODO-SISTEMAS.md`
 - `VERSION`
 - `dist/company-brain-starter-en.zip`
 - `docs/stories/2026-08-23-company-brain-console-local-control-plane.md`
@@ -260,22 +317,33 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/access-receipt.schema.json`
 - `protocol/examples/access-grant.v1.json`
 - `protocol/examples/access-receipt.v1.json`
+- `protocol/examples/executor-binding.v1.json`
+- `protocol/examples/routine-contract.v1.json`
+- `protocol/examples/routine-run-receipt.v1.json`
 - `protocol/examples/run-record.v2.json`
 - `protocol/examples/source-contract.v1.json`
 - `protocol/examples/system-contract.v2.json`
 - `protocol/run-record-v2.schema.json`
+- `protocol/executor-binding.schema.json`
+- `protocol/routine-contract.schema.json`
+- `protocol/routine-run-receipt.schema.json`
 - `protocol/source-contract.schema.json`
 - `protocol/system-contract-v2.schema.json`
 - `scripts/lib/company-brain-protocol-v2.mjs`
 - `scripts/lib/access-runtime.mjs`
+- `scripts/lib/model-executors.mjs`
+- `scripts/lib/routine-protocol.mjs`
+- `scripts/lib/routine-runtime.mjs`
 - `scripts/lib/secret-provider.mjs`
 - `scripts/lib/system-protocol.mjs`
 - `scripts/protocol-validate.mjs`
 - `scripts/runtime-access.mjs`
 - `scripts/runtime-secret.mjs`
+- `scripts/routine-runtime.mjs`
 - `scripts/source-contract.mjs`
 - `scripts/system-run.mjs`
 - `scripts/test-access-runtime.mjs`
 - `scripts/test-company-brain-protocol-v2.mjs`
 - `scripts/test-company-brain-starter.mjs`
+- `scripts/test-routine-runtime.mjs`
 - `scripts/validate-product.mjs`

@@ -240,7 +240,15 @@ Essas peças convivem no pipeline, mas não são sinônimos.
 ### Rotina — quando
 
 Dispara por evento ou cadência: “quando a call termina”, “todo dia às 9h”, “quando a amostra
-atinge o mínimo”. Uma rotina declara gatilho, dono, entrada, passos, exceção e recibo.
+atinge o mínimo”. Uma rotina não redefine o resultado do Sistema. Ela declara gatilho, host e
+workspace, executor/modelo solicitado, referências do contexto e dos Access Grants, destino,
+timeout, retry, idempotência, concorrência, exceção e recibo.
+
+Quando o dono usa a própria assinatura de um provedor, o Cérebro chama somente o cliente oficial
+já autenticado na máquina. A sessão fica com o provedor: o contrato não guarda OAuth nem converte
+assinatura em API key. O prompt entra por `stdin`, o output fica no destino privado e cada tentativa
+deixa um Routine Run Receipt sem conteúdo. Agendar só vem depois de um run manual concluído e da
+aprovação humana; pausar bloqueia ocorrências futuras, sem fingir apagar o que já rodou.
 
 ### Skill — como
 

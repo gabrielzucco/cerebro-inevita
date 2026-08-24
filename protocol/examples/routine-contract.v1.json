@@ -1,0 +1,62 @@
+{
+  "protocol_version": 1,
+  "routine_id": "funil-diario-cerebro",
+  "version": "1.0.0",
+  "name": "Leitura diária do funil",
+  "lifecycle": "approved",
+  "system_ref": "analisar-funil",
+  "trigger": {
+    "type": "schedule",
+    "schedule": {
+      "cadence": "daily",
+      "time": "08:30",
+      "timezone": "America/Sao_Paulo",
+      "weekdays": [],
+      "month_days": [],
+      "not_before": "2026-08-24T00:00:00.000Z",
+      "missed_run_policy": "run-on-wake"
+    }
+  },
+  "placement": {
+    "host_ref": "host-owner-local",
+    "workspace_ref": "company-brain-local"
+  },
+  "executor": {
+    "binding_ref": "executor-codex-local",
+    "requested_model": "gpt-5.6-sol",
+    "reasoning_effort": "high"
+  },
+  "context": {
+    "prompt_ref": "operacao/rotinas/funil-diario.prompt.md",
+    "access_requests": [
+      {
+        "grant_ref": "grant-funnel-local-read",
+        "source_ref": "paid-media",
+        "action": "read-metrics",
+        "mode": "read"
+      }
+    ]
+  },
+  "permission_mode": "read-only",
+  "destination": {
+    "kind": "local-file",
+    "ref": "operacao/execucoes/rotinas/funil-diario.md"
+  },
+  "operations": {
+    "timeout_seconds": 900,
+    "retry": {
+      "max_attempts": 2,
+      "backoff_seconds": 60,
+      "idempotency_scope": "scheduled-slot"
+    },
+    "concurrency": "forbid"
+  },
+  "approval": {
+    "required_before_schedule": true,
+    "approved_by": "role-marketing-owner",
+    "approved_at": "2026-08-23T22:20:00.000Z"
+  },
+  "privacy": {
+    "content_shared_with_inevita": false
+  }
+}

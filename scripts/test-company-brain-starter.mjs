@@ -25,13 +25,17 @@ try {
     'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
     'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
     'protocol/access-receipt.schema.json', 'protocol/examples/access-receipt.v1.json',
+    'protocol/routine-contract.schema.json', 'protocol/executor-binding.schema.json',
+    'protocol/routine-run-receipt.schema.json',
+    'protocol/examples/routine-contract.v1.json', 'protocol/examples/executor-binding.v1.json',
+    'protocol/examples/routine-run-receipt.v1.json',
   ];
   for (const file of required) if (!existsSync(join(output, file))) errors.push(`missing: ${file}`);
   if (!existsSync(zip)) errors.push('missing zip');
 
   if (existsSync(join(output, '.cerebro', 'layout.json'))) {
     const layout = JSON.parse(readFileSync(join(output, '.cerebro', 'layout.json'), 'utf8'));
-    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'sourceContracts', 'accessGrants', 'accessReceipts', 'runLedger', 'learningRegister']) {
+    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'sourceContracts', 'accessGrants', 'accessReceipts', 'routineContracts', 'executorBindings', 'routineReceipts', 'routineState', 'routineOutputs', 'runLedger', 'learningRegister']) {
       const value = layout[key];
       if (!value || value.startsWith('/') || value.includes('..')) errors.push(`unsafe layout path: ${key}`);
     }

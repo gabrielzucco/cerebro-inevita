@@ -1,0 +1,22 @@
+{
+  "protocol_version": 1,
+  "binding_id": "executor-codex-local",
+  "adapter": "codex-cli",
+  "host_ref": "host-owner-local",
+  "workspace_ref": "company-brain-local",
+  "workspace_path": ".",
+  "auth": {
+    "type": "provider-session",
+    "status": "ready"
+  },
+  "model_policy": {
+    "default_model": "gpt-5.6-sol",
+    "allowed_models": []
+  },
+  "permission_profile": "read-only",
+  "observed_at": "2026-08-23T22:20:00.000Z",
+  "privacy": {
+    "credential_stored": false,
+    "content_shared_with_inevita": false
+  }
+}

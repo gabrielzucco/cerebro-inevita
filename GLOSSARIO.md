@@ -29,7 +29,10 @@
 | **Estado do mapa** | O grau de prova do Architect: V0 declarado · V1 evidência parcial · V2 verificado pelo responsável · V3 validado por execução e resultado. |
 | **Mapa da empresa** | Vista de controle que começa ampla e rasa no declarado e ganha recortes observados por uso; registra entidades, fontes, relações, decisões, lacunas e estado de evidência sem exigir ingestão total. |
 | **Pipeline** | Estados pelos quais uma entrada vira uma saída verificável. |
-| **Rotina** | Gatilho por evento ou cadência que inicia ou revisa um pipeline. |
+| **Rotina** | Objeto operacional que dispara um Sistema: declara quando, em qual host/workspace, com qual executor/modelo, usando quais grants e prompt por referência, entregando onde e sob quais políticas de timeout, retry, idempotência e concorrência. Não redefine o resultado do Sistema. |
+| **Routine Contract** | Envelope compartilhável e sem conteúdo da Rotina. Agenda, placement, referências de contexto, destino e política são canônicos; sessão autenticada e estado de execução não circulam. |
+| **Executor Binding** | Binding privado entre uma Rotina e um cliente oficial local do modelo, já autenticado pelo dono. Registra compatibilidade observada, nunca OAuth, token ou API key. |
+| **Routine Run Receipt** | Recibo privado e reference-only de uma tentativa da Rotina: slot, executor solicitado, tempos, status, reason code e referências de acesso/input/output, sem prompt, output ou erro cru. |
 | **Conexão** | Interface fina para uma fonte ou ferramenta; não contém o processo inteiro. [MCP/CLI] |
 | **Output** | Resultado concreto e verificável produzido por uma execução. |
 | **Recibo** | Registro local que liga entrada, output, versão, gates, decisão, falhas e próxima ação de uma execução. |
