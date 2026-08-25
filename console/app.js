@@ -648,7 +648,6 @@ function showDrawerShell(content) {
   $('#drawer-content').innerHTML = content;
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
-  $('#drawer-backdrop').hidden = false;
 }
 
 function entityLink(attribute, ref, title, hint, kind) {
@@ -904,7 +903,6 @@ function openDrawer(routineId) {
     <div class="drawer-actions">${drawerActions(routine)}</div>`;
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
-  $('#drawer-backdrop').hidden = false;
 }
 
 function closeDrawer() {
@@ -927,7 +925,6 @@ async function openExperiment(experimentId) {
   $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo contrato privado local…</span></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
-  $('#drawer-backdrop').hidden = false;
   try {
     const detail = await getJson(`/api/experiments/${experimentId}`);
     if (state.selectedExperiment !== experimentId) return;
@@ -1008,7 +1005,6 @@ async function openContextDrawer(receiptId) {
   $('#drawer-content').innerHTML = '<div class="drawer-head"><p class="eyebrow">RUN RECORD V2</p><h2>Contexto selecionado</h2></div><div id="context-slot"><p class="muted">Lendo referências locais…</p></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
-  $('#drawer-backdrop').hidden = false;
   await loadContext(receiptId, $('#context-slot'));
 }
 
@@ -1019,7 +1015,6 @@ async function openJudgment(receiptId) {
   $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo output privado local…</span></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
-  $('#drawer-backdrop').hidden = false;
   try {
     const detail = await getJson(`/api/runs/${receiptId}/output`);
     const current = detail.judgment.summary;

@@ -833,19 +833,41 @@ export function createSlotKey(routineId, trigger, scheduledFor = null, nonce = r
   return `slot-${createHash('sha256').update(material).digest('hex').slice(0, 24)}`;
 }
 
+// Intl.DateTimeFormat é caro de CONSTRUIR (~1ms) e barato de USAR. Os loops de
+// agenda andam minuto a minuto; sem memoização isso custava segundos por request.
+const ZONED_FORMATTERS = new Map();
+const ZONED_PARTS_CACHE = new Map();
+const ZONED_PARTS_CACHE_MAX = 400000;
+
+function zonedFormatter(timezone) {
+  let formatter = ZONED_FORMATTERS.get(timezone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
+    });
+    ZONED_FORMATTERS.set(timezone, formatter);
+  }
+  return formatter;
+}
+
 function zonedParts(dateValue, timezone) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
-  }).formatToParts(dateValue);
+  const epochMinute = Math.floor(new Date(dateValue).getTime() / 60000);
+  const cacheKey = `${epochMinute}|${timezone}`;
+  const cached = ZONED_PARTS_CACHE.get(cacheKey);
+  if (cached) return cached;
+  const parts = zonedFormatter(timezone).formatToParts(dateValue);
   const value = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
-  return {
+  const result = {
     localDate: `${value.year}-${value.month}-${value.day}`,
     day: Number(value.day),
     time: `${value.hour}:${value.minute}`,
     weekday: WEEKDAY_FROM_INTL[value.weekday],
   };
+  if (ZONED_PARTS_CACHE.size >= ZONED_PARTS_CACHE_MAX) ZONED_PARTS_CACHE.clear();
+  ZONED_PARTS_CACHE.set(cacheKey, result);
+  return result;
 }
 
 function scheduleMatches(schedule, instant) {

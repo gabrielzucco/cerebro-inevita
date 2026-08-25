@@ -1109,12 +1109,12 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
   width: min(580px, 94vw);
   overflow-y: auto;
   padding: var(--s6) var(--s6) 110px;
-  border: 1px solid var(--hairline-2);
+  border: 1px solid rgba(255, 255, 255, .16);
   border-radius: var(--r-lg);
-  background: #101012;
-  box-shadow: var(--shadow-lift);
+  background: #101013;
+  box-shadow: -24px 0 80px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .4);
   transform: translateX(calc(100% + 16px));
-  transition: transform .24s var(--ease);
+  transition: transform .22s var(--ease);
 }
 .drawer.open { transform: translateX(0); }
 
