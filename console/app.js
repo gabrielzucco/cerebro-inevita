@@ -328,7 +328,7 @@ function systemCockpit(system) {
       <span class="cockpit-actions">
         <button class="canvas-tool" data-open-system="${escapeHtml(system.system_id)}">Detalhes</button>
         ${system.source_manifest_ref ? `<button class="canvas-tool" data-copy-ref="${escapeHtml(system.source_manifest_ref)}" title="Copiar caminho do manifest">Manifest ⧉</button>` : ''}
-        ${system.interface_ref ? `<a class="canvas-tool replay" href="/files/${encodeURIComponent(system.interface_ref)}" target="_blank" rel="noopener">Abrir interface ↗</a>` : ''}
+        ${system.interface_ref ? `<a class="canvas-tool replay" href="${system.interface_ref.startsWith('http') ? escapeHtml(system.interface_ref) : `/files/${encodeURIComponent(system.interface_ref)}`}" target="_blank" rel="noopener">Abrir interface ↗</a>` : ''}
       </span>
     </div>
     ${executions.length ? `<div class="cockpit-execs"><p class="micro">EXECUÇÕES · ${executions.length} — clique para abrir o trace</p>${executions.slice(0, 12).map((execution) => `<button type="button" class="cockpit-exec" data-canvas-jump-run="${escapeHtml(execution.selector_ref)}"><i class="health-dot ${tone(execution.status)}"></i><strong>${escapeHtml(execution.label)}</strong><small>${escapeHtml(label(execution.mode || '—'))}</small><small>${fmtDate(execution.completed_at)}</small><b>→</b></button>`).join('')}${executions.length > 12 ? `<p class="muted">+ ${executions.length - 12} anteriores na aba Execuções</p>` : ''}</div>` : '<p class="section-help">Nenhuma execução registrada ainda — o primeiro run aparece aqui com trace clicável.</p>'}
