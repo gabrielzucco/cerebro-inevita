@@ -301,6 +301,7 @@ function renderCanvas() {
           <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
         </div>
         ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : ''}
+        ${state.canvas.scope === 'run' ? '<button class="canvas-tool replay" data-canvas-replay>▶ Replay</button>' : ''}
         <button class="canvas-tool" data-canvas-fit>Mapa inteiro</button>
         <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
         <button class="canvas-tool primary" data-canvas-save disabled>Salvar</button>
@@ -469,6 +470,7 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   $('#summary').innerHTML = state.view === 'canvas' ? '' : summaryCards();
+  if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
   if (state.canvas.stopParticles) { state.canvas.stopParticles(); state.canvas.stopParticles = null; }
   $('#content').innerHTML = tabstrip() + renderers[state.view]();
@@ -634,6 +636,72 @@ async function renderKnowledgePanel() {
       <div class="knowledge-block"><p class="micro">MAIS LINKADAS</p>${knowledge.most_linked.map((note) => `<button type="button" class="knowledge-note" data-copy-ref="${escapeHtml(note.path)}" title="Copiar caminho"><strong>${escapeHtml(note.title)}</strong><small>${escapeHtml(note.domain)} · ${note.count}←</small></button>`).join('') || '<p class="muted">Nenhum wikilink encontrado.</p>'}</div>
       <p class="section-help">Clique copia o caminho da nota. Este índice é derivado e reconstruível; a verdade continua nos arquivos.</p>`;
   } catch { /* painel opcional — o Canvas funciona sem ele */ }
+}
+
+/* Replay do Execution Trace — reproduz o run evento a evento sobre o mapa.
+   Só coreografa o que o ledger registrou; estados finais voltam ao real no fim. */
+const replay = { playing: false, timer: 0 };
+
+function stopTraceReplay(restore = true) {
+  clearTimeout(replay.timer);
+  replay.playing = false;
+  $('#replay-ticker')?.remove();
+  const button = $('[data-canvas-replay]');
+  if (button) button.textContent = '▶ Replay';
+  if (!restore) return;
+  for (const element of document.querySelectorAll('#operational-canvas .brain-node')) {
+    if (element.dataset.replayClass) {
+      element.className = element.dataset.replayClass;
+      delete element.dataset.replayClass;
+    }
+  }
+}
+
+function playTraceReplay() {
+  const timeline = (state.canvas.graph?.trace_timeline || []).filter((event) => event.node_id);
+  if (!timeline.length) { toast('Este run não tem trace com eventos para reproduzir.', 'bad'); return; }
+  if (replay.playing) { stopTraceReplay(); return; }
+  replay.playing = true;
+  const button = $('[data-canvas-replay]');
+  if (button) button.textContent = '⏹ Parar';
+  const pane = document.querySelector('.canvas-graph-pane');
+  const ticker = document.createElement('div');
+  ticker.id = 'replay-ticker';
+  ticker.className = 'replay-ticker';
+  pane?.appendChild(ticker);
+  const nodes = [...document.querySelectorAll('#operational-canvas .brain-node')];
+  for (const element of nodes) {
+    element.dataset.replayClass = element.className;
+    element.className = element.className
+      .replace(/brain-node--state-[\w-]+/g, 'brain-node--state-declared')
+      .replace(/\bis-focused\b|\bis-neighbor\b/g, '');
+    element.classList.add('is-dimmed');
+  }
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const stepMs = reduced ? 0 : 620;
+  let index = 0;
+  let previous = null;
+  const step = () => {
+    if (!replay.playing) return;
+    if (index >= timeline.length) {
+      ticker.innerHTML = `<b>✓</b> trace completo · ${timeline.length} eventos`;
+      replay.timer = setTimeout(() => stopTraceReplay(), reduced ? 0 : 1600);
+      return;
+    }
+    const event = timeline[index];
+    const element = document.querySelector(`#operational-canvas .brain-node[data-node-id="${CSS.escape(event.node_id)}"]`);
+    if (element) {
+      element.classList.remove('is-dimmed');
+      element.className = element.className.replace(/brain-node--state-[\w-]+/g, `brain-node--state-${event.state}`);
+      previous?.classList.remove('is-focused');
+      element.classList.add('is-focused');
+      previous = element;
+    }
+    ticker.innerHTML = `<b>${index + 1}/${timeline.length}</b> ${escapeHtml(event.step_id)} · ${escapeHtml(label(event.state))}`;
+    index += 1;
+    replay.timer = setTimeout(step, stepMs);
+  };
+  step();
 }
 
 // Troca rápida de referência (‹ › no pill, ← → no teclado)
@@ -1098,6 +1166,7 @@ document.addEventListener('click', (event) => {
     return;
   }
   if (event.target.closest('[data-canvas-save]')) { saveCanvasLayout(); return; }
+  if (event.target.closest('[data-canvas-replay]')) { playTraceReplay(); return; }
   const canvasNode = event.target.closest('[data-canvas-inspect-node]');
   if (canvasNode && state.canvas.graph) {
     const node = state.canvas.graph.nodes.find((item) => item.id === canvasNode.dataset.canvasInspectNode);

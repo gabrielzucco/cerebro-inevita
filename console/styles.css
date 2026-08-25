@@ -924,6 +924,34 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
   overflow: hidden;
 }
 
+/* Replay do trace — botão e ticker */
+.canvas-tool.replay { color: #07111d; background: var(--run); font-weight: 620; }
+.canvas-tool.replay:hover { filter: brightness(1.08); background: var(--run); color: #07111d; }
+.replay-ticker {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  max-width: min(520px, 90%);
+  padding: 7px 14px;
+  color: var(--text);
+  border: 1px solid rgba(78, 156, 245, .4);
+  border-radius: 999px;
+  background: var(--overlay);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 24px rgba(78, 156, 245, .15), var(--shadow-lift);
+  font: 560 var(--fs-micro) var(--font-mono);
+  letter-spacing: .05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.replay-ticker b { color: var(--run); font-weight: 700; }
+
 /* Pill de navegação inferior — ‹ referência › como no leque do Gbrain */
 .canvas-nav-pill {
   position: absolute;

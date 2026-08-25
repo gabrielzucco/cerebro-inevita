@@ -640,11 +640,24 @@ export function buildRunGraph(root, receiptId) {
     graph.trace_origin = events[0].extensions?.origin === 'reconstructed' ? 'reconstructed' : 'recorded';
     graph.trace_ref = `execution-trace:${events[0].trace_id}`;
     graph.trace_events = events.length;
+    // Timeline reference-only para replay visual: sequência, passo e estado —
+    // nunca payload, prompt ou output.
+    graph.trace_timeline = [...events]
+      .sort((left, right) => left.sequence - right.sequence)
+      .map((event) => ({
+        sequence: event.sequence,
+        step_id: event.step_id,
+        step_type: event.step_type,
+        state: event.state,
+        occurred_at: event.occurred_at,
+        node_id: traceNodeId(event),
+      }));
     applyRecordedTrace(graph, events);
   } else {
     graph.trace_origin = 'reconstructed';
     graph.trace_ref = null;
     graph.trace_events = 0;
+    graph.trace_timeline = [];
     applyReconstructedTrace(root, graph, receipt, record);
   }
   try {
