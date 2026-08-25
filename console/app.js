@@ -333,12 +333,12 @@ function renderSystems() {
     const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
     const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
     const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
-    return `<article class="object-card" data-kind="system"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
+    return `<article class="object-card" data-kind="system" data-open-system="${escapeHtml(system.system_id)}"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
   }).join('') || empty('Nenhum Sistema contratado', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}</div>`;
 }
 
 function renderSources() {
-  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card" data-kind="source"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
 }
 
 function experimentProgress(experiment) {
@@ -638,6 +638,73 @@ async function renderKnowledgePanel() {
   } catch { /* painel opcional — o Canvas funciona sem ele */ }
 }
 
+/* Drawers de Sistema e Fonte — os objetos estruturais também abrem, e tudo
+   se cruza: fonte ↔ sistemas ↔ rotinas ↔ experimentos, em cadeia. */
+
+function showDrawerShell(content) {
+  state.selectedRoutine = null;
+  state.selectedJudgment = null;
+  state.selectedExperiment = null;
+  $('#drawer-content').innerHTML = content;
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#drawer-backdrop').hidden = false;
+}
+
+function entityLink(attribute, ref, title, hint, kind) {
+  return `<button type="button" class="node-link" ${attribute}="${escapeHtml(ref)}" style="--dot: var(--kind-${escapeHtml(kind)}, var(--idle))"><i></i><strong>${escapeHtml(title)}</strong><small>${escapeHtml(hint)}</small></button>`;
+}
+
+// source_refs pode vir como string ou objeto {source_id, role, ...} conforme o contrato
+function sourceRefId(ref) {
+  return typeof ref === 'string' ? ref : ref?.source_id || ref?.ref || ref?.role || '';
+}
+
+function openSystemDrawer(systemId) {
+  const system = state.model.systems.find((item) => item.system_id === systemId);
+  if (!system) return;
+  const sources = system.source_refs.map((ref) => {
+    const refId = sourceRefId(ref);
+    return state.model.sources.find((item) => item.source_id === refId) || { source_id: refId, name: refId, type: typeof ref === 'object' ? ref.role || '—' : '—' };
+  });
+  const routines = state.model.routines.filter((routine) => routine.system_ref === system.system_id);
+  const experiments = (state.model.experiments || []).filter((experiment) => experiment.system_ref === system.system_id);
+  const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
+  showDrawerShell(`<div class="drawer-head"><p class="micro">SISTEMA · v${escapeHtml(system.version)}</p><h2>${escapeHtml(system.name)}</h2>
+      <div class="judgment-badges">${badge(system.migration_stage, system.migration_stage === 'active' ? 'good' : system.migration_stage === 'configured' ? 'neutral' : 'warn', stageLabel)}${system.human_maturity ? badge(system.human_maturity, 'neutral') : ''}</div></div>
+    <p class="section-help">${escapeHtml(system.result)}</p>
+    ${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}
+    <div class="drawer-section"><h3>Contrato</h3><dl>
+      <div><dt>Área</dt><dd>${escapeHtml(label(system.area_ref))}</dd></div>
+      <div><dt>Retrieval</dt><dd>${system.retrieval_status === 'declared' ? 'Declarado' : 'Não declarado'}</dd></div>
+      <div><dt>Contrato</dt><dd><code>${escapeHtml(system.contract_id)}</code></dd></div>
+    </dl></div>
+    <div class="drawer-section"><h3>Fontes · ${sources.length}</h3><div class="node-links">${sources.map((source) => entityLink('data-open-source', source.source_id, source.name, source.type || 'fonte', 'source')).join('') || '<p class="muted">Nenhuma fonte declarada.</p>'}</div></div>
+    ${routines.length ? `<div class="drawer-section"><h3>Rotinas · ${routines.length}</h3><div class="node-links">${routines.map((routine) => entityLink('data-open-routine', routine.routine_id, routine.name, label(routine.health_reason_code), 'routine')).join('')}</div></div>` : ''}
+    ${experiments.length ? `<div class="drawer-section"><h3>Experimentos · ${experiments.length}</h3><div class="node-links">${experiments.map((experiment) => entityLink('data-open-experiment', experiment.experiment_id, experiment.name, label(experiment.status), 'gate')).join('')}</div></div>` : ''}
+    <div class="drawer-section"><button class="action primary" data-open-experiment-system="${escapeHtml(system.system_id)}">Ver no Canvas →</button></div>`);
+}
+
+function openSourceDrawer(sourceId) {
+  const source = state.model.sources.find((item) => item.source_id === sourceId);
+  if (!source) return;
+  const systems = state.model.systems.filter((system) => system.source_refs.some((ref) => sourceRefId(ref) === source.source_id));
+  const grants = state.model.routines.flatMap((routine) => routine.access
+    .filter((access) => access.source_ref === source.source_id)
+    .map((access) => ({ routine, access })));
+  showDrawerShell(`<div class="drawer-head"><p class="micro">FONTE · ${escapeHtml(source.type || 'casa de verdade')}</p><h2>${escapeHtml(source.name)}</h2>
+      <div class="judgment-badges">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div></div>
+    <div class="drawer-section"><h3>Contrato</h3><dl>
+      <div><dt>Custódia</dt><dd>${escapeHtml(label(source.custody))}</dd></div>
+      <div><dt>PII</dt><dd>${escapeHtml(label(source.pii))}</dd></div>
+      <div><dt>Modos</dt><dd>${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join(' ')}</dd></div>
+      <div><dt>Ref</dt><dd><code>${escapeHtml(source.source_id)}</code></dd></div>
+    </dl></div>
+    <div class="drawer-section"><h3>Sistemas que usam · ${systems.length}</h3><div class="node-links">${systems.map((system) => entityLink('data-open-system', system.system_id, system.name, label(system.migration_stage), 'system')).join('') || '<p class="muted">Nenhum sistema declara esta fonte.</p>'}</div></div>
+    ${grants.length ? `<div class="drawer-section"><h3>Acessos concedidos · ${grants.length}</h3><div class="node-links">${grants.map(({ routine, access }) => entityLink('data-open-routine', routine.routine_id, routine.name, `${label(access.assurance)} · ${label(access.revocation_effect)}`, 'routine')).join('')}</div></div>` : ''}
+    <div class="drawer-section"><button class="action primary" data-focus-brain-node="source:${escapeHtml(source.source_id)}">Ver no mandala →</button></div>`);
+}
+
 /* Replay do Execution Trace — reproduz o run evento a evento sobre o mapa.
    Só coreografa o que o ledger registrou; estados finais voltam ao real no fim. */
 const replay = { playing: false, timer: 0 };
@@ -675,7 +742,7 @@ function playTraceReplay() {
     element.className = element.className
       .replace(/brain-node--state-[\w-]+/g, 'brain-node--state-declared')
       .replace(/\bis-focused\b|\bis-neighbor\b/g, '');
-    element.classList.add('is-dimmed');
+    element.classList.add('is-awaiting');
   }
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stepMs = reduced ? 0 : 620;
@@ -691,7 +758,7 @@ function playTraceReplay() {
     const event = timeline[index];
     const element = document.querySelector(`#operational-canvas .brain-node[data-node-id="${CSS.escape(event.node_id)}"]`);
     if (element) {
-      element.classList.remove('is-dimmed');
+      element.classList.remove('is-awaiting');
       element.className = element.className.replace(/brain-node--state-[\w-]+/g, `brain-node--state-${event.state}`);
       previous?.classList.remove('is-focused');
       element.classList.add('is-focused');
@@ -735,11 +802,18 @@ async function mountCanvasView() {
       ? `<span>${graph.run?.mode ? escapeHtml(label(graph.run.mode).toUpperCase()) : graph.trace_origin === 'recorded' ? 'TRACE V1' : 'TRACE RECONSTRUÍDO'}</span><b>${escapeHtml(graph.run?.chain_id ? `${graph.run.chain_id} · ${graph.trace_events} eventos` : graph.trace_origin === 'recorded' ? `${graph.trace_events} eventos` : 'granularidade limitada')}</b>`
       : `<span>CONTRATO</span><b>${graph.nodes.length} nós · ${graph.edges.length} arestas</b>`;
     $('#canvas-list').innerHTML = canvasList(graph);
-    if (state.canvas.scope === 'brain') void renderKnowledgePanel();
+    const pendingFocus = state.canvas.pendingFocus;
+    state.canvas.pendingFocus = null;
+    if (state.canvas.scope === 'brain' && !pendingFocus) void renderKnowledgePanel();
+    if (pendingFocus) {
+      const focusTarget = graph.nodes.find((item) => item.id === pendingFocus);
+      if (focusTarget) canvasInspector(focusTarget);
+    }
     state.canvas.controller = await mountOperationalCanvas({
       container,
       model: graph,
       editable: state.canvas.editable,
+      focusNodeId: pendingFocus,
       onInspect: canvasInspector,
       onLayoutChange: (positions) => {
         state.canvas.positions = positions;
@@ -1178,6 +1252,21 @@ document.addEventListener('click', (event) => {
   }
   const open = event.target.closest('[data-open-routine]');
   if (open) { openDrawer(open.dataset.openRoutine); return; }
+  const openSystem = event.target.closest('[data-open-system]');
+  if (openSystem) { openSystemDrawer(openSystem.dataset.openSystem); return; }
+  const openSource = event.target.closest('[data-open-source]');
+  if (openSource) { openSourceDrawer(openSource.dataset.openSource); return; }
+  const focusBrain = event.target.closest('[data-focus-brain-node]');
+  if (focusBrain) {
+    state.canvas.scope = 'brain';
+    state.canvas.ref = null;
+    state.canvas.positions = null;
+    state.canvas.pendingFocus = focusBrain.dataset.focusBrainNode;
+    state.view = 'canvas';
+    closeDrawer();
+    render();
+    return;
+  }
   const judgment = event.target.closest('[data-open-judgment]');
   if (judgment) { openJudgment(judgment.dataset.openJudgment); return; }
   const experiment = event.target.closest('[data-open-experiment]');

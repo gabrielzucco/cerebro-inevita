@@ -952,6 +952,12 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 }
 .replay-ticker b { color: var(--run); font-weight: 700; }
 
+/* Replay: quem aguarda a vez fica apagado mas legível */
+.brain-node.is-awaiting { opacity: .45; filter: saturate(.5); }
+
+/* Cards estruturais são clicáveis */
+[data-open-system], [data-open-source] { cursor: pointer; }
+
 /* Pill de navegação inferior — ‹ referência › como no leque do Gbrain */
 .canvas-nav-pill {
   position: absolute;

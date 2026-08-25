@@ -262,6 +262,7 @@ export async function mountOperationalCanvas({
   container,
   model,
   editable = false,
+  focusNodeId = null,
   onInspect = () => {},
   onLayoutChange = () => {},
 }) {
@@ -393,7 +394,20 @@ export async function mountOperationalCanvas({
     graph.on(NodeEvent.DRAG_END, () => onLayoutChange(allPositions(graph)));
   }
   await graph.render();
-  await fitReadable(360);
+  if (focusNodeId && model.nodes.some((node) => node.id === focusNodeId)) {
+    applyZoomBand();
+    // foco pedido de fora (ex.: "Ver no mandala"); timeout garante que o mount
+    // resolve mesmo com animações estranguladas em aba de fundo
+    await Promise.race([
+      (async () => {
+        await focusNode(focusNodeId);
+        await graph.focusElement(focusNodeId, { duration: 280, easing: 'ease-out' });
+      })(),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+  } else {
+    await fitReadable(360);
+  }
   for (const node of model.nodes) {
     if (node.actual) await graph.setElementState(node.id, ['actual'], false);
   }
