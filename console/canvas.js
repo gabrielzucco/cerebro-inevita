@@ -403,6 +403,10 @@ export async function mountOperationalCanvas({
       await graph.setElementState(baselineStates(), false);
       await fitReadable(420);
     },
+    focus: async (id) => {
+      await focusNode(id);
+      try { await graph.focusElement(id, { duration: 320, easing: 'ease-out' }); } catch { /* nó fora do grafo atual */ }
+    },
     positions: () => allPositions(graph),
     destroy: () => graph.destroy(),
     accentFor: (kind) => KIND_ACCENT[kind] || '#91a0b5',

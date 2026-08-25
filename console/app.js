@@ -536,12 +536,31 @@ function canvasDetailValue(value) {
   return detailScalar(value);
 }
 
+// Vizinhos do nó — navegar o grafo de conexão em conexão, sem caçar no mapa.
+function nodeConnections(node) {
+  const graph = state.canvas.graph;
+  if (!graph) return '';
+  const seen = new Set([node.id]);
+  const neighbors = [];
+  for (const edge of graph.edges) {
+    const otherId = edge.source === node.id ? edge.target : edge.target === node.id ? edge.source : null;
+    if (!otherId || seen.has(otherId)) continue;
+    const other = graph.nodes.find((item) => item.id === otherId);
+    if (!other) continue;
+    seen.add(otherId);
+    neighbors.push({ other, relation: edge.relation });
+  }
+  if (!neighbors.length) return '';
+  neighbors.sort((left, right) => left.other.kind.localeCompare(right.other.kind));
+  return `<div class="knowledge-block"><p class="micro">CONEXÕES · ${neighbors.length}</p><div class="node-links">${neighbors.map(({ other, relation }) => `<button type="button" class="node-link" data-canvas-inspect-node="${escapeHtml(other.id)}" style="--dot: var(--kind-${escapeHtml(other.kind)}, var(--idle))"><i></i><strong>${escapeHtml(other.label)}</strong><small>${escapeHtml(label(other.kind))}${relation ? ` · ${escapeHtml(relation)}` : ''}</small></button>`).join('')}</div></div>`;
+}
+
 function canvasInspector(node) {
   const inspector = $('#canvas-inspector');
   if (!inspector) return;
   const externalUrl = safeCanvasExternalUrl(node.details?.external_url);
   const details = Object.entries(node.details || {}).filter(([key, value]) => key !== 'external_url' && value !== null && value !== undefined);
-  inspector.innerHTML = `<p class="micro">${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>objeto observado</span>' : '<span>contrato</span>'}</div>${externalUrl ? `<a class="canvas-open-link" href="${escapeHtml(externalUrl)}" target="_blank" rel="noopener noreferrer">Abrir no ${escapeHtml(externalProvider(externalUrl))} <b>↗</b></a>` : ''}<dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${canvasDetailValue(value)}</dd></div>`).join('')}</dl>`;
+  inspector.innerHTML = `<p class="micro">${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</p><h3>${escapeHtml(node.label)}</h3><div class="canvas-inspector-state">${badge(node.state, tone(node.state))}${node.actual ? '<span>objeto observado</span>' : '<span>contrato</span>'}</div>${externalUrl ? `<a class="canvas-open-link" href="${escapeHtml(externalUrl)}" target="_blank" rel="noopener noreferrer">Abrir no ${escapeHtml(externalProvider(externalUrl))} <b>↗</b></a>` : ''}${nodeConnections(node)}<dl>${details.map(([key, value]) => `<div><dt>${escapeHtml(key.replaceAll('_', ' '))}</dt><dd>${canvasDetailValue(value)}</dd></div>`).join('')}</dl>`;
 }
 
 function canvasList(graph) {
@@ -666,11 +685,44 @@ async function mountCanvasView() {
   }
 }
 
+/* Dialog de confirmação da casa — substitui window.prompt/confirm.
+   Junta aviso institucional + campos de aprovação num único passo. */
+const APPROVED_BY_FIELD = { key: 'approvedBy', label: 'Quem aprova · referência sem dado pessoal', value: 'role-founder' };
+
+function askConfirm({ title, body = '', confirmLabel = 'Confirmar', tone = 'primary', fields = [] }) {
+  const dialog = $('#confirm-dialog');
+  dialog.innerHTML = `<form method="dialog">
+    <h2>${escapeHtml(title)}</h2>
+    ${body ? `<p>${escapeHtml(body).replaceAll('\n', '<br>')}</p>` : ''}
+    ${fields.map((field) => `<label><span>${escapeHtml(field.label)}</span><input name="${escapeHtml(field.key)}" value="${escapeHtml(field.value || '')}" placeholder="${escapeHtml(field.placeholder || '')}" autocomplete="off" spellcheck="false" required></label>`).join('')}
+    <div class="confirm-dialog-actions">
+      <button value="cancel" class="action" formnovalidate>Cancelar</button>
+      <button value="confirm" class="action ${tone}">${escapeHtml(confirmLabel)}</button>
+    </div>
+  </form>`;
+  dialog.showModal();
+  const firstInput = dialog.querySelector('input');
+  if (firstInput) { firstInput.focus(); firstInput.select(); }
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => {
+      if (dialog.returnValue !== 'confirm') { resolve(null); return; }
+      const values = {};
+      for (const field of fields) values[field.key] = dialog.querySelector(`[name="${field.key}"]`)?.value.trim() || '';
+      resolve(values);
+    }, { once: true });
+  });
+}
+
 async function saveCanvasLayout() {
   if (!state.canvas.graph || !state.canvas.positions) return;
-  const approvedBy = window.prompt('Quem está salvando o layout? Use uma referência sem dado pessoal.', 'role-founder') || '';
-  if (!approvedBy) return;
-  if (!window.confirm('Salvar somente as posições dos nós nesta máquina? A topologia e os contratos não serão alterados.')) return;
+  const approval = await askConfirm({
+    title: 'Salvar layout do mapa',
+    body: 'Salva somente as posições dos nós nesta máquina. A topologia e os contratos não serão alterados.',
+    confirmLabel: 'Salvar posições',
+    fields: [APPROVED_BY_FIELD],
+  });
+  if (!approval?.approvedBy) return;
+  const approvedBy = approval.approvedBy;
   try {
     const result = await mutate(`/api/graphs/layouts/${state.canvas.graph.layout.key}`, {
       approved_by: approvedBy,
@@ -855,12 +907,16 @@ async function performJudgment(action) {
     toast('Explique o motivo antes de registrar.', 'bad');
     return;
   }
-  const approvedBy = window.prompt('Quem está julgando? Use uma referência sem dado pessoal.', 'role-founder') || '';
-  if (!approvedBy) return;
-  const message = payload.action_intent === 'propose-action'
-    ? 'Registrar esta intenção local? Nenhuma ação externa será executada.'
-    : `Registrar o julgamento “${label(payload.verdict)}”? O histórico anterior será preservado.`;
-  if (!window.confirm(message)) return;
+  const approval = await askConfirm({
+    title: payload.action_intent === 'propose-action' ? 'Registrar intenção de ação' : `Registrar julgamento · ${label(payload.verdict)}`,
+    body: payload.action_intent === 'propose-action'
+      ? 'A intenção fica local. Nenhuma ação externa será executada.'
+      : 'O histórico anterior será preservado. Nenhuma ação externa será executada.',
+    confirmLabel: 'Registrar',
+    fields: [APPROVED_BY_FIELD],
+  });
+  if (!approval?.approvedBy) return;
+  const approvedBy = approval.approvedBy;
   state.busy = true;
   document.querySelectorAll('[data-judgment-action]').forEach((button) => { button.disabled = true; });
   try {
@@ -894,11 +950,19 @@ async function performCorrectionAction(action) {
     }
     return;
   }
-  const approvedBy = window.prompt('Quem está aprovando? Use uma referência sem dado pessoal.', 'role-founder') || '';
-  if (!approvedBy) return;
-  if (action === 'rerun') {
-    if (!window.confirm('Reexecutar usando esta correção humana?\n\nA nota privada será enviada por stdin ao provider configurado e pode consumir sua assinatura. Ela não irá para a INEVITA, Git, logs ou recibos. Nenhuma ação externa será executada.')) return;
-  } else if (!window.confirm('Criar candidato de aprendizado 1/3?\n\nIsso não altera o motor. Ainda serão necessários três casos comparáveis, replay e novo martelo humano.')) return;
+  const approval = await askConfirm(action === 'rerun' ? {
+    title: 'Reexecutar com a correção humana',
+    body: 'A nota privada será enviada por stdin ao provider configurado e pode consumir sua assinatura. Ela não irá para a INEVITA, Git, logs ou recibos. Nenhuma ação externa será executada.',
+    confirmLabel: 'Reexecutar',
+    fields: [APPROVED_BY_FIELD],
+  } : {
+    title: 'Criar candidato de aprendizado 1/3',
+    body: 'Isso não altera o motor. Ainda serão necessários três casos comparáveis, replay e novo martelo humano.',
+    confirmLabel: 'Criar candidato',
+    fields: [APPROVED_BY_FIELD],
+  });
+  if (!approval?.approvedBy) return;
+  const approvedBy = approval.approvedBy;
   state.busy = true;
   document.querySelectorAll('[data-correction-action], [data-judgment-action]').forEach((button) => { button.disabled = true; });
   try {
@@ -924,9 +988,15 @@ async function performCorrectionAction(action) {
 
 async function revokeGrant(grantId) {
   if (state.busy) return;
-  const approvedBy = window.prompt('Quem está aprovando a revogação? Use uma referência sem dado pessoal.', 'role-founder') || '';
-  if (!approvedBy) return;
-  if (!window.confirm('Revogar este acesso para Runs futuros?\n\nIsso não apaga outputs, recibos ou artefatos já consumidos. Nenhuma ação externa será executada.')) return;
+  const approval = await askConfirm({
+    title: 'Revogar acesso para Runs futuros',
+    body: 'Isso não apaga outputs, recibos ou artefatos já consumidos. Nenhuma ação externa será executada.',
+    confirmLabel: 'Revogar',
+    tone: 'warn',
+    fields: [APPROVED_BY_FIELD],
+  });
+  if (!approval?.approvedBy) return;
+  const approvedBy = approval.approvedBy;
   state.busy = true;
   try {
     const result = await mutate(`/api/grants/${grantId}/revoke`, { approved_by: approvedBy });
@@ -945,18 +1015,45 @@ async function performAction(action) {
   let approvedBy = '';
   let evidenceRef = '';
   if (action === 'run') {
-    if (!window.confirm(`Rodar “${routine.name}” agora?\n\nIsso usa a sessão ${routine.binding.adapter} e pode consumir sua assinatura. Não ativa a agenda.`)) return;
+    const approval = await askConfirm({
+      title: `Rodar “${routine.name}” agora`,
+      body: `Isso usa a sessão ${routine.binding.adapter} e pode consumir sua assinatura. Não ativa a agenda.`,
+      confirmLabel: 'Rodar agora',
+    });
+    if (!approval) return;
+  } else if (action === 'confirm-legacy-pause') {
+    const approval = await askConfirm({
+      title: 'Registrar pausa da agenda antiga',
+      body: 'Confirme somente depois de pausar a agenda no fornecedor antigo. O Console registra o readback; ele não pausa o Claude por você.',
+      confirmLabel: 'Registrar readback',
+      tone: 'warn',
+      fields: [APPROVED_BY_FIELD, { key: 'evidenceRef', label: 'Referência opaca da evidência de pausa', value: 'readback:legacy-schedule-paused' }],
+    });
+    if (!approval?.approvedBy || !approval.evidenceRef) return;
+    approvedBy = approval.approvedBy;
+    evidenceRef = approval.evidenceRef;
+  } else if (action === 'activate') {
+    evidenceRef = routine.actions.activation_evidence_ref;
+    if (!evidenceRef) return;
+    const approval = await askConfirm({
+      title: 'Ativar agenda desta rotina',
+      body: 'O relógio liga usando o último replay manual concluído e aprovado.',
+      confirmLabel: 'Ativar agenda',
+      fields: [APPROVED_BY_FIELD],
+    });
+    if (!approval?.approvedBy) return;
+    approvedBy = approval.approvedBy;
   } else {
-    approvedBy = window.prompt('Quem está aprovando? Use uma referência sem dado pessoal.', 'role-founder') || '';
-    if (!approvedBy) return;
-    if (action === 'confirm-legacy-pause') {
-      if (!window.confirm('Confirme somente depois de pausar a agenda no fornecedor antigo. O Console registra o readback; ele não pausa o Claude por você.')) return;
-      evidenceRef = window.prompt('Referência opaca da evidência de pausa:', 'readback:legacy-schedule-paused') || '';
-      if (!evidenceRef) return;
-    } else if (action === 'activate') {
-      evidenceRef = routine.actions.activation_evidence_ref;
-      if (!evidenceRef || !window.confirm('Ativar o relógio desta rotina usando o último replay manual concluído?')) return;
-    } else if (!window.confirm(`${action === 'pause' ? 'Pausar' : 'Retomar'} esta rotina?`)) return;
+    const approval = await askConfirm({
+      title: `${action === 'pause' ? 'Pausar' : 'Retomar'} esta rotina`,
+      body: action === 'pause'
+        ? 'Execuções futuras serão bloqueadas. Efeitos externos já consumados permanecem.'
+        : 'O relógio volta a valer a partir de agora.',
+      confirmLabel: action === 'pause' ? 'Pausar' : 'Retomar',
+      fields: [APPROVED_BY_FIELD],
+    });
+    if (!approval?.approvedBy) return;
+    approvedBy = approval.approvedBy;
   }
   state.busy = true;
   document.querySelectorAll('[data-routine-action]').forEach((button) => { button.disabled = true; });
@@ -1004,7 +1101,10 @@ document.addEventListener('click', (event) => {
   const canvasNode = event.target.closest('[data-canvas-inspect-node]');
   if (canvasNode && state.canvas.graph) {
     const node = state.canvas.graph.nodes.find((item) => item.id === canvasNode.dataset.canvasInspectNode);
-    if (node) canvasInspector(node);
+    if (node) {
+      canvasInspector(node);
+      void state.canvas.controller?.focus?.(node.id);
+    }
     return;
   }
   const open = event.target.closest('[data-open-routine]');
@@ -1054,7 +1154,11 @@ $('#drawer-backdrop').addEventListener('click', closeDrawer);
 $('#refresh').addEventListener('click', async () => {
   try { await loadModel(); toast('Estado local recompilado.'); } catch (error) { toast(label(error.message), 'bad'); }
 });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer(); });
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if ($('#confirm-dialog')?.open) return; // o <dialog> cuida do próprio Escape
+  closeDrawer();
+});
 
 /* --- Command palette (⌘K) — ir a qualquer view, rotina, sistema ou experimento --- */
 
