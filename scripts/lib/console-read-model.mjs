@@ -103,6 +103,7 @@ function listSystemContracts(root, issues) {
           migration_stage: migrationStage,
           human_maturity: contract.extensions?.human_maturity || null,
           source_manifest_ref: contract.extensions?.source_manifest_ref || null,
+          interface_ref: contract.extensions?.interface_ref || null,
           component_statuses: contract.extensions?.component_statuses || null,
           next_gate: contract.extensions?.next_gate || null,
           area_ref: contract.extensions?.area_ref || 'geral',

@@ -257,6 +257,17 @@ export function createConsoleServer({
         response.end();
         return;
       }
+      if (request.method === 'GET' && url.pathname.startsWith('/files/')) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const relative = decodeURIComponent(url.pathname.slice('/files/'.length));
+        const resolved = resolve(brainRoot, relative);
+        if (!resolved.startsWith(resolve(brainRoot) + '/') || !resolved.endsWith('.html')) throw new Error('not-found');
+        let content;
+        try { content = readFileSync(resolved); } catch { throw new Error('not-found'); }
+        response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        response.end(content);
+        return;
+      }
       if (request.method === 'GET' && url.pathname === '/api/knowledge') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, knowledgeIndex(brainRoot));

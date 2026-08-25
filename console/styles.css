@@ -984,6 +984,45 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 /* Cards estruturais são clicáveis */
 [data-open-system], [data-open-source] { cursor: pointer; }
 
+/* Cockpit do Sistema — o centro de comando sob o mapa */
+.canvas-page.with-cockpit .canvas-stage-shell { height: calc(100vh - 420px); min-height: 380px; }
+.system-cockpit { margin-top: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
+.cockpit-stats { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--hairline); color: var(--text-3); font-size: var(--fs-meta); }
+.cockpit-stats b { color: var(--text); font: 620 var(--fs-lead) var(--font-sans); font-variant-numeric: tabular-nums; }
+.cockpit-stats .warn-text { color: var(--wait); }
+.cockpit-actions { display: flex; gap: var(--s2); margin-left: auto; }
+.cockpit-actions .canvas-tool { border: 1px solid var(--hairline-2); }
+.cockpit-execs { padding: var(--s3) var(--s4) var(--s4); }
+.cockpit-execs .micro { margin-bottom: var(--s2); }
+.cockpit-exec {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto 16px;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: 7px var(--s2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-meta);
+  text-align: left;
+  cursor: pointer;
+  transition: background .1s var(--ease), color .1s var(--ease);
+}
+.cockpit-exec:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+.cockpit-exec strong { overflow: hidden; font-weight: 540; text-overflow: ellipsis; white-space: nowrap; }
+.cockpit-exec small { color: var(--text-3); font: 480 var(--fs-micro) var(--font-mono); white-space: nowrap; }
+.cockpit-exec b { color: var(--text-3); }
+.cockpit-exec:hover b { color: var(--brand); }
+.system-cockpit .section-help { padding: var(--s4); margin: 0; }
+
+/* Lista acessível do canvas (restaurada — tinha se perdido numa cirurgia) */
+.canvas-accessible { margin: var(--s3) 0 0; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); }
+.canvas-accessible summary { padding: 10px var(--s3); color: var(--text-3); font: 540 var(--fs-meta) var(--font-sans); cursor: pointer; }
+.canvas-accessible > div { overflow: auto; border-top: 1px solid var(--hairline); }
+.canvas-accessible table { width: 100%; border-collapse: collapse; }
+
 /* Pill de navegação inferior — ‹ referência › como no leque do Gbrain */
 .canvas-nav-pill {
   position: absolute;

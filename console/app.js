@@ -283,12 +283,66 @@ function canvasRefOptions() {
   return '';
 }
 
+// Execuções de um sistema, prontas pro seletor do Canvas
+function executionsForSystem(system) {
+  const routineIds = new Set(state.model.routines.filter((routine) => refMatchesSystem(routine.system_ref, system)).map((routine) => routine.routine_id));
+  const receipts = state.model.routines
+    .filter((routine) => routineIds.has(routine.routine_id))
+    .flatMap((routine) => routine.receipts.map((receipt) => ({
+      selector_ref: receipt.receipt_id,
+      label: routine.name,
+      status: receipt.status,
+      mode: 'replay',
+      completed_at: receipt.completed_at,
+    })));
+  const receiptRunIds = new Set(state.model.routines.flatMap((routine) => routine.receipts.map((receipt) => receipt.run_id)));
+  const standalone = (state.model.run_records || [])
+    .filter((record) => refMatchesSystem(record.system_ref, system) && !receiptRunIds.has(record.run_id))
+    .map((record) => ({
+      selector_ref: record.run_record_ref,
+      label: record.experiment_ref ? `${record.experiment_ref}` : label(record.mode || 'run'),
+      status: record.status === 'completed' ? 'completed' : record.status,
+      mode: record.mode,
+      completed_at: record.completed_at,
+    }));
+  return [...receipts, ...standalone].sort((left, right) => Date.parse(right.completed_at) - Date.parse(left.completed_at));
+}
+
+// Cockpit do Sistema — o centro de comando sob o mapa: números reais,
+// execuções clicáveis e as portas (detalhes, manifest, interface própria).
+function systemCockpit(system) {
+  const executions = executionsForSystem(system);
+  const judgments = state.model.judgments.filter((item) => refMatchesSystem(item.system_ref, system));
+  const approved = judgments.filter((item) => item.judgment.status === 'approved' || item.judgment.verdict === 'approved').length;
+  const pending = judgments.filter((item) => item.judgment.status === 'pending').length;
+  const routines = state.model.routines.filter((routine) => refMatchesSystem(routine.system_ref, system));
+  const experiments = (state.model.experiments || []).filter((experiment) => refMatchesSystem(experiment.system_ref, system));
+  const lastRun = executions[0]?.completed_at;
+  return `<div class="system-cockpit">
+    <div class="cockpit-stats">
+      <span><b>${executions.length}</b> execuções</span>
+      <span><b>${approved}</b> aprovadas${pending ? ` · <b class="warn-text">${pending}</b> pendentes` : ''}</span>
+      <span><b>${routines.length}</b> rotinas</span>
+      <span><b>${experiments.length}</b> experimentos</span>
+      <span><b>${lastRun ? fmtDate(lastRun) : '—'}</b> última execução</span>
+      <span class="cockpit-actions">
+        <button class="canvas-tool" data-open-system="${escapeHtml(system.system_id)}">Detalhes</button>
+        ${system.source_manifest_ref ? `<button class="canvas-tool" data-copy-ref="${escapeHtml(system.source_manifest_ref)}" title="Copiar caminho do manifest">Manifest ⧉</button>` : ''}
+        ${system.interface_ref ? `<a class="canvas-tool replay" href="/files/${encodeURIComponent(system.interface_ref)}" target="_blank" rel="noopener">Abrir interface ↗</a>` : ''}
+      </span>
+    </div>
+    ${executions.length ? `<div class="cockpit-execs"><p class="micro">EXECUÇÕES · ${executions.length} — clique para abrir o trace</p>${executions.slice(0, 12).map((execution) => `<button type="button" class="cockpit-exec" data-canvas-jump-run="${escapeHtml(execution.selector_ref)}"><i class="health-dot ${tone(execution.status)}"></i><strong>${escapeHtml(execution.label)}</strong><small>${escapeHtml(label(execution.mode || '—'))}</small><small>${fmtDate(execution.completed_at)}</small><b>→</b></button>`).join('')}${executions.length > 12 ? `<p class="muted">+ ${executions.length - 12} anteriores na aba Execuções</p>` : ''}</div>` : '<p class="section-help">Nenhuma execução registrada ainda — o primeiro run aparece aqui com trace clicável.</p>'}
+  </div>`;
+}
+
 function renderCanvas() {
   const hasRef = state.canvas.scope !== 'brain';
   const areaTitle = state.canvas.scope === 'brain' ? 'Cérebro'
     : state.canvas.scope === 'system' ? (state.model.systems.find((system) => system.system_id === state.canvas.ref)?.name || 'Sistema')
       : 'Execução';
-  return `<div class="canvas-page">
+  const cockpitSystem = state.canvas.scope === 'system' && state.canvas.ref
+    ? state.model.systems.find((system) => system.system_id === state.canvas.ref) : null;
+  return `<div class="canvas-page${cockpitSystem ? ' with-cockpit' : ''}">
     <div class="canvas-stage-shell">
       <div class="canvas-graph-pane">
         <div class="canvas-ambient one"></div><div class="canvas-ambient two"></div>
@@ -315,6 +369,7 @@ function renderCanvas() {
       </div>
       <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>Fontes são casas de verdade. Etapas são contrato. Artefatos são os objetos que realmente atravessaram uma execução.</p></aside>
     </div>
+    ${cockpitSystem ? systemCockpit(cockpitSystem) : ''}
     <details class="canvas-accessible"><summary>Ver equivalente em lista</summary><div id="canvas-list"></div></details>
     <div class="boundary-note"><b>Layout ≠ arquitetura</b>Reorganizar salva apenas coordenadas privadas nesta máquina. Criar ou remover Fonte, Sistema, gate ou aresta continua exigindo mudança de contrato.</div>
   </div>`;
@@ -465,8 +520,16 @@ const viewGroups = {
 
 /* Contexto de Área — o switcher filtra a jornada inteira (padrão Linear:
    você "entra" numa área e todas as superfícies respondem). */
+// Um sistema tem dois nomes no protocolo: o id de portfólio e o id do contrato.
+// Rotinas, julgamentos e run records referenciam o contrato — casar com ambos.
+function systemByRef(ref) {
+  return state.model?.systems.find((system) => system.system_id === ref || system.contract_id === ref) || null;
+}
+function refMatchesSystem(ref, system) {
+  return ref === system.system_id || ref === system.contract_id;
+}
 function systemAreaRef(systemId) {
-  return state.model?.systems.find((system) => system.system_id === systemId)?.area_ref || null;
+  return systemByRef(systemId)?.area_ref || null;
 }
 function inActiveArea(areaRef) {
   return !state.areaFilter || areaRef === state.areaFilter;
@@ -721,8 +784,8 @@ function openSystemDrawer(systemId) {
     const refId = sourceRefId(ref);
     return state.model.sources.find((item) => item.source_id === refId) || { source_id: refId, name: refId, type: typeof ref === 'object' ? ref.role || '—' : '—' };
   });
-  const routines = state.model.routines.filter((routine) => routine.system_ref === system.system_id);
-  const experiments = (state.model.experiments || []).filter((experiment) => experiment.system_ref === system.system_id);
+  const routines = state.model.routines.filter((routine) => refMatchesSystem(routine.system_ref, system));
+  const experiments = (state.model.experiments || []).filter((experiment) => refMatchesSystem(experiment.system_ref, system));
   const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
   showDrawerShell(`<div class="drawer-head"><p class="micro">SISTEMA · v${escapeHtml(system.version)}</p><h2>${escapeHtml(system.name)}</h2>
       <div class="judgment-badges">${badge(system.migration_stage, system.migration_stage === 'active' ? 'good' : system.migration_stage === 'configured' ? 'neutral' : 'warn', stageLabel)}${system.human_maturity ? badge(system.human_maturity, 'neutral') : ''}</div></div>
@@ -1302,6 +1365,16 @@ document.addEventListener('click', (event) => {
   if (event.target.closest('[data-canvas-fit]')) { state.canvas.controller?.fit(); return; }
   const cycle = event.target.closest('[data-canvas-cycle]');
   if (cycle) { cycleCanvasRef(Number(cycle.dataset.canvasCycle)); return; }
+  const jumpRun = event.target.closest('[data-canvas-jump-run]');
+  if (jumpRun) {
+    state.canvas.scope = 'run';
+    state.canvas.ref = jumpRun.dataset.canvasJumpRun;
+    state.canvas.positions = null;
+    state.view = 'canvas';
+    closeDrawer();
+    render();
+    return;
+  }
   if (event.target.closest('[data-canvas-edit]')) {
     state.canvas.editable = !state.canvas.editable;
     state.canvas.positions = null;
