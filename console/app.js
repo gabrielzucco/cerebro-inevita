@@ -8,6 +8,7 @@ const state = {
   selectedJudgment: null,
   selectedExperiment: null,
   busy: false,
+  areaFilter: (() => { try { return localStorage.getItem('cb-area') || ''; } catch { return ''; } })(),
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
   },
@@ -254,13 +255,13 @@ function judgmentList(items) {
 
 function renderRoutines() {
   return `<div class="section-heading"><div><p class="eyebrow">CONTROL PLANE</p><h2>Todas as rotinas</h2></div><p>Abrir e inspecionar nunca executa modelos. O relógio só liga após replay e aprovação.</p></div>
-    <div class="routine-list">${state.model.routines.length ? state.model.routines.map(routineCard).join('') : empty('Nenhuma rotina instalada', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
+    <div class="routine-list">${visibleRoutines().length ? visibleRoutines().map(routineCard).join('') : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
 }
 
 function renderToday() {
   const ids = [...state.model.today.needs_attention, ...state.model.today.ready_to_work, ...state.model.today.active];
-  const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean);
-  const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
+  const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean).filter((routine) => inActiveArea(systemAreaRef(routine.system_ref)));
+  const pending = visibleJudgments().filter((item) => item.judgment.status === 'pending');
   return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div>
     ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
     <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
@@ -268,7 +269,13 @@ function renderToday() {
 
 function canvasRefOptions() {
   if (state.canvas.scope === 'system') {
-    return state.model.systems.map((system) => `<option value="${escapeHtml(system.system_id)}"${state.canvas.ref === system.system_id ? ' selected' : ''}>${escapeHtml(system.name)}</option>`).join('');
+    const byArea = new Map();
+    for (const system of visibleSystems()) {
+      const areaName = state.model.areas.find((area) => area.area_ref === system.area_ref)?.name || 'Sem área';
+      if (!byArea.has(areaName)) byArea.set(areaName, []);
+      byArea.get(areaName).push(system);
+    }
+    return [...byArea.entries()].map(([areaName, systems]) => `<optgroup label="${escapeHtml(areaName)}">${systems.map((system) => `<option value="${escapeHtml(system.system_id)}"${state.canvas.ref === system.system_id ? ' selected' : ''}>${escapeHtml(system.name)}</option>`).join('')}</optgroup>`).join('');
   }
   if (state.canvas.scope === 'run') {
     return allCanvasExecutions().map((execution) => `<option value="${escapeHtml(execution.selector_ref)}"${state.canvas.ref === execution.selector_ref ? ' selected' : ''}>${escapeHtml(execution.label)} · ${escapeHtml(execution.mode ? label(execution.mode) : 'Run')} · ${fmtDate(execution.completed_at)}</option>`).join('');
@@ -314,8 +321,8 @@ function renderCanvas() {
 }
 
 function renderJudgments() {
-  const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
-  const decided = state.model.judgments.filter((item) => item.judgment.status !== 'pending');
+  const pending = visibleJudgments().filter((item) => item.judgment.status === 'pending');
+  const decided = visibleJudgments().filter((item) => item.judgment.status !== 'pending');
   return `<div class="section-heading"><div><p class="eyebrow">MARTELO HUMANO</p><h2>Caixa de Julgamento</h2></div><p>Abra o output privado, decida e deixe rastro. Nenhum botão desta tela executa ação externa.</p></div>
     <div class="judgment-section"><div class="subheading"><h3>Pendentes</h3><span>${pending.length}</span></div>${pending.length ? judgmentList(pending) : empty('Nenhum output pendente', 'O próximo run concluído aparecerá aqui para julgamento.')}</div>
     <div class="judgment-section"><div class="subheading"><h3>Histórico</h3><span>${decided.length}</span></div>${decided.length ? judgmentList(decided) : '<p class="muted">Nenhum julgamento registrado ainda.</p>'}</div>`;
@@ -325,20 +332,32 @@ function renderAreas() {
   return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
 }
 
+function systemCard(system) {
+  const configured = system.migration_stage === 'configured';
+  const active = system.migration_stage === 'active';
+  const componentStatuses = Object.values(system.component_statuses || {});
+  const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
+  const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
+  const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
+  return `<article class="object-card" data-kind="system" data-open-system="${escapeHtml(system.system_id)}"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
+}
+
 function renderSystems() {
-  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div><p>Mapeado tem contrato. Configurado tem recuperação declarada. Ativo já possui operação governada e recibo.</p></div><div class="object-grid">${state.model.systems.map((system) => {
-    const configured = system.migration_stage === 'configured';
-    const active = system.migration_stage === 'active';
-    const componentStatuses = Object.values(system.component_statuses || {});
-    const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
-    const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
-    const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
-    return `<article class="object-card" data-kind="system" data-open-system="${escapeHtml(system.system_id)}"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
-  }).join('') || empty('Nenhum Sistema contratado', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}</div>`;
+  const systems = visibleSystems();
+  if (!systems.length) return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div></div>${empty('Nenhum Sistema nesta área', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}`;
+  // Sem filtro, a lista é a jornada: agrupada por Área, nunca um dropdown gigante.
+  const groups = state.areaFilter
+    ? [[null, systems]]
+    : [
+      ...state.model.areas.map((area) => [area, systems.filter((system) => system.area_ref === area.area_ref)]),
+      [{ name: 'Sem área declarada' }, systems.filter((system) => !state.model.areas.some((area) => area.area_ref === system.area_ref))],
+    ].filter(([, grouped]) => grouped.length);
+  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div><p>Mapeado tem contrato. Configurado tem recuperação declarada. Ativo já possui operação governada e recibo.</p></div>
+    ${groups.map(([area, grouped]) => `${area ? `<div class="subheading"><h3>${escapeHtml(area.name)}</h3><span>${grouped.length}</span></div>` : ''}<div class="object-grid" style="margin-bottom: var(--s5)">${grouped.map(systemCard).join('')}</div>`).join('')}`;
 }
 
 function renderSources() {
-  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${visibleSources().map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
 }
 
 function experimentProgress(experiment) {
@@ -356,7 +375,7 @@ function experimentProgress(experiment) {
 }
 
 function renderExperiments() {
-  const experiments = state.model.experiments || [];
+  const experiments = visibleExperiments();
   const running = experiments.filter((item) => item.status === 'running').length;
   const ready = experiments.filter((item) => item.status === 'ready-for-read').length;
   const decided = experiments.filter((item) => item.status === 'decided').length;
@@ -373,7 +392,7 @@ function renderExperiments() {
 }
 
 function allReceipts() {
-  return state.model.routines.flatMap((routine) => routine.receipts.map((receipt) => ({ ...receipt, routine_name: routine.name, routine_id: routine.routine_id }))).sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at));
+  return visibleRoutines().flatMap((routine) => routine.receipts.map((receipt) => ({ ...receipt, routine_name: routine.name, routine_id: routine.routine_id }))).sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at));
 }
 
 function allCanvasExecutions() {
@@ -385,7 +404,7 @@ function allCanvasExecutions() {
     mode: state.model.run_records?.find((record) => record.run_id === receipt.run_id)?.mode || null,
   }));
   const receivedRunIds = new Set(receipts.map((receipt) => receipt.run_id));
-  const standalone = (state.model.run_records || []).filter((record) => !receivedRunIds.has(record.run_id)).map((record) => ({
+  const standalone = (state.model.run_records || []).filter((record) => !receivedRunIds.has(record.run_id) && inActiveArea(systemAreaRef(record.system_ref))).map((record) => ({
     selector_ref: record.run_record_ref,
     run_id: record.run_id,
     label: `${label(record.system_ref)}${record.experiment_ref ? ` · ${record.experiment_ref}` : ''}`,
@@ -444,6 +463,40 @@ const viewGroups = {
   society: 'Rede',
 };
 
+/* Contexto de Área — o switcher filtra a jornada inteira (padrão Linear:
+   você "entra" numa área e todas as superfícies respondem). */
+function systemAreaRef(systemId) {
+  return state.model?.systems.find((system) => system.system_id === systemId)?.area_ref || null;
+}
+function inActiveArea(areaRef) {
+  return !state.areaFilter || areaRef === state.areaFilter;
+}
+function visibleSystems() {
+  return state.model.systems.filter((system) => inActiveArea(system.area_ref));
+}
+function visibleSources() {
+  if (!state.areaFilter) return state.model.sources;
+  const used = new Set(visibleSystems().flatMap((system) => system.source_refs.map((ref) => sourceRefId(ref))));
+  return state.model.sources.filter((source) => used.has(source.source_id));
+}
+function visibleRoutines() {
+  return state.model.routines.filter((routine) => inActiveArea(systemAreaRef(routine.system_ref)));
+}
+function visibleExperiments() {
+  return (state.model.experiments || []).filter((experiment) => inActiveArea(systemAreaRef(experiment.system_ref)));
+}
+function visibleJudgments() {
+  return state.model.judgments.filter((item) => inActiveArea(systemAreaRef(item.system_ref)));
+}
+
+function renderAreaSwitcher() {
+  const host = $('#area-switcher');
+  if (!host || !state.model) return;
+  host.innerHTML = `<p class="nav-group">Área</p>
+    <button class="area-pill${state.areaFilter ? '' : ' active'}" data-area-filter=""><i></i>Toda a empresa</button>
+    ${state.model.areas.map((area) => `<button class="area-pill${state.areaFilter === area.area_ref ? ' active' : ''}" data-area-filter="${escapeHtml(area.area_ref)}"><i></i>${escapeHtml(area.name)}<b>${area.system_refs.length}</b></button>`).join('')}`;
+}
+
 // Views irmãs viram abas dentro da mesma superfície.
 const tabGroups = [
   ['judgments', 'routines', 'runs'],
@@ -457,7 +510,8 @@ function tabstrip() {
   if (!group) return '';
   return `<div class="tabstrip" role="tablist">${group.map((view) => {
     const countKey = tabCounts[view];
-    const count = countKey ? state.model.counts[countKey] ?? 0 : null;
+    const filtered = { judgments: () => visibleJudgments().filter((item) => item.judgment.status === 'pending').length, routines: () => visibleRoutines().length, systems: () => visibleSystems().length, sources: () => visibleSources().length, experiments: () => visibleExperiments().length };
+    const count = countKey ? (filtered[countKey] ? filtered[countKey]() : state.model.counts[countKey] ?? 0) : null;
     return `<button role="tab" data-view="${view}" class="${view === state.view ? 'active' : ''}">${titles[view][0]}${count ? `<b>${count}</b>` : ''}</button>`;
   }).join('')}</div>`;
 }
@@ -469,6 +523,7 @@ function render() {
   $('#eyebrow').textContent = `company-brain // ${(viewGroups[state.view] || 'Operação').toLowerCase()}`;
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
+  renderAreaSwitcher();
   $('#summary').innerHTML = state.view === 'canvas' ? '' : summaryCards();
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
@@ -774,7 +829,7 @@ function playTraceReplay() {
 function cycleCanvasRef(step) {
   if (state.canvas.scope === 'brain') return;
   const options = state.canvas.scope === 'system'
-    ? state.model.systems.map((system) => system.system_id)
+    ? visibleSystems().map((system) => system.system_id)
     : allCanvasExecutions().map((execution) => execution.selector_ref);
   if (!options.length) return;
   const index = Math.max(0, options.indexOf(state.canvas.ref));
@@ -803,7 +858,16 @@ async function mountCanvasView() {
     $('#canvas-list').innerHTML = canvasList(graph);
     const pendingFocus = state.canvas.pendingFocus;
     state.canvas.pendingFocus = null;
-    if (state.canvas.scope === 'brain' && !pendingFocus) void renderKnowledgePanel();
+    if (state.canvas.scope === 'brain' && !pendingFocus && state.areaFilter) {
+      const areaNode = graph.nodes.find((item) => item.kind === 'area' && (item.id === `area:${state.areaFilter}` || item.id.endsWith(state.areaFilter)));
+      if (areaNode) state.canvas.pendingFocus = areaNode.id;
+    }
+    const areaPendingFocus = state.canvas.pendingFocus;
+    if (state.canvas.scope === 'brain' && !pendingFocus && !areaPendingFocus) void renderKnowledgePanel();
+    if (areaPendingFocus) {
+      const areaTarget = graph.nodes.find((item) => item.id === areaPendingFocus);
+      if (areaTarget) canvasInspector(areaTarget);
+    }
     if (pendingFocus) {
       const focusTarget = graph.nodes.find((item) => item.id === pendingFocus);
       if (focusTarget) canvasInspector(focusTarget);
@@ -812,7 +876,7 @@ async function mountCanvasView() {
       container,
       model: graph,
       editable: state.canvas.editable,
-      focusNodeId: pendingFocus,
+      focusNodeId: pendingFocus || areaPendingFocus || null,
       onInspect: canvasInspector,
       onLayoutChange: (positions) => {
         state.canvas.positions = positions;
@@ -1215,6 +1279,16 @@ async function loadModel() {
 document.addEventListener('click', (event) => {
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
+  const areaPill = event.target.closest('[data-area-filter]');
+  if (areaPill) {
+    state.areaFilter = areaPill.dataset.areaFilter;
+    try { localStorage.setItem('cb-area', state.areaFilter); } catch { /* preferência local */ }
+    if (state.canvas.scope === 'system' && state.canvas.ref && !inActiveArea(systemAreaRef(state.canvas.ref))) state.canvas.ref = null;
+    if (state.canvas.scope === 'run') state.canvas.ref = null;
+    state.canvas.positions = null;
+    render();
+    return;
+  }
   const canvasScope = event.target.closest('[data-canvas-scope]');
   if (canvasScope) {
     state.canvas.scope = canvasScope.dataset.canvasScope;

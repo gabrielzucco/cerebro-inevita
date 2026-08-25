@@ -154,6 +154,32 @@ kbd {
 .brand-mark span:nth-child(2) { height: 13px; }
 .brand-mark span:nth-child(3) { height: 9px; }
 
+/* Switcher de Área — o contexto da jornada (padrão team-switcher do Linear) */
+#area-switcher { display: grid; gap: 1px; margin-bottom: var(--s2); }
+.area-pill {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 var(--s2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-meta);
+  text-align: left;
+  cursor: pointer;
+  transition: background .1s var(--ease), color .1s var(--ease);
+}
+.area-pill:hover { color: var(--text); background: rgba(255, 255, 255, .04); }
+.area-pill.active { color: var(--text); background: rgba(255, 255, 255, .07); font-weight: 560; }
+.area-pill i { width: 7px; height: 7px; border-radius: 2px; background: var(--idle); justify-self: center; }
+.area-pill.active i { background: var(--kind-area); }
+.area-pill b { color: var(--text-3); font: 590 var(--fs-micro) var(--font-mono); font-variant-numeric: tabular-nums; }
+body[data-nav="collapsed"] #area-switcher .area-pill { grid-template-columns: 14px; justify-content: center; font-size: 0; min-height: 30px; }
+body[data-nav="collapsed"] #area-switcher .area-pill b { display: none; }
+
 nav { display: grid; gap: 1px; }
 .nav-group { margin: var(--s4) var(--s2) 6px; color: var(--text-3); font: 590 10px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
 .nav-group:first-child { margin-top: 0; }
