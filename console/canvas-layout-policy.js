@@ -4,7 +4,7 @@ const CENTER_Y = 340;
 const ROW_GAP = 112;
 
 const MIN_READABLE_ZOOM = {
-  brain: 0.82,
+  brain: 0.48,
   system: 0.72,
   run: 0.70,
 };

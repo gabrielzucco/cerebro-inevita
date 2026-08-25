@@ -1,9 +1,9 @@
-import { mountOperationalCanvas } from '/canvas.bundle.js';
+import { mountOperationalCanvas } from '/canvas.bundle.js?v=4';
 
 const state = {
   model: null,
   csrf: '',
-  view: 'compatibility',
+  view: 'today',
   selectedRoutine: null,
   selectedJudgment: null,
   selectedExperiment: null,
@@ -119,17 +119,22 @@ function summaryCards() {
       ['Fontes governadas', diagnostic.inventory.sources.valid, 'Contrato válido; presença não significa conexão', 'receipt'],
       ['Sistemas declarados', diagnostic.inventory.systems.valid, `${diagnostic.inventory.systems.retrieval_v2} com recuperação V2`, 'play'],
       ['Runs com contexto', diagnostic.inventory.runs.context_snapshot_v2, `${diagnostic.inventory.runs.valid} execuções observadas`, 'decision'],
-    ].map(([title, value, description, icon]) => `<article class="summary-card"><span class="summary-icon ${icon}"></span><div><small>${title}</small><strong>${value}</strong><p>${description}</p></div></article>`).join('');
+    ].map(summaryCard).join('');
   }
   const active = model.today.active.length;
   const ready = model.today.ready_to_work.length;
   const judgments = model.counts.judgments;
   return [
     ['Rotinas ativas', active, 'Rodam apenas quando o estado canônico está ativo', 'signal'],
-    ['Aguardam julgamento', judgments, 'Outputs privados que ainda precisam do seu martelo', 'decision'],
+    ['Aguardam julgamento', judgments, 'Outputs privados que ainda precisam do seu martelo', 'decision', true],
     ['Prontas para trabalhar', ready, 'Replay manual não liga o agendamento', 'play'],
     ['Recibos privados', model.routines.reduce((total, routine) => total + routine.receipts.length, 0), 'Prompt e output não aparecem no ledger', 'receipt'],
-  ].map(([title, value, description, icon]) => `<article class="summary-card"><span class="summary-icon ${icon}"></span><div><small>${title}</small><strong>${value}</strong><p>${description}</p></div></article>`).join('');
+  ].map(summaryCard).join('');
+}
+
+// O card só chama atenção quando o número pede ação humana — o zero não grita.
+function summaryCard([title, value, description, icon, actionable]) {
+  return `<article class="summary-card${actionable && Number(value) > 0 ? ' is-actionable' : ''}"><small><span class="summary-icon ${icon}"></span>${title}</small><strong>${value}</strong><p>${description}</p></article>`;
 }
 
 function routineCard(routine) {
@@ -273,27 +278,32 @@ function canvasRefOptions() {
 
 function renderCanvas() {
   const hasRef = state.canvas.scope !== 'brain';
+  const areaTitle = state.canvas.scope === 'brain' ? 'Cérebro'
+    : state.canvas.scope === 'system' ? (state.model.systems.find((system) => system.system_id === state.canvas.ref)?.name || 'Sistema')
+      : 'Execução';
   return `<div class="canvas-page">
-    <div class="section-heading canvas-heading"><div><p class="eyebrow">OPERATIONAL GRAPH</p><h2>O cérebro em movimento</h2></div><p>Contrato e execução no mesmo mapa. Nó aceso exige recibo ou evento real.</p></div>
-    <div class="canvas-toolbar" role="toolbar" aria-label="Controles do Canvas">
-      <div class="canvas-segmented" aria-label="Escala do mapa">
-        <button data-canvas-scope="brain" class="${state.canvas.scope === 'brain' ? 'active' : ''}">Cérebro</button>
-        <button data-canvas-scope="system" class="${state.canvas.scope === 'system' ? 'active' : ''}">Sistema</button>
-        <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
-      </div>
-      ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : '<div class="canvas-spacer"></div>'}
-      <button class="canvas-tool" data-canvas-fit>Ver mapa inteiro</button>
-      <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
-      <button class="canvas-tool primary" data-canvas-save disabled>Salvar layout</button>
-    </div>
     <div class="canvas-stage-shell">
       <div class="canvas-graph-pane">
         <div class="canvas-ambient one"></div><div class="canvas-ambient two"></div>
+        <canvas id="canvas-particles" class="canvas-particles"></canvas>
+        <div class="canvas-area-title">${escapeHtml(areaTitle)}</div>
         <div id="operational-canvas" class="operational-canvas"><div class="loading"><i></i><span>Compilando grafo local…</span></div></div>
         <div id="canvas-origin" class="canvas-origin"></div>
         <div class="canvas-legend" aria-label="Legenda de estados">
           <span class="declared"><i></i>Declarado</span><span class="running"><i></i>Executando</span><span class="completed"><i></i>Concluído</span><span class="gap"><i></i>Lacuna</span><span class="failed"><i></i>Falhou</span>
         </div>
+        ${hasRef ? `<div class="canvas-nav-pill" role="navigation" aria-label="Trocar referência"><button data-canvas-cycle="-1" aria-label="Anterior">‹</button><span>${escapeHtml(areaTitle)}</span><button data-canvas-cycle="1" aria-label="Próximo">›</button></div>` : ''}
+      </div>
+      <div class="canvas-toolbar" role="toolbar" aria-label="Controles do Canvas">
+        <div class="canvas-segmented" aria-label="Escala do mapa">
+          <button data-canvas-scope="brain" class="${state.canvas.scope === 'brain' ? 'active' : ''}">Cérebro</button>
+          <button data-canvas-scope="system" class="${state.canvas.scope === 'system' ? 'active' : ''}">Sistema</button>
+          <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
+        </div>
+        ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : ''}
+        <button class="canvas-tool" data-canvas-fit>Mapa inteiro</button>
+        <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
+        <button class="canvas-tool primary" data-canvas-save disabled>Salvar</button>
       </div>
       <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>Fontes são casas de verdade. Etapas são contrato. Artefatos são os objetos que realmente atravessaram uma execução.</p></aside>
     </div>
@@ -311,7 +321,7 @@ function renderJudgments() {
 }
 
 function renderAreas() {
-  return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
 }
 
 function renderSystems() {
@@ -322,12 +332,12 @@ function renderSystems() {
     const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
     const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
     const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
-    return `<article class="object-card"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
+    return `<article class="object-card" data-kind="system"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
   }).join('') || empty('Nenhum Sistema contratado', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}</div>`;
 }
 
 function renderSources() {
-  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${state.model.sources.map((source) => `<article class="object-card" data-kind="source"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
 }
 
 function experimentProgress(experiment) {
@@ -395,7 +405,7 @@ function renderGovernance() {
     const grantId = access.grant_ref.replace(/^access-grant:/, '');
     const revoke = access.grant_status === 'granted' && access.revocation_effect === 'future-only'
       ? `<button class="secondary-action" data-revoke-grant="${escapeHtml(grantId)}">Revogar acesso futuro</button>` : '';
-    return `<article class="object-card"><div class="object-card-top">${badge(access.grant_status, access.grant_status === 'granted' ? 'good' : 'bad')}${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(routine.name)}</p><h3>${escapeHtml(access.source_ref)}</h3><p>${escapeHtml(access.action)} · ${escapeHtml(access.requested_mode)}</p><div class="boundary-note"><b>Revogação</b>${escapeHtml(label(access.revocation_effect))}</div>${revoke}</article>`;
+    return `<article class="object-card" data-kind="grant"><div class="object-card-top">${badge(access.grant_status, access.grant_status === 'granted' ? 'good' : 'bad')}${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(routine.name)}</p><h3>${escapeHtml(access.source_ref)}</h3><p>${escapeHtml(access.action)} · ${escapeHtml(access.requested_mode)}</p><div class="boundary-note"><b>Revogação</b>${escapeHtml(label(access.revocation_effect))}</div>${revoke}</article>`;
   }).join('') || empty('Nenhuma concessão declarada', 'A rotina pode existir sem grant quando trabalha apenas com instrução local.')}</div>`;
 }
 
@@ -425,17 +435,53 @@ const titles = {
   society: ['Society', 'A rede distribui capacidade; o contexto da empresa não circula.'],
 };
 
+// A que pergunta do operador cada view responde — vira o eyebrow da topbar.
+const viewGroups = {
+  today: 'Operação', judgments: 'Operação', routines: 'Operação', runs: 'Operação',
+  canvas: 'Estrutura', areas: 'Estrutura', systems: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
+  compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
+  society: 'Rede',
+};
+
+// Views irmãs viram abas dentro da mesma superfície.
+const tabGroups = [
+  ['judgments', 'routines', 'runs'],
+  ['systems', 'sources', 'areas', 'experiments'],
+  ['compatibility', 'governance', 'health'],
+];
+const tabCounts = { judgments: 'judgments', routines: 'routines', systems: 'systems', sources: 'sources', areas: 'areas', experiments: 'experiments' };
+
+function tabstrip() {
+  const group = tabGroups.find((views) => views.includes(state.view));
+  if (!group) return '';
+  return `<div class="tabstrip" role="tablist">${group.map((view) => {
+    const countKey = tabCounts[view];
+    const count = countKey ? state.model.counts[countKey] ?? 0 : null;
+    return `<button role="tab" data-view="${view}" class="${view === state.view ? 'active' : ''}">${titles[view][0]}${count ? `<b>${count}</b>` : ''}</button>`;
+  }).join('')}</div>`;
+}
+
 function render() {
   if (!state.model) return;
   const [title, subtitle] = titles[state.view];
+  document.body.dataset.currentView = state.view;
+  $('#eyebrow').textContent = `company-brain // ${(viewGroups[state.view] || 'Operação').toLowerCase()}`;
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
-  $('#summary').innerHTML = summaryCards();
+  $('#summary').innerHTML = state.view === 'canvas' ? '' : summaryCards();
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
-  $('#content').innerHTML = renderers[state.view]();
+  if (state.canvas.stopParticles) { state.canvas.stopParticles(); state.canvas.stopParticles = null; }
+  $('#content').innerHTML = tabstrip() + renderers[state.view]();
   $('#updated-at').textContent = `Estado local · ${fmtDate(state.model.generated_at)}`;
-  document.querySelectorAll('[data-count]').forEach((element) => { element.textContent = state.model.counts[element.dataset.count] ?? 0; });
-  document.querySelectorAll('[data-view]').forEach((element) => element.classList.toggle('active', element.dataset.view === state.view));
+  document.querySelectorAll('[data-count]').forEach((element) => {
+    const value = state.model.counts[element.dataset.count] ?? 0;
+    element.textContent = value;
+    element.dataset.zero = String(!value);
+  });
+  document.querySelectorAll('[data-view]').forEach((element) => {
+    const views = (element.dataset.views || element.dataset.view).split(',');
+    element.classList.toggle('active', views.includes(state.view));
+  });
   if (state.view === 'canvas') void mountCanvasView();
 }
 
@@ -467,14 +513,27 @@ function externalProvider(value) {
   return 'Meta';
 }
 
+// Proveniência acionável: URL abre na origem; ref/caminho copia com um clique.
+function detailScalar(value) {
+  const text = String(value ?? '');
+  if (/^https?:\/\//.test(text)) {
+    const url = safeCanvasExternalUrl(text);
+    if (url) return `<a class="copy-ref" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)} <b>↗</b></a>`;
+  }
+  if (/^[\w.@-]+[/:][\w./:@ -]+$/.test(text) && text.length > 6) {
+    return `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(text)}" title="Copiar">${escapeHtml(text)} <b>⧉</b></button>`;
+  }
+  return escapeHtml(text);
+}
+
 function canvasDetailValue(value) {
   if (Array.isArray(value)) {
     return value.length
-      ? `<ul class="canvas-detail-list">${value.map((item) => `<li>${escapeHtml(typeof item === 'object' ? JSON.stringify(item) : item)}</li>`).join('')}</ul>`
+      ? `<ul class="canvas-detail-list">${value.map((item) => `<li>${typeof item === 'object' ? escapeHtml(JSON.stringify(item)) : detailScalar(item)}</li>`).join('')}</ul>`
       : '<span class="muted">nenhum</span>';
   }
   if (value && typeof value === 'object') return `<pre class="canvas-detail-json">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
-  return escapeHtml(value);
+  return detailScalar(value);
 }
 
 function canvasInspector(node) {
@@ -489,7 +548,90 @@ function canvasList(graph) {
   return `<table><thead><tr><th>Objeto</th><th>Tipo</th><th>Estado</th><th>Rastro</th></tr></thead><tbody>${graph.nodes.map((node) => `<tr><td><button class="table-action" data-canvas-inspect-node="${escapeHtml(node.id)}">${escapeHtml(node.label)} →</button></td><td>${escapeHtml(label(node.kind))}</td><td>${escapeHtml(label(node.state))}</td><td>${node.actual ? 'Observado' : 'Contrato'}</td></tr>`).join('')}</tbody></table>`;
 }
 
+// Enxame determinístico de partículas orbitando o centro — o núcleo vivo do
+// Cérebro. Nenhum dado envolvido: é ambiente, e respeita reduced-motion.
+function startParticles() {
+  const canvas = $('#canvas-particles');
+  if (!canvas) return;
+  const context = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const resize = () => { canvas.width = canvas.clientWidth * dpr; canvas.height = canvas.clientHeight * dpr; };
+  resize();
+  const TOTAL = 230;
+  const particles = Array.from({ length: TOTAL }, (_, index) => ({
+    angle: (index / TOTAL) * Math.PI * 2 * 7.3,
+    radius: index % 3 ? 0.02 + ((index * 17) % 80) / 80 * 0.11 : 0.14 + ((index * 37) % 100) / 100 * 0.34,
+    speed: 0.00005 + ((index % 9) * 0.000016),
+    size: 0.8 + (index % 4) * 0.5,
+    color: index % 9 === 0 ? '78,156,245' : index % 13 === 0 ? '161,142,247' : '140,152,170',
+    alpha: 0.16 + (index % 5) * 0.08,
+  }));
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let frame = 0;
+  const draw = (time) => {
+    if (canvas.width !== canvas.clientWidth * dpr || canvas.height !== canvas.clientHeight * dpr) resize();
+    const { width, height } = canvas;
+    context.clearRect(0, 0, width, height);
+    const centerX = width / 2;
+    const centerY = height * 0.55;
+    const scale = Math.min(width, height);
+    for (const [ringIndex, ringRadius] of [[0, 0.13], [1, 0.2]]) {
+      context.beginPath();
+      context.setLineDash([3 * dpr, 9 * dpr]);
+      context.lineDashOffset = (time * 0.004 * (ringIndex ? -1 : 1)) % 1000;
+      context.ellipse(centerX, centerY, ringRadius * scale, ringRadius * scale * 0.72, 0, 0, Math.PI * 2);
+      context.strokeStyle = 'rgba(120, 150, 210, .14)';
+      context.lineWidth = dpr;
+      context.stroke();
+    }
+    context.setLineDash([]);
+    for (const particle of particles) {
+      const angle = particle.angle + time * particle.speed;
+      const x = centerX + Math.cos(angle) * particle.radius * scale;
+      const y = centerY + Math.sin(angle) * particle.radius * scale * 0.72;
+      context.beginPath();
+      context.arc(x, y, particle.size * dpr, 0, Math.PI * 2);
+      context.fillStyle = `rgba(${particle.color},${particle.radius < 0.13 ? Math.min(0.6, particle.alpha + 0.2) : particle.alpha})`;
+      context.fill();
+    }
+    if (!reduced) frame = requestAnimationFrame(draw);
+  };
+  frame = requestAnimationFrame(draw);
+  window.addEventListener('resize', resize);
+  state.canvas.stopParticles = () => { cancelAnimationFrame(frame); window.removeEventListener('resize', resize); };
+}
+
+// DIRECTORY do conhecimento — como o cérebro está distribuído e o que é mais
+// linkado. Índice derivado do fosso (01-nucleo-privado), calculado pelo server.
+async function renderKnowledgePanel() {
+  try {
+    const knowledge = await getJson('/api/knowledge');
+    const inspector = $('#canvas-inspector');
+    if (!inspector || state.view !== 'canvas' || state.canvas.scope !== 'brain') return;
+    const maxDomain = Math.max(1, ...knowledge.domains.map((domain) => domain.count));
+    inspector.innerHTML = `<p class="micro">DIRECTORY // CONHECIMENTO</p><h3>Cérebro da empresa</h3>
+      <div class="canvas-inspector-state"><span>${knowledge.total_notes} notas · 01-nucleo-privado</span></div>
+      <div class="knowledge-block"><p class="micro">DOMÍNIOS</p>${knowledge.domains.map((domain) => `<div class="knowledge-domain"><span>${escapeHtml(domain.name)}</span><i style="--w:${Math.round((domain.count / maxDomain) * 100)}%"></i><b>${domain.count}</b></div>`).join('')}</div>
+      <div class="knowledge-block"><p class="micro">MAIS LINKADAS</p>${knowledge.most_linked.map((note) => `<button type="button" class="knowledge-note" data-copy-ref="${escapeHtml(note.path)}" title="Copiar caminho"><strong>${escapeHtml(note.title)}</strong><small>${escapeHtml(note.domain)} · ${note.count}←</small></button>`).join('') || '<p class="muted">Nenhum wikilink encontrado.</p>'}</div>
+      <p class="section-help">Clique copia o caminho da nota. Este índice é derivado e reconstruível; a verdade continua nos arquivos.</p>`;
+  } catch { /* painel opcional — o Canvas funciona sem ele */ }
+}
+
+// Troca rápida de referência (‹ › no pill, ← → no teclado)
+function cycleCanvasRef(step) {
+  if (state.canvas.scope === 'brain') return;
+  const options = state.canvas.scope === 'system'
+    ? state.model.systems.map((system) => system.system_id)
+    : allCanvasExecutions().map((execution) => execution.selector_ref);
+  if (!options.length) return;
+  const index = Math.max(0, options.indexOf(state.canvas.ref));
+  state.canvas.ref = options[(index + step + options.length) % options.length];
+  state.canvas.positions = null;
+  render();
+}
+
 async function mountCanvasView() {
+  startParticles();
   if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id;
   if (state.canvas.scope === 'run' && !state.canvas.ref) state.canvas.ref = allCanvasExecutions()[0]?.selector_ref;
   const container = $('#operational-canvas');
@@ -506,6 +648,7 @@ async function mountCanvasView() {
       ? `<span>${graph.run?.mode ? escapeHtml(label(graph.run.mode).toUpperCase()) : graph.trace_origin === 'recorded' ? 'TRACE V1' : 'TRACE RECONSTRUÍDO'}</span><b>${escapeHtml(graph.run?.chain_id ? `${graph.run.chain_id} · ${graph.trace_events} eventos` : graph.trace_origin === 'recorded' ? `${graph.trace_events} eventos` : 'granularidade limitada')}</b>`
       : `<span>CONTRATO</span><b>${graph.nodes.length} nós · ${graph.edges.length} arestas</b>`;
     $('#canvas-list').innerHTML = canvasList(graph);
+    if (state.canvas.scope === 'brain') void renderKnowledgePanel();
     state.canvas.controller = await mountOperationalCanvas({
       container,
       model: graph,
@@ -849,6 +992,8 @@ document.addEventListener('click', (event) => {
     return;
   }
   if (event.target.closest('[data-canvas-fit]')) { state.canvas.controller?.fit(); return; }
+  const cycle = event.target.closest('[data-canvas-cycle]');
+  if (cycle) { cycleCanvasRef(Number(cycle.dataset.canvasCycle)); return; }
   if (event.target.closest('[data-canvas-edit]')) {
     state.canvas.editable = !state.canvas.editable;
     state.canvas.positions = null;
@@ -887,6 +1032,14 @@ document.addEventListener('click', (event) => {
   if (loadContextAction) { loadContext(loadContextAction.dataset.loadContext, $('#context-slot')); return; }
   const revokeAction = event.target.closest('[data-revoke-grant]');
   if (revokeAction) { revokeGrant(revokeAction.dataset.revokeGrant); return; }
+  const copyRef = event.target.closest('[data-copy-ref]');
+  if (copyRef) {
+    navigator.clipboard?.writeText(copyRef.dataset.copyRef).then(
+      () => toast('Referência copiada.'),
+      () => toast('Não foi possível copiar.', 'bad'),
+    );
+    return;
+  }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
 });
@@ -903,7 +1056,111 @@ $('#refresh').addEventListener('click', async () => {
 });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDrawer(); });
 
+/* --- Command palette (⌘K) — ir a qualquer view, rotina, sistema ou experimento --- */
+
+const palette = { open: false, query: '', index: 0, items: [] };
+
+function paletteGlyph(view) {
+  const direct = document.querySelector(`#navigation [data-view="${view}"] .nav-glyph`);
+  if (direct) return direct.innerHTML;
+  for (const button of document.querySelectorAll('#navigation [data-views]')) {
+    if (button.dataset.views.split(',').includes(view)) return button.querySelector('.nav-glyph').innerHTML;
+  }
+  return '';
+}
+
+function paletteItems() {
+  const items = Object.entries(titles).map(([view, [title]]) => ({
+    glyph: view, title, hint: 'View', run: () => { state.view = view; closeDrawer(); render(); },
+  }));
+  const model = state.model;
+  if (model) {
+    model.routines.forEach((routine) => items.push({
+      glyph: 'routines', title: routine.name, hint: 'Rotina',
+      run: () => { state.view = 'routines'; render(); openDrawer(routine.routine_id); },
+    }));
+    (model.systems || []).forEach((system) => items.push({
+      glyph: 'canvas', title: system.name, hint: 'Sistema → Canvas',
+      run: () => { state.canvas.scope = 'system'; state.canvas.ref = system.system_id; state.canvas.positions = null; state.view = 'canvas'; closeDrawer(); render(); },
+    }));
+    (model.experiments || []).forEach((experiment) => items.push({
+      glyph: 'experiments', title: experiment.name, hint: experiment.experiment_id,
+      run: () => { state.view = 'experiments'; render(); openExperiment(experiment.experiment_id); },
+    }));
+  }
+  return items;
+}
+
+function paletteRender() {
+  const query = palette.query.trim().toLowerCase();
+  const all = paletteItems();
+  palette.items = query ? all.filter((item) => `${item.title} ${item.hint}`.toLowerCase().includes(query)).slice(0, 12) : all.slice(0, 12);
+  if (palette.index >= palette.items.length) palette.index = Math.max(0, palette.items.length - 1);
+  $('#palette-list').innerHTML = palette.items.map((item, index) => `<li role="option" data-palette-index="${index}" aria-selected="${index === palette.index}"><span class="palette-glyph">${paletteGlyph(item.glyph)}</span>${escapeHtml(item.title)}<small>${escapeHtml(item.hint)}</small></li>`).join('')
+    || '<li class="palette-empty">Nada com esse nome no estado local.</li>';
+}
+
+function openPalette() {
+  palette.open = true; palette.query = ''; palette.index = 0;
+  $('#palette').hidden = false; $('#palette-backdrop').hidden = false;
+  const input = $('#palette-input');
+  input.value = '';
+  paletteRender();
+  input.focus();
+}
+
+function closePalette() {
+  palette.open = false;
+  $('#palette').hidden = true; $('#palette-backdrop').hidden = true;
+}
+
+$('#open-palette').addEventListener('click', openPalette);
+$('#palette-backdrop').addEventListener('click', closePalette);
+$('#palette-input').addEventListener('input', (event) => { palette.query = event.target.value; palette.index = 0; paletteRender(); });
+$('#palette-list').addEventListener('click', (event) => {
+  const item = event.target.closest('[data-palette-index]');
+  if (!item) return;
+  event.stopPropagation();
+  closePalette();
+  palette.items[Number(item.dataset.paletteIndex)]?.run();
+});
+
+// Captura para ganhar do Escape que fecha o drawer.
+document.addEventListener('keydown', (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    palette.open ? closePalette() : openPalette();
+    return;
+  }
+  if (!palette.open) return;
+  if (event.key === 'Escape') { event.stopPropagation(); closePalette(); return; }
+  if (event.key === 'ArrowDown' || event.key === 'Down') { event.preventDefault(); palette.index = Math.min(palette.index + 1, palette.items.length - 1); paletteRender(); return; }
+  if (event.key === 'ArrowUp' || event.key === 'Up') { event.preventDefault(); palette.index = Math.max(palette.index - 1, 0); paletteRender(); return; }
+  if (event.key === 'Enter' || event.key === 'Return' || event.keyCode === 13) { event.preventDefault(); const item = palette.items[palette.index]; closePalette(); item?.run(); }
+}, true);
+
+/* --- Sidebar colapsável + atalhos globais --- */
+
+function setNavCollapsed(collapsed) {
+  document.body.dataset.nav = collapsed ? 'collapsed' : 'open';
+  try { localStorage.setItem('cb-nav', document.body.dataset.nav); } catch { /* preferência local, nunca crítica */ }
+}
+setNavCollapsed((() => { try { return localStorage.getItem('cb-nav') === 'collapsed'; } catch { return false; } })());
+$('#collapse-nav')?.addEventListener('click', () => setNavCollapsed(document.body.dataset.nav !== 'collapsed'));
+
+document.addEventListener('keydown', (event) => {
+  if (palette.open) return;
+  const target = event.target;
+  if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+  if (event.key === '[') { setNavCollapsed(document.body.dataset.nav !== 'collapsed'); return; }
+  if (state.view === 'canvas' && state.canvas.scope !== 'brain' && !state.busy) {
+    if (event.key === 'ArrowLeft') { event.preventDefault(); cycleCanvasRef(-1); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); cycleCanvasRef(1); }
+  }
+});
+
 try {
+  $('#sys-line').textContent = `${window.location.host} · file-only · reference-only`;
   state.csrf = (await getJson('/api/session')).csrf_token;
   await loadModel();
 } catch (error) {

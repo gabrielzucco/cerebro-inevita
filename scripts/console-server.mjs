@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,6 +33,48 @@ import {
   readCorrectionComparison,
   rerunWithCorrection,
 } from './lib/correction-loop.mjs';
+
+// Índice derivado do conhecimento: varre SOMENTE 01-nucleo-privado (fosso, baixo
+// risco), nunca 02-dados-terceiros. Reconstruível a cada chamada; não cria verdade.
+function knowledgeIndex(root) {
+  const base = resolve(root, '01-nucleo-privado');
+  const files = [];
+  const walk = (dir) => {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name.endsWith('.md')) files.push(full);
+    }
+  };
+  walk(base);
+  const domains = new Map();
+  const inbound = new Map();
+  const slugs = new Map();
+  for (const file of files) {
+    const relative = file.slice(base.length + 1);
+    const domain = relative.includes('/') ? relative.slice(0, relative.indexOf('/')) : '·raiz';
+    domains.set(domain, (domains.get(domain) || 0) + 1);
+    const slug = relative.slice(relative.lastIndexOf('/') + 1, -3);
+    slugs.set(slug, { relative, domain });
+    let content = '';
+    try { content = readFileSync(file, 'utf8'); } catch { continue; }
+    for (const match of content.matchAll(/\[\[([^\]|#\n]+)/g)) {
+      const target = match[1].trim();
+      if (target) inbound.set(target, (inbound.get(target) || 0) + 1);
+    }
+  }
+  const top = [...inbound.entries()]
+    .filter(([slug]) => slugs.has(slug))
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 12)
+    .map(([slug, count]) => ({ title: slug, count, domain: slugs.get(slug).domain, path: `01-nucleo-privado/${slugs.get(slug).relative}` }));
+  const domainList = [...domains.entries()].sort((left, right) => right[1] - left[1]).slice(0, 10)
+    .map(([name, count]) => ({ name, count }));
+  return { total_notes: files.length, domains: domainList, most_linked: top };
+}
 
 const COOKIE_NAME = 'cerebro_console_session';
 const MAX_BODY_BYTES = 32 * 1024;
@@ -76,7 +118,8 @@ function send(response, status, value, extraHeaders = {}) {
 }
 
 function sendStatic(response, file, type, extraHeaders = {}) {
-  response.writeHead(200, { ...headers(type), ...extraHeaders });
+  // Console local em iteração constante: nunca deixar o navegador congelar um asset.
+  response.writeHead(200, { ...headers(type), 'Cache-Control': 'no-store', ...extraHeaders });
   response.end(readFileSync(resolve(STATIC_ROOT, file)));
 }
 
@@ -212,6 +255,11 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/favicon.ico') {
         response.writeHead(204, headers());
         response.end();
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/knowledge') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, knowledgeIndex(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/session') {
