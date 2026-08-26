@@ -315,11 +315,14 @@ O caminho de escrita é `preview → diff → confirmação → recibo`, o mesmo
    nota e deixa recibo. Se o arquivo mudou depois do martelo, a reversão para em
    `rollback-conflict` — reverter nunca destrói edição humana posterior.
 
-A ordem dos eventos de um caso é a `sequence` declarada no recibo (1, 2, 3…), verificada na
-gravação contra o histórico em disco — nunca o timestamp, que empata com relógio congelado, nem o
-UUID, que não ordena nada. A reversão é compensada: se a gravação do recibo falhar depois da
-remoção, a nota volta dos bytes em memória; a nota canônica nunca desaparece sem um evento de
-reversão de pé.
+A ordem dos eventos de um caso é a `sequence` declarada no recibo (1, 2, 3…) — nunca o
+timestamp, que empata com relógio congelado, nem o UUID, que não ordena nada. O nome do arquivo do
+recibo é a própria sequência e a gravação usa `link(2)` exclusivo: dois processos em corrida nunca
+conseguem dois recibos com a mesma sequência — o perdedor recebe `sequence-conflict` e compensa.
+A reversão é **compensada, não atômica**: o recibo é validado antes da remoção e, se a gravação
+falhar depois, a nota volta dos bytes em memória. Queda do processo entre a remoção e o recibo não
+é coberta pela compensação — para esse caso, o snapshot gravado ANTES da remoção é a recuperação:
+os bytes da nota nunca se perdem, e o estado do caso permanece `applied` até um rollback completo.
 
 Sobre autoria: o Console local roda numa sessão de máquina única, sem sistema de identidade — ele
 **não consegue provar** que um humano específico digitou o texto. O que o protocolo garante é o

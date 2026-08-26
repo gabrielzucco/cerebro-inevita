@@ -281,6 +281,13 @@ try {
     ...receipt,
     canonical_writes: [{ ...receipt.canonical_writes[0], bytes: 'not-a-number' }],
   }).some((error) => error.includes('bytes inválido')));
+  // recorded_at estrito: "0" (Date.parse aceita como ano 2000) e data impossível
+  // normalizada não passam mais (P2 da re-revisão).
+  assert(validateDecisionCaseReceipt({ ...receipt, recorded_at: '0' }).includes('recorded_at inválido'));
+  assert(validateDecisionCaseReceipt({ ...receipt, recorded_at: '2026-02-30T12:00:00.000Z' })
+    .includes('recorded_at inválido'));
+  assert(validateDecisionCaseReceipt({ ...receipt, recorded_at: '2026-08-26T14:00:00Z' })
+    .includes('recorded_at inválido'), 'sem milissegundos não é o formato do recibo');
   const { sequence: _omitted, ...withoutSequence } = receipt;
   assert(validateDecisionCaseReceipt(withoutSequence).includes('sequence inválida'));
   assert(validateDecisionCaseReceipt({ ...receipt, sequence: 0 }).includes('sequence inválida'));
@@ -303,6 +310,19 @@ try {
   }
   assert.equal(existsSync(secondNotePath), true, 'recibo falhou → a nota tem que voltar');
   assert.equal(decisionCaseState(root, CASE_ID).status, 'applied', 'estado intacto após falha de reversão');
+
+  // ------------------------------------ claim exclusivo por sequência (TOCTOU)
+  // O nome do arquivo É a sequência: dois processos em corrida disputam o mesmo
+  // nome e link(2) exclusivo garante que só um vence — não existem dois N+1.
+  const caseReceiptsDir = join(root, '.cerebro', 'runtime', 'receipts', 'decisions', CASE_ID);
+  assert.deepEqual(readdirSync(caseReceiptsDir).sort(), ['0001.json', '0002.json', '0003.json'],
+    'um arquivo por sequência, nome determinístico — o claim é o filesystem');
+  // Histórico ilegível é fail-stop: nada novo se decide em cima de recibo corrompido.
+  writeFileSync(join(caseReceiptsDir, '0004.json'), '{lixo');
+  assert.throws(() => decisionCaseState(root, CASE_ID));
+  assert.throws(() => rollbackDecisionCase(root, CASE_ID, { actorRef: ACTOR, reasonCode: 'mistake' }));
+  rmSync(join(caseReceiptsDir, '0004.json'));
+  assert.equal(decisionCaseState(root, CASE_ID).status, 'applied');
 
   // --------------------------------------- fronteira é realpath, não prefixo
   // Um diretório-symlink DENTRO do núcleo apontando para fora (ou para a zona de

@@ -99,8 +99,10 @@ A revisão pós-implementação bloqueou o landing com 5 P1; todos corrigidos e 
    ordenação — timestamp empatava com relógio congelado e o desempate por UUID era aleatório
    (a suíte HTTP ficava vermelha ~50% dos runs; 8 runs seguidos verdes após o fix). Filename do
    recibo agora é prefixado pela sequência.
-2. **Rollback atômico**: o recibo de reversão é validado ANTES do unlink; se a gravação falhar
-   depois, a nota volta dos bytes em memória. Teste força EACCES no diretório de recibos e prova
+2. **Rollback compensado** (não atômico a queda de processo): o recibo de reversão é validado ANTES
+   do unlink; se a gravação falhar depois, a nota volta dos bytes em memória. Queda do processo entre
+   o unlink e o recibo não é coberta — o snapshot gravado antes da remoção é a recuperação; os bytes
+   nunca se perdem. Teste força EACCES no diretório de recibos e prova
    que a nota reaparece e o estado continua `applied`.
 3. **Autoria**: o cliente não autodeclara mais `authored_by_human: true` — virou checkbox
    explícito, desmarcado por padrão, com texto honesto sobre a garantia real (asserção humana
@@ -115,6 +117,21 @@ A revisão pós-implementação bloqueou o landing com 5 P1; todos corrigidos e 
 
 Também: `review_on` exige data de calendário real (2026-02-30 não vira março) e os cards de caso
 respondem a Enter/Space no handler global de `role="button"`.
+
+### Re-revisão 26/08 — 2 P1 + 3 P2 corrigidos
+
+1. **TOCTOU da sequência (P1)**: o filename do recibo virou a própria sequência (`0001.json`…) e a
+   gravação usa `link(2)` exclusivo — dois processos em corrida nunca conseguem dois recibos N+1;
+   o perdedor cai em `sequence-conflict` e compensa. Teste prova o nome determinístico e o
+   fail-stop quando o histórico contém recibo ilegível.
+2. **Fronteira antes da leitura (P1)**: em evidência `note:`, o realpath é provado ANTES de
+   qualquer stat/read/hash do alvo — recusar depois de ler já é ter lido.
+3. **`recorded_at` estrito (P2)**: `isInstant` exige o formato exato de `toISOString` com
+   round-trip; `"0"` e `2026-02-30T…` agora falham (no teste).
+4. **Checkbox sem corrida input/change (P2)**: `authored` saiu do handler de `input` (que gravava
+   `"on"` como string e podia renderizar antes do `change`); o `change` é o dono único.
+5. **Wording (P2)**: "atômico" rebaixado para **compensado** no código, no protocolo e nesta story,
+   com o snapshot pré-remoção documentado como recuperação para queda de processo.
 
 **Nota de processo**: o commit `8b2810b` varreu, no `validate-product.mjs`, a linha da migração de
 traces de outra mesa (editada entre a leitura e o commit — o risco exato documentado em
@@ -140,7 +157,7 @@ paralela ativa, reescrever histórico seria pior que registrar o acoplamento aqu
 - `console/app.js` — view `cases` (fila, caso, formulário, evidência, diff, registrado, reversão),
   estado do formulário, invalidação da simulação e labels do vocabulário do martelo
 - `console/styles.css` — bloco Decision Case + `.case-path`/`.case-hint`
-- `console/index.html` — `cases` no grupo de views da nav e bump de cache `?v=6`
+- `console/index.html` — `cases` no grupo de views da nav e bump de cache (hoje `?v=7`)
 - `docs/stories/2026-08-26-decision-case-v1.md` — esta story
 
 ## Verificação

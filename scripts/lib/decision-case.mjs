@@ -12,6 +12,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   closeSync,
   existsSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -79,16 +80,21 @@ function closed(errors, value, path, keys) {
   for (const key of Object.keys(value)) if (!allowed.has(key)) errors.push(`${path}.${key} não é permitido`);
 }
 
-function validDate(value) {
-  return Number.isFinite(Date.parse(value || ''));
-}
-
 // Data de calendário REAL: 2026-02-30 não existe e não pode virar março em silêncio.
 // O round-trip pelo Date pega dia/mês fora do calendário sem tabela de bissexto manual.
 function isCalendarDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+// Instante estrito: Date.parse aceita "0" (vira ano 2000) e normaliza datas
+// impossíveis. O recibo só nasce de toISOString, então o formato exato é exigível
+// — e o round-trip garante que o calendário é real.
+function isInstant(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
 function digestOf(value) {
@@ -324,16 +330,19 @@ function resolveEvidence(root, ref, { inferredRefs = new Set() } = {}) {
     const path = resolve(root, id);
     const moat = resolve(root, '01-nucleo-privado');
     if (!path.startsWith(`${moat}${sep}`)) throw new Error('evidence-note-outside-moat');
-    resolved = fileEvidence(root, path, ref, 'note', inferred ? 'inferred' : 'declared', 'Nota do núcleo privado');
-    // Fronteira REAL, não lexical: um diretório-symlink dentro do núcleo pode apontar
-    // para fora do cérebro ou para 02-dados-terceiros. O que vale é o realpath.
-    if (resolved) {
+    // Fronteira REAL antes de QUALQUER stat/read/hash do alvo: um diretório-symlink
+    // dentro do núcleo pode apontar para fora do cérebro ou para 02-dados-terceiros,
+    // e recusar depois de ler já é ter lido. realpath só resolve o caminho — o
+    // conteúdo do arquivo não é tocado até a fronteira estar provada.
+    if (existsSync(path)) {
+      if (lstatSync(path).isSymbolicLink()) throw new Error('evidence-note-outside-moat');
       const realMoat = realpathSync(moat);
       const realNote = realpathSync(path);
       if (!insideRealDirectory(realpathSync(resolve(root)), realMoat)
         || !insideRealDirectory(realMoat, realNote)) {
         throw new Error('evidence-note-outside-moat');
       }
+      resolved = fileEvidence(root, path, ref, 'note', inferred ? 'inferred' : 'declared', 'Nota do núcleo privado');
     }
   } else {
     throw new Error('evidence-kind-unsupported');
@@ -504,7 +513,7 @@ export function validateDecisionCaseReceipt(value) {
   if (!REF_ID_RE.test(value.actor_ref || '')) errors.push('actor_ref inválido');
   if (NON_HUMAN_ACTOR_RE.test(value.actor_ref || '')) errors.push('martelo exige autoria humana');
   if (value.authorship !== 'human') errors.push('authorship precisa ser human');
-  if (!validDate(value.recorded_at)) errors.push('recorded_at inválido');
+  if (!isInstant(value.recorded_at)) errors.push('recorded_at inválido');
   if (!object(value.privacy)) errors.push('privacy precisa ser objeto');
   else {
     closed(errors, value.privacy, 'privacy', [
@@ -836,12 +845,24 @@ function writeEvent(root, caseId, value) {
   if (errors.length) throw new Error('decision-case-receipt-invalid');
   // Ordem causal é sequência declarada, nunca timestamp: com relógio congelado ou
   // eventos no mesmo milissegundo, `recorded_at` empata e UUID não ordena nada.
-  // O próximo evento tem que ser exatamente o count atual + 1 — senão é corrida.
   const existing = listDecisionCaseEvents(root, caseId);
   if (value.sequence !== existing.length + 1) throw new Error('decision-case-sequence-conflict');
-  const path = join(caseDirectory(root, caseId), `${String(value.sequence).padStart(4, '0')}-${value.event_id}.json`);
-  if (existsSync(path)) throw new Error('decision-case-receipt-already-exists');
-  writeJsonAtomic(path, value);
+  // Claim EXCLUSIVO da sequência: o nome do arquivo é a própria sequência (sem UUID),
+  // e link(2) falha com EEXIST se outro processo chegou primeiro — fecha a janela
+  // TOCTOU entre a leitura do histórico acima e a gravação. Dois processos nunca
+  // conseguem dois recibos N+1; o perdedor cai em sequence-conflict e compensa.
+  const directory = caseDirectory(root, caseId);
+  const path = join(directory, `${String(value.sequence).padStart(4, '0')}.json`);
+  const temporary = join(directory, `.${value.event_id}.tmp`);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  try {
+    linkSync(temporary, path);
+  } catch {
+    try { unlinkSync(temporary); } catch { /* o tmp pode nem ter sobrevivido */ }
+    throw new Error('decision-case-sequence-conflict');
+  }
+  unlinkSync(temporary);
   return { value, path, ref: `decision-case-receipt:${value.event_id}` };
 }
 
@@ -1010,9 +1031,11 @@ export function rollbackDecisionCase(root, caseId, input, {
     actor_ref: actorRef,
     recorded_at: recordedAt.toISOString(),
   };
-  // Reversão atômica: valida o recibo ANTES de apagar; se a gravação do recibo
-  // falhar depois do unlink, a nota volta dos bytes em memória. A nota canônica
-  // nunca desaparece sem um evento de reversão de pé.
+  // Reversão COMPENSADA, não atômica: o recibo é validado ANTES de apagar e, se a
+  // gravação falhar depois do unlink, a nota volta dos bytes em memória. O que a
+  // compensação não cobre é queda do processo entre o unlink e o recibo — para esse
+  // caso, o snapshot gravado antes da remoção é a recuperação: os bytes da nota
+  // nunca se perdem, e o estado do caso segue 'applied' até um rollback completo.
   const invalid = validateDecisionCaseReceipt(value);
   if (invalid.length) throw new Error('decision-case-receipt-invalid');
   unlinkSync(target);

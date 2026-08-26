@@ -2253,7 +2253,7 @@ document.addEventListener('input', (event) => {
   const field = event.target.closest('[data-case-field]');
   if (!field || !state.cases.form) return;
   const key = field.dataset.caseField;
-  if (key === 'evidence' || key === 'rollback_reason') return;
+  if (key === 'evidence' || key === 'rollback_reason' || key === 'authored') return;
   state.cases.form[key] = field.value;
   const counter = document.querySelector('.case-counter');
   if (counter && key === 'decision_text') {
