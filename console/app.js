@@ -15,6 +15,7 @@ const state = {
     sort: { key: 'when', dir: 'desc' },
     cmpA: '', cmpB: '',
   },
+  cases: { list: null, detail: null, form: null, preview: null, actor: '' },
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
   },
@@ -76,6 +77,32 @@ const labels = {
   foundation: 'Fundação', contracted: 'Contratado', operational: 'Operacional',
   valid: 'Válido', invalid: 'Inválido', unassigned: 'Ainda não atribuído', assigned: 'Atribuído',
   'run-ledger-invalid': 'Ledger de runs ilegível', 'routine-receipt-invalid': 'Recibo de rotina ilegível',
+  // Decision Case — o vocabulário do martelo humano na fonte canônica.
+  applied: 'Registrado', 'rolled-back': 'Revertido', 'already-applied': 'Já registrado',
+  'already-rolled-back': 'Já revertido', 'nothing-to-roll-back': 'Nada a reverter',
+  decided: 'Decidido', dropped: 'Descartado', deferred: 'Adiado',
+  'preview-required': 'Simule antes de registrar',
+  'preview-stale': 'A simulação não vale mais — simule de novo',
+  'preview-expired': 'Simulação vencida — simule de novo',
+  'preview-in-future': 'Simulação com data no futuro',
+  'rollback-conflict': 'A nota mudou depois do martelo — reversão bloqueada',
+  'evidence-required': 'Escolha a evidência', 'evidence-not-found': 'Evidência não abre no disco',
+  'evidence-beyond-queue-required': 'Precisa de evidência além do item da fila',
+  'evidence-note-outside-moat': 'Nota fora do núcleo privado não vira evidência',
+  'human-authorship-required': 'O martelo exige autoria humana',
+  'decision-text-too-short': 'Texto da decisão curto demais',
+  'decision-text-contains-pii': 'Texto com dado pessoal — o vault não aceita',
+  'decision-text-looks-like-secret': 'Texto parece conter segredo',
+  'title-invalid': 'Título fora do tamanho permitido',
+  'review-on-invalid': 'Adiar exige data de revisão',
+  'review-on-not-future': 'A data de revisão precisa ser no futuro',
+  'canonical-target-exists': 'Já existe nota com esse nome hoje',
+  'canonical-target-missing': 'A nota registrada não está mais no lugar',
+  'decision-case-already-applied': 'Este caso já tem martelo',
+  'decision-case-not-found': 'Item saiu da fila — caso não existe mais',
+  'decision-notes-missing': 'A casa canônica das decisões não existe',
+  'wrong-verdict': 'Veredito errado', 'wrong-evidence': 'Evidência errada',
+  duplicate: 'Duplicado', superseded: 'Superado', mistake: 'Registro por engano',
 };
 
 function label(value) {
@@ -1079,7 +1106,301 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+/* --- Decision Case: o Console prepara o caso, o humano dá o martelo ---
+   Nenhum botão desta view decide sozinho. Preparar e simular não escrevem nada;
+   aplicar exige o digest do diff que a pessoa acabou de ler; reverter guarda cópia
+   privada e para se alguém editou a nota depois do martelo. */
+
+const CASE_VERDICTS = [
+  ['decided', 'Decidido', 'Vale a partir do registro.'],
+  ['dropped', 'Descartado', 'O item morre e não volta sem caso novo.'],
+  ['deferred', 'Adiado', 'Com data explícita de revisão — sem terceira opção silenciosa.'],
+];
+const CASE_ROLLBACK_REASONS = [
+  ['wrong-verdict', 'Veredito errado'],
+  ['wrong-evidence', 'Evidência errada'],
+  ['duplicate', 'Duplicado'],
+  ['superseded', 'Superado por decisão nova'],
+  ['mistake', 'Registro por engano'],
+];
+
+function emptyCaseForm() {
+  return { verdict: 'decided', theme: 'metodo', review_on: '', title: '', decision_text: '', evidence: [] };
+}
+
+function caseProvenance(provenance) {
+  const map = { observed: ['observado', 'good'], declared: ['declarado', 'neutral'], inferred: ['inferido', 'warn'] };
+  const [text, kind] = map[provenance] || [provenance, 'neutral'];
+  return `<span class="badge ${kind}"><i></i>${escapeHtml(text)}</span>`;
+}
+
+function caseStateBadge(state) {
+  if (state.status === 'applied') return badge('applied', 'good', 'Registrado no vault');
+  if (state.status === 'rolled-back') return badge('rolled-back', 'warn', 'Revertido');
+  return badge('pending', 'warn', 'Espera martelo');
+}
+
+function caseDiffBlock(diff) {
+  return `<pre class="case-diff">${diff.split('\n').map((line) => {
+    const kind = line.startsWith('+++') || line.startsWith('---') ? 'meta'
+      : line.startsWith('@@') ? 'hunk'
+        : line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : 'ctx';
+    return `<span class="${kind}">${escapeHtml(line) || '&nbsp;'}</span>`;
+  }).join('\n')}</pre>`;
+}
+
+function caseHistory(state) {
+  if (!state.history.length) return '';
+  return `<section class="drawer-section"><h3>Histórico do caso</h3><div class="ref-list vertical">${state.history.map((event) => `<div class="case-event">${badge(event.event, event.event === 'applied' ? 'good' : 'warn', event.event === 'applied' ? 'Registrado' : 'Revertido')}<span>${fmtDate(event.recorded_at)} · <code>${escapeHtml(event.actor_ref)}</code>${event.reason_code ? ` · ${escapeHtml(label(event.reason_code))}` : ''}</span><code>${escapeHtml(event.event_ref)}</code></div>`).join('')}</div></section>`;
+}
+
+function caseList() {
+  const data = state.cases.list;
+  if (!data) return '<p class="muted">Carregando a fila de casos…</p>';
+  if (!data.available) {
+    return empty('Fila de decisão indisponível', 'O motor do vault (gera_fila_decisao.py) ainda não materializou `.automacao/_FILA-DECISAO.json`. O Console mostra a verdade; não inventa fila.');
+  }
+  if (!data.cases.length) return empty('Nenhum item espera martelo', 'Fila vazia — nada para decidir agora.');
+  const rows = data.cases.map((item) => `<article class="case-row" data-case-open="${escapeHtml(item.case_id)}" role="button" tabindex="0">
+      <div class="case-row-top">${caseStateBadge(item.state)}<span class="decision-age${item.age_days >= 30 ? ' overdue' : item.age_days >= 7 ? ' late' : ''}">${item.age_days}d</span></div>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p class="micro">${escapeHtml(decisionCategory(item.category))} · na fila desde ${escapeHtml(item.first_seen)}</p>
+      ${item.state.canonical_path ? `<code>${escapeHtml(item.state.canonical_path)}</code>` : ''}
+    </article>`).join('');
+  return `<div class="case-kpis">
+      <div><b>${data.open_count}</b><span>abertos</span></div>
+      <div><b>${data.applied_count}</b><span>com martelo registrado</span></div>
+      <div><b>${data.decided_total}</b><span>já saíram da fila</span></div>
+      <div><b>${data.house_ready ? 'pronta' : 'ausente'}</b><span>casa canônica</span></div>
+    </div>
+    <div class="case-grid">${rows}</div>
+    <div class="boundary-note"><b>O Console não decide</b>Ele reúne o item, resolve a evidência e mostra o diff exato. A decisão é sua, o texto é seu, e o registro só acontece depois de você confirmar o diff que leu.</div>`;
+}
+
+function caseEvidenceRow(entry, checked) {
+  return `<label class="case-evidence">
+    <input type="checkbox" data-case-field="evidence" value="${escapeHtml(entry.ref)}"${checked ? ' checked' : ''}>
+    <span class="case-evidence-body">
+      <code>${escapeHtml(entry.ref)}</code>
+      <small>${escapeHtml(entry.summary)}${entry.path ? ` · <code>${escapeHtml(entry.path)}</code>` : ''}</small>
+    </span>
+    ${caseProvenance(entry.provenance)}
+  </label>`;
+}
+
+function casePreviewBlock() {
+  const preview = state.cases.preview;
+  if (!preview) {
+    return `<div class="boundary-note"><b>Nada foi escrito ainda</b>Simular monta a nota inteira e devolve o diff. Enquanto você não confirmar esse diff, o vault não é tocado.</div>`;
+  }
+  return `<section class="case-preview">
+    <div class="subheading"><h3>Diff exato · o que vai para o vault</h3><span>${preview.canonical_write.bytes} bytes</span></div>
+    <p class="case-path"><span>arquivo novo</span><code>${escapeHtml(preview.canonical_write.path)}</code></p>
+    ${caseDiffBlock(preview.diff)}
+    <div class="case-preview-meta">
+      <span>plano <code>${escapeHtml(preview.plan_digest.slice(0, 19))}…</code></span>
+      <span>vale até ${fmtDate(preview.expires_at)}</span>
+      <span>${preview.evidence.length} evidência(s)</span>
+    </div>
+    <div class="case-actions">
+      <button class="action primary" data-case-apply>Confirmar este diff e registrar</button>
+      <button class="action" data-case-discard>Descartar simulação</button>
+    </div>
+    <div class="boundary-note"><b>Confirmação é do diff, não do botão</b>Registrar exige o digest deste plano. Se você mudar qualquer campo, esta simulação morre e é preciso simular de novo — o que se escreve é byte a byte o que está acima.</div>
+  </section>`;
+}
+
+function caseAppliedBlock(detail) {
+  const { state: caseState } = detail;
+  const path = caseState.canonical_path;
+  return `<section class="case-preview applied">
+    <div class="subheading"><h3>Martelo registrado</h3><span>${escapeHtml(caseState.last_event.actor_ref)}</span></div>
+    <p class="case-path"><span>fonte canônica</span><code>${escapeHtml(path)}</code></p>
+    <div class="case-preview-meta">
+      <span>${fmtDate(caseState.last_event.recorded_at)}</span>
+      <span>veredito ${escapeHtml(label(caseState.last_event.verdict))}</span>
+      <span>recibo <code>${escapeHtml(caseState.applied_ref)}</code></span>
+    </div>
+    <div class="case-actions">
+      <label class="case-inline-field"><span>Motivo da reversão</span><select data-case-field="rollback_reason">${CASE_ROLLBACK_REASONS.map(([value, text]) => `<option value="${value}">${escapeHtml(text)}</option>`).join('')}</select></label>
+      <button class="action danger" data-case-rollback>Reverter registro</button>
+    </div>
+    <div class="boundary-note"><b>Reverter apaga o registro, não o efeito</b>A nota sai do vault, uma cópia privada fica em <code>.cerebro/runtime/decisions/</code> e um recibo de reversão entra no histórico. O que a decisão causou fora do cérebro continua valendo.</div>
+  </section>`;
+}
+
+function caseForm(detail) {
+  const form = state.cases.form;
+  const selected = new Set(form.evidence);
+  const candidates = detail.evidence_candidates;
+  return `<section class="case-form">
+    <div class="subheading"><h3>Seu martelo</h3><span>autoria humana obrigatória</span></div>
+    <div class="case-verdicts">${CASE_VERDICTS.map(([value, text, hint]) => `<button class="case-verdict${form.verdict === value ? ' active' : ''}" data-case-verdict="${value}"><b>${escapeHtml(text)}</b><small>${escapeHtml(hint)}</small></button>`).join('')}</div>
+    ${form.verdict === 'deferred' ? `<label class="case-field"><span>Revisar em (data explícita, obrigatória)</span><input type="date" data-case-field="review_on" value="${escapeHtml(form.review_on)}"></label>` : ''}
+    <label class="case-field"><span>Título da decisão · vira o nome do arquivo</span><input type="text" data-case-field="title" maxlength="120" value="${escapeHtml(form.title)}" placeholder="O que ficou decidido, em uma linha"></label>
+    <label class="case-field"><span>Tema</span><select data-case-field="theme">${detail.canonical.themes.map((theme) => `<option value="${escapeHtml(theme)}"${form.theme === theme ? ' selected' : ''}>${escapeHtml(theme)}</option>`).join('')}</select></label>
+    <label class="case-field"><span>A decisão, nas suas palavras · verbatim, mínimo ${detail.draft.min_chars} caracteres</span><textarea data-case-field="decision_text" rows="7" maxlength="${detail.draft.max_chars}" placeholder="${escapeHtml(detail.draft.hint)}">${escapeHtml(form.decision_text)}</textarea></label>
+    <p class="case-counter">${form.decision_text.trim().length}/${detail.draft.max_chars} · o Console não escreve esta parte por você</p>
+    <div class="subheading"><h3>Evidência</h3><span>${selected.size} escolhida(s)</span></div>
+    <div class="case-evidence-list">${candidates.length ? candidates.map((entry) => caseEvidenceRow(entry, selected.has(entry.ref))).join('') : '<p class="muted">Nenhum candidato resolvível neste cérebro.</p>'}</div>
+    <p class="case-hint">Referência que não abre no disco derruba o caso. O item da fila sozinho não basta: escolha pelo menos uma evidência além dele.</p>
+    <div class="case-actions">
+      <button class="action primary" data-case-preview>Simular e ver o diff</button>
+      <button class="action" data-case-back>Voltar para a fila</button>
+    </div>
+  </section>`;
+}
+
+function caseDetail() {
+  const detail = state.cases.detail;
+  if (!detail) return '<p class="muted">Abrindo o caso…</p>';
+  const applied = detail.state.status === 'applied';
+  return `<div class="case-detail">
+    <div class="case-detail-head">
+      <button class="action" data-case-back>← Fila de casos</button>
+      ${caseStateBadge(detail.state)}
+      <code>${escapeHtml(detail.case_ref)}</code>
+    </div>
+    <article class="case-item">
+      <p class="micro">${escapeHtml(decisionCategory(detail.item.category))} · na fila desde ${escapeHtml(detail.item.first_seen)} (${detail.item.age_days}d)</p>
+      <h2>${escapeHtml(detail.item.title)}</h2>
+      <code>${escapeHtml(detail.queue_ref)}</code>
+    </article>
+    <div class="boundary-note"><b>${escapeHtml(detail.authorship.rule)}</b>${detail.canonical.house_ready ? `A decisão vai virar um arquivo em <code>${escapeHtml(detail.canonical.house)}</code> (${escapeHtml(detail.canonical.filename_pattern)}), com <code>tipo: decisao</code> e <code>pode-ir-comunidade: false</code>.` : 'A casa canônica das decisões não existe neste cérebro — o caso pode ser preparado, mas não registrado.'}</div>
+    ${applied ? caseAppliedBlock(detail) : `${caseForm(detail)}${casePreviewBlock()}`}
+    ${caseHistory(detail.state)}
+  </div>`;
+}
+
+function renderCases() {
+  return `<div class="section-heading"><div><p class="eyebrow">MARTELO HUMANO NA FONTE CANÔNICA</p><h2>Decisões</h2></div><p>O Console prepara o caso — item, evidência com proveniência e o diff exato. Quem decide é você; o registro vai para o vault com recibo e reversão.</p></div>
+    ${state.cases.detail ? caseDetail() : caseList()}`;
+}
+
+async function loadCases() {
+  try {
+    state.cases.list = await getJson('/api/decision-cases');
+  } catch {
+    state.cases.list = { available: false, house_ready: false, cases: [], open_count: 0, applied_count: 0, decided_total: 0 };
+  }
+  if (state.view === 'cases') render();
+}
+
+async function openCase(caseId) {
+  try {
+    const detail = await getJson(`/api/decision-cases/${caseId}`);
+    state.cases.detail = detail;
+    state.cases.preview = null;
+    state.cases.form = emptyCaseForm();
+    // Evidência do próprio item já entra marcada; o resto é escolha de quem decide.
+    state.cases.form.evidence = detail.evidence_candidates
+      .filter((entry) => entry.kind === 'decision-queue')
+      .map((entry) => entry.ref);
+    state.view = 'cases';
+    render();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  }
+}
+
+function casePayload() {
+  const form = state.cases.form;
+  return {
+    verdict: form.verdict,
+    theme: form.theme,
+    title: form.title.trim(),
+    decision_text: form.decision_text.trim(),
+    evidence_refs: form.evidence,
+    authored_by_human: true,
+    ...(form.verdict === 'deferred' ? { review_on: form.review_on } : {}),
+  };
+}
+
+async function previewCase() {
+  if (state.busy || !state.cases.detail) return;
+  const approval = await askConfirm({
+    title: 'Simular o registro da decisão',
+    body: 'Simular não escreve nada: monta a nota inteira e devolve o diff para você conferir antes de qualquer coisa.',
+    confirmLabel: 'Simular',
+    fields: [APPROVED_BY_FIELD],
+  });
+  if (!approval?.approvedBy) return;
+  state.cases.actor = approval.approvedBy;
+  state.busy = true;
+  try {
+    state.cases.preview = await mutate(`/api/decision-cases/${state.cases.detail.case_id}/preview`, {
+      ...casePayload(), approved_by: approval.approvedBy,
+    });
+    toast('Diff pronto. Nada foi escrito no vault ainda.');
+  } catch (error) {
+    state.cases.preview = null;
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
+
+async function applyCase() {
+  const preview = state.cases.preview;
+  if (state.busy || !preview) return;
+  const approval = await askConfirm({
+    title: 'Registrar o martelo na fonte canônica',
+    body: `Isto cria ${preview.canonical_write.path} no vault, exatamente como no diff que você acabou de ler.\nO recibo guarda autoria, evidência e impressões — nunca o texto da decisão.\nNenhuma ação externa será executada, e o registro é reversível.`,
+    confirmLabel: 'Registrar decisão',
+    fields: [{ ...APPROVED_BY_FIELD, value: state.cases.actor || APPROVED_BY_FIELD.value }],
+  });
+  if (!approval?.approvedBy) return;
+  state.busy = true;
+  try {
+    const result = await mutate(`/api/decision-cases/${state.cases.detail.case_id}/apply`, {
+      ...casePayload(),
+      approved_by: approval.approvedBy,
+      plan_digest: preview.plan_digest,
+      decided_at: preview.decided_at,
+    });
+    toast(result.status === 'already-applied'
+      ? 'Este caso já tinha martelo — nada foi escrito de novo.'
+      : `Decisão registrada em ${result.canonical_write.path}.`);
+    state.cases.preview = null;
+    await loadCases();
+    await openCase(state.cases.detail.case_id);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+    render();
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function rollbackCase() {
+  if (state.busy || !state.cases.detail) return;
+  const reason = document.querySelector('[data-case-field="rollback_reason"]')?.value || 'mistake';
+  const approval = await askConfirm({
+    title: 'Reverter o registro da decisão',
+    body: 'A nota sai do vault e uma cópia privada fica no runtime, com recibo de reversão.\nSe alguém editou a nota depois do martelo, a reversão para e nada é apagado.\nReverter o registro não desfaz o que a decisão causou fora daqui.',
+    confirmLabel: 'Reverter',
+    tone: 'danger',
+    fields: [{ ...APPROVED_BY_FIELD, value: state.cases.actor || APPROVED_BY_FIELD.value }],
+  });
+  if (!approval?.approvedBy) return;
+  state.busy = true;
+  try {
+    const result = await mutate(`/api/decision-cases/${state.cases.detail.case_id}/rollback`, {
+      approved_by: approval.approvedBy, reason_code: reason,
+    });
+    toast(result.status === 'rolled-back' ? 'Registro revertido. Cópia privada guardada.' : 'Nada a reverter neste caso.');
+    await loadCases();
+    await openCase(state.cases.detail.case_id);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+    render();
+  } finally {
+    state.busy = false;
+  }
+}
+
+const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
@@ -1092,6 +1413,7 @@ const titles = {
   experiments: ['Experimentos', 'Hipótese, execução, medição, martelo e aprendizado ligados ao Sistema.'],
   routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
   judgments: ['Julgamento', 'Outputs privados esperando decisão humana rastreável.'],
+  cases: ['Decisões', 'Decision Case: caso preparado pelo Console, martelo humano registrado na fonte canônica.'],
   runs: ['Execuções', 'Todas as execuções — recibos de rotina e Run Records do ledger, com contexto, eval, decisão e trace.'],
   governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
   health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
@@ -1100,7 +1422,7 @@ const titles = {
 
 // A que pergunta do operador cada view responde — vira o eyebrow da topbar.
 const viewGroups = {
-  today: 'Operação', judgments: 'Operação', routines: 'Operação', runs: 'Operação',
+  today: 'Operação', judgments: 'Operação', cases: 'Operação', routines: 'Operação', runs: 'Operação',
   anatomy: 'Estrutura',
   system: 'Estrutura',
   canvas: 'Estrutura', areas: 'Estrutura', systems: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
@@ -1152,7 +1474,7 @@ function renderAreaSwitcher() {
 
 // Views irmãs viram abas dentro da mesma superfície.
 const tabGroups = [
-  ['judgments', 'routines', 'runs'],
+  ['judgments', 'cases', 'routines', 'runs'],
   ['systems', 'sources', 'areas', 'experiments'],
   ['compatibility', 'governance', 'health'],
 ];
@@ -1904,6 +2226,7 @@ async function loadModel() {
   const [model, decisions] = await Promise.all([
     getJson('/api/console'),
     getJson('/api/decisions').catch(() => null),
+    loadCases(),
   ]);
   state.model = model;
   state.decisions = decisions;
@@ -1912,7 +2235,62 @@ async function loadModel() {
   render();
 }
 
+/* Formulário do Decision Case: o estado mora em state.cases.form, nunca só no DOM.
+   Mexer em qualquer campo mata a simulação anterior — o diff confirmado tem que ser
+   o diff do texto atual, sem exceção. */
+function invalidateCasePreview() {
+  if (!state.cases.preview) return false;
+  state.cases.preview = null;
+  toast('Campo alterado: a simulação anterior não vale mais.', 'warn');
+  return true;
+}
+
+document.addEventListener('input', (event) => {
+  const field = event.target.closest('[data-case-field]');
+  if (!field || !state.cases.form) return;
+  const key = field.dataset.caseField;
+  if (key === 'evidence' || key === 'rollback_reason') return;
+  state.cases.form[key] = field.value;
+  const counter = document.querySelector('.case-counter');
+  if (counter && key === 'decision_text') {
+    counter.textContent = `${field.value.trim().length}/${state.cases.detail.draft.max_chars} · o Console não escreve esta parte por você`;
+  }
+  if (invalidateCasePreview()) render();
+});
+
+document.addEventListener('change', (event) => {
+  const field = event.target.closest('[data-case-field]');
+  if (!field || !state.cases.form) return;
+  if (field.dataset.caseField === 'evidence') {
+    const refs = new Set(state.cases.form.evidence);
+    if (field.checked) refs.add(field.value); else refs.delete(field.value);
+    state.cases.form.evidence = [...refs];
+    invalidateCasePreview();
+    render();
+  }
+});
+
 document.addEventListener('click', (event) => {
+  const caseOpen = event.target.closest('[data-case-open]');
+  if (caseOpen) { void openCase(caseOpen.dataset.caseOpen); return; }
+  const caseVerdict = event.target.closest('[data-case-verdict]');
+  if (caseVerdict && state.cases.form) {
+    state.cases.form.verdict = caseVerdict.dataset.caseVerdict;
+    if (state.cases.form.verdict !== 'deferred') state.cases.form.review_on = '';
+    invalidateCasePreview();
+    render();
+    return;
+  }
+  if (event.target.closest('[data-case-back]')) {
+    state.cases.detail = null; state.cases.preview = null; state.cases.form = null;
+    void loadCases();
+    render();
+    return;
+  }
+  if (event.target.closest('[data-case-discard]')) { state.cases.preview = null; render(); return; }
+  if (event.target.closest('[data-case-preview]')) { void previewCase(); return; }
+  if (event.target.closest('[data-case-apply]')) { void applyCase(); return; }
+  if (event.target.closest('[data-case-rollback]')) { void rollbackCase(); return; }
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
   const areaPill = event.target.closest('[data-area-filter]');

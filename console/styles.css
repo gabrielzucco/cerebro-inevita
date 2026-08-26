@@ -1569,3 +1569,84 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
   .canvas-graph-pane { position: relative; min-height: 480px; }
   .tabstrip { overflow-x: auto; }
 }
+
+/* ==========================================================================
+   DECISION CASE — o caso preparado e o martelo humano
+   O diff é o herói desta tela: monoespaçado, com adição/remoção em ponto de
+   cor semântico, nunca em bloco colorido.
+   ========================================================================== */
+
+.case-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--s3); margin-bottom: var(--s4); }
+.case-kpis > div { padding: var(--s3) 14px; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); }
+.case-kpis b { display: block; color: var(--text); font: 590 var(--fs-lead)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+.case-kpis span { color: var(--text-3); font-size: var(--fs-micro); }
+
+.case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: var(--s3); }
+.case-row { padding: var(--s4); border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); cursor: pointer; transition: .1s var(--ease); }
+.case-row:hover { background: var(--raised); border-color: var(--hairline-2); }
+.case-row-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s3); }
+.case-row h3 { margin: 0 0 var(--s1); font-size: var(--fs-body); font-weight: 560; line-height: 1.4; }
+.case-row code { display: block; margin-top: var(--s2); overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
+
+.case-detail { display: grid; gap: var(--s5); }
+.case-detail-head { display: flex; align-items: center; gap: var(--s3); }
+.case-detail-head code { margin-left: auto; color: var(--text-3); }
+.case-item h2 { margin: var(--s2) 0; font-size: var(--fs-lead); font-weight: 590; letter-spacing: -.012em; line-height: 1.35; }
+
+.case-form, .case-preview { padding: var(--s4); border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
+.case-verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s2); margin-bottom: var(--s4); }
+.case-verdict { padding: var(--s3); color: var(--text-2); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); background: transparent; text-align: left; cursor: pointer; transition: .1s var(--ease); }
+.case-verdict:hover { background: rgba(255, 255, 255, .04); }
+.case-verdict.active { color: var(--text); border-color: var(--brand); background: rgba(201, 243, 29, .07); }
+.case-verdict b { display: block; font-size: var(--fs-body); font-weight: 590; }
+.case-verdict small { display: block; margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.45; }
+
+.case-field { display: block; margin-bottom: var(--s3); }
+.case-field > span { display: block; margin-bottom: var(--s1); color: var(--text-2); font-size: var(--fs-micro); }
+.case-field input, .case-field select, .case-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  color: var(--text);
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font: 460 var(--fs-body)/1.6 var(--font-sans);
+}
+.case-field textarea { resize: vertical; font-family: var(--font-mono); }
+.case-field input:focus, .case-field select:focus, .case-field textarea:focus { outline: 1px solid var(--hairline-2); outline-offset: 1px; }
+.case-counter { margin: calc(-1 * var(--s2)) 0 var(--s4); color: var(--text-3); font: 460 var(--fs-micro) var(--font-mono); }
+
+.case-evidence-list { display: grid; gap: var(--s1); margin-bottom: var(--s2); }
+.case-evidence { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-sm); cursor: pointer; }
+.case-evidence:hover { background: rgba(255, 255, 255, .03); }
+.case-evidence input { accent-color: var(--brand); }
+.case-evidence-body { flex: 1; min-width: 0; }
+.case-evidence-body small { display: block; margin-top: 1px; color: var(--text-3); font-size: var(--fs-micro); }
+
+.case-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s2); margin: var(--s4) 0 var(--s3); }
+.case-inline-field { display: grid; gap: var(--s1); margin-right: auto; }
+.case-inline-field span { color: var(--text-3); font-size: var(--fs-micro); }
+.case-inline-field select { padding: 6px 10px; color: var(--text); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); background: var(--bg); font-size: var(--fs-meta); }
+.action.danger { color: var(--fail); border-color: rgba(229, 72, 77, .35); }
+.action.danger:hover { background: var(--fail-soft); }
+
+.case-diff { max-height: 52vh; margin: var(--s3) 0; overflow: auto; padding: var(--s3) 0; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--bg); font: 460 var(--fs-meta)/1.55 var(--font-mono); }
+.case-diff span { display: block; padding: 0 var(--s4); white-space: pre-wrap; overflow-wrap: anywhere; }
+.case-diff .meta { color: var(--text-3); }
+.case-diff .hunk { color: var(--run); }
+.case-diff .add { color: var(--ok); background: var(--ok-soft); }
+.case-diff .del { color: var(--fail); background: var(--fail-soft); }
+.case-diff .ctx { color: var(--text-2); }
+
+.case-preview-meta { display: flex; flex-wrap: wrap; gap: var(--s3); color: var(--text-3); font-size: var(--fs-micro); }
+.case-preview.applied { border-color: rgba(48, 196, 141, .28); }
+.case-event { display: flex; align-items: center; gap: var(--s2); width: 100%; padding: var(--s2) 0; border-top: 1px solid var(--hairline); color: var(--text-2); font-size: var(--fs-micro); }
+.case-event:first-child { border-top: 0; }
+.case-event code { margin-left: auto; color: var(--text-3); }
+.ref-list.vertical { flex-direction: column; gap: 0; }
+/* Caminho de arquivo nunca vai em caixa alta: path é case-sensitive, e ler
+   "01-NUCLEO-PRIVADO" como se fosse o nome real é mentira de interface. */
+.case-path { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); margin: var(--s2) 0; }
+.case-path span { color: var(--text-3); font: 590 var(--fs-micro) var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.case-path code { color: var(--text-2); overflow-wrap: anywhere; }
+.case-hint { margin: var(--s2) 0 0; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.55; }
