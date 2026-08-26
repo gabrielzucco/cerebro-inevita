@@ -17,6 +17,7 @@ import {
   validateRoutineRunReceipt,
 } from './lib/routine-protocol.mjs';
 import { validateJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import { validateDecisionCaseReceipt } from './lib/decision-case.mjs';
 import {
   validateCorrectionRunReceipt,
   validateLearningCandidate,
@@ -46,6 +47,7 @@ const required = [
   'protocol/routine-migration.schema.json',
   'protocol/collector-binding.schema.json',
   'protocol/judgment-receipt.schema.json',
+  'protocol/decision-case-receipt.schema.json',
   'protocol/correction-run-receipt.schema.json',
   'protocol/learning-candidate.schema.json',
   'protocol/execution-trace-event.schema.json',
@@ -61,6 +63,7 @@ const required = [
   'protocol/examples/routine-migration.v1.json',
   'protocol/examples/collector-binding.v1.json',
   'protocol/examples/judgment-receipt.v1.json',
+  'protocol/examples/decision-case-receipt.v1.json',
   'protocol/examples/correction-run-receipt.v1.json',
   'protocol/examples/learning-candidate.v1.json',
   'protocol/examples/execution-trace-event.v1.json',
@@ -115,6 +118,7 @@ const required = [
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
   'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
+  'scripts/lib/decision-case.mjs', 'scripts/test-decision-case.mjs',
   'scripts/lib/correction-loop.mjs',
   'scripts/lib/console-read-model.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
   'console/index.html', 'console/app.js', 'console/canvas.js', 'console/canvas-layout-policy.js',
@@ -124,6 +128,7 @@ const required = [
   'scripts/test-routine-runtime.mjs',
   'scripts/test-context-snapshot-runtime.mjs',
   'scripts/test-execution-trace.mjs', 'scripts/test-evaluation-runtime.mjs',
+  'scripts/migrate-execution-traces.mjs', 'scripts/test-migrate-execution-traces.mjs',
   'scripts/test-graph-read-model.mjs',
   'scripts/test-canvas-layout-readability.mjs',
   'scripts/test-judgment-protocol.mjs',
@@ -173,6 +178,7 @@ for (const [label, path, validate] of [
   ['example routine migration v1', 'protocol/examples/routine-migration.v1.json', validateRoutineMigration],
   ['example collector binding v1', 'protocol/examples/collector-binding.v1.json', validateCollectorBinding],
   ['example judgment receipt v1', 'protocol/examples/judgment-receipt.v1.json', validateJudgmentReceipt],
+  ['example decision case receipt v1', 'protocol/examples/decision-case-receipt.v1.json', validateDecisionCaseReceipt],
   ['example correction receipt v1', 'protocol/examples/correction-run-receipt.v1.json', validateCorrectionRunReceipt],
   ['example learning candidate v1', 'protocol/examples/learning-candidate.v1.json', validateLearningCandidate],
   ['example execution trace event v1', 'protocol/examples/execution-trace-event.v1.json', validateExecutionTraceEvent],

@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os dezessete envelopes
+## Os dezoito envelopes
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -31,6 +31,11 @@ conteúdo bruto.
   da evidência humana de pausa antes do cutover; nunca carrega o payload da agenda antiga.
 - `judgment-receipt.schema.json`: evento privado e imutável que liga o julgamento humano ao run,
   sem copiar output ou executar a intenção de ação.
+- `decision-case-receipt.schema.json`: evento privado e imutável do martelo humano que escreveu
+  — ou reverteu — uma decisão na fonte canônica. Carrega autoria humana, evidência com
+  proveniência (`observed` · `declared` · `inferred`), o digest do plano que a pessoa confirmou
+  no diff e a impressão do arquivo escrito. Nunca carrega o texto da decisão: ele vive só na nota
+  canônica.
 - `correction-run-receipt.schema.json`: liga baseline, julgamento e novo Run por referência; a
   correção atravessa o provider somente em memória e não entra no envelope.
 - `learning-candidate.schema.json`: registra que um Run corrigido e aprovado virou candidato
@@ -123,6 +128,7 @@ O plano sempre preserva o que já é canônico e mantém migração em
 | Routine Run Receipt | V1 privado | — |
 | Routine Migration Readback | V1 privado | — |
 | Judgment Receipt | V1 privado | — |
+| Decision Case Receipt | V1 privado | — |
 | Correction Run Receipt | V1 privado | — |
 | Learning Candidate | V1 privado | — |
 | Execution Trace Event | V1 privado | — |
@@ -287,6 +293,32 @@ final e guardam somente IDs, booleanos, contagem de problemas e hash de evidênc
 A tela de Execuções abre o Context Snapshot reference-only sem abrir o artefato privado nem chamar
 modelo. A tela de Governança revoga Access Grants com confirmação explícita e CSRF; o efeito é
 somente futuro, preserva o rastro passado e bloqueia o provider antes do próximo Run.
+
+### Decision Case — o martelo humano na fonte canônica
+
+O Console nunca decide sozinho: ele **prepara o caso**. `GET /api/decision-cases` lista os itens
+que esperam julgamento e o estado de cada caso; `GET /api/decision-cases/:case-id` reúne o item,
+os candidatos a evidência com proveniência carimbada e a casa canônica onde a decisão moraria. O
+rascunho que o Console entrega é estrutura, nunca prosa — o veredito é texto humano, verbatim.
+
+O caminho de escrita é `preview → diff → confirmação → recibo`, o mesmo da migração:
+
+1. `POST /api/decision-cases/:case-id/preview` resolve a evidência (referência que não abre
+   derruba o caso), monta a nota inteira e devolve o diff unificado e o `plan_digest`. Nada é
+   escrito.
+2. `POST /api/decision-cases/:case-id/apply` exige sessão, CSRF, confirmação, autoria humana e o
+   mesmo `plan_digest` — o que se escreve é byte a byte o diff que a pessoa leu. Preview de outra
+   janela responde `preview-stale`; preview velho responde `preview-expired`.
+3. Aplicar duas vezes é idempotente: o segundo pedido devolve `already-applied` e o recibo
+   existente, sem tocar em disco.
+4. `POST /api/decision-cases/:case-id/rollback` reverte o registro, guarda uma cópia privada da
+   nota e deixa recibo. Se o arquivo mudou depois do martelo, a reversão para em
+   `rollback-conflict` — reverter nunca destrói edição humana posterior.
+
+O caso escreve exatamente um arquivo, sempre na casa canônica das decisões, criado com abertura
+exclusiva. O recibo guarda referência, proveniência e impressão; o texto da decisão existe só na
+nota. Reverter o registro não desfaz o que a decisão causou fora do cérebro — o recibo diz isso
+com todas as letras.
 
 ### Experimentos como objeto transversal
 

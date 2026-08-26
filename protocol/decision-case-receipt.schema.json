@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/decision-case-receipt-v1.json",
+  "title": "INEVITA Decision Case Receipt V1",
+  "description": "Evento imutável de um Decision Case: o martelo humano que escreveu (ou reverteu) uma decisão na fonte canônica. O recibo guarda referência, proveniência e impressão — nunca o texto da decisão.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "event_id", "event", "case_id", "case_ref", "queue_ref", "queue_key",
+    "verdict", "review_on", "title", "title_digest", "decision_text_digest", "decision_text_chars",
+    "evidence", "canonical_writes", "snapshot_ref", "reason_code", "applied_event_ref",
+    "actor_ref", "authorship", "recorded_at", "plan_digest", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "event_id": { "$ref": "#/$defs/ref" },
+    "event": { "enum": ["applied", "rolled-back"] },
+    "case_id": { "$ref": "#/$defs/ref" },
+    "case_ref": { "$ref": "#/$defs/local_ref" },
+    "queue_ref": { "$ref": "#/$defs/local_ref" },
+    "queue_key": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "verdict": { "enum": ["decided", "dropped", "deferred"] },
+    "review_on": {
+      "description": "Data explícita de revisão. Obrigatória em 'deferred', proibida nos demais.",
+      "oneOf": [{ "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }, { "type": "null" }]
+    },
+    "title": { "type": "string", "minLength": 8, "maxLength": 120 },
+    "title_digest": { "$ref": "#/$defs/digest" },
+    "decision_text_digest": {
+      "description": "sha256 do texto humano. O texto em si vive só na nota canônica.",
+      "$ref": "#/$defs/digest"
+    },
+    "decision_text_chars": { "type": "integer", "minimum": 40, "maximum": 8000 },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "kind", "provenance", "path", "digest"],
+        "properties": {
+          "ref": { "$ref": "#/$defs/local_ref" },
+          "kind": {
+            "enum": ["decision-queue", "routine-receipt", "judgment-receipt", "run-record", "experiment", "note"]
+          },
+          "provenance": {
+            "description": "observado = artefato deixado por execução; declarado = contrato ou nota humana; inferido = candidato apontado pelo Console e aceito pelo humano.",
+            "enum": ["observed", "declared", "inferred"]
+          },
+          "path": { "oneOf": [{ "type": "string", "maxLength": 512 }, { "type": "null" }] },
+          "digest": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "canonical_writes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "operation", "before_digest", "after_digest", "bytes"],
+        "properties": {
+          "path": { "type": "string", "pattern": "\\.md$", "maxLength": 512 },
+          "operation": { "enum": ["create", "delete"] },
+          "before_digest": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+          "after_digest": { "oneOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+          "bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "snapshot_ref": { "oneOf": [{ "$ref": "#/$defs/local_ref" }, { "type": "null" }] },
+    "reason_code": {
+      "oneOf": [
+        { "enum": ["wrong-verdict", "wrong-evidence", "duplicate", "superseded", "mistake"] },
+        { "type": "null" }
+      ]
+    },
+    "applied_event_ref": { "oneOf": [{ "$ref": "#/$defs/local_ref" }, { "type": "null" }] },
+    "actor_ref": { "$ref": "#/$defs/ref" },
+    "authorship": { "const": "human" },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "plan_digest": {
+      "description": "Impressão do plano confirmado no preview. Aplicar exige o mesmo digest — o que foi escrito é o diff que o humano leu.",
+      "$ref": "#/$defs/digest"
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_shared_with_inevita", "decision_text_recorded", "canonical_write",
+        "external_action_executed", "pii_scanned"
+      ],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "decision_text_recorded": { "const": false },
+        "canonical_write": { "const": true },
+        "external_action_executed": { "const": false },
+        "pii_scanned": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

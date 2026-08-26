@@ -1,0 +1,61 @@
+{
+  "protocol_version": 1,
+  "event_id": "decision-9c1f6b02-7f0f-4c2b-9f1e-2a5d4f7c8e10",
+  "event": "applied",
+  "case_id": "case-218d61641f20f107f1c792961dc3f0af",
+  "case_ref": "decision-case:case-218d61641f20f107f1c792961dc3f0af",
+  "queue_ref": "decision-queue:martelo:exemplo-sanitizado-decisao-de-corte",
+  "queue_key": "martelo:exemplo-sanitizado-decisao-de-corte",
+  "verdict": "decided",
+  "review_on": null,
+  "title": "Corte estreito aprovado para o proximo ciclo",
+  "title_digest": "sha256:0e8bd1c30bb0b3b1a7d5bd8b0b3d2f2ba1e0f6c9ad0e2b7b5c4c1a3f8d9e0b71",
+  "decision_text_digest": "sha256:5f1c2f9b1de1b8d0f2a5c7e9b3d4a6c8e0f2b4d6a8c0e2f4b6d8a0c2e4f6b8d0",
+  "decision_text_chars": 214,
+  "evidence": [
+    {
+      "ref": "decision-queue:martelo:exemplo-sanitizado-decisao-de-corte",
+      "kind": "decision-queue",
+      "provenance": "observed",
+      "path": ".automacao/_FILA-DECISAO.json",
+      "digest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90"
+    },
+    {
+      "ref": "routine-receipt:routine-receipt-sanitized",
+      "kind": "routine-receipt",
+      "provenance": "observed",
+      "path": ".cerebro/runtime/receipts/routines/routine-receipt-sanitized.json",
+      "digest": "sha256:b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1"
+    },
+    {
+      "ref": "experiment:EXP-DEMO-001",
+      "kind": "experiment",
+      "provenance": "inferred",
+      "path": ".cerebro/contracts/experiments/exp-demo-001.json",
+      "digest": "sha256:c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2"
+    }
+  ],
+  "canonical_writes": [
+    {
+      "path": "01-nucleo-privado/decisoes/2026-08-26-corte-estreito-aprovado-para-o-proximo-ciclo.md",
+      "operation": "create",
+      "before_digest": null,
+      "after_digest": "sha256:d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3",
+      "bytes": 1842
+    }
+  ],
+  "snapshot_ref": null,
+  "reason_code": null,
+  "applied_event_ref": null,
+  "actor_ref": "role-owner",
+  "authorship": "human",
+  "recorded_at": "2026-08-26T14:00:00.000Z",
+  "plan_digest": "sha256:e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4",
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "decision_text_recorded": false,
+    "canonical_write": true,
+    "external_action_executed": false,
+    "pii_scanned": true
+  }
+}
