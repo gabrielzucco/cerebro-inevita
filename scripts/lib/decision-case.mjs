@@ -35,6 +35,7 @@ import {
 export const DECISION_VERDICTS = new Set(['decided', 'dropped', 'deferred']);
 export const DECISION_THEMES = new Set(['comunidade', 'aquisicao', 'produto', 'metodo', 'operacao']);
 export const ROLLBACK_REASONS = new Set(['wrong-verdict', 'wrong-evidence', 'duplicate', 'superseded', 'mistake']);
+export const EVIDENCE_KINDS = new Set(['decision-queue', 'routine-receipt', 'judgment-receipt', 'run-record', 'experiment', 'note']);
 export const MIN_DECISION_TEXT_CHARS = 40;
 export const MAX_DECISION_TEXT_CHARS = 8000;
 export const MIN_TITLE_CHARS = 8;
@@ -80,6 +81,14 @@ function closed(errors, value, path, keys) {
 
 function validDate(value) {
   return Number.isFinite(Date.parse(value || ''));
+}
+
+// Data de calendário REAL: 2026-02-30 não existe e não pode virar março em silêncio.
+// O round-trip pelo Date pega dia/mês fora do calendário sem tabela de bissexto manual.
+function isCalendarDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 function digestOf(value) {
@@ -313,8 +322,19 @@ function resolveEvidence(root, ref, { inferredRefs = new Set() } = {}) {
   } else if (kind === 'note') {
     if (!id.startsWith('01-nucleo-privado/') || !id.endsWith('.md')) throw new Error('evidence-note-outside-moat');
     const path = resolve(root, id);
-    if (!path.startsWith(`${resolve(root, '01-nucleo-privado')}${sep}`)) throw new Error('evidence-note-outside-moat');
+    const moat = resolve(root, '01-nucleo-privado');
+    if (!path.startsWith(`${moat}${sep}`)) throw new Error('evidence-note-outside-moat');
     resolved = fileEvidence(root, path, ref, 'note', inferred ? 'inferred' : 'declared', 'Nota do núcleo privado');
+    // Fronteira REAL, não lexical: um diretório-symlink dentro do núcleo pode apontar
+    // para fora do cérebro ou para 02-dados-terceiros. O que vale é o realpath.
+    if (resolved) {
+      const realMoat = realpathSync(moat);
+      const realNote = realpathSync(path);
+      if (!insideRealDirectory(realpathSync(resolve(root)), realMoat)
+        || !insideRealDirectory(realMoat, realNote)) {
+        throw new Error('evidence-note-outside-moat');
+      }
+    }
   } else {
     throw new Error('evidence-kind-unsupported');
   }
@@ -370,7 +390,8 @@ export function listDecisionCaseEvents(root, caseId) {
       if (errors.length) throw new Error('decision-case-receipt-invalid');
       return value;
     })
-    .sort((left, right) => Date.parse(left.recorded_at) - Date.parse(right.recorded_at)
+    .sort((left, right) => left.sequence - right.sequence
+      || Date.parse(left.recorded_at) - Date.parse(right.recorded_at)
       || left.event_id.localeCompare(right.event_id));
 }
 
@@ -409,7 +430,7 @@ export function validateDecisionCaseReceipt(value) {
   const errors = [];
   if (!object(value)) return ['decision case receipt precisa ser objeto'];
   closed(errors, value, 'decision_case_receipt', [
-    'protocol_version', 'event_id', 'event', 'case_id', 'case_ref', 'queue_ref', 'queue_key',
+    'protocol_version', 'event_id', 'event', 'sequence', 'case_id', 'case_ref', 'queue_ref', 'queue_key',
     'verdict', 'review_on', 'title', 'title_digest', 'decision_text_digest', 'decision_text_chars',
     'evidence', 'canonical_writes', 'snapshot_ref', 'reason_code', 'applied_event_ref',
     'actor_ref', 'authorship', 'recorded_at', 'plan_digest', 'privacy',
@@ -417,15 +438,17 @@ export function validateDecisionCaseReceipt(value) {
   if (value.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
   if (!REF_ID_RE.test(value.event_id || '')) errors.push('event_id inválido');
   if (!['applied', 'rolled-back'].includes(value.event)) errors.push('event inválido');
+  if (!Number.isInteger(value.sequence) || value.sequence < 1) errors.push('sequence inválida');
   if (!REF_ID_RE.test(value.case_id || '')) errors.push('case_id inválido');
   if (value.case_ref !== `decision-case:${value.case_id}`) errors.push('case_ref diverge de case_id');
-  if (typeof value.queue_key !== 'string' || !value.queue_key.trim()) errors.push('queue_key inválido');
-  else {
+  if (typeof value.queue_key !== 'string' || !value.queue_key.trim() || value.queue_key.length > 512) {
+    errors.push('queue_key inválido');
+  } else {
     if (value.queue_ref !== `decision-queue:${value.queue_key}`) errors.push('queue_ref diverge de queue_key');
     if (value.case_id !== decisionCaseIdFor(value.queue_key)) errors.push('case_id não deriva do queue_key');
   }
   if (!DECISION_VERDICTS.has(value.verdict)) errors.push('verdict inválido');
-  if (value.verdict === 'deferred' ? !/^\d{4}-\d{2}-\d{2}$/.test(value.review_on || '') : value.review_on !== null) {
+  if (value.verdict === 'deferred' ? !isCalendarDate(value.review_on) : value.review_on !== null) {
     errors.push('review_on inválido para o veredito');
   }
   if (typeof value.title !== 'string' || value.title.length < MIN_TITLE_CHARS || value.title.length > MAX_TITLE_CHARS) {
@@ -442,7 +465,11 @@ export function validateDecisionCaseReceipt(value) {
     for (const [index, entry] of value.evidence.entries()) {
       closed(errors, entry, `evidence[${index}]`, ['ref', 'kind', 'provenance', 'path', 'digest']);
       if (!LOCAL_REF_RE.test(entry?.ref || '')) errors.push(`evidence[${index}].ref inválido`);
+      if (!EVIDENCE_KINDS.has(entry?.kind)) errors.push(`evidence[${index}].kind inválido`);
       if (!['observed', 'declared', 'inferred'].includes(entry?.provenance)) errors.push(`evidence[${index}].provenance inválida`);
+      if (entry?.path !== null && (typeof entry?.path !== 'string' || !entry.path || entry.path.length > 512)) {
+        errors.push(`evidence[${index}].path inválido`);
+      }
       if (!/^sha256:[0-9a-f]{64}$/.test(entry?.digest || '')) errors.push(`evidence[${index}].digest inválido`);
     }
     if (!value.evidence.some((entry) => entry?.kind !== 'decision-queue')) {
@@ -454,9 +481,11 @@ export function validateDecisionCaseReceipt(value) {
   } else {
     const [write] = value.canonical_writes;
     closed(errors, write, 'canonical_writes[0]', ['path', 'operation', 'before_digest', 'after_digest', 'bytes']);
-    if (typeof write?.path !== 'string' || !write.path.endsWith('.md') || write.path.includes('..')) {
+    if (typeof write?.path !== 'string' || !write.path.endsWith('.md') || write.path.includes('..')
+      || write.path.length > 512) {
       errors.push('canonical_writes[0].path inválido');
     }
+    if (!Number.isInteger(write?.bytes) || write.bytes < 0) errors.push('canonical_writes[0].bytes inválido');
     if (!['create', 'delete'].includes(write?.operation)) errors.push('canonical_writes[0].operation inválida');
     if (value.event === 'applied' && (write?.operation !== 'create' || write.before_digest !== null
       || !/^sha256:[0-9a-f]{64}$/.test(write?.after_digest || ''))) errors.push('escrita aplicada inconsistente');
@@ -596,7 +625,7 @@ function planFor(root, caseId, input, decidedAt) {
   let reviewOn = null;
   if (verdict === 'deferred') {
     reviewOn = String(input.reviewOn || '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(reviewOn) || !validDate(`${reviewOn}T12:00:00Z`)) throw new Error('review-on-invalid');
+    if (!isCalendarDate(reviewOn)) throw new Error('review-on-invalid');
     if (Date.parse(`${reviewOn}T23:59:59Z`) <= decidedAt.getTime()) throw new Error('review-on-not-future');
   } else if (input.reviewOn) {
     throw new Error('review-on-not-allowed');
@@ -805,7 +834,12 @@ export function previewDecisionCase(root, caseId, input, { clock = () => new Dat
 function writeEvent(root, caseId, value) {
   const errors = validateDecisionCaseReceipt(value);
   if (errors.length) throw new Error('decision-case-receipt-invalid');
-  const path = join(caseDirectory(root, caseId), `${value.recorded_at.replace(/[:.]/g, '-')}-${value.event_id}.json`);
+  // Ordem causal é sequência declarada, nunca timestamp: com relógio congelado ou
+  // eventos no mesmo milissegundo, `recorded_at` empata e UUID não ordena nada.
+  // O próximo evento tem que ser exatamente o count atual + 1 — senão é corrida.
+  const existing = listDecisionCaseEvents(root, caseId);
+  if (value.sequence !== existing.length + 1) throw new Error('decision-case-sequence-conflict');
+  const path = join(caseDirectory(root, caseId), `${String(value.sequence).padStart(4, '0')}-${value.event_id}.json`);
   if (existsSync(path)) throw new Error('decision-case-receipt-already-exists');
   writeJsonAtomic(path, value);
   return { value, path, ref: `decision-case-receipt:${value.event_id}` };
@@ -862,6 +896,7 @@ export function applyDecisionCase(root, caseId, input, {
     protocol_version: 1,
     event_id: randomId(),
     event: 'applied',
+    sequence: state.event_count + 1,
     case_id: caseId,
     case_ref: `decision-case:${caseId}`,
     queue_ref: `decision-queue:${plan.item.key}`,
@@ -941,6 +976,11 @@ export function rollbackDecisionCase(root, caseId, input, {
   if (!target.startsWith(`${notesDirectory}${sep}`)) throw new Error('canonical-target-outside-house');
   if (!existsSync(target)) throw new Error('canonical-target-missing');
   if (lstatSync(target).isSymbolicLink()) throw new Error('canonical-target-symlink-blocked');
+  // A nota tem que ser filha REAL da casa canônica — um symlink de diretório no meio
+  // do caminho poderia fazer o unlink acontecer fora da fronteira.
+  if (realpathSync(join(target, '..')) !== realpathSync(notesDirectory)) {
+    throw new Error('canonical-target-outside-house');
+  }
   const bytes = readFileSync(target);
   // Reverter não destrói trabalho de gente: se a nota mudou depois do martelo, para.
   if (digestOf(bytes) !== write.after_digest) throw new Error('rollback-conflict');
@@ -951,12 +991,12 @@ export function rollbackDecisionCase(root, caseId, input, {
   const snapshotPath = join(decisionSnapshotDirectory(root), caseId, snapshotName);
   mkdirSync(join(snapshotPath, '..'), { recursive: true });
   writeFileSync(snapshotPath, bytes, { mode: 0o600 });
-  unlinkSync(target);
 
   const value = {
     ...applied,
     event_id: randomId(),
     event: 'rolled-back',
+    sequence: state.event_count + 1,
     canonical_writes: [{
       path: write.path,
       operation: 'delete',
@@ -970,7 +1010,19 @@ export function rollbackDecisionCase(root, caseId, input, {
     actor_ref: actorRef,
     recorded_at: recordedAt.toISOString(),
   };
-  const receipt = writeEvent(root, caseId, value);
+  // Reversão atômica: valida o recibo ANTES de apagar; se a gravação do recibo
+  // falhar depois do unlink, a nota volta dos bytes em memória. A nota canônica
+  // nunca desaparece sem um evento de reversão de pé.
+  const invalid = validateDecisionCaseReceipt(value);
+  if (invalid.length) throw new Error('decision-case-receipt-invalid');
+  unlinkSync(target);
+  let receipt;
+  try {
+    receipt = writeEvent(root, caseId, value);
+  } catch (error) {
+    writeFileSync(target, bytes, { mode: 0o644 });
+    throw error;
+  }
   return {
     status: 'rolled-back',
     case_ref: value.case_ref,

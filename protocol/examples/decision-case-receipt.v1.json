@@ -2,6 +2,7 @@
   "protocol_version": 1,
   "event_id": "decision-9c1f6b02-7f0f-4c2b-9f1e-2a5d4f7c8e10",
   "event": "applied",
+  "sequence": 1,
   "case_id": "case-218d61641f20f107f1c792961dc3f0af",
   "case_ref": "decision-case:case-218d61641f20f107f1c792961dc3f0af",
   "queue_ref": "decision-queue:martelo:exemplo-sanitizado-decisao-de-corte",

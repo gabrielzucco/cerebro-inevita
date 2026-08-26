@@ -5,7 +5,7 @@
 // idempotência, diff confirmado, recibo auditável e reversão que não destrói trabalho.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -120,6 +120,9 @@ try {
   fails(() => preview(baseInput({ verdict: 'talvez' })), 'verdict-invalid');
   fails(() => preview(baseInput({ verdict: 'deferred' })), 'review-on-invalid');
   fails(() => preview(baseInput({ verdict: 'deferred', reviewOn: '2026-08-01' })), 'review-on-not-future');
+  // Data impossível não pode virar março em silêncio (achado da revisão).
+  fails(() => preview(baseInput({ verdict: 'deferred', reviewOn: '2026-02-30' })), 'review-on-invalid');
+  fails(() => preview(baseInput({ verdict: 'deferred', reviewOn: '2026-13-01' })), 'review-on-invalid');
   fails(() => preview(baseInput({ reviewOn: '2026-09-30' })), 'review-on-not-allowed');
   fails(() => previewDecisionCase(root, 'case-00000000000000000000000000000000', baseInput(), { clock: clockAt(T0) }),
     'decision-case-not-found');
@@ -207,8 +210,10 @@ try {
   assert.equal(existsSync(notePath), true, 'conflito não pode apagar edição humana');
 
   writeFileSync(notePath, plan.content);
+  // Ordem causal com relógio CONGELADO: rollback no mesmo instante do apply tem que
+  // vencer pela sequência declarada, nunca pelo acaso da ordenação de UUIDs (P1 da revisão).
   const rolledBack = rollbackDecisionCase(root, CASE_ID, { actorRef: ACTOR, reasonCode: 'wrong-evidence' }, {
-    clock: clockAt('2026-08-26T15:00:00.000Z'),
+    clock: clockAt(T0),
   });
   assert.equal(rolledBack.status, 'rolled-back');
   assert.equal(rolledBack.restored_to, 'absent');
@@ -218,8 +223,12 @@ try {
   assert.equal(snapshots.length, 1);
   assert.equal(readFileSync(join(snapshotRoot, snapshots[0]), 'utf8'), plan.content, 'reverter guarda cópia privada');
 
+  assert.equal(decisionCaseState(root, CASE_ID).status, 'rolled-back',
+    'com timestamps idênticos, a sequência decide — nunca o UUID');
+
   const history = listDecisionCaseEvents(root, CASE_ID);
   assert.equal(history.length, 2);
+  assert.deepEqual(history.map((event) => event.sequence), [1, 2], 'sequência monotônica declarada');
   const rollbackReceipt = history[1];
   assert.deepEqual(validateDecisionCaseReceipt(rollbackReceipt), []);
   assert.equal(rollbackReceipt.event, 'rolled-back');
@@ -258,6 +267,70 @@ try {
     .includes('Decision Case não executa ação externa'));
   assert(validateDecisionCaseReceipt({ ...receipt, decision_text: TEXT })
     .includes('decision_case_receipt.decision_text não é permitido'));
+  // Os payloads exatos que a revisão provou passarem: kind arbitrário, path numérico,
+  // bytes não-numérico e sequência ausente. Nenhum pode voltar [].
+  assert(validateDecisionCaseReceipt({
+    ...receipt,
+    evidence: [{ ...receipt.evidence[0] }, { ...receipt.evidence[1], kind: 'anything' }],
+  }).some((error) => error.includes('kind inválido')));
+  assert(validateDecisionCaseReceipt({
+    ...receipt,
+    evidence: [{ ...receipt.evidence[0] }, { ...receipt.evidence[1], path: 42 }],
+  }).some((error) => error.includes('path inválido')));
+  assert(validateDecisionCaseReceipt({
+    ...receipt,
+    canonical_writes: [{ ...receipt.canonical_writes[0], bytes: 'not-a-number' }],
+  }).some((error) => error.includes('bytes inválido')));
+  const { sequence: _omitted, ...withoutSequence } = receipt;
+  assert(validateDecisionCaseReceipt(withoutSequence).includes('sequence inválida'));
+  assert(validateDecisionCaseReceipt({ ...receipt, sequence: 0 }).includes('sequence inválida'));
+  assert(validateDecisionCaseReceipt({ ...receipt, review_on: '2026-02-30', verdict: 'deferred' })
+    .some((error) => error.includes('review_on inválido')));
+
+  // ------------------------------------------ atomicidade da reversão
+  // Se a gravação do recibo falhar depois do unlink, a nota canônica volta:
+  // ela nunca desaparece sem um evento de reversão de pé.
+  const currentState = decisionCaseState(root, CASE_ID);
+  assert.equal(currentState.status, 'applied');
+  const secondNotePath = join(root, currentState.canonical_path);
+  assert.equal(existsSync(secondNotePath), true);
+  const receiptsDir = join(root, '.cerebro', 'runtime', 'receipts', 'decisions', CASE_ID);
+  chmodSync(receiptsDir, 0o500); // leitura ok, escrita negada — writeJsonAtomic falha
+  try {
+    assert.throws(() => rollbackDecisionCase(root, CASE_ID, { actorRef: ACTOR, reasonCode: 'mistake' }));
+  } finally {
+    chmodSync(receiptsDir, 0o700);
+  }
+  assert.equal(existsSync(secondNotePath), true, 'recibo falhou → a nota tem que voltar');
+  assert.equal(decisionCaseState(root, CASE_ID).status, 'applied', 'estado intacto após falha de reversão');
+
+  // --------------------------------------- fronteira é realpath, não prefixo
+  // Um diretório-symlink DENTRO do núcleo apontando para fora (ou para a zona de
+  // terceiros) não pode virar evidência `note:` — o caminho lexical mente.
+  if (process.platform !== 'win32') {
+    const outsideRoot = mkdtempSync(join(tmpdir(), 'decision-case-outside-'));
+    write(join(outsideRoot, 'fora-do-cerebro.md'), '# Conteúdo fora do cérebro\n');
+    write(join(root, '02-dados-terceiros', 'transcricao-crua.md'), '# Dado de terceiro\n');
+    symlinkSync(outsideRoot, join(root, '01-nucleo-privado', 'atalho-externo'));
+    symlinkSync(join(root, '02-dados-terceiros'), join(root, '01-nucleo-privado', 'atalho-terceiros'));
+    const SYMLINK_QUEUE_KEY = 'martelo:item-novo-para-testar-fronteira-simbolica';
+    write(join(root, '.automacao', '_FILA-DECISAO.json'), {
+      abertos: {
+        [SYMLINK_QUEUE_KEY]: {
+          titulo: 'Item novo para testar fronteira simbolica',
+          categoria: 'martelo', first_seen: '2026-08-25', last_seen: '2026-08-26',
+        },
+      },
+      historico: [],
+    });
+    const symlinkCase = decisionCaseIdFor(SYMLINK_QUEUE_KEY);
+    const escape = (notePath) => previewDecisionCase(root, symlinkCase, baseInput({
+      evidenceRefs: [`decision-queue:${SYMLINK_QUEUE_KEY}`, notePath],
+    }), { clock: clockAt('2026-08-26T17:00:00.000Z') });
+    fails(() => escape('note:01-nucleo-privado/atalho-externo/fora-do-cerebro.md'), 'evidence-note-outside-moat');
+    fails(() => escape('note:01-nucleo-privado/atalho-terceiros/transcricao-crua.md'), 'evidence-note-outside-moat');
+    rmSync(outsideRoot, { recursive: true, force: true });
+  }
 
   // ------------------------------------------------------------------- diff
   assert.equal(unifiedDiff('a\nb\nc\n', 'a\nB\nc\n', 'x.md'),

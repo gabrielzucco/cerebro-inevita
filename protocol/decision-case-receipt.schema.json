@@ -6,7 +6,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "protocol_version", "event_id", "event", "case_id", "case_ref", "queue_ref", "queue_key",
+    "protocol_version", "event_id", "event", "sequence", "case_id", "case_ref", "queue_ref", "queue_key",
     "verdict", "review_on", "title", "title_digest", "decision_text_digest", "decision_text_chars",
     "evidence", "canonical_writes", "snapshot_ref", "reason_code", "applied_event_ref",
     "actor_ref", "authorship", "recorded_at", "plan_digest", "privacy"
@@ -15,6 +15,11 @@
     "protocol_version": { "const": 1 },
     "event_id": { "$ref": "#/$defs/ref" },
     "event": { "enum": ["applied", "rolled-back"] },
+    "sequence": {
+      "description": "Ordem causal declarada do evento no caso (1, 2, 3…). Timestamps empatam com relógio congelado; a sequência não.",
+      "type": "integer",
+      "minimum": 1
+    },
     "case_id": { "$ref": "#/$defs/ref" },
     "case_ref": { "$ref": "#/$defs/local_ref" },
     "queue_ref": { "$ref": "#/$defs/local_ref" },

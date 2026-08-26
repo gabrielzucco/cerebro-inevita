@@ -1125,7 +1125,7 @@ const CASE_ROLLBACK_REASONS = [
 ];
 
 function emptyCaseForm() {
-  return { verdict: 'decided', theme: 'metodo', review_on: '', title: '', decision_text: '', evidence: [] };
+  return { verdict: 'decided', theme: 'metodo', review_on: '', title: '', decision_text: '', evidence: [], authored: false };
 }
 
 function caseProvenance(provenance) {
@@ -1244,6 +1244,10 @@ function caseForm(detail) {
     <div class="subheading"><h3>Evidência</h3><span>${selected.size} escolhida(s)</span></div>
     <div class="case-evidence-list">${candidates.length ? candidates.map((entry) => caseEvidenceRow(entry, selected.has(entry.ref))).join('') : '<p class="muted">Nenhum candidato resolvível neste cérebro.</p>'}</div>
     <p class="case-hint">Referência que não abre no disco derruba o caso. O item da fila sozinho não basta: escolha pelo menos uma evidência além dele.</p>
+    <label class="case-authorship">
+      <input type="checkbox" data-case-field="authored"${form.authored ? ' checked' : ''}>
+      <span><b>Este texto é meu.</b> Eu li a evidência e escrevi a decisão acima com as minhas palavras — não é rascunho de IA colado. O Console local não verifica identidade; esta declaração assina o recibo junto com a referência de quem aprova.</span>
+    </label>
     <div class="case-actions">
       <button class="action primary" data-case-preview>Simular e ver o diff</button>
       <button class="action" data-case-back>Voltar para a fila</button>
@@ -1311,7 +1315,7 @@ function casePayload() {
     title: form.title.trim(),
     decision_text: form.decision_text.trim(),
     evidence_refs: form.evidence,
-    authored_by_human: true,
+    authored_by_human: form.authored === true,
     ...(form.verdict === 'deferred' ? { review_on: form.review_on } : {}),
   };
 }
@@ -2261,6 +2265,11 @@ document.addEventListener('input', (event) => {
 document.addEventListener('change', (event) => {
   const field = event.target.closest('[data-case-field]');
   if (!field || !state.cases.form) return;
+  if (field.dataset.caseField === 'authored') {
+    state.cases.form.authored = field.checked;
+    invalidateCasePreview();
+    return;
+  }
   if (field.dataset.caseField === 'evidence') {
     const refs = new Set(state.cases.form.evidence);
     if (field.checked) refs.add(field.value); else refs.delete(field.value);
@@ -2442,7 +2451,7 @@ $('#refresh').addEventListener('click', async () => {
 });
 document.addEventListener('keydown', (event) => {
   if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement
-    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment]')) {
+    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment], [role="button"][data-case-open]')) {
     event.preventDefault();
     event.target.click();
     return;

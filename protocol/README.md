@@ -315,6 +315,19 @@ O caminho de escrita é `preview → diff → confirmação → recibo`, o mesmo
    nota e deixa recibo. Se o arquivo mudou depois do martelo, a reversão para em
    `rollback-conflict` — reverter nunca destrói edição humana posterior.
 
+A ordem dos eventos de um caso é a `sequence` declarada no recibo (1, 2, 3…), verificada na
+gravação contra o histórico em disco — nunca o timestamp, que empata com relógio congelado, nem o
+UUID, que não ordena nada. A reversão é compensada: se a gravação do recibo falhar depois da
+remoção, a nota volta dos bytes em memória; a nota canônica nunca desaparece sem um evento de
+reversão de pé.
+
+Sobre autoria: o Console local roda numa sessão de máquina única, sem sistema de identidade — ele
+**não consegue provar** que um humano específico digitou o texto. O que o protocolo garante é o
+gesto: a declaração de autoria é um checkbox explícito que a pessoa marca (nunca pré-marcado, nunca
+enviado automaticamente), a referência de quem aprova entra no mesmo dialog de confirmação, e refs
+com cara de máquina (`agent-`, `bot-`, `console-`, `model-`…) são recusadas. É a mesma garantia
+dos Judgment Receipts: asserção humana auditável, não autenticação.
+
 O caso escreve exatamente um arquivo, sempre na casa canônica das decisões, criado com abertura
 exclusiva. O recibo guarda referência, proveniência e impressão; o texto da decisão existe só na
 nota. Reverter o registro não desfaz o que a decisão causou fora do cérebro — o recibo diz isso

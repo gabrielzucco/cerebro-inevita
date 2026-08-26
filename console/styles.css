@@ -1650,3 +1650,10 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
 .case-path span { color: var(--text-3); font: 590 var(--fs-micro) var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
 .case-path code { color: var(--text-2); overflow-wrap: anywhere; }
 .case-hint { margin: var(--s2) 0 0; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.55; }
+/* Declaração de autoria — o gesto humano que a asserção do payload representa.
+   Sem marcar, o servidor recusa: human-authorship-required. */
+.case-authorship { display: flex; align-items: flex-start; gap: var(--s3); margin: var(--s4) 0 0; padding: var(--s3); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); cursor: pointer; }
+.case-authorship:hover { background: rgba(255, 255, 255, .03); }
+.case-authorship input { margin-top: 2px; accent-color: var(--brand); }
+.case-authorship span { color: var(--text-3); font-size: var(--fs-micro); line-height: 1.55; }
+.case-authorship b { color: var(--text-2); font-weight: 590; }

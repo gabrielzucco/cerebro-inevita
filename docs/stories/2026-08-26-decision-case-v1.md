@@ -90,6 +90,37 @@ O EXP-DEMO-001 citado no título de um dos itens virou candidato `inferido` e **
 lista de candidatos porque o contrato não existia naquele cérebro — candidato que não abre não é
 candidato.
 
+## Revisão 26/08 — 5 P1 corrigidos
+
+A revisão pós-implementação bloqueou o landing com 5 P1; todos corrigidos e cobertos por teste:
+
+1. **Ordem causal**: eventos ganharam `sequence` declarada (1, 2, 3…), verificada na gravação
+   contra o histórico em disco (`decision-case-sequence-conflict` em corrida) e usada na
+   ordenação — timestamp empatava com relógio congelado e o desempate por UUID era aleatório
+   (a suíte HTTP ficava vermelha ~50% dos runs; 8 runs seguidos verdes após o fix). Filename do
+   recibo agora é prefixado pela sequência.
+2. **Rollback atômico**: o recibo de reversão é validado ANTES do unlink; se a gravação falhar
+   depois, a nota volta dos bytes em memória. Teste força EACCES no diretório de recibos e prova
+   que a nota reaparece e o estado continua `applied`.
+3. **Autoria**: o cliente não autodeclara mais `authored_by_human: true` — virou checkbox
+   explícito, desmarcado por padrão, com texto honesto sobre a garantia real (asserção humana
+   auditável, não autenticação; o Console local não tem sistema de identidade). Documentado no
+   `protocol/README.md`.
+4. **Validador estrito**: `kind` em enum fechado, `path` tipado (string ≤512 ou null), `bytes`
+   inteiro ≥0, `queue_key` ≤512, `sequence` obrigatória — os payloads exatos da revisão
+   (`kind: "anything"`, `path: 42`, `bytes: "not-a-number"`) agora falham no teste.
+5. **Fronteira por realpath**: evidência `note:` e o alvo da reversão validam o realpath contra a
+   fronteira real — symlink-dir dentro do núcleo apontando para fora do cérebro ou para
+   `02-dados-terceiros/` é recusado (teste com dois symlinks de escape).
+
+Também: `review_on` exige data de calendário real (2026-02-30 não vira março) e os cards de caso
+respondem a Enter/Space no handler global de `role="button"`.
+
+**Nota de processo**: o commit `8b2810b` varreu, no `validate-product.mjs`, a linha da migração de
+traces de outra mesa (editada entre a leitura e o commit — o risco exato documentado em
+mesas-paralelas). A migração em si está em commit próprio (`82e006c`, da outra mesa); com mesa
+paralela ativa, reescrever histórico seria pior que registrar o acoplamento aqui.
+
 ## File List
 
 - `scripts/lib/decision-case.mjs` — protocolo e runtime do caso: fila, evidência com proveniência,
