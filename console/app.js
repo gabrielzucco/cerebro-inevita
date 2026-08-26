@@ -260,6 +260,137 @@ function renderRoutines() {
     <div class="routine-list">${visibleRoutines().length ? visibleRoutines().map(routineCard).join('') : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
 }
 
+/* Anatomia do Cérebro — seis módulos + governança transversal.
+   Cada dado carimba a proveniência: DECLARADO (contrato/documento),
+   OBSERVADO (recibo/ledger) ou INFERIDO (derivação explícita). */
+
+function prov(kind) {
+  return `<span class="prov prov--${kind}">${kind.toUpperCase()}</span>`;
+}
+
+function organ({ number, name, question, answer, body, gaps = [], canonical, lastReceipt, action }) {
+  return `<section class="organ">
+    <header class="organ-head"><b>${number}</b><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(question)}</p></div></header>
+    <p class="organ-answer">${answer}</p>
+    ${body || ''}
+    ${gaps.length ? `<div class="organ-gaps">${gaps.map((gap) => `<span>⚠ ${escapeHtml(gap)}</span>`).join('')}</div>` : ''}
+    <footer class="organ-foot">
+      ${canonical ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(canonical)}">${escapeHtml(canonical)} <b>⧉</b></button>` : ''}
+      ${lastReceipt ? `<span class="muted">último recibo · ${escapeHtml(lastReceipt)}</span>` : ''}
+      ${action || ''}
+    </footer>
+  </section>`;
+}
+
+function anatomyStat(label_, value, kind) {
+  return `<div class="organ-stat"><b>${value}</b><span>${escapeHtml(label_)}</span>${prov(kind)}</div>`;
+}
+
+function renderAnatomy() {
+  const anatomy = state.anatomy;
+  if (!anatomy) {
+    void loadAnatomy();
+    return '<div class="loading"><i></i><span>Compilando a anatomia do estado real…</span></div>';
+  }
+  const memory = anatomy.memory;
+  const observedSources = memory.sources.filter((source) => source.last_access || source.freshness_observed).length;
+  const neverObserved = memory.sources.length - observedSources;
+  const attention = anatomy.attention;
+  const execution = anatomy.execution;
+  const judgment = anatomy.judgment;
+  const learning = anatomy.learning;
+  const governance = anatomy.governance;
+  const ops = anatomy.brain_ops;
+
+  const sourceRows = memory.sources.map((source) => `<tr>
+    <td><button type="button" class="table-action" data-open-source="${escapeHtml(source.source_id)}">${escapeHtml(source.name)}</button></td>
+    <td>${badge(source.contract_status, source.contract_status === 'active' ? 'good' : 'neutral')}</td>
+    <td>${source.binding_ref ? `<code>${escapeHtml(source.binding_ref)}</code>` : '<span class="muted">—</span>'}</td>
+    <td>${source.grants || '<span class="muted">0</span>'}</td>
+    <td>${source.last_access ? `${escapeHtml(label(source.last_access.decision))} · ${fmtDate(source.last_access.occurred_at, false)}` : '<span class="gap-mark">nunca</span>'}</td>
+    <td>${source.freshness_observed ? fmtDate(source.freshness_observed, false) : '<span class="gap-mark">não observado</span>'}</td>
+  </tr>`).join('');
+
+  return `<div class="anatomy">
+    <div class="anatomy-spine">
+      ${organ({
+        number: 1, name: 'Identidade e intenção', question: 'O que orienta este cérebro?',
+        answer: `<b>${anatomy.identity.anchors.length}</b> conceitos-âncora vividos e <b>${anatomy.identity.recent_decisions.length}</b> decisões recentes em vigor. ${prov('declarado')}`,
+        body: `<div class="anchor-chips">${anatomy.identity.anchors.map((anchor_) => `<code>[[${escapeHtml(anchor_)}]]</code>`).join('')}</div>
+          <ul class="organ-list">${anatomy.identity.recent_decisions.map((decision) => `<li><span>${escapeHtml(decision.date)}</span>${escapeHtml(decision.title)}</li>`).join('')}</ul>`,
+        canonical: anatomy.identity.canonical,
+        lastReceipt: anatomy.identity.last_receipt,
+      })}
+      ${organ({
+        number: 2, name: 'Fontes e memória', question: 'O que ele sabe e de onde vem?',
+        answer: `<b>${memory.sources.length}</b> casas de verdade sob contrato ${prov('declarado')} · <b>${observedSources}</b> com acesso ou frescor observado ${prov('observado')} · <b>${neverObserved}</b> nunca observadas.`,
+        body: `<div class="table-wrap organ-table"><table><thead><tr><th>Fonte</th><th>Contrato</th><th>Binding</th><th>Grants</th><th>Último acesso</th><th>Frescor</th></tr></thead><tbody>${sourceRows}</tbody></table></div>
+          ${memory.distill_backlog ? `<p class="muted">Memória semântica · fila de destilação: ${escapeHtml(memory.distill_backlog)} ${prov('observado')}</p>` : ''}`,
+        gaps: neverObserved ? [`${neverObserved} fonte(s) com contrato ativo mas sem nenhum acesso observado — "ativa" ali é contrato, não conexão`] : [],
+        canonical: memory.canonical,
+      })}
+      ${organ({
+        number: 3, name: 'Atenção e recuperação', question: 'Onde falta contexto?',
+        answer: `<b>${attention.retrieval_declared}/${attention.systems_total}</b> sistemas com recuperação declarada ${prov('declarado')} · <b>${attention.runs_with_context}</b> execuções com contexto registrado ${prov('observado')} · <b>${attention.context_gaps}</b> lacunas/conflitos de contexto.`,
+        gaps: [
+          ...(attention.sources_never_observed ? [`${attention.sources_never_observed} fontes nunca entraram num Context Snapshot`] : []),
+          ...(attention.context_gaps ? [`${attention.context_gaps} lacunas ou conflitos registrados em snapshots reais`] : []),
+        ],
+        canonical: '.cerebro/runtime/ledger/runs.jsonl',
+      })}
+      ${organ({
+        number: 4, name: 'Sistemas e execução', question: 'O que está executando?',
+        answer: `<b>${execution.by_stage.active}</b> ativos · <b>${execution.by_stage.configured}</b> configurados · <b>${execution.by_stage.mapped}</b> mapeados ${prov('declarado')} · <b>${execution.recent_runs.length ? execution.recent_runs.length : 0}</b> execuções recentes, evals <b>${execution.evals_passed}/${execution.evals_total}</b> ${prov('observado')}.`,
+        body: `<ul class="organ-list">${execution.recent_runs.map((run) => `<li><span>${fmtDate(run.completed_at, false)}</span>${escapeHtml(label(run.system))} · ${escapeHtml(label(run.mode || 'run'))} · ${escapeHtml(label(run.status))}${run.eval_passed === false ? ' · <b class="gap-mark">eval falhou</b>' : ''}</li>`).join('') || '<li class="muted">Nenhuma execução no ledger.</li>'}</ul>`,
+        canonical: '.cerebro/contracts/systems/',
+        action: '<button class="action" data-view="canvas">Ver no Canvas →</button>',
+      })}
+      ${organ({
+        number: 5, name: 'Julgamento humano', question: 'O que espera julgamento?',
+        answer: `<b>${judgment.vault_queue_open}</b> decisões abertas na fila do cérebro ${prov('observado')} — <b>${judgment.late7}</b> há 7+ dias, mais antiga <b>${judgment.oldest_days ?? '—'}d</b> · <b>${judgment.routine_pending}</b> outputs de rotina pendentes.`,
+        body: judgment.oldest_title ? `<p class="muted">Mais antiga: “${escapeHtml(judgment.oldest_title)}”</p>` : '',
+        gaps: judgment.late30 ? [`${judgment.late30} decisão(ões) há 30+ dias — veredito final na mesa`] : [],
+        canonical: '.automacao/_FILA-DECISAO.json',
+        action: '<button class="action primary" data-view="today">Ir para a mesa (Hoje) →</button>',
+      })}
+      ${organ({
+        number: 6, name: 'Aprendizado', question: 'O que realmente melhorou uma execução posterior?',
+        answer: learning.candidates || learning.corrections
+          ? `<b>${learning.candidates}</b> candidatos e <b>${learning.corrections}</b> correções em curso ${prov('observado')} · <b>${learning.runs_with_outcomes}</b> runs com outcomes registrados.`
+          : `Ainda <b>nenhuma melhoria provada</b> em execução posterior ${prov('observado')} — ${learning.runs_with_outcomes} runs têm outcomes; candidatos exigem 3 casos comparáveis + replay + martelo.`,
+        gaps: !learning.candidates ? ['O loop de aprendizado existe no protocolo mas ainda não tem caso fechado — é o próximo gate do produto'] : [],
+        canonical: learning.improvements_canonical,
+      })}
+      <div class="anatomy-loop">↺ contexto, política ou capacidade versionada volta para a próxima execução</div>
+    </div>
+    <aside class="anatomy-side">
+      <section class="governance-panel">
+        <p class="micro">GOVERNANÇA · TRANSVERSAL</p>
+        <div class="gov-row"><span>Grants ativos</span><b>${governance.grants_total}</b>${prov('declarado')}</div>
+        <div class="gov-row"><span>Recibos de acesso</span><b>${governance.access_receipts}</b>${prov('observado')}</div>
+        <div class="gov-row"><span>Negações</span><b>${governance.denies}</b>${prov('observado')}</div>
+        ${governance.pii_gate ? `<div class="gov-row"><span>Gate schema/PII</span><b>${escapeHtml(governance.pii_gate.summary)}</b>${prov('observado')}</div>` : ''}
+        ${governance.golden_set ? `<div class="gov-row"><span>Golden set</span><b>${escapeHtml(governance.golden_set.summary.split('—')[0].trim())}</b>${prov('observado')}</div>` : ''}
+        <div class="gov-row"><span>Protocolo</span><b>${governance.protocol_score ?? '—'}%</b><button class="action" data-view="compatibility">→</button></div>
+      </section>
+      <section class="governance-panel brain-ops">
+        <p class="micro">OPERAÇÃO DO CÉREBRO · O MANTENEDOR</p>
+        <p class="section-help">O sistema de Fundação que mantém esta arquitetura saudável. Ele mantém o cérebro; ele não é o cérebro.</p>
+        <p class="muted">Última rodada do motor · ${escapeHtml(ops.round_at || '—')} ${prov('observado')}</p>
+        <div class="ops-tasks">${ops.tasks.map((task) => `<div class="ops-task"><i class="health-dot ${task.state === 'ok' ? 'good' : task.state === 'skip' ? 'warn' : 'warn'}"></i><span>${escapeHtml(task.name)}</span><small>${escapeHtml(task.summary || '')}</small></div>`).join('')}</div>
+        <button class="action" data-open-system="cerebro-operacional">Abrir o sistema →</button>
+      </section>
+    </aside>
+  </div>`;
+}
+
+async function loadAnatomy() {
+  try {
+    state.anatomy = await getJson('/api/anatomy');
+    if (state.view === 'anatomy') render();
+  } catch { /* a view mostra loading; refresh recarrega */ }
+}
+
 const DECISION_CATEGORIES = {
   experimento: '🧪 experimento em gate',
   escalacao: '🚨 exceção do loop',
@@ -516,10 +647,11 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { compatibility: renderCompatibility, today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
+  anatomy: ['Cérebro', 'A anatomia: como esta empresa transforma contexto em aprendizado reutilizável.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
@@ -536,6 +668,7 @@ const titles = {
 // A que pergunta do operador cada view responde — vira o eyebrow da topbar.
 const viewGroups = {
   today: 'Operação', judgments: 'Operação', routines: 'Operação', runs: 'Operação',
+  anatomy: 'Estrutura',
   canvas: 'Estrutura', areas: 'Estrutura', systems: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
   compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
   society: 'Rede',
@@ -1364,6 +1497,7 @@ async function loadModel() {
   ]);
   state.model = model;
   state.decisions = decisions;
+  state.anatomy = null;
   render();
 }
 

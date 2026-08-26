@@ -15,6 +15,7 @@ import {
   runRoutine,
 } from './lib/routine-runtime.mjs';
 import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { latestRunRecords } from './lib/system-protocol.mjs';
 import { saveCanvasLayout } from './lib/canvas-layout-runtime.mjs';
 import {
   buildBrainGraph,
@@ -94,6 +95,178 @@ function decisionQueue(root) {
   } catch {
     return { available: false, open: [], open_count: 0, decided_total: 0 };
   }
+}
+
+// Anatomia do Cérebro — o agregador dos seis módulos + governança.
+// Regra: só dados que existem; cada campo nasce de contrato (declarado),
+// recibo/ledger (observado) ou derivação explícita (inferido).
+function listJsonDir(root, relative) {
+  try {
+    return readdirSync(resolve(root, relative), { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map((entry) => {
+        try { return JSON.parse(readFileSync(resolve(root, relative, entry.name), 'utf8')); } catch { return null; }
+      })
+      .filter(Boolean);
+  } catch { return []; }
+}
+
+function countDir(root, relative) {
+  try { return readdirSync(resolve(root, relative)).filter((name) => !name.startsWith('.')).length; } catch { return 0; }
+}
+
+function anatomyModel(root) {
+  const model = buildConsoleReadModel(root);
+  const records = latestRunRecords(root);
+  const queue = decisionQueue(root);
+  const accessReceipts = listJsonDir(root, '.cerebro/runtime/receipts/access');
+  const sourceContracts = new Map(listJsonDir(root, '.cerebro/contracts/sources').map((contract) => [contract.source_id, contract]));
+
+  // rodada do motor (Operação do Cérebro)
+  let round = null;
+  try { round = JSON.parse(readFileSync(resolve(root, '.automacao/_ULTIMA-RODADA.json'), 'utf8')); } catch { round = null; }
+  const roundTask = (name) => round?.tarefas?.find((task) => task.nome.toLowerCase().includes(name)) || null;
+
+  // identidade: âncoras + decisões recentes (documentos humanos datados)
+  let anchors = [];
+  try {
+    anchors = readdirSync(resolve(root, '01-nucleo-privado/conceitos'))
+      .filter((name) => name.endsWith('.md') && !name.startsWith('_') && !name.includes('excalidraw'))
+      .map((name) => name.slice(0, -3));
+  } catch { anchors = []; }
+  let decisions = [];
+  try {
+    decisions = readdirSync(resolve(root, '01-nucleo-privado/decisoes'))
+      .filter((name) => /^\d{4}-\d{2}-\d{2}/.test(name) && name.endsWith('.md'))
+      .sort().slice(-5).reverse()
+      .map((name) => ({ date: name.slice(0, 10), title: name.slice(11, -3).replaceAll('-', ' ') }));
+  } catch { decisions = []; }
+
+  // memória: fonte desmembrada em contrato × binding × grant × acesso × frescor
+  const grantsBySource = new Map();
+  for (const routine of model.routines) {
+    for (const access of routine.access) {
+      grantsBySource.set(access.source_ref, (grantsBySource.get(access.source_ref) || 0) + 1);
+    }
+  }
+  const lastAccessBySource = new Map();
+  for (const receipt of accessReceipts) {
+    const previous = lastAccessBySource.get(receipt.source_ref);
+    if (!previous || receipt.occurred_at > previous.occurred_at) {
+      lastAccessBySource.set(receipt.source_ref, { decision: receipt.decision, occurred_at: receipt.occurred_at });
+    }
+  }
+  const lastSnapshotBySource = new Map();
+  for (const record of records) {
+    for (const access of record.context_snapshot?.accesses || []) {
+      const id = access.source_ref?.id;
+      if (!id) continue;
+      const previous = lastSnapshotBySource.get(id);
+      const observedAt = record.context_snapshot.observed_at;
+      if (!previous || observedAt > previous) lastSnapshotBySource.set(id, observedAt);
+    }
+  }
+  const sources = model.sources.map((source) => {
+    const contract = sourceContracts.get(source.source_id) || {};
+    return {
+      source_id: source.source_id,
+      name: source.name,
+      contract_status: source.status,
+      binding_ref: contract.connector?.binding_ref || null,
+      has_credential: Boolean(contract.connector?.credential_ref),
+      grants: grantsBySource.get(source.source_id) || 0,
+      last_access: lastAccessBySource.get(source.source_id) || null,
+      freshness_policy: contract.freshness?.policy || null,
+      freshness_observed: contract.freshness?.observed_at || lastSnapshotBySource.get(source.source_id) || null,
+    };
+  });
+
+  // atenção: contexto declarado vs observado
+  const snapshots = records.filter((record) => record.context_snapshot?.accesses?.length);
+  const contextGaps = records.reduce((total, record) => total
+    + (record.context_snapshot?.gaps?.length || 0) + (record.context_snapshot?.conflicts?.length || 0), 0);
+  const retrievalDeclared = model.systems.filter((system) => system.retrieval_status === 'declared').length;
+  const sourcesNeverObserved = sources.filter((source) => !source.last_access && !source.freshness_observed).length;
+
+  // execução
+  const byStage = { mapped: 0, configured: 0, active: 0 };
+  for (const system of model.systems) byStage[system.migration_stage] = (byStage[system.migration_stage] || 0) + 1;
+  const recentRuns = [...records].sort((left, right) => String(right.completed_at || '').localeCompare(String(left.completed_at || ''))).slice(0, 5)
+    .map((record) => ({ run_id: record.run_id, system: record.system_id, mode: record.mode, status: record.status, completed_at: record.completed_at, eval_passed: record.eval?.passed ?? null }));
+
+  // julgamento
+  const routinePending = model.counts.judgments;
+  const oldest = queue.open[0] || null;
+
+  // aprendizado
+  const learningCandidates = countDir(root, '.cerebro/runtime/learning-candidates');
+  const corrections = countDir(root, '.cerebro/runtime/corrections');
+  const decidedWithOutcomes = records.filter((record) => (record.outcomes || []).length).length;
+
+  // governança
+  const grantsTotal = model.routines.flatMap((routine) => routine.access).length;
+  const denies = accessReceipts.filter((receipt) => receipt.decision === 'deny' || receipt.decision === 'denied').length;
+  const piiTask = roundTask('schema');
+  const goldenTask = roundTask('golden') || roundTask('eval do c');
+
+  return {
+    generated_at: new Date().toISOString(),
+    identity: {
+      canonical: '01-nucleo-privado/_SISTEMAS.md',
+      anchors,
+      recent_decisions: decisions,
+      last_receipt: decisions[0]?.date || null,
+    },
+    memory: {
+      sources,
+      distill_backlog: roundTask('destila')?.resumo || null,
+      canonical: '.cerebro/contracts/sources/',
+    },
+    attention: {
+      systems_total: model.systems.length,
+      retrieval_declared: retrievalDeclared,
+      runs_with_context: snapshots.length,
+      context_gaps: contextGaps,
+      sources_never_observed: sourcesNeverObserved,
+    },
+    execution: {
+      by_stage: byStage,
+      routines_active: model.today.active.length,
+      recent_runs: recentRuns,
+      evals_passed: records.filter((record) => record.eval?.passed === true).length,
+      evals_total: records.filter((record) => record.eval?.passed !== undefined && record.eval?.passed !== null).length,
+      handoff_receipts: countDir(root, '.cerebro/runtime/receipts/handoffs') || countDir(root, '.cerebro/runtime/handoffs'),
+    },
+    judgment: {
+      vault_queue_open: queue.open_count,
+      vault_queue_decided: queue.decided_total,
+      oldest_days: oldest?.age_days ?? null,
+      oldest_title: oldest?.title || null,
+      late7: queue.open.filter((item) => item.age_days >= 7).length,
+      late30: queue.open.filter((item) => item.age_days >= 30).length,
+      routine_pending: routinePending,
+    },
+    learning: {
+      candidates: learningCandidates,
+      corrections,
+      runs_with_outcomes: decidedWithOutcomes,
+      promotions_canonical: '01-nucleo-privado/PROMOCOES.md',
+      improvements_canonical: '01-nucleo-privado/sistemas/_MELHORIAS.md',
+    },
+    governance: {
+      grants_total: grantsTotal,
+      access_receipts: accessReceipts.length,
+      denies,
+      pii_gate: piiTask ? { state: piiTask.estado, summary: piiTask.resumo } : null,
+      golden_set: goldenTask ? { state: goldenTask.estado, summary: goldenTask.resumo } : null,
+      protocol_score: model.compatibility?.score?.percent ?? null,
+    },
+    brain_ops: {
+      system_ref: 'cerebro-operacional',
+      round_at: round?.quando || null,
+      tasks: (round?.tarefas || []).map((task) => ({ name: task.nome, state: task.estado, summary: task.resumo })),
+    },
+  };
 }
 
 const COOKIE_NAME = 'cerebro_console_session';
@@ -286,6 +459,11 @@ export function createConsoleServer({
         try { content = readFileSync(resolved); } catch { throw new Error('not-found'); }
         response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         response.end(content);
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/anatomy') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, anatomyModel(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/decisions') {

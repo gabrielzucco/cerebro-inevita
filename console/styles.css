@@ -510,6 +510,59 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 .card-footer button:hover { color: var(--text); }
 .card-footer button b { margin-left: 5px; color: var(--text-3); }
 
+/* Anatomia do Cérebro — espinha de seis módulos + governança lateral */
+.anatomy { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s4); align-items: start; }
+.anatomy-spine { position: relative; display: grid; gap: var(--s3); padding-left: 26px; }
+.anatomy-spine::before { content: ''; position: absolute; left: 9px; top: 22px; bottom: 40px; border-left: 1px dashed var(--hairline-2); }
+
+.organ { position: relative; padding: var(--s4) 18px; border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
+.organ-head { display: grid; grid-template-columns: 26px 1fr; gap: var(--s3); align-items: start; margin-bottom: var(--s2); }
+.organ-head > b {
+  position: relative; z-index: 1;
+  width: 22px; height: 22px; margin-left: -30px;
+  display: grid; place-items: center;
+  color: var(--text); border: 1.5px solid var(--hairline-2); border-radius: 50%;
+  background: var(--bg); font: 650 var(--fs-micro) var(--font-mono);
+}
+.organ-head h3 { margin: 0; font-size: var(--fs-lead); font-weight: 610; letter-spacing: -.012em; }
+.organ-head p { margin: 1px 0 0; color: var(--text-3); font-size: var(--fs-meta); font-style: italic; }
+.organ-answer { margin: 0 0 var(--s3); color: var(--text-2); font-size: var(--fs-body); line-height: 1.65; }
+.organ-answer b { color: var(--text); font: 640 var(--fs-lead) var(--font-sans); font-variant-numeric: tabular-nums; }
+
+.prov { display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 4px; font: 650 9px/1.5 var(--font-mono); letter-spacing: .07em; vertical-align: 1px; }
+.prov--declarado { color: var(--kind-area); background: rgba(106, 166, 248, .1); }
+.prov--observado { color: var(--ok); background: var(--ok-soft); }
+.prov--inferido { color: var(--text-3); background: rgba(255, 255, 255, .06); }
+
+.anchor-chips { display: flex; flex-wrap: wrap; gap: var(--s1); margin-bottom: var(--s3); }
+.organ-list { margin: 0 0 var(--s2); padding: 0; list-style: none; }
+.organ-list li { display: grid; grid-template-columns: 84px 1fr; gap: var(--s3); padding: 4px 0; color: var(--text-2); font-size: var(--fs-meta); border-top: 1px solid var(--hairline); }
+.organ-list li:first-child { border-top: 0; }
+.organ-list li > span { color: var(--text-3); font: 500 var(--fs-micro) var(--font-mono); }
+.organ-table table { min-width: 640px; }
+.organ-table { margin-bottom: var(--s3); }
+.gap-mark { color: var(--wait); font-weight: 560; }
+
+.organ-gaps { display: grid; gap: var(--s1); margin: var(--s2) 0; }
+.organ-gaps span { padding: 6px 10px; color: var(--wait); border-left: 2px solid var(--wait); border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--wait-soft); font-size: var(--fs-meta); }
+.organ-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--hairline); }
+.anatomy-loop { padding: var(--s3) var(--s4); color: var(--text-3); font: 560 var(--fs-meta) var(--font-mono); text-align: center; }
+
+.anatomy-side { position: sticky; top: var(--s4); display: grid; gap: var(--s3); }
+.governance-panel { padding: var(--s4); border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
+.governance-panel .micro { margin-bottom: var(--s3); }
+.gov-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: var(--s2); padding: 6px 0; border-top: 1px solid var(--hairline); color: var(--text-3); font-size: var(--fs-meta); }
+.gov-row:first-of-type { border-top: 0; }
+.gov-row b { color: var(--text); font: 600 var(--fs-body) var(--font-sans); font-variant-numeric: tabular-nums; text-align: right; }
+.gov-row .action { padding: 2px 8px; }
+.brain-ops { border-color: rgba(106, 166, 248, .2); }
+.ops-tasks { display: grid; gap: 2px; margin: var(--s3) 0; max-height: 300px; overflow-y: auto; }
+.ops-task { display: grid; grid-template-columns: 10px auto 1fr; align-items: baseline; gap: var(--s2); font-size: var(--fs-micro); }
+.ops-task span { color: var(--text-2); white-space: nowrap; }
+.ops-task small { overflow: hidden; color: var(--text-3); text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1200px) { .anatomy { grid-template-columns: 1fr; } .anatomy-side { position: static; } }
+
 /* Fila única de decisão — a verdade do vault dentro do Hoje */
 .decision-list { display: grid; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); overflow: hidden; margin-bottom: var(--s3); }
 .decision-row {
