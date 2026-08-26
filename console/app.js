@@ -9,6 +9,12 @@ const state = {
   selectedExperiment: null,
   busy: false,
   areaFilter: (() => { try { return localStorage.getItem('cb-area') || ''; } catch { return ''; } })(),
+  runs: {
+    data: null,
+    filters: { system: '', mode: '', status: '', decision: '', snapshot: '' },
+    sort: { key: 'when', dir: 'desc' },
+    cmpA: '', cmpB: '',
+  },
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
   },
@@ -44,7 +50,8 @@ const labels = {
   'runtime-enforced': 'Bloqueio pelo runtime',
   'receipt-audited': 'Auditado por recibo', exported: 'Cópia exportada', unknown: 'Não verificado',
   pending: 'Pendente', decided: 'Julgado', approved: 'Aprovado',
-  'changes-requested': 'Pedir ajuste', rejected: 'Rejeitado',
+  'changes-requested': 'Pedir ajuste', changes_requested: 'Pedir ajuste', rejected: 'Rejeitado',
+  started: 'Iniciada',
   'propose-action': 'Intenção de ação', none: 'Sem ação', unavailable: 'Indisponível',
   candidate: 'Candidato', baseline: 'Baseline',
   'not-eligible': 'Ainda não elegível',
@@ -68,6 +75,7 @@ const labels = {
   'partial-brain': 'Cérebro parcial', 'inevita-compatible': 'Compatível com INEVITA',
   foundation: 'Fundação', contracted: 'Contratado', operational: 'Operacional',
   valid: 'Válido', invalid: 'Inválido', unassigned: 'Ainda não atribuído', assigned: 'Atribuído',
+  'run-ledger-invalid': 'Ledger de runs ilegível', 'routine-receipt-invalid': 'Recibo de rotina ilegível',
 };
 
 function label(value) {
@@ -380,8 +388,12 @@ function wsRuns(ws) {
 }
 
 function wsCompareTable(ws, indexA, indexB) {
-  const a = ws.records[indexA];
-  const b = ws.records[indexB];
+  return runCompareTable(ws.records[indexA], ws.records[indexB]);
+}
+
+// Compara dois Run Records integrais do MESMO sistema — a base da aba Execuções
+// e do workspace. Sistemas diferentes não entram aqui: não são comparáveis.
+function runCompareTable(a, b) {
   if (!a || !b) return '';
   const sourcesOf = (record) => (record.context_snapshot?.accesses || []).map((access) => access.source_ref?.id).filter(Boolean).join(', ') || '—';
   const freshOf = (record) => (record.context_snapshot?.accesses || []).map((access) => access.freshness_marker).filter(Boolean).join(' · ') || '—';
@@ -842,9 +854,210 @@ function allCanvasExecutions() {
   return [...receipts, ...standalone].sort((left, right) => Date.parse(right.completed_at) - Date.parse(left.completed_at));
 }
 
+/* Runs Explorer — a linha do tempo única de TODAS as execuções: recibos de
+   rotina + run records standalone do ledger, com a mesma gramática das outras
+   superfícies (proveniência carimbada, lacuna visível, comparação A×B). */
+
+async function loadRuns() {
+  try {
+    state.runs.data = await getJson('/api/runs');
+  } catch (error) {
+    state.runs.data = { error: error.message, runs: [] };
+  }
+  if (state.view === 'runs') render();
+}
+
+// Decisão humana resolvida: julgamento do recibo (quando existe) ganha do
+// campo human_decision do Run Record — os dois são observados, o julgamento
+// é o mais recente. Underscore do protocolo vira o mesmo vocabulário da casa.
+function runDecision(entry) {
+  if (entry.receipt_id) {
+    const judgment = state.model.judgments.find((item) => item.receipt_id === entry.receipt_id)?.judgment;
+    if (judgment && judgment.status !== 'unavailable') {
+      return judgment.status === 'pending' ? 'pending' : (judgment.verdict || judgment.status);
+    }
+  }
+  return entry.human_decision ? String(entry.human_decision).replaceAll('_', '-') : null;
+}
+
+function runsEntries() {
+  return (state.runs.data?.runs || []).map((entry) => {
+    const system = systemByRef(entry.system_ref);
+    const routine = entry.routine_ref ? state.model.routines.find((item) => item.routine_id === entry.routine_ref) : null;
+    return {
+      ...entry,
+      system,
+      system_name: system?.name || entry.system_ref,
+      area_ref: system?.area_ref || null,
+      routine_name: routine?.name || entry.routine_ref,
+      decision: runDecision(entry),
+      when: entry.completed_at || entry.started_at || '',
+    };
+  });
+}
+
+function runsVisibleEntries() {
+  const filters = state.runs.filters;
+  const list = runsEntries().filter((entry) => inActiveArea(entry.area_ref)
+    && (!filters.system || entry.system?.system_id === filters.system || entry.system_ref === filters.system)
+    && (!filters.mode || (entry.mode || 'none') === filters.mode)
+    && (!filters.status || entry.status === filters.status)
+    && (!filters.decision || (entry.decision || 'none') === filters.decision)
+    && (!filters.snapshot || (filters.snapshot === 'with' ? Boolean(entry.context) : !entry.context)));
+  const { key, dir } = state.runs.sort;
+  const value = (entry) => key === 'system' ? entry.system_name
+    : key === 'mode' ? (entry.mode || '')
+      : key === 'status' ? entry.status
+        : key === 'decision' ? (entry.decision || '')
+          : key === 'eval' ? String(entry.eval_passed ?? '')
+            : entry.when;
+  return list.sort((left, right) => {
+    const order = String(value(left)).localeCompare(String(value(right)), 'pt-BR') * (dir === 'asc' ? 1 : -1);
+    return order || String(right.when).localeCompare(String(left.when));
+  });
+}
+
+function runsFilterBar(visible, total) {
+  const filters = state.runs.filters;
+  const entries = runsEntries().filter((entry) => inActiveArea(entry.area_ref));
+  const options = (key, values, labelOf) => values.map((option) => `<option value="${escapeHtml(option)}"${filters[key] === option ? ' selected' : ''}>${escapeHtml(labelOf(option))}</option>`).join('');
+  const distinct = (map) => [...new Set(entries.map(map).filter(Boolean))].sort();
+  const systems = [...new Map(entries.filter((entry) => entry.system).map((entry) => [entry.system.system_id, entry.system_name])).entries()].sort((left, right) => left[1].localeCompare(right[1], 'pt-BR'));
+  const active = Object.values(filters).some(Boolean);
+  return `<div class="runs-filterbar">
+    <label>Sistema <select data-runs-filter="system"><option value="">todos</option>${systems.map(([id, name]) => `<option value="${escapeHtml(id)}"${filters.system === id ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select></label>
+    <label>Modo <select data-runs-filter="mode"><option value="">todos</option>${options('mode', [...distinct((entry) => entry.mode), ...(entries.some((entry) => !entry.mode) ? ['none'] : [])], (option) => option === 'none' ? 'sem modo' : label(option))}</select></label>
+    <label>Status <select data-runs-filter="status"><option value="">todos</option>${options('status', distinct((entry) => entry.status), label)}</select></label>
+    <label>Decisão <select data-runs-filter="decision"><option value="">todas</option>${options('decision', [...distinct((entry) => entry.decision), ...(entries.some((entry) => !entry.decision) ? ['none'] : [])], (option) => option === 'none' ? 'sem decisão' : label(option))}</select></label>
+    <label>Snapshot <select data-runs-filter="snapshot"><option value="">todos</option><option value="with"${filters.snapshot === 'with' ? ' selected' : ''}>com contexto</option><option value="without"${filters.snapshot === 'without' ? ' selected' : ''}>sem snapshot</option></select></label>
+    <span class="runs-count muted">${visible} de ${total} execuções${state.areaFilter ? ' · área ativa' : ''}</span>
+    ${active ? '<button type="button" class="table-action" data-runs-clear>limpar filtros</button>' : ''}
+  </div>`;
+}
+
+function runsTraceBadge(entry) {
+  const trace = entry.trace || { status: 'none', events: 0 };
+  if (trace.status === 'recorded') return badge('recorded', 'good', `Trace V1 · ${trace.events} ev.`);
+  if (trace.status === 'reconstructed') return badge('reconstructed', 'warn', `Reconstruído · ${trace.events} ev.`);
+  if (trace.status === 'unreadable') return `<span title="O arquivo de trace existe, mas falha na validação do protocolo atual — o Canvas reconstrói a partir do recibo.">${badge('unreadable', 'bad', 'Trace ilegível')}</span>`;
+  return '<span class="muted">sem trace</span>';
+}
+
+function runsOriginCell(entry) {
+  const source = entry.origin === 'routine-receipt'
+    ? `<strong>${escapeHtml(entry.routine_name || entry.routine_ref || '—')}</strong><small>rotina · ${escapeHtml(label(entry.trigger || '—'))}</small>`
+    : `<strong>${escapeHtml(entry.experiment_ref || 'Run Record')}</strong><small>${entry.experiment_ref ? 'experimento · ' : ''}ledger direto</small>`;
+  return source;
+}
+
+function runsContextCell(entry) {
+  if (!entry.context) return badge('context-not-recorded', 'neutral');
+  const gaps = entry.context.gaps + entry.context.conflicts;
+  const core = `${entry.context.sources} fonte(s)${gaps ? ` · <span class="gap-mark">${gaps} lacuna(s)</span>` : ''}`;
+  return entry.receipt_id
+    ? `<button class="table-action" data-open-context="${escapeHtml(entry.receipt_id)}">${core} →</button>`
+    : core;
+}
+
+function runsChainCell(entry) {
+  if (!entry.chain_id) return '<span class="muted">—</span>';
+  return `<code>${escapeHtml(entry.chain_id)}</code>${entry.handoff_count ? `<small>${entry.handoff_count} handoff(s)</small>` : ''}`;
+}
+
+function runsSameSystem(a, b) {
+  return a.system && b.system ? a.system === b.system : a.system_ref === b.system_ref;
+}
+
+function runsCompareSlot(visible) {
+  const a = visible.find((entry) => entry.selector_ref === state.runs.cmpA);
+  const b = visible.find((entry) => entry.selector_ref === state.runs.cmpB);
+  if (!a || !b) return '<p class="muted">Escolha duas execuções acima.</p>';
+  if (a.selector_ref === b.selector_ref) return '<p class="muted">Escolha duas execuções diferentes.</p>';
+  if (!runsSameSystem(a, b)) {
+    return `<div class="experiment-gap">Runs de sistemas diferentes (${escapeHtml(a.system_name)} × ${escapeHtml(b.system_name)}) não são comparáveis — comparar exige o mesmo contrato de sistema.</div>`;
+  }
+  if (!a.record || !b.record) {
+    return '<div class="experiment-gap">Uma das execuções não tem Run Record no ledger — sem base estruturada para comparar. O recibo da rotina continua auditável na tabela.</div>';
+  }
+  return runCompareTable(a.record, b.record);
+}
+
+function runsCompareSection(visible) {
+  if (visible.length < 2) return '<p class="section-help">Comparação disponível a partir de duas execuções visíveis.</p>';
+  const valid = new Set(visible.map((entry) => entry.selector_ref));
+  if (!valid.has(state.runs.cmpA) || !valid.has(state.runs.cmpB) || state.runs.cmpA === state.runs.cmpB) {
+    // Default honesto: o par comparável mais recente (mesmo sistema, com record).
+    const pair = visible.find((entry, index) => entry.record
+      && visible.slice(index + 1).some((other) => other.record && runsSameSystem(other, entry)));
+    const partner = pair ? visible.find((other) => other !== pair && other.record && runsSameSystem(other, pair)) : null;
+    state.runs.cmpB = (pair || visible[0]).selector_ref;
+    state.runs.cmpA = (partner || visible[1]).selector_ref;
+  }
+  const optionsFor = (selected) => visible.map((entry) => `<option value="${escapeHtml(entry.selector_ref)}"${entry.selector_ref === selected ? ' selected' : ''}>${escapeHtml(entry.system_name)} · ${fmtDate(entry.when)} · ${escapeHtml(entry.mode ? label(entry.mode) : label(entry.origin === 'routine-receipt' ? 'routine' : 'run'))}</option>`).join('');
+  return `<section class="organ"><header class="organ-head"><div><h3>O que mudou entre duas runs</h3><p>comparável = mesmo sistema, com Run Record no ledger</p></div></header>
+    <div class="ws-compare-pick"><label>A <select id="runs-cmp-a">${optionsFor(state.runs.cmpA)}</select></label>
+    <label>B <select id="runs-cmp-b">${optionsFor(state.runs.cmpB)}</select></label></div>
+    <div id="runs-compare">${runsCompareSlot(visible)}</div></section>`;
+}
+
+function runsKpis(visible) {
+  const sevenDays = Date.now() - 7 * 86400000;
+  const week = visible.filter((entry) => Date.parse(entry.when) >= sevenDays).length;
+  const withContext = visible.filter((entry) => entry.context).length;
+  const recorded = visible.filter((entry) => entry.trace?.status === 'recorded').length;
+  const reconstructed = visible.filter((entry) => entry.trace?.status === 'reconstructed').length;
+  const noTrace = visible.length - recorded - reconstructed;
+  const evalFailed = visible.filter((entry) => entry.eval_passed === false).length;
+  const rejected = visible.filter((entry) => ['rejected', 'changes-requested'].includes(entry.decision)).length;
+  const pending = visible.filter((entry) => entry.decision === 'pending').length;
+  return `<div class="experiment-kpis">
+    <span><b>${visible.length}</b> execuções · ${week} nos últimos 7d</span>
+    <span><b>${withContext}</b> com contexto registrado · ${visible.length - withContext} sem snapshot</span>
+    <span><b>${recorded}</b> trace V1 · ${reconstructed} reconstruído(s) · ${noTrace} sem trace</span>
+    <span class="${evalFailed ? 'attention' : ''}"><b>${evalFailed}</b> eval falhou</span>
+    <span class="${rejected ? 'attention' : ''}"><b>${rejected}</b> rejeitada(s)/ajuste · ${pending} pendente(s) de martelo</span>
+  </div>`;
+}
+
 function renderRuns() {
-  const receipts = allReceipts();
-  return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Run Record mostra o contexto selecionado por referência. O conteúdo continua privado.</p></div><div class="table-wrap"><table><thead><tr><th>Rotina</th><th>Quando</th><th>Gatilho</th><th>Estado</th><th>Contexto selecionado</th><th>Modelo</th><th>Output ref.</th></tr></thead><tbody>${receipts.map((receipt) => `<tr><td><strong>${escapeHtml(receipt.routine_name)}</strong><small>${escapeHtml(receipt.receipt_ref)}</small></td><td>${fmtDate(receipt.completed_at)}</td><td>${escapeHtml(label(receipt.trigger))}</td><td>${badge(receipt.status)}</td><td>${receipt.context_status === 'recorded' ? `<button class="table-action" data-open-context="${escapeHtml(receipt.receipt_id)}">${receipt.context_source_count} fontes →</button>` : badge('context-not-recorded', 'neutral')}</td><td>${escapeHtml(receipt.requested_model)}<small>${escapeHtml(receipt.model_observation)}</small></td><td><code>${escapeHtml(receipt.output_ref || '—')}</code></td></tr>`).join('') || `<tr><td colspan="7">Nenhum recibo ainda.</td></tr>`}</tbody></table></div>`;
+  if (!state.runs.data) {
+    void loadRuns();
+    return '<div class="loading"><i></i><span>Unificando recibos e ledger de runs…</span></div>';
+  }
+  if (state.runs.data.error) return empty('Execuções indisponíveis', label(state.runs.data.error));
+  const total = runsEntries().filter((entry) => inActiveArea(entry.area_ref)).length;
+  const visible = runsVisibleEntries();
+  const issues = (state.runs.data.issues || []).map((issue) => `<div class="experiment-gap">${escapeHtml(label(issue.reason_code))} · <code>${escapeHtml(issue.ref)}</code></div>`).join('');
+  const sortMark = (key) => state.runs.sort.key === key ? `<b>${state.runs.sort.dir === 'asc' ? '↑' : '↓'}</b>` : '';
+  const rows = visible.map((entry) => `<tr>
+    <td><strong>${fmtDate(entry.when)}</strong><small title="${escapeHtml(entry.run_id)}">${escapeHtml(entry.run_id.length > 22 ? `${entry.run_id.slice(0, 22)}…` : entry.run_id)}</small></td>
+    <td><button type="button" class="table-action" data-open-system="${escapeHtml(entry.system?.system_id || entry.system_ref)}">${escapeHtml(entry.system_name)}</button><small>${entry.system_version ? `v${escapeHtml(entry.system_version)}` : 'versão não registrada'}</small></td>
+    <td>${runsOriginCell(entry)}</td>
+    <td>${entry.mode ? badge(entry.mode, entry.mode === 'live' ? 'good' : 'neutral') : '<span class="muted">—</span>'}</td>
+    <td>${badge(entry.status)}</td>
+    <td>${runsContextCell(entry)}</td>
+    <td>${entry.eval_passed === true ? badge('evaluation-passed', 'good') : entry.eval_passed === false ? badge('evaluation-gate-failed', 'bad') : '<span class="muted">—</span>'}</td>
+    <td>${entry.decision ? badge(entry.decision) : '<span class="muted">—</span>'}</td>
+    <td>${runsChainCell(entry)}</td>
+    <td>${runsTraceBadge(entry)}<button class="table-action" data-canvas-jump-run="${escapeHtml(entry.selector_ref)}">trace →</button></td>
+  </tr>`).join('');
+  return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Recibos de rotina e Run Records do ledger na mesma linha do tempo. Tudo reference-only ${prov('observado')} — o conteúdo continua privado.</p></div>
+    ${issues}
+    ${runsKpis(visible)}
+    ${runsFilterBar(visible.length, total)}
+    <div class="table-wrap runs-table"><table><thead><tr>
+      <th data-runs-sort="when">Quando${sortMark('when')}</th>
+      <th data-runs-sort="system">Sistema${sortMark('system')}</th>
+      <th>Rotina / experimento</th>
+      <th data-runs-sort="mode">Modo${sortMark('mode')}</th>
+      <th data-runs-sort="status">Status${sortMark('status')}</th>
+      <th>Contexto</th>
+      <th data-runs-sort="eval">Eval${sortMark('eval')}</th>
+      <th data-runs-sort="decision">Decisão${sortMark('decision')}</th>
+      <th>Cadeia</th>
+      <th>Trace</th>
+    </tr></thead><tbody>${rows || `<tr><td colspan="10">${total ? 'Nenhuma execução passa nos filtros atuais.' : 'Nenhuma execução registrada ainda — recibo ou Run Record aparecem aqui.'}</td></tr>`}</tbody></table></div>
+    ${runsCompareSection(visible)}`;
 }
 
 function renderGovernance() {
@@ -879,7 +1092,7 @@ const titles = {
   experiments: ['Experimentos', 'Hipótese, execução, medição, martelo e aprendizado ligados ao Sistema.'],
   routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
   judgments: ['Julgamento', 'Outputs privados esperando decisão humana rastreável.'],
-  runs: ['Execuções', 'O rastro reference-only de cada tentativa.'],
+  runs: ['Execuções', 'Todas as execuções — recibos de rotina e Run Records do ledger, com contexto, eval, decisão e trace.'],
   governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
   health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
   society: ['Society', 'A rede distribui capacidade; o contexto da empresa não circula.'],
@@ -1695,6 +1908,7 @@ async function loadModel() {
   state.model = model;
   state.decisions = decisions;
   state.anatomy = null;
+  state.runs.data = null;
   render();
 }
 
@@ -1750,6 +1964,20 @@ document.addEventListener('click', (event) => {
       canvasInspector(node);
       void state.canvas.controller?.focus?.(node.id);
     }
+    return;
+  }
+  const runsSort = event.target.closest('[data-runs-sort]');
+  if (runsSort) {
+    const key = runsSort.dataset.runsSort;
+    state.runs.sort = state.runs.sort.key === key
+      ? { key, dir: state.runs.sort.dir === 'desc' ? 'asc' : 'desc' }
+      : { key, dir: key === 'when' ? 'desc' : 'asc' };
+    render();
+    return;
+  }
+  if (event.target.closest('[data-runs-clear]')) {
+    state.runs.filters = { system: '', mode: '', status: '', decision: '', snapshot: '' };
+    render();
     return;
   }
   const open = event.target.closest('[data-open-routine]');
@@ -1810,6 +2038,18 @@ document.addEventListener('change', (event) => {
     const ws = state.workspace?.data;
     const slot = $('#ws-compare');
     if (ws && slot) slot.innerHTML = wsCompareTable(ws, Number($('#ws-cmp-a').value), Number($('#ws-cmp-b').value));
+    return;
+  }
+  if (event.target.id === 'runs-cmp-a' || event.target.id === 'runs-cmp-b') {
+    state.runs[event.target.id === 'runs-cmp-a' ? 'cmpA' : 'cmpB'] = event.target.value;
+    const slot = $('#runs-compare');
+    if (slot) slot.innerHTML = runsCompareSlot(runsVisibleEntries());
+    return;
+  }
+  const runsFilter = event.target.closest('[data-runs-filter]');
+  if (runsFilter) {
+    state.runs.filters[runsFilter.dataset.runsFilter] = runsFilter.value;
+    render();
     return;
   }
   if (event.target.id !== 'canvas-ref') return;

@@ -449,6 +449,17 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 .secondary-action { width: fit-content; margin-top: var(--s3); }
 .secondary-action:disabled { opacity: .4; cursor: wait; }
 
+/* Runs Explorer — filtros, ordenação e tabela larga da linha do tempo única */
+.runs-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s4); margin-bottom: var(--s4); padding: var(--s3) 14px; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); }
+.runs-filterbar label { display: flex; align-items: center; gap: var(--s2); color: var(--text-3); font: 600 var(--fs-micro) var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.runs-filterbar select { padding: 5px 8px; color: var(--text); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); background: var(--bg); font: 500 var(--fs-meta) var(--font-sans); }
+.runs-filterbar .runs-count { margin-left: auto; font-size: var(--fs-micro); }
+.runs-table table { min-width: 1180px; }
+.runs-table td .table-action { margin-top: 4px; }
+th[data-runs-sort] { cursor: pointer; user-select: none; }
+th[data-runs-sort]:hover { color: var(--text); }
+th[data-runs-sort] b { margin-left: 3px; color: var(--text); }
+
 .boundary-note { padding: var(--s3) 0 0; color: var(--text-3); border-top: 1px solid var(--hairline); font-size: var(--fs-micro); line-height: 1.55; }
 .boundary-note b { display: block; margin-bottom: 1px; color: var(--text-2); font-weight: 560; }
 
