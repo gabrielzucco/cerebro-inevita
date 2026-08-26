@@ -30,6 +30,13 @@ import { revokeAccessGrant } from './lib/access-runtime.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
 import { readExperimentDetail } from './lib/experiment-protocol.mjs';
 import {
+  applyDecisionCase,
+  listDecisionCases,
+  prepareDecisionCase,
+  previewDecisionCase,
+  rollbackDecisionCase,
+} from './lib/decision-case.mjs';
+import {
   correctionActions,
   correctionView,
   createLearningCandidate,
@@ -518,9 +525,13 @@ function safeReason(error) {
   return /^[a-z0-9-]+$/.test(message) ? message : 'request-failed';
 }
 
-function assertMutation(request, sessionToken, csrfToken, payload) {
+function assertAuthenticatedPost(request, sessionToken, csrfToken) {
   if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
   if (!exactEqual(String(request.headers['x-cerebro-csrf'] || ''), csrfToken)) throw new Error('csrf-invalid');
+}
+
+function assertMutation(request, sessionToken, csrfToken, payload) {
+  assertAuthenticatedPost(request, sessionToken, csrfToken);
   if (payload.confirm !== true) throw new Error('confirmation-required');
 }
 
@@ -552,6 +563,16 @@ function grantRevocationFrom(pathname) {
 function judgmentReceiptFrom(pathname) {
   const match = pathname.match(/^\/api\/runs\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})\/judgments$/);
   return match?.[1] || null;
+}
+
+function decisionCaseFrom(pathname) {
+  const match = pathname.match(/^\/api\/decision-cases\/(case-[0-9a-f]{32})$/);
+  return match?.[1] || null;
+}
+
+function decisionCaseActionFrom(pathname) {
+  const match = pathname.match(/^\/api\/decision-cases\/(case-[0-9a-f]{32})\/(preview|apply|rollback)$/);
+  return match ? { caseId: match[1], action: match[2] } : null;
 }
 
 function correctionActionFrom(pathname) {
@@ -660,6 +681,59 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/api/decisions') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, decisionQueue(brainRoot));
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/decision-cases') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, listDecisionCases(brainRoot));
+        return;
+      }
+      const preparedCaseId = request.method === 'GET' ? decisionCaseFrom(url.pathname) : null;
+      if (preparedCaseId) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, prepareDecisionCase(brainRoot, preparedCaseId));
+        return;
+      }
+      // Decision Case: preparar (GET), simular (preview), aplicar e reverter. O martelo é
+      // do humano — `approved_by` é obrigatório nas três, e aplicar exige o digest do
+      // preview que essa pessoa acabou de ler.
+      const decisionCaseAction = request.method === 'POST' ? decisionCaseActionFrom(url.pathname) : null;
+      if (decisionCaseAction) {
+        const payload = await body(request);
+        if (decisionCaseAction.action === 'preview') assertAuthenticatedPost(request, sessionToken, csrfToken);
+        else assertMutation(request, sessionToken, csrfToken, payload);
+        const approvedBy = actor(payload);
+        if (decisionCaseAction.action === 'rollback') {
+          const result = rollbackDecisionCase(brainRoot, decisionCaseAction.caseId, {
+            actorRef: approvedBy,
+            reasonCode: payload.reason_code,
+          }, { clock });
+          send(response, 200, result);
+          return;
+        }
+        if (payload.evidence_refs !== undefined && !Array.isArray(payload.evidence_refs)) {
+          throw new Error('evidence-refs-invalid');
+        }
+        const input = {
+          verdict: payload.verdict,
+          reviewOn: payload.review_on || '',
+          theme: payload.theme || 'metodo',
+          title: payload.title,
+          decisionText: payload.decision_text,
+          evidenceRefs: payload.evidence_refs || [],
+          actorRef: approvedBy,
+          authoredByHuman: payload.authored_by_human === true,
+        };
+        if (decisionCaseAction.action === 'preview') {
+          send(response, 200, previewDecisionCase(brainRoot, decisionCaseAction.caseId, input, { clock }));
+          return;
+        }
+        const result = applyDecisionCase(brainRoot, decisionCaseAction.caseId, {
+          ...input,
+          planDigest: payload.plan_digest,
+          decidedAt: payload.decided_at,
+        }, { clock });
+        send(response, 200, result);
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/knowledge') {

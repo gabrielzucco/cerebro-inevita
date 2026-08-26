@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { request as httpRequest } from 'node:http';
@@ -12,6 +12,7 @@ import {
   saveCollectorBinding,
   saveExecutorBinding,
 } from './lib/routine-protocol.mjs';
+import { decisionCaseIdFor } from './lib/decision-case.mjs';
 import { createConsoleServer } from './console-server.mjs';
 import { bootstrapLegacyConsole, previewLegacyConsoleBootstrap } from './console-bootstrap.mjs';
 
@@ -776,8 +777,138 @@ try {
   assert.equal(blockedFutureRun.value.reason_code, 'grant-revoked');
   assert.equal(calls.length, 2, 'grant revogado deve bloquear o modelo antes da execução');
 
+  // ---------------------------------------------------------- Decision Case
+  // O Console prepara o caso; o martelo é humano e vai para a fonte canônica.
+  const queueKey = 'martelo:corte-sanitizado-que-espera-decisao';
+  const caseId = decisionCaseIdFor(queueKey);
+  const decisionText = 'Aprovo o corte sanitizado. O Console prepara o caso e eu registro o martelo, com evidencia aberta.';
+  mkdirSync(join(root, '01-nucleo-privado', 'decisoes'), { recursive: true });
+  write(join(root, '01-nucleo-privado', '_PAINEL.md'), '# Painel sanitizado\n');
+  write(join(root, '.automacao', '_FILA-DECISAO.json'), {
+    abertos: {
+      [queueKey]: {
+        titulo: 'Corte sanitizado que espera decisao',
+        categoria: 'martelo',
+        first_seen: '2026-08-20',
+        last_seen: '2026-08-24',
+      },
+    },
+    historico: [],
+  });
+
+  assert.equal((await request(base, '/api/decision-cases')).status, 403);
+  const caseList = await request(base, '/api/decision-cases', { cookie });
+  assert.equal(caseList.status, 200);
+  assert.equal(caseList.value.available, true);
+  assert.equal(caseList.value.house_ready, true);
+  assert.equal(caseList.value.open_count, 1);
+  assert.equal(caseList.value.cases[0].case_id, caseId);
+  assert.equal(caseList.value.cases[0].state.status, 'pending');
+
+  const caseDetail = await request(base, `/api/decision-cases/${caseId}`, { cookie });
+  assert.equal(caseDetail.status, 200);
+  assert.equal(caseDetail.value.authorship.required, 'human');
+  assert.equal(caseDetail.value.draft.decision_text, '', 'o Console entrega estrutura, nunca o veredito escrito');
+  const candidateRefs = caseDetail.value.evidence_candidates.map((entry) => entry.ref);
+  assert(candidateRefs.includes(`decision-queue:${queueKey}`));
+  assert(candidateRefs.includes('note:01-nucleo-privado/_PAINEL.md'));
+
+  const caseBody = (overrides = {}) => ({
+    confirm: true,
+    approved_by: 'role-owner',
+    verdict: 'decided',
+    theme: 'metodo',
+    title: 'Corte sanitizado aprovado com martelo humano',
+    decision_text: decisionText,
+    evidence_refs: [`decision-queue:${queueKey}`, 'note:01-nucleo-privado/_PAINEL.md'],
+    authored_by_human: true,
+    ...overrides,
+  });
+
+  assert.equal((await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, body: caseBody(),
+  })).status, 403, 'preview sem CSRF não passa');
+  const withoutEvidence = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody({ evidence_refs: [`decision-queue:${queueKey}`] }),
+  });
+  assert.equal(withoutEvidence.status, 400);
+  assert.equal(withoutEvidence.value.reason_code, 'evidence-beyond-queue-required');
+  const machineAuthored = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody({ authored_by_human: false }),
+  });
+  assert.equal(machineAuthored.value.reason_code, 'human-authorship-required');
+
+  const casePreview = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody(),
+  });
+  assert.equal(casePreview.status, 200);
+  assert.equal(casePreview.value.applied, false);
+  assert.equal(casePreview.value.external_action_executed, false);
+  assert(casePreview.value.diff.startsWith('--- /dev/null'));
+  assert(casePreview.value.diff.includes(`+${decisionText}`));
+  const notePath = join(root, casePreview.value.canonical_write.path);
+  assert.equal(existsSync(notePath), false, 'preview não escreve no vault');
+
+  const staleApply = await request(base, `/api/decision-cases/${caseId}/apply`, {
+    method: 'POST',
+    cookie,
+    csrf: 'fixed-csrf-token',
+    body: caseBody({ plan_digest: `sha256:${'0'.repeat(64)}`, decided_at: casePreview.value.decided_at }),
+  });
+  assert.equal(staleApply.status, 400);
+  assert.equal(staleApply.value.reason_code, 'preview-stale');
+  assert.equal(existsSync(notePath), false);
+
+  const applyBody = caseBody({
+    plan_digest: casePreview.value.plan_digest, decided_at: casePreview.value.decided_at,
+  });
+  const applied = await request(base, `/api/decision-cases/${caseId}/apply`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: applyBody,
+  });
+  assert.equal(applied.status, 200);
+  assert.equal(applied.value.status, 'applied');
+  assert.equal(applied.value.canonical_write_performed, true);
+  assert.equal(applied.value.external_action_executed, false);
+  assert.equal(existsSync(notePath), true);
+  assert.equal(readFileSync(notePath, 'utf8'), casePreview.value.content);
+  assert(readFileSync(notePath, 'utf8').includes('tipo: decisao'));
+  assert.equal(JSON.stringify(applied.value).includes(decisionText), false, 'a resposta do apply não devolve o texto');
+
+  const appliedAgain = await request(base, `/api/decision-cases/${caseId}/apply`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: applyBody,
+  });
+  assert.equal(appliedAgain.value.status, 'already-applied');
+  assert.equal(appliedAgain.value.canonical_write_performed, false);
+  assert.equal(appliedAgain.value.receipt_ref, applied.value.receipt_ref);
+  assert.equal(readdirSync(join(root, '01-nucleo-privado', 'decisoes')).length, 1);
+
+  const previewAfterApply = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody(),
+  });
+  assert.equal(previewAfterApply.value.reason_code, 'decision-case-already-applied');
+
+  const rolledBack = await request(base, `/api/decision-cases/${caseId}/rollback`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', reason_code: 'wrong-evidence' },
+  });
+  assert.equal(rolledBack.status, 200);
+  assert.equal(rolledBack.value.status, 'rolled-back');
+  assert.equal(existsSync(notePath), false);
+  assert.equal(rolledBack.value.state.status, 'rolled-back');
+  const rolledBackAgain = await request(base, `/api/decision-cases/${caseId}/rollback`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', reason_code: 'mistake' },
+  });
+  assert.equal(rolledBackAgain.value.status, 'already-rolled-back');
+  assert.equal(rolledBackAgain.value.canonical_write_performed, false);
+
+  const finalList = await request(base, '/api/decision-cases', { cookie });
+  assert.equal(finalList.value.cases[0].state.status, 'rolled-back');
+  assert.equal(JSON.stringify(finalList.value).includes(decisionText), false, 'o read model nunca carrega o texto do martelo');
+
   await new Promise((resolveClose) => instance.server.close(resolveClose));
   console.log('✓ Console local fecha contexto → julgamento → correção → revogação sem ação externa');
+  console.log('✓ Decision Case: caso preparado, diff confirmado, martelo na fonte canônica e reversão');
 } finally {
   rmSync(root, { recursive: true, force: true });
   rmSync(legacyRoot, { recursive: true, force: true });
