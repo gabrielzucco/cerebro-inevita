@@ -133,6 +133,21 @@ respondem a Enter/Space no handler global de `role="button"`.
 5. **Wording (P2)**: "atômico" rebaixado para **compensado** no código, no protocolo e nesta story,
    com o snapshot pré-remoção documentado como recuperação para queda de processo.
 
+### Re-re-revisão 26/08 — 2 P1 + 1 P2 corrigidos
+
+1. **Leitura no realpath provado (P1)**: depois de validar a fronteira, a evidência `note:` era
+   lida pelo caminho lexical original — um symlink de diretório trocado entre validação e leitura
+   levaria o `readFileSync` para outro lugar. Agora `fileEvidence` lê o `realNote` provado e
+   exibe o caminho lógico (`displayPath`). Teste com symlink interno legítimo prova que o digest
+   é do conteúdo no realpath e o path exibido é o que a pessoa escolheu.
+2. **Limpeza do tmp best-effort (P1)**: depois do `link(2)`, o recibo está publicado; se o
+   `unlink` do tmp lançasse, o chamador compensaria desfazendo a nota com o recibo final já de
+   pé. A limpeza virou try/catch engolido — tmp órfão é lixo inofensivo, nunca motivo de
+   compensação.
+3. **Render no toggle de autoria (P2)**: desmarcar o checkbox invalidava o preview no estado mas
+   não renderizava — o diff antigo e o botão ficavam na tela com `preview === null` por trás.
+   O handler agora renderiza.
+
 **Nota de processo**: o commit `8b2810b` varreu, no `validate-product.mjs`, a linha da migração de
 traces de outra mesa (editada entre a leitura e o commit — o risco exato documentado em
 mesas-paralelas). A migração em si está em commit próprio (`82e006c`, da outra mesa); com mesa

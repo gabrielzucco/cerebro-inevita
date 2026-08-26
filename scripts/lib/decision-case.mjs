@@ -235,7 +235,11 @@ function queueItem(root, caseId) {
 
 // ------------------------------------------------------------------ evidência
 
-function fileEvidence(root, path, ref, kind, provenance, summary) {
+// `displayPath` separa o que se LÊ do que se MOSTRA: quando a fronteira foi provada
+// por realpath, a leitura acontece no caminho real provado (imune a troca de
+// symlink entre validação e leitura), mas a referência exibida segue sendo o
+// caminho lógico dentro do cérebro.
+function fileEvidence(root, path, ref, kind, provenance, summary, displayPath = path) {
   if (!existsSync(path) || lstatSync(path).isSymbolicLink()) return null;
   const details = statSync(path);
   if (!details.isFile()) return null;
@@ -243,7 +247,7 @@ function fileEvidence(root, path, ref, kind, provenance, summary) {
     ref,
     kind,
     provenance,
-    path: relative(resolve(root), path),
+    path: relative(resolve(root), displayPath),
     digest: digestOf(readFileSync(path)),
     bytes: details.size,
     summary,
@@ -342,7 +346,11 @@ function resolveEvidence(root, ref, { inferredRefs = new Set() } = {}) {
         || !insideRealDirectory(realMoat, realNote)) {
         throw new Error('evidence-note-outside-moat');
       }
-      resolved = fileEvidence(root, path, ref, 'note', inferred ? 'inferred' : 'declared', 'Nota do núcleo privado');
+      // A leitura acontece no realpath PROVADO, não no caminho lexical: um
+      // diretório-symlink trocado entre a validação acima e a leitura levaria o
+      // readFileSync para outro lugar. realNote não segue o symlink novo.
+      resolved = fileEvidence(root, realNote, ref, 'note', inferred ? 'inferred' : 'declared',
+        'Nota do núcleo privado', path);
     }
   } else {
     throw new Error('evidence-kind-unsupported');
@@ -862,7 +870,9 @@ function writeEvent(root, caseId, value) {
     try { unlinkSync(temporary); } catch { /* o tmp pode nem ter sobrevivido */ }
     throw new Error('decision-case-sequence-conflict');
   }
-  unlinkSync(temporary);
+  // Depois do link, o recibo ESTÁ publicado. A limpeza do tmp é best-effort: se ela
+  // lançasse, o chamador compensaria desfazendo a nota com o recibo final já de pé.
+  try { unlinkSync(temporary); } catch { /* tmp órfão é lixo inofensivo, nunca motivo de compensação */ }
   return { value, path, ref: `decision-case-receipt:${value.event_id}` };
 }
 

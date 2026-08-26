@@ -349,6 +349,18 @@ try {
     }), { clock: clockAt('2026-08-26T17:00:00.000Z') });
     fails(() => escape('note:01-nucleo-privado/atalho-externo/fora-do-cerebro.md'), 'evidence-note-outside-moat');
     fails(() => escape('note:01-nucleo-privado/atalho-terceiros/transcricao-crua.md'), 'evidence-note-outside-moat');
+    // Symlink INTERNO (realpath dentro do moat) é legítimo — e a leitura acontece no
+    // caminho real provado: o digest é do conteúdo do arquivo real, e o path exibido
+    // segue sendo o lógico que a pessoa escolheu.
+    write(join(root, '01-nucleo-privado', 'subpasta', 'nota-interna.md'), '# Nota interna real\n');
+    symlinkSync(join(root, '01-nucleo-privado', 'subpasta'), join(root, '01-nucleo-privado', 'atalho-interno'));
+    const internal = previewDecisionCase(root, symlinkCase, baseInput({
+      title: 'Teste do symlink interno com titulo proprio',
+      evidenceRefs: [`decision-queue:${SYMLINK_QUEUE_KEY}`, 'note:01-nucleo-privado/atalho-interno/nota-interna.md'],
+    }), { clock: clockAt('2026-08-26T17:05:00.000Z') });
+    const internalEvidence = internal.evidence.find((entry) => entry.kind === 'note');
+    assert.equal(internalEvidence.digest, digestOf('# Nota interna real\n'), 'digest é do conteúdo no realpath');
+    assert.equal(internalEvidence.path, '01-nucleo-privado/atalho-interno/nota-interna.md', 'path exibido é o lógico');
     rmSync(outsideRoot, { recursive: true, force: true });
   }
 

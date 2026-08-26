@@ -2268,6 +2268,7 @@ document.addEventListener('change', (event) => {
   if (field.dataset.caseField === 'authored') {
     state.cases.form.authored = field.checked;
     invalidateCasePreview();
+    render(); // sem re-render, o diff antigo e o botão de registrar ficariam na tela com preview já morto
     return;
   }
   if (field.dataset.caseField === 'evidence') {
