@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   confirmLegacySchedulePaused,
+  listRoutineRunReceipts,
 } from './lib/routine-protocol.mjs';
 import {
   activateRoutine,
@@ -24,6 +25,7 @@ import {
   graphForLayout,
 } from './lib/graph-read-model.mjs';
 import { readRoutineRunContext } from './lib/context-snapshot-runtime.mjs';
+import { readExecutionTrace } from './lib/execution-trace-runtime.mjs';
 import { revokeAccessGrant } from './lib/access-runtime.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
 import { readExperimentDetail } from './lib/experiment-protocol.mjs';
@@ -178,6 +180,117 @@ function systemWorkspace(root, ref) {
     })),
     experiments,
     judgments,
+  };
+}
+
+// Execuções unificadas — routine receipts + run records standalone do ledger,
+// numa linha do tempo única. Cada linha nasce de recibo ou de Run Record; o
+// trace é sondado no arquivo real (recorded × reconstructed × ausente) e a
+// ausência de snapshot, eval ou trace aparece como lacuna, nunca como saúde.
+function traceProbe(root, runId) {
+  let events;
+  try {
+    events = readExecutionTrace(root, runId);
+  } catch {
+    return { status: 'unreadable', events: 0 };
+  }
+  if (!events.length) return { status: 'none', events: 0 };
+  return {
+    status: events[0].extensions?.origin === 'reconstructed' ? 'reconstructed' : 'recorded',
+    events: events.length,
+  };
+}
+
+function runContextView(record) {
+  if (record?.protocol_version !== 2 || !record.context_snapshot) return null;
+  const snapshot = record.context_snapshot;
+  return {
+    sources: (snapshot.accesses || []).length,
+    gaps: (snapshot.gaps || []).length,
+    conflicts: (snapshot.conflicts || []).length,
+    retrieval_version: snapshot.retrieval_version || null,
+  };
+}
+
+function runsExplorerModel(root) {
+  const issues = [];
+  let records = [];
+  try {
+    records = latestRunRecords(root);
+  } catch {
+    issues.push({ reason_code: 'run-ledger-invalid', ref: '.cerebro/runtime/ledger/runs.jsonl' });
+  }
+  const recordById = new Map(records.map((record) => [record.run_id, record]));
+  let receipts = [];
+  try {
+    receipts = listRoutineRunReceipts(root);
+  } catch {
+    issues.push({ reason_code: 'routine-receipt-invalid', ref: '.cerebro/runtime/receipts/routines' });
+  }
+  const fromRecord = (record) => (record ? {
+    system_version: record.system_version || null,
+    mode: record.mode ?? null,
+    chain_id: record.chain_id ?? null,
+    experiment_ref: record.experiment_ref ?? null,
+    handoff_count: record.handoff_refs?.length || 0,
+    context: runContextView(record),
+    eval_passed: record.eval?.passed ?? null,
+    human_decision: record.human_decision ?? null,
+    outcomes: record.outcomes?.length || 0,
+  } : {
+    system_version: null, mode: null, chain_id: null, experiment_ref: null,
+    handoff_count: 0, context: null, eval_passed: null, human_decision: null, outcomes: 0,
+  });
+  const entries = receipts.map((receipt) => {
+    const record = recordById.get(receipt.run_id) || null;
+    return {
+      run_id: receipt.run_id,
+      origin: 'routine-receipt',
+      selector_ref: receipt.receipt_id,
+      receipt_id: receipt.receipt_id,
+      receipt_ref: `routine-receipt:${receipt.receipt_id}`,
+      run_record_ref: record ? `run-record:${record.run_id}` : null,
+      routine_ref: receipt.routine_id,
+      trigger: receipt.trigger,
+      system_ref: record?.system_id || receipt.system_ref,
+      status: receipt.status,
+      reason_code: receipt.reason_code || null,
+      started_at: receipt.started_at,
+      completed_at: receipt.completed_at,
+      ...fromRecord(record),
+      trace: traceProbe(root, receipt.run_id),
+      record,
+    };
+  });
+  const receiptRunIds = new Set(receipts.map((receipt) => receipt.run_id));
+  for (const record of records) {
+    if (receiptRunIds.has(record.run_id)) continue;
+    entries.push({
+      run_id: record.run_id,
+      origin: 'run-record',
+      selector_ref: `run-record:${record.run_id}`,
+      receipt_id: null,
+      receipt_ref: null,
+      run_record_ref: `run-record:${record.run_id}`,
+      routine_ref: record.extensions?.routine_ref || null,
+      trigger: null,
+      system_ref: record.system_id,
+      status: record.status,
+      reason_code: null,
+      started_at: record.started_at,
+      completed_at: record.completed_at || null,
+      ...fromRecord(record),
+      trace: traceProbe(root, record.run_id),
+      record,
+    });
+  }
+  entries.sort((left, right) => String(right.completed_at || right.started_at || '')
+    .localeCompare(String(left.completed_at || left.started_at || '')));
+  return {
+    generated_at: new Date().toISOString(),
+    privacy: { content_shared_with_inevita: false, prompt_exposed: false, raw_output_exposed: false },
+    runs: entries,
+    issues,
   };
 }
 
@@ -537,6 +650,11 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/api/anatomy') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, anatomyModel(brainRoot));
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/runs') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, runsExplorerModel(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/decisions') {

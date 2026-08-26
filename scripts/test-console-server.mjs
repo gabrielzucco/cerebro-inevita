@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { request as httpRequest } from 'node:http';
@@ -663,6 +663,51 @@ try {
   const failedOutput = await request(base, `/api/runs/${failedId}/output`, { cookie });
   assert.equal(failedOutput.status, 400);
   assert.equal(failedOutput.value.reason_code, 'output-not-available');
+
+  assert.equal((await request(base, '/api/runs')).status, 403);
+  const runsExplorer = await request(base, '/api/runs', { cookie });
+  assert.equal(runsExplorer.status, 200);
+  assert(Array.isArray(runsExplorer.value.runs));
+  const receiptEntry = runsExplorer.value.runs.find((entry) => entry.receipt_id === receiptId);
+  assert.equal(receiptEntry.origin, 'routine-receipt');
+  assert.equal(receiptEntry.selector_ref, receiptId);
+  assert.equal(receiptEntry.system_ref, 'analisar-funil');
+  assert.equal(receiptEntry.trace.status, 'recorded');
+  assert(receiptEntry.trace.events > 0);
+  assert.equal(receiptEntry.context.sources, 3);
+  assert.equal(receiptEntry.run_record_ref, `run-record:${receiptEntry.run_id}`);
+  assert(receiptEntry.record, 'a comparação A×B precisa do Run Record integral');
+  const failedEntry = runsExplorer.value.runs.find((entry) => entry.receipt_id === failedId);
+  assert.equal(failedEntry.status, 'failed');
+  assert.equal(failedEntry.context, null, 'recibo sem Run Record não inventa snapshot');
+  assert.equal(failedEntry.trace.status, 'none');
+  assert.equal(JSON.stringify(runsExplorer.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  assert.equal(JSON.stringify(runsExplorer.value).includes('CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL'), false);
+
+  const standaloneRecord = {
+    ...example('run-record.v2.json'),
+    run_id: 'run-standalone-replay-001',
+    system_id: 'projetar-vendas',
+    system_version: '0.9.0',
+    mode: 'replay',
+    chain_id: 'chain-standalone-001',
+    experiment_ref: 'EXP-DEMO-001',
+  };
+  appendFileSync(join(root, '.cerebro', 'runtime', 'ledger', 'runs.jsonl'), `${JSON.stringify(standaloneRecord)}\n`);
+  const runsWithStandalone = await request(base, '/api/runs', { cookie });
+  const standaloneEntry = runsWithStandalone.value.runs.find((entry) => entry.run_id === 'run-standalone-replay-001');
+  assert.equal(standaloneEntry.origin, 'run-record');
+  assert.equal(standaloneEntry.selector_ref, 'run-record:run-standalone-replay-001');
+  assert.equal(standaloneEntry.receipt_id, null);
+  assert.equal(standaloneEntry.mode, 'replay');
+  assert.equal(standaloneEntry.chain_id, 'chain-standalone-001');
+  assert.equal(standaloneEntry.experiment_ref, 'EXP-DEMO-001');
+  assert.equal(standaloneEntry.handoff_count, 1);
+  assert.equal(standaloneEntry.system_version, '0.9.0');
+  assert.equal(standaloneEntry.eval_passed, true);
+  assert.equal(standaloneEntry.human_decision, 'approved');
+  assert.equal(standaloneEntry.trace.status, 'none', 'sem arquivo de trace, a distinção honesta é "sem trace"');
+  assert.equal(standaloneEntry.context.sources, 3);
 
   if (process.platform !== 'win32') {
     const layoutPath = join(root, '.cerebro', 'layout.json');
