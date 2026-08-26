@@ -510,6 +510,45 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 .card-footer button:hover { color: var(--text); }
 .card-footer button b { margin-left: 5px; color: var(--text-3); }
 
+/* Workspace do Sistema */
+.ws-top { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s2); }
+.ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s3); align-items: start; }
+.ws-stack { display: grid; gap: var(--s3); }
+.ws-dl { margin: 0; }
+.ws-dl > div { display: grid; grid-template-columns: 140px 1fr; gap: var(--s3); padding: 6px 0; border-top: 1px solid var(--hairline); }
+.ws-dl > div:first-child { border-top: 0; }
+.ws-dl dt { color: var(--text-3); font-size: var(--fs-meta); }
+.ws-dl dd { margin: 0; color: var(--text-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.ws-matrix { display: grid; gap: 2px; }
+.ws-dim {
+  display: grid;
+  grid-template-columns: 92px auto minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: var(--s3);
+  padding: 8px var(--s2);
+  border: 0; border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
+}
+.ws-dim:hover { background: rgba(255, 255, 255, .04); color: var(--text); }
+.ws-dim-name { font-size: var(--fs-body); font-weight: 560; }
+.ws-dim small { overflow: hidden; color: var(--text-3); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+.ws-dim > b { color: var(--text-3); }
+.ws-dim:hover > b { color: var(--brand); }
+.ws-compare-pick { display: flex; gap: var(--s4); margin-bottom: var(--s3); }
+.ws-compare-pick label { display: flex; align-items: center; gap: var(--s2); color: var(--text-3); font: 600 var(--fs-micro) var(--font-mono); }
+.ws-compare-pick select { padding: 6px 10px; color: var(--text); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); background: var(--bg); font: 500 var(--fs-meta) var(--font-sans); }
+tr.ws-diff td { background: rgba(78, 156, 245, .07); }
+.ws-learning { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); margin-bottom: var(--s3); }
+.ws-stage { padding: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--bg); text-align: center; opacity: .55; }
+.ws-stage.has { opacity: 1; border-color: rgba(48, 196, 141, .3); }
+.ws-stage b { display: block; color: var(--text); font: 640 22px var(--font-sans); font-variant-numeric: tabular-nums; }
+.ws-stage span { display: block; margin: 2px 0; color: var(--text-2); font-size: var(--fs-meta); font-weight: 560; }
+.ws-stage small { color: var(--text-3); font-size: var(--fs-micro); }
+@media (max-width: 1200px) { .ws-grid { grid-template-columns: 1fr; } .ws-learning { grid-template-columns: repeat(2, 1fr); } }
+
 /* Anatomia do Cérebro — espinha de seis módulos + governança lateral */
 .anatomy { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s4); align-items: start; }
 .anatomy-spine { position: relative; display: grid; gap: var(--s3); padding-left: 26px; }
@@ -517,6 +556,7 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 
 .organ { position: relative; padding: var(--s4) 18px; border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
 .organ-head { display: grid; grid-template-columns: 26px 1fr; gap: var(--s3); align-items: start; margin-bottom: var(--s2); }
+.organ-head:not(:has(> b)) { grid-template-columns: 1fr; }
 .organ-head > b {
   position: relative; z-index: 1;
   width: 22px; height: 22px; margin-left: -30px;

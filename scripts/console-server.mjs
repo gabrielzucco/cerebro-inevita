@@ -115,6 +115,72 @@ function countDir(root, relative) {
   try { return readdirSync(resolve(root, relative)).filter((name) => !name.startsWith('.')).length; } catch { return 0; }
 }
 
+// Workspace de um Sistema — o contrato cru + tudo que foi observado dele.
+function systemWorkspace(root, ref) {
+  const model = buildConsoleReadModel(root);
+  const system = model.systems.find((item) => item.system_id === ref || item.contract_id === ref);
+  if (!system) throw new Error('not-found');
+  let contract = {};
+  try { contract = JSON.parse(readFileSync(resolve(root, `.cerebro/contracts/systems/${system.contract_id}.json`), 'utf8')); } catch { contract = {}; }
+  const matches = (value) => value === system.system_id || value === system.contract_id;
+  const records = latestRunRecords(root).filter((record) => matches(record.system_id))
+    .sort((left, right) => String(right.completed_at || '').localeCompare(String(left.completed_at || '')));
+  const routines = model.routines.filter((routine) => matches(routine.system_ref));
+  const experiments = (model.experiments || []).filter((experiment) => matches(experiment.system_ref));
+  const judgments = model.judgments.filter((item) => matches(item.system_ref));
+
+  // fontes do sistema, desmembradas (mesma gramática da Anatomia)
+  const accessReceipts = listJsonDir(root, '.cerebro/runtime/receipts/access');
+  const sourceContracts = new Map(listJsonDir(root, '.cerebro/contracts/sources').map((item) => [item.source_id, item]));
+  const roleIds = (contract.sources || []).map((source) => ({ role: source.role, id: source.source_id || source.role }));
+  const sources = roleIds.map(({ role, id }) => {
+    const sourceContract = sourceContracts.get(id) || {};
+    const receipts = accessReceipts.filter((receipt) => receipt.source_ref === id && matches(receipt.system_ref));
+    const last = receipts.sort((a, b) => String(b.occurred_at).localeCompare(String(a.occurred_at)))[0] || null;
+    let lastSnapshot = null;
+    for (const record of records) {
+      for (const access of record.context_snapshot?.accesses || []) {
+        if (access.source_ref?.id === id && (!lastSnapshot || record.context_snapshot.observed_at > lastSnapshot)) {
+          lastSnapshot = record.context_snapshot.observed_at;
+        }
+      }
+    }
+    return {
+      role, source_id: id,
+      name: sourceContract.name || id,
+      contract_status: sourceContract.status || null,
+      binding_ref: sourceContract.connector?.binding_ref || null,
+      has_credential: Boolean(sourceContract.connector?.credential_ref),
+      last_access: last ? { decision: last.decision, occurred_at: last.occurred_at } : null,
+      freshness_policy: sourceContract.freshness?.policy || null,
+      freshness_observed: sourceContract.freshness?.observed_at || lastSnapshot || null,
+    };
+  });
+
+  return {
+    system,
+    contract: {
+      result: contract.result || null,
+      capability: contract.capability || null,
+      retrieval: contract.retrieval || null,
+      pipeline: contract.pipeline || [],
+      permissions: contract.permissions || null,
+      eval: contract.eval || null,
+      learning: contract.learning || null,
+      trigger: contract.trigger || null,
+    },
+    sources,
+    records,
+    routines: routines.map((routine) => ({
+      routine_id: routine.routine_id, name: routine.name, schedule: routine.schedule,
+      health: routine.health_reason_code, binding: routine.binding, receipts: routine.receipts.length,
+      access: routine.access,
+    })),
+    experiments,
+    judgments,
+  };
+}
+
 function anatomyModel(root) {
   const model = buildConsoleReadModel(root);
   const records = latestRunRecords(root);
@@ -459,6 +525,13 @@ export function createConsoleServer({
         try { content = readFileSync(resolved); } catch { throw new Error('not-found'); }
         response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         response.end(content);
+        return;
+      }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/systems/') && url.pathname.endsWith('/workspace')) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const ref = decodeURIComponent(url.pathname.slice('/api/systems/'.length, -'/workspace'.length));
+        if (!SAFE_REF_RE.test(ref)) throw new Error('not-found');
+        send(response, 200, systemWorkspace(brainRoot, ref));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/anatomy') {

@@ -260,6 +260,225 @@ function renderRoutines() {
     <div class="routine-list">${visibleRoutines().length ? visibleRoutines().map(routineCard).join('') : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
 }
 
+/* Workspace do Sistema — sete abas sobre o contrato cru + o observado. */
+
+const WS_TABS = [
+  ['overview', 'Visão geral'], ['architecture', 'Arquitetura'], ['runs', 'Execuções'],
+  ['experiments', 'Experimentos'], ['judgment', 'Julgamento'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
+];
+
+function openWorkspace(ref, tab = 'overview') {
+  closeDrawer();
+  state.view = 'system';
+  state.workspace = { ref, tab, data: state.workspace?.ref === ref ? state.workspace.data : null };
+  render();
+  if (!state.workspace.data) void loadWorkspace(ref);
+}
+
+async function loadWorkspace(ref) {
+  try {
+    const data = await getJson(`/api/systems/${encodeURIComponent(ref)}/workspace`);
+    if (state.view === 'system' && state.workspace?.ref === ref) { state.workspace.data = data; render(); }
+  } catch (error) { toast(label(error.message), 'bad'); }
+}
+
+function wsRunSelector(record) {
+  return `run-record:${record.run_id}`;
+}
+
+// Matriz dos sete componentes: estado do manifest + evidência real + porta.
+function wsMatrix(ws) {
+  const statuses = ws.system.component_statuses || {};
+  const evalsTotal = ws.records.filter((record) => record.eval?.passed !== undefined && record.eval?.passed !== null).length;
+  const evalsPassed = ws.records.filter((record) => record.eval?.passed === true).length;
+  const receiptsTotal = ws.routines.reduce((total, routine) => total + routine.receipts, 0);
+  const outcomes = ws.records.filter((record) => (record.outcomes || []).length).length;
+  const rows = [
+    ['pipeline', 'Pipeline', `${ws.contract.pipeline.length} etapa(s) declaradas`, ws.contract.pipeline.length > 0, 'architecture'],
+    ['routines', 'Rotinas', `${ws.routines.length} rotina(s) · ${receiptsTotal} recibo(s)`, receiptsTotal > 0, 'config'],
+    ['skills', 'Skills', ws.contract.capability ? `capability ${ws.contract.capability.capability_id} v${ws.contract.capability.version}` : 'nenhuma declarada', false, 'architecture'],
+    ['interfaces', 'Interfaces', ws.system.interface_ref ? 'interface própria ligada' : 'nenhuma declarada', Boolean(ws.system.interface_ref), 'overview'],
+    ['gates', 'Gates', ws.contract.eval ? `${(ws.contract.eval.deterministic_gates || []).length} determinístico(s) · ${(ws.contract.eval.human_questions || []).length} pergunta(s) humanas` : 'não declarados', ws.judgments.length > 0, 'architecture'],
+    ['evals', 'Evals', evalsTotal ? `${evalsPassed}/${evalsTotal} passaram em execuções reais` : 'nenhum eval observado', evalsTotal > 0, 'runs'],
+    ['learning', 'Aprendizado', outcomes ? `${outcomes} run(s) com outcomes` : 'nenhum outcome registrado', outcomes > 0, 'learning'],
+  ];
+  return `<div class="ws-matrix">${rows.map(([key, name, evidence, observed, tab]) => {
+    const declared = statuses[key] || 'ausente';
+    const hollow = ['ativo', 'repetivel', 'instrumentado'].includes(declared) && !observed;
+    return `<button type="button" class="ws-dim" data-ws-tab="${tab}">
+      <span class="ws-dim-name">${escapeHtml(name)}</span>
+      ${badge(declared, ['ativo', 'repetivel', 'instrumentado'].includes(declared) ? 'good' : declared === 'parcial' ? 'warn' : 'neutral')}
+      <small>${escapeHtml(evidence)} ${observed ? prov('observado') : prov('declarado')}</small>
+      ${hollow ? '<small class="gap-mark">estado declarado sem observação</small>' : ''}
+      <b>→</b>
+    </button>`;
+  }).join('')}</div>`;
+}
+
+function wsOverview(ws) {
+  const result = ws.contract.result || {};
+  const lastRun = ws.records[0];
+  return `<div class="ws-grid">
+    <section class="organ"><header class="organ-head"><div><h3>Para que este sistema existe</h3></div></header>
+      <p class="organ-answer">${escapeHtml(ws.system.result)} ${prov('declarado')}</p>
+      <dl class="ws-dl">
+        <div><dt>Dono</dt><dd>${escapeHtml(result.owner || '—')}</dd></div>
+        <div><dt>Gate humano</dt><dd>${escapeHtml(result.human_gate || ws.system.human_gate || '—')}</dd></div>
+        <div><dt>Pronto quando</dt><dd>${escapeHtml(result.definition_of_done || '—')}</dd></div>
+        <div><dt>Não é sucesso</dt><dd>${escapeHtml(result.non_success || '—')}</dd></div>
+        <div><dt>Estágio</dt><dd>${escapeHtml(label(ws.system.migration_stage))} · ${escapeHtml(ws.system.human_maturity || '—')} · v${escapeHtml(ws.system.version)}</dd></div>
+        <div><dt>Última execução</dt><dd>${lastRun ? `${fmtDate(lastRun.completed_at)} ${prov('observado')}` : 'nenhuma no ledger'}</dd></div>
+      </dl>
+      ${ws.system.next_gate ? `<div class="organ-gaps"><span>Próximo gate: ${escapeHtml(ws.system.next_gate)}</span></div>` : ''}
+    </section>
+    <section class="organ"><header class="organ-head"><div><h3>Os sete componentes</h3><p>estado declarado × evidência observada</p></div></header>${wsMatrix(ws)}</section>
+  </div>`;
+}
+
+function wsArchitecture(ws) {
+  const retrieval = ws.contract.retrieval;
+  const sourceRows = ws.sources.map((source) => `<tr>
+    <td><button type="button" class="table-action" data-open-source="${escapeHtml(source.source_id)}">${escapeHtml(source.name)}</button><small>${escapeHtml(source.role)}</small></td>
+    <td>${source.contract_status ? badge(source.contract_status, source.contract_status === 'active' ? 'good' : 'neutral') : '<span class="muted">—</span>'}</td>
+    <td>${source.binding_ref ? `<code>${escapeHtml(source.binding_ref)}</code>${source.has_credential ? ' 🔑' : ''}` : '<span class="gap-mark">sem binding</span>'}</td>
+    <td>${source.last_access ? `${escapeHtml(label(source.last_access.decision))} · ${fmtDate(source.last_access.occurred_at, false)}` : '<span class="gap-mark">nunca</span>'}</td>
+    <td>${source.freshness_observed ? fmtDate(source.freshness_observed, false) : '<span class="gap-mark">não observado</span>'}</td>
+  </tr>`).join('');
+  const retrievalRows = (retrieval?.source_roles || []).map((role) => `<tr>
+    <td><b>${role.priority}</b> ${escapeHtml(role.role)}</td><td>${escapeHtml(role.selection || '—')}</td>
+    <td>${(role.filters || []).map((filter) => `<code>${escapeHtml(filter)}</code>`).join(' ')}</td>
+    <td>${escapeHtml(role.window || '—')}</td><td>${escapeHtml(role.required_freshness || '—')}</td>
+    <td>${escapeHtml(role.on_unavailable || '—')}</td>
+  </tr>`).join('');
+  return `<div class="ws-stack">
+    <section class="organ"><header class="organ-head"><div><h3>Fontes deste sistema</h3><p>contrato × binding × acesso × frescor</p></div></header>
+      <div class="table-wrap organ-table"><table><thead><tr><th>Fonte · papel</th><th>Contrato</th><th>Binding</th><th>Último acesso</th><th>Frescor</th></tr></thead><tbody>${sourceRows}</tbody></table></div></section>
+    <section class="organ"><header class="organ-head"><div><h3>Política de recuperação ${retrieval ? `v${escapeHtml(retrieval.version)}` : ''}</h3><p>a atenção declarada — não um "sim"</p></div></header>
+      ${retrieval ? `<div class="table-wrap organ-table"><table><thead><tr><th>Papel</th><th>Seleção</th><th>Filtros</th><th>Janela</th><th>Frescor exigido</th><th>Se indisponível</th></tr></thead><tbody>${retrievalRows}</tbody></table></div>` : '<p class="muted">Recuperação não declarada.</p>'}</section>
+    <section class="organ"><header class="organ-head"><div><h3>Pipeline · ${ws.contract.pipeline.length} etapas</h3></div></header>
+      <ul class="organ-list">${ws.contract.pipeline.map((step, index) => `<li><span>${index + 1}</span>${escapeHtml(step.name || step.step_id || step.state || JSON.stringify(step).slice(0, 60))}</li>`).join('')}</ul>
+      ${ws.contract.eval ? `<p class="muted">Gates determinísticos: ${(ws.contract.eval.deterministic_gates || []).map((gate) => `<code>${escapeHtml(gate)}</code>`).join(' ')}</p>` : ''}</section>
+  </div>`;
+}
+
+function wsRuns(ws) {
+  if (!ws.records.length) return empty('Nenhuma execução no ledger', 'O primeiro run registrado aparece aqui com contexto, eval e comparação.');
+  const rows = ws.records.map((record) => `<tr>
+    <td><strong>${fmtDate(record.completed_at)}</strong><small>${escapeHtml(record.run_id.slice(0, 24))}…</small></td>
+    <td>${escapeHtml(label(record.mode || '—'))}</td><td>${badge(record.status)}</td>
+    <td>${record.context_snapshot?.accesses?.length ? `${record.context_snapshot.accesses.length} fontes${(record.context_snapshot.gaps || []).length ? ` · <span class="gap-mark">${record.context_snapshot.gaps.length} lacunas</span>` : ''}` : '<span class="muted">sem snapshot</span>'}</td>
+    <td>${record.eval?.passed === true ? badge('evaluation-passed', 'good') : record.eval?.passed === false ? badge('evaluation-gate-failed', 'bad') : '<span class="muted">—</span>'}</td>
+    <td>${badge(record.human_decision)}</td>
+    <td><button class="table-action" data-canvas-jump-run="${escapeHtml(wsRunSelector(record))}">trace →</button></td>
+  </tr>`).join('');
+  const options = ws.records.map((record, index) => `<option value="${index}">${fmtDate(record.completed_at)} · ${escapeHtml(label(record.mode || 'run'))}</option>`);
+  const compare = ws.records.length >= 2 ? `<section class="organ"><header class="organ-head"><div><h3>O que mudou entre duas runs</h3></div></header>
+    <div class="ws-compare-pick"><label>A <select id="ws-cmp-a">${options.map((option, index) => index === 1 ? option.replace('<option', '<option selected') : option).join('')}</select></label>
+    <label>B <select id="ws-cmp-b">${options.map((option, index) => index === 0 ? option.replace('<option', '<option selected') : option).join('')}</select></label></div>
+    <div id="ws-compare">${wsCompareTable(ws, 1, 0)}</div></section>` : '<p class="section-help">Comparação disponível a partir de duas execuções.</p>';
+  return `<div class="ws-stack"><div class="table-wrap"><table><thead><tr><th>Quando</th><th>Modo</th><th>Status</th><th>Contexto</th><th>Eval</th><th>Decisão</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${compare}</div>`;
+}
+
+function wsCompareTable(ws, indexA, indexB) {
+  const a = ws.records[indexA];
+  const b = ws.records[indexB];
+  if (!a || !b) return '';
+  const sourcesOf = (record) => (record.context_snapshot?.accesses || []).map((access) => access.source_ref?.id).filter(Boolean).join(', ') || '—';
+  const freshOf = (record) => (record.context_snapshot?.accesses || []).map((access) => access.freshness_marker).filter(Boolean).join(' · ') || '—';
+  const rows = [
+    ['Contrato', `v${a.system_version}`, `v${b.system_version}`],
+    ['Recuperação', `v${a.context_snapshot?.retrieval_version || '—'}`, `v${b.context_snapshot?.retrieval_version || '—'}`],
+    ['Modo', label(a.mode || '—'), label(b.mode || '—')],
+    ['Fontes acessadas', sourcesOf(a), sourcesOf(b)],
+    ['Frescor', freshOf(a), freshOf(b)],
+    ['Lacunas/conflitos', `${(a.context_snapshot?.gaps || []).length}/${(a.context_snapshot?.conflicts || []).length}`, `${(b.context_snapshot?.gaps || []).length}/${(b.context_snapshot?.conflicts || []).length}`],
+    ['Eval', a.eval?.passed === true ? 'passou' : a.eval?.passed === false ? 'falhou' : '—', b.eval?.passed === true ? 'passou' : b.eval?.passed === false ? 'falhou' : '—'],
+    ['Decisão humana', label(a.human_decision), label(b.human_decision)],
+    ['Outcomes', String((a.outcomes || []).length), String((b.outcomes || []).length)],
+    ['Outputs', (a.output_refs || []).join(' · ') || '—', (b.output_refs || []).join(' · ') || '—'],
+  ];
+  return `<div class="table-wrap"><table><thead><tr><th></th><th>A · ${fmtDate(a.completed_at)}</th><th>B · ${fmtDate(b.completed_at)}</th></tr></thead><tbody>${rows.map(([name, left, right]) => `<tr${left !== right ? ' class="ws-diff"' : ''}><td><strong>${escapeHtml(name)}</strong></td><td>${escapeHtml(String(left))}</td><td>${escapeHtml(String(right))}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function wsExperiments(ws) {
+  if (!ws.experiments.length) return empty('Nenhum experimento deste sistema', 'Experimentos aparecem quando o contrato aponta este sistema como palco ou leitura.');
+  return `<div class="experiment-grid">${ws.experiments.map((experiment) => `<article class="experiment-card" data-open-experiment="${escapeHtml(experiment.experiment_id)}" role="button" tabindex="0">
+    <div class="experiment-card-head"><div><p class="micro">${escapeHtml(experiment.experiment_id)}</p><h3>${escapeHtml(experiment.name)}</h3></div>${badge(experiment.status, experiment.status === 'decided' ? 'good' : experiment.status === 'running' ? 'neutral' : 'warn')}</div>
+    ${experimentProgress(experiment)}
+  </article>`).join('')}</div>`;
+}
+
+function wsJudgment(ws) {
+  const pending = ws.judgments.filter((item) => item.judgment.status === 'pending');
+  const decided = ws.judgments.filter((item) => item.judgment.status !== 'pending');
+  return `<div class="ws-stack">
+    <div class="subheading"><h3>Pendentes deste sistema</h3><span>${pending.length}</span></div>
+    ${pending.length ? judgmentList(pending) : '<p class="muted">Nenhum output deste sistema espera martelo.</p>'}
+    <div class="subheading"><h3>Julgados</h3><span>${decided.length}</span></div>
+    ${decided.length ? judgmentList(decided) : '<p class="muted">Nenhum julgamento registrado.</p>'}
+    <div class="boundary-note"><b>Fila única</b>Decisões de negócio deste sistema também vivem na fila única do cérebro — o Hoje é a mesa. <button class="action" data-view="today">Ir para a mesa →</button></div>
+  </div>`;
+}
+
+function wsLearning(ws) {
+  const learning = ws.contract.learning || {};
+  const outcomes = ws.records.filter((record) => (record.outcomes || []).length);
+  const corrected = ws.records.filter((record) => record.correction_ref);
+  const stages = [
+    ['Candidato', 0, `política: ${learning.correction_policy || '—'} · limiar ${learning.promotion_threshold ?? '—'} casos`],
+    ['Aprovado', corrected.length, 'correções humanas aplicadas a runs'],
+    ['Replay posterior', ws.records.filter((record) => record.mode === 'replay').length, 'reexecuções comparáveis'],
+    ['Melhoria provada', 0, 'nenhuma ainda — exige replay melhor que baseline com martelo'],
+  ];
+  return `<div class="ws-stack">
+    <section class="organ"><header class="organ-head"><div><h3>O funil de aprendizado deste sistema</h3><p>candidato → aprovado → replay → provado</p></div></header>
+      <div class="ws-learning">${stages.map(([name, count, help]) => `<div class="ws-stage${count ? ' has' : ''}"><b>${count}</b><span>${escapeHtml(name)}</span><small>${escapeHtml(help)}</small></div>`).join('')}</div>
+      <p class="organ-answer">${outcomes.length ? `<b>${outcomes.length}</b> run(s) com outcomes registrados ${prov('observado')} — matéria-prima do próximo candidato.` : `Nenhum outcome registrado ainda ${prov('observado')}.`}</p>
+    </section>
+  </div>`;
+}
+
+function wsConfig(ws) {
+  return `<div class="ws-stack">
+    ${ws.routines.length ? ws.routines.map((routine) => `<section class="organ"><header class="organ-head"><div><h3>${escapeHtml(routine.name)}</h3><p>declarado × observado</p></div></header>
+      <dl class="ws-dl">
+        <div><dt>Agenda declarada</dt><dd>${escapeHtml(routine.schedule)} ${prov('declarado')}</dd></div>
+        <div><dt>Estado observado</dt><dd>${escapeHtml(label(routine.health))} ${prov('observado')}</dd></div>
+        <div><dt>Executor</dt><dd>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)} · auth ${escapeHtml(routine.binding.auth_status)} </dd></div>
+        <div><dt>Recibos</dt><dd>${routine.receipts} ${prov('observado')}</dd></div>
+        <div><dt>Grants</dt><dd>${routine.access.map((access) => `<code>${escapeHtml(access.source_ref)}</code>`).join(' ') || '—'}</dd></div>
+      </dl>
+      <button class="action" data-open-routine="${escapeHtml(routine.routine_id)}">Abrir rotina →</button></section>`).join('') : empty('Nenhuma rotina instalada', 'Este sistema ainda roda fora do protocolo de Rotinas — a execução não deixa recibo automático.')}
+    <section class="organ"><header class="organ-head"><div><h3>Versões e interface</h3></div></header>
+      <dl class="ws-dl">
+        <div><dt>Contrato</dt><dd><code>${escapeHtml(ws.system.contract_id)}</code> v${escapeHtml(ws.system.version)}</dd></div>
+        <div><dt>Recuperação</dt><dd>v${escapeHtml(ws.contract.retrieval?.version || '—')}</dd></div>
+        <div><dt>Eval</dt><dd>v${escapeHtml(ws.contract.eval?.version || '—')}</dd></div>
+        <div><dt>Interface</dt><dd>${ws.system.interface_ref ? `<a class="copy-ref" href="${escapeHtml(ws.system.interface_ref)}" target="_blank" rel="noopener">${escapeHtml(ws.system.interface_ref)} ↗</a>` : 'nenhuma declarada'}</dd></div>
+        <div><dt>Manifest</dt><dd>${ws.system.source_manifest_ref ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(ws.system.source_manifest_ref)}">copiar caminho ⧉</button>` : '—'}</dd></div>
+      </dl></section>
+  </div>`;
+}
+
+function renderSystemWorkspace() {
+  const workspace = state.workspace;
+  if (!workspace) return empty('Nenhum sistema aberto', 'Abra um sistema pela lista ou pelo Canvas.');
+  const ws = workspace.data;
+  if (!ws) return '<div class="loading"><i></i><span>Abrindo o workspace do sistema…</span></div>';
+  const tabs = { overview: wsOverview, architecture: wsArchitecture, runs: wsRuns, experiments: wsExperiments, judgment: wsJudgment, learning: wsLearning, config: wsConfig };
+  return `<div class="ws">
+    <div class="ws-top">
+      <button class="action" data-view="systems">← Sistemas</button>
+      ${badge(ws.system.migration_stage, ws.system.migration_stage === 'active' ? 'good' : 'neutral')}
+      <span class="muted">${escapeHtml(label(ws.system.area_ref))} · ${ws.records.length} execuções · ${ws.experiments.length} experimentos</span>
+      <span class="canvas-spacer"></span>
+      <button class="action" data-open-experiment-system="${escapeHtml(ws.system.system_id)}">Ver no Canvas →</button>
+    </div>
+    <div class="tabstrip" role="tablist">${WS_TABS.map(([id, name]) => `<button role="tab" data-ws-tab="${id}" class="${workspace.tab === id ? 'active' : ''}">${name}${id === 'judgment' && ws.judgments.filter((item) => item.judgment.status === 'pending').length ? `<b>${ws.judgments.filter((item) => item.judgment.status === 'pending').length}</b>` : ''}</button>`).join('')}</div>
+    ${(tabs[workspace.tab] || wsOverview)(ws)}
+  </div>`;
+}
+
 /* Anatomia do Cérebro — seis módulos + governança transversal.
    Cada dado carimba a proveniência: DECLARADO (contrato/documento),
    OBSERVADO (recibo/ledger) ou INFERIDO (derivação explícita). */
@@ -647,11 +866,12 @@ function renderSociety() {
   return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
 }
 
-const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
   anatomy: ['Cérebro', 'A anatomia: como esta empresa transforma contexto em aprendizado reutilizável.'],
+  system: ['Sistema', 'Como este sistema pensa, executa, é julgado e aprende.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
@@ -669,6 +889,7 @@ const titles = {
 const viewGroups = {
   today: 'Operação', judgments: 'Operação', routines: 'Operação', runs: 'Operação',
   anatomy: 'Estrutura',
+  system: 'Estrutura',
   canvas: 'Estrutura', areas: 'Estrutura', systems: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
   compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
   society: 'Rede',
@@ -737,7 +958,8 @@ function tabstrip() {
 
 function render() {
   if (!state.model) return;
-  const [title, subtitle] = titles[state.view];
+  let [title, subtitle] = titles[state.view];
+  if (state.view === 'system' && state.workspace?.data) title = state.workspace.data.system.name;
   document.body.dataset.currentView = state.view;
   $('#eyebrow').textContent = `company-brain // ${(viewGroups[state.view] || 'Operação').toLowerCase()}`;
   $('#page-title').textContent = title;
@@ -931,31 +1153,6 @@ function entityLink(attribute, ref, title, hint, kind) {
 // source_refs pode vir como string ou objeto {source_id, role, ...} conforme o contrato
 function sourceRefId(ref) {
   return typeof ref === 'string' ? ref : ref?.source_id || ref?.ref || ref?.role || '';
-}
-
-function openSystemDrawer(systemId) {
-  const system = state.model.systems.find((item) => item.system_id === systemId);
-  if (!system) return;
-  const sources = system.source_refs.map((ref) => {
-    const refId = sourceRefId(ref);
-    return state.model.sources.find((item) => item.source_id === refId) || { source_id: refId, name: refId, type: typeof ref === 'object' ? ref.role || '—' : '—' };
-  });
-  const routines = state.model.routines.filter((routine) => refMatchesSystem(routine.system_ref, system));
-  const experiments = (state.model.experiments || []).filter((experiment) => refMatchesSystem(experiment.system_ref, system));
-  const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
-  showDrawerShell(`<div class="drawer-head"><p class="micro">SISTEMA · v${escapeHtml(system.version)}</p><h2>${escapeHtml(system.name)}</h2>
-      <div class="judgment-badges">${badge(system.migration_stage, system.migration_stage === 'active' ? 'good' : system.migration_stage === 'configured' ? 'neutral' : 'warn', stageLabel)}${system.human_maturity ? badge(system.human_maturity, 'neutral') : ''}</div></div>
-    <p class="section-help">${escapeHtml(system.result)}</p>
-    ${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}
-    <div class="drawer-section"><h3>Contrato</h3><dl>
-      <div><dt>Área</dt><dd>${escapeHtml(label(system.area_ref))}</dd></div>
-      <div><dt>Retrieval</dt><dd>${system.retrieval_status === 'declared' ? 'Declarado' : 'Não declarado'}</dd></div>
-      <div><dt>Contrato</dt><dd><code>${escapeHtml(system.contract_id)}</code></dd></div>
-    </dl></div>
-    <div class="drawer-section"><h3>Fontes · ${sources.length}</h3><div class="node-links">${sources.map((source) => entityLink('data-open-source', source.source_id, source.name, source.type || 'fonte', 'source')).join('') || '<p class="muted">Nenhuma fonte declarada.</p>'}</div></div>
-    ${routines.length ? `<div class="drawer-section"><h3>Rotinas · ${routines.length}</h3><div class="node-links">${routines.map((routine) => entityLink('data-open-routine', routine.routine_id, routine.name, label(routine.health_reason_code), 'routine')).join('')}</div></div>` : ''}
-    ${experiments.length ? `<div class="drawer-section"><h3>Experimentos · ${experiments.length}</h3><div class="node-links">${experiments.map((experiment) => entityLink('data-open-experiment', experiment.experiment_id, experiment.name, label(experiment.status), 'gate')).join('')}</div></div>` : ''}
-    <div class="drawer-section"><button class="action primary" data-open-experiment-system="${escapeHtml(system.system_id)}">Ver no Canvas →</button></div>`);
 }
 
 function openSourceDrawer(sourceId) {
@@ -1558,7 +1755,9 @@ document.addEventListener('click', (event) => {
   const open = event.target.closest('[data-open-routine]');
   if (open) { openDrawer(open.dataset.openRoutine); return; }
   const openSystem = event.target.closest('[data-open-system]');
-  if (openSystem) { openSystemDrawer(openSystem.dataset.openSystem); return; }
+  if (openSystem) { openWorkspace(openSystem.dataset.openSystem); return; }
+  const wsTab = event.target.closest('[data-ws-tab]');
+  if (wsTab && state.view === 'system' && state.workspace) { state.workspace.tab = wsTab.dataset.wsTab; render(); return; }
   const openSource = event.target.closest('[data-open-source]');
   if (openSource) { openSourceDrawer(openSource.dataset.openSource); return; }
   const focusBrain = event.target.closest('[data-focus-brain-node]');
@@ -1607,6 +1806,12 @@ document.addEventListener('click', (event) => {
   if (action) performAction(action.dataset.routineAction);
 });
 document.addEventListener('change', (event) => {
+  if (event.target.id === 'ws-cmp-a' || event.target.id === 'ws-cmp-b') {
+    const ws = state.workspace?.data;
+    const slot = $('#ws-compare');
+    if (ws && slot) slot.innerHTML = wsCompareTable(ws, Number($('#ws-cmp-a').value), Number($('#ws-cmp-b').value));
+    return;
+  }
   if (event.target.id !== 'canvas-ref') return;
   state.canvas.ref = event.target.value;
   state.canvas.positions = null;
