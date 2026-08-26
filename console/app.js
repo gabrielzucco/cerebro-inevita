@@ -125,9 +125,11 @@ function summaryCards() {
   const active = model.today.active.length;
   const ready = model.today.ready_to_work.length;
   const judgments = model.counts.judgments;
+  const queueCount = state.decisions?.available ? state.decisions.open_count : null;
   return [
+    ...(queueCount !== null ? [['Fila de decisão', queueCount, 'Decisões do cérebro esperando seu martelo hoje', 'decision', true]] : []),
     ['Rotinas ativas', active, 'Rodam apenas quando o estado canônico está ativo', 'signal'],
-    ['Aguardam julgamento', judgments, 'Outputs privados que ainda precisam do seu martelo', 'decision', true],
+    ['Aguardam julgamento', judgments, 'Outputs privados de rotina para julgar', 'decision', true],
     ['Prontas para trabalhar', ready, 'Replay manual não liga o agendamento', 'play'],
     ['Recibos privados', model.routines.reduce((total, routine) => total + routine.receipts.length, 0), 'Prompt e output não aparecem no ledger', 'receipt'],
   ].map(summaryCard).join('');
@@ -141,7 +143,7 @@ function summaryCard([title, value, description, icon, actionable]) {
 function routineCard(routine) {
   const access = routine.access.length ? routine.access.map((item) => badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')).join('') : '<span class="muted">Sem grants declarados</span>';
   const next = routine.next_scheduled_at ? `Próxima ${fmtDate(routine.next_scheduled_at)}` : routine.state.status === 'disabled' ? 'Relógio desligado' : 'Sem próxima ocorrência';
-  return `<article class="routine-card" data-open-routine="${escapeHtml(routine.routine_id)}">
+  return `<article class="routine-card" data-open-routine="${escapeHtml(routine.routine_id)}" role="button" tabindex="0">
     <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(routine.system_ref)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
     <p class="routine-purpose">${escapeHtml(routine.schedule)}</p>
     <div class="routine-meta"><span><b>Executor</b>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</span><span><b>Estado</b>${escapeHtml(next)}</span></div>
@@ -258,13 +260,34 @@ function renderRoutines() {
     <div class="routine-list">${visibleRoutines().length ? visibleRoutines().map(routineCard).join('') : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
 }
 
+const DECISION_CATEGORIES = {
+  experimento: '🧪 experimento em gate',
+  escalacao: '🚨 exceção do loop',
+  radar: '📡 sinal de mercado',
+  persona: '🧭 revisão de persona',
+  martelo: '🔨 martelo de negócio',
+  curadoria: '🌱 curadoria/promoção',
+  integracao: '🧩 integração semanal',
+  preflight: '🌱 curadoria/promoção',
+};
+function decisionCategory(category) {
+  return DECISION_CATEGORIES[category] || category;
+}
+
 function renderToday() {
   const ids = [...state.model.today.needs_attention, ...state.model.today.ready_to_work, ...state.model.today.active];
   const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean).filter((routine) => inActiveArea(systemAreaRef(routine.system_ref)));
   const pending = visibleJudgments().filter((item) => item.judgment.status === 'pending');
+  const queue = state.decisions;
+  const decisionRows = queue?.available ? queue.open.map((item, index) => `<div class="decision-row" role="listitem">
+      <b>${index + 1}</b>
+      <div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(decisionCategory(item.category))} · ${escapeHtml(item.first_seen)}</small></div>
+      <span class="decision-age${item.age_days >= 30 ? ' overdue' : item.age_days >= 7 ? ' late' : ''}">${item.age_days}d${item.age_days >= 30 ? ' ⚖️' : item.age_days >= 7 ? ' ⏰' : ''}</span>
+    </div>`).join('') : '';
   return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div>
+    ${queue?.available ? `<div class="today-block"><div class="subheading"><h3>🔨 Fila única de decisão</h3><span>${queue.open_count} abertas · ${queue.decided_total} decididas</span></div><div class="decision-list" role="list">${decisionRows || '<p class="muted">Fila vazia — nada espera seu martelo.</p>'}</div><div class="boundary-note"><b>Uma fila, um juiz</b>Gerada pelo motor do cérebro (gera_fila_decisao.py) a partir de escalações, experimentos, radar, personas e integração. O veredito acontece na mesa de martelo; o Console mostra a verdade, não a substitui.</div></div>` : ''}
     ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
-    <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
+    <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Nenhuma rotina pede atenção', 'Rotinas ativas e prontas aparecem aqui.')}</div>`;
 }
 
 function canvasRefOptions() {
@@ -337,7 +360,7 @@ function systemCockpit(system) {
 
 function renderCanvas() {
   const hasRef = state.canvas.scope !== 'brain';
-  const areaTitle = state.canvas.scope === 'brain' ? 'Cérebro'
+  const areaTitle = state.canvas.scope === 'brain' ? 'Mapa da Empresa'
     : state.canvas.scope === 'system' ? (state.model.systems.find((system) => system.system_id === state.canvas.ref)?.name || 'Sistema')
       : 'Execução';
   const cockpitSystem = state.canvas.scope === 'system' && state.canvas.ref
@@ -357,7 +380,7 @@ function renderCanvas() {
       </div>
       <div class="canvas-toolbar" role="toolbar" aria-label="Controles do Canvas">
         <div class="canvas-segmented" aria-label="Escala do mapa">
-          <button data-canvas-scope="brain" class="${state.canvas.scope === 'brain' ? 'active' : ''}">Cérebro</button>
+          <button data-canvas-scope="brain" class="${state.canvas.scope === 'brain' ? 'active' : ''}">Mapa da empresa</button>
           <button data-canvas-scope="system" class="${state.canvas.scope === 'system' ? 'active' : ''}">Sistema</button>
           <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
         </div>
@@ -394,7 +417,7 @@ function systemCard(system) {
   const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
   const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
   const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
-  return `<article class="object-card" data-kind="system" data-open-system="${escapeHtml(system.system_id)}"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
+  return `<article class="object-card" data-kind="system" data-open-system="${escapeHtml(system.system_id)}" role="button" tabindex="0"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
 }
 
 function renderSystems() {
@@ -412,7 +435,7 @@ function renderSystems() {
 }
 
 function renderSources() {
-  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${visibleSources().map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${visibleSources().map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}" role="button" tabindex="0"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
 }
 
 function experimentProgress(experiment) {
@@ -437,7 +460,7 @@ function renderExperiments() {
   const unlinked = experiments.filter((item) => item.learning_status === 'unlinked').length;
   return `<div class="section-heading"><div><p class="eyebrow">DECISÃO ANTES DO DADO</p><h2>Experimentos</h2></div><p>Uma mudança controlada atravessa Sistemas, Runs, medição e martelo. Contrato congelado não se edita depois do dado.</p></div>
     <div class="experiment-kpis"><span><b>${running}</b> coletando</span><span><b>${ready}</b> prontos para leitura</span><span><b>${decided}</b> decididos</span><span class="${unlinked ? 'attention' : ''}"><b>${unlinked}</b> aprendizados sem vínculo</span></div>
-    <div class="experiment-grid">${experiments.map((experiment) => `<article class="experiment-card" data-open-experiment="${escapeHtml(experiment.experiment_id)}">
+    <div class="experiment-grid">${experiments.map((experiment) => `<article class="experiment-card" data-open-experiment="${escapeHtml(experiment.experiment_id)}" role="button" tabindex="0">
       <div class="experiment-card-head"><div><p class="micro">${escapeHtml(experiment.experiment_id)} · ${escapeHtml(experiment.system_ref)}</p><h3>${escapeHtml(experiment.name)}</h3></div>${badge(experiment.status, experiment.status === 'decided' ? 'good' : experiment.status === 'running' ? 'neutral' : experiment.status === 'ready-for-read' ? 'warn' : tone(experiment.status))}</div>
       ${experimentProgress(experiment)}
       <div class="experiment-card-stats"><span><b>${experiment.arm_count || '—'}</b> braços${experiment.arms_status === 'not-structured' ? ' não estruturados' : ''}</span><span><b>${experiment.run_count}</b> Runs ligados</span><span><b>${experiment.amendment_count}</b> emendas</span>${experiment.contract_gap_count ? `<span class="warn-text"><b>${experiment.contract_gap_count}</b> lacunas legadas</span>` : ''}</div>
@@ -495,7 +518,7 @@ function renderSociety() {
 
 const renderers = { compatibility: renderCompatibility, today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
-  compatibility: ['Compatibilidade', 'O que preservar, o que falta e quais Sistemas já podem trabalhar.'],
+  compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
@@ -748,11 +771,11 @@ async function renderKnowledgePanel() {
     const inspector = $('#canvas-inspector');
     if (!inspector || state.view !== 'canvas' || state.canvas.scope !== 'brain') return;
     const maxDomain = Math.max(1, ...knowledge.domains.map((domain) => domain.count));
-    inspector.innerHTML = `<p class="micro">DIRECTORY // CONHECIMENTO</p><h3>Cérebro da empresa</h3>
+    inspector.innerHTML = `<p class="micro">MEMÓRIA SEMÂNTICA · DIAGNÓSTICO</p><h3>Notas e conexões</h3>
       <div class="canvas-inspector-state"><span>${knowledge.total_notes} notas · 01-nucleo-privado</span></div>
       <div class="knowledge-block"><p class="micro">DOMÍNIOS</p>${knowledge.domains.map((domain) => `<div class="knowledge-domain"><span>${escapeHtml(domain.name)}</span><i style="--w:${Math.round((domain.count / maxDomain) * 100)}%"></i><b>${domain.count}</b></div>`).join('')}</div>
       <div class="knowledge-block"><p class="micro">MAIS LINKADAS</p>${knowledge.most_linked.map((note) => `<button type="button" class="knowledge-note" data-copy-ref="${escapeHtml(note.path)}" title="Copiar caminho"><strong>${escapeHtml(note.title)}</strong><small>${escapeHtml(note.domain)} · ${note.count}←</small></button>`).join('') || '<p class="muted">Nenhum wikilink encontrado.</p>'}</div>
-      <p class="section-help">Clique copia o caminho da nota. Este índice é derivado e reconstruível; a verdade continua nos arquivos.</p>`;
+      <p class="section-help">Diagnóstico secundário da memória — o cérebro começa pelos resultados que sabe produzir, não pela contagem de notas.</p>`;
   } catch { /* painel opcional — o Canvas funciona sem ele */ }
 }
 
@@ -1335,7 +1358,12 @@ async function performAction(action) {
 }
 
 async function loadModel() {
-  state.model = await getJson('/api/console');
+  const [model, decisions] = await Promise.all([
+    getJson('/api/console'),
+    getJson('/api/decisions').catch(() => null),
+  ]);
+  state.model = model;
+  state.decisions = decisions;
   render();
 }
 
@@ -1344,6 +1372,7 @@ document.addEventListener('click', (event) => {
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
   const areaPill = event.target.closest('[data-area-filter]');
   if (areaPill) {
+    closeDrawer();
     state.areaFilter = areaPill.dataset.areaFilter;
     try { localStorage.setItem('cb-area', state.areaFilter); } catch { /* preferência local */ }
     if (state.canvas.scope === 'system' && state.canvas.ref && !inActiveArea(systemAreaRef(state.canvas.ref))) state.canvas.ref = null;
@@ -1455,6 +1484,12 @@ $('#refresh').addEventListener('click', async () => {
   try { await loadModel(); toast('Estado local recompilado.'); } catch (error) { toast(label(error.message), 'bad'); }
 });
 document.addEventListener('keydown', (event) => {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement
+    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment]')) {
+    event.preventDefault();
+    event.target.click();
+    return;
+  }
   if (event.key !== 'Escape') return;
   if ($('#confirm-dialog')?.open) return; // o <dialog> cuida do próprio Escape
   closeDrawer();

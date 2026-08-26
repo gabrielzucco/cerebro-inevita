@@ -161,7 +161,7 @@ kbd {
   grid-template-columns: 14px 1fr auto;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
+  min-height: 36px;
   padding: 0 var(--s2);
   border: 0;
   border-radius: var(--r-sm);
@@ -189,7 +189,7 @@ nav button {
   grid-template-columns: 18px 1fr auto;
   align-items: center;
   gap: 10px;
-  min-height: 32px;
+  min-height: 38px;
   padding: 0 var(--s2);
   border: 0;
   border-radius: var(--r-sm);
@@ -509,6 +509,24 @@ td small { margin-top: 2px; color: var(--text-3); font-size: var(--fs-micro); }
 .card-footer button { border: 0; background: transparent; color: var(--text-2); font-size: var(--fs-meta); font-weight: 500; cursor: pointer; }
 .card-footer button:hover { color: var(--text); }
 .card-footer button b { margin-left: 5px; color: var(--text-3); }
+
+/* Fila única de decisão — a verdade do vault dentro do Hoje */
+.decision-list { display: grid; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); overflow: hidden; margin-bottom: var(--s3); }
+.decision-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: 9px var(--s4);
+  border-top: 1px solid var(--hairline);
+}
+.decision-row:first-child { border-top: 0; }
+.decision-row > b { color: var(--text-3); font: 590 var(--fs-micro) var(--font-mono); font-variant-numeric: tabular-nums; }
+.decision-row strong { display: block; overflow: hidden; color: var(--text); font-size: var(--fs-body); font-weight: 520; text-overflow: ellipsis; white-space: nowrap; }
+.decision-row small { display: block; margin-top: 1px; color: var(--text-3); font-size: var(--fs-micro); }
+.decision-age { color: var(--text-3); font: 590 var(--fs-micro) var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.decision-age.late { color: var(--wait); }
+.decision-age.overdue { color: var(--fail); }
 
 .judgment-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: var(--s3); }
 .judgment-card {

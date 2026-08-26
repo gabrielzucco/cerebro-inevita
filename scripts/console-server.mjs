@@ -76,6 +76,26 @@ function knowledgeIndex(root) {
   return { total_notes: files.length, domains: domainList, most_linked: top };
 }
 
+// Fila única de decisão do cérebro — leitura fiel do objeto que o motor do
+// vault materializa (gera_fila_decisao.py). O Console mostra; não substitui
+// a mesa de martelo.
+function decisionQueue(root) {
+  try {
+    const data = JSON.parse(readFileSync(resolve(root, '.automacao/_FILA-DECISAO.json'), 'utf8'));
+    const open = Object.entries(data.abertos || {}).map(([key, item]) => ({
+      key,
+      title: item.titulo,
+      category: item.categoria,
+      first_seen: item.first_seen,
+      last_seen: item.last_seen,
+      age_days: Math.max(0, Math.round((Date.now() - Date.parse(`${item.first_seen}T12:00:00`)) / 86400000)),
+    })).sort((left, right) => right.age_days - left.age_days);
+    return { available: true, open, open_count: open.length, decided_total: (data.historico || []).length };
+  } catch {
+    return { available: false, open: [], open_count: 0, decided_total: 0 };
+  }
+}
+
 const COOKIE_NAME = 'cerebro_console_session';
 const MAX_BODY_BYTES = 32 * 1024;
 const STATIC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'console');
@@ -266,6 +286,11 @@ export function createConsoleServer({
         try { content = readFileSync(resolved); } catch { throw new Error('not-found'); }
         response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         response.end(content);
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/decisions') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, decisionQueue(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/knowledge') {
