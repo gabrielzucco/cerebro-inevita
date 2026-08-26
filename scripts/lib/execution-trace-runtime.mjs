@@ -137,7 +137,7 @@ export function readExecutionTrace(root, runId) {
     let event;
     try { event = JSON.parse(line); } catch { throw new Error(`trace-json-invalid-${index + 1}`); }
     const errors = validateExecutionTraceEvent(event);
-    if (errors.length) throw new Error(`trace-event-invalid-${index + 1}`);
+    if (errors.length) throw new Error(`trace-event-invalid-${index + 1}:${errors.join('|')}`);
     return event;
   });
   for (let index = 0; index < events.length; index += 1) {
