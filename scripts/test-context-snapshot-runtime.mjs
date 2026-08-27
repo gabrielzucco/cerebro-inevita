@@ -44,7 +44,8 @@ function retrievalReceipt(receiptId, overrides = {}) {
     completed_at: '2026-08-24T11:29:00.000Z',
     latency_ms: 100,
     adapter_invoked: true,
-    transport: 'gbrain-vector-daemon',
+    provider_ref: 'local-semantic-retrieval',
+    transport: 'local-unix-socket',
     selected_refs: [
       { rank: 1, document_ref: 'document:system-next-best-commercial-action' },
       { rank: 2, document_ref: 'document:source-commercial-journey' },
@@ -64,6 +65,13 @@ function retrievalReceipt(receiptId, overrides = {}) {
     evidence: { ...base.evidence, ...(overrides.evidence || {}) },
     privacy: { ...base.privacy, ...(overrides.privacy || {}) },
   };
+}
+
+function legacyRetrievalReceipt(receiptId) {
+  const { provider_ref: _providerRef, ...legacy } = retrievalReceipt(receiptId, {
+    transport: 'gbrain-vector-daemon',
+  });
+  return legacy;
 }
 
 function example(name) {
@@ -105,7 +113,7 @@ try {
       ...systemBase.sources,
       {
         role: 'memoria-operacional',
-        source_id: 'gbrain-index',
+        source_id: 'operational-memory-index',
         required: false,
         access: 'read-only',
         freshness: 'recibo do Run',
@@ -133,7 +141,16 @@ try {
   write(join(root, '.cerebro', 'contracts', 'sources', 'paid-media.json'), source(sourceBase, 'paid-media'));
   write(join(root, '.cerebro', 'contracts', 'sources', 'sales-ledger.json'), source(sourceBase, 'sales-ledger'));
   write(join(root, '.cerebro', 'contracts', 'sources', 'experiment-ledger.json'), source(sourceBase, 'experiment-ledger'));
-  write(join(root, '.cerebro', 'contracts', 'sources', 'gbrain-index.json'), source(sourceBase, 'gbrain-index'));
+  write(join(root, '.cerebro', 'contracts', 'sources', 'operational-memory-index.json'), {
+    ...source(sourceBase, 'operational-memory-index'),
+    connector: {
+      ...sourceBase.connector,
+      kind: 'retrieval-provider',
+      binding_ref: 'local-semantic-retrieval',
+      credential_ref: null,
+      custody: 'agent-direct',
+    },
+  });
 
   const acceptedReceiptId = 'retrieval-receipt-fixture-accepted';
   const acceptedReceiptRef = `retrieval-receipt:${acceptedReceiptId}`;
@@ -163,7 +180,7 @@ try {
           { source_ref: 'sales-ledger', selected_pointers: ['/sales'], freshness_pointer: '/observed' },
           { source_ref: 'experiment-ledger', selected_pointers: ['/experiments'], freshness_pointer: '/observed' },
           {
-            source_ref: 'gbrain-index',
+            source_ref: 'operational-memory-index',
             retrieval_receipt_pointer: '/retrieval/receipt_ref',
             expected_profile_sha256: PROFILE_SHA,
           },
@@ -186,7 +203,7 @@ try {
   assert(context.context_snapshot.accesses[0].selected_refs[0].endsWith(':json-pointer:/paid'));
   assert.equal(JSON.stringify(context.context_snapshot).includes('private_metric'), false);
   assert.equal(JSON.stringify(context.context_snapshot).includes('fixture-only'), false);
-  const retrievalAccess = context.context_snapshot.accesses.find((item) => item.source_ref.id === 'gbrain-index');
+  const retrievalAccess = context.context_snapshot.accesses.find((item) => item.source_ref.id === 'operational-memory-index');
   assert.deepEqual(retrievalAccess.selected_refs, [
     'document:system-next-best-commercial-action',
     'document:source-commercial-journey',
@@ -197,6 +214,29 @@ try {
   assert.equal(JSON.stringify(context).includes('semantic_and_domain_evidence'), false);
   assert(existsSync(join(root, context.artifact_path_ref)), 'a cópia privada content-addressed precisa existir');
   assert(readFileSync(join(root, context.artifact_path_ref), 'utf8').includes('private_metric'));
+
+  const legacyReceiptId = 'retrieval-receipt-fixture-legacy';
+  const legacyReceiptRef = `retrieval-receipt:${legacyReceiptId}`;
+  writePrivate(
+    join(root, '.cerebro', 'runtime', 'receipts', 'retrieval', `${legacyReceiptId}.json`),
+    legacyRetrievalReceipt(legacyReceiptId),
+  );
+  write(join(root, artifactRef), {
+    observed: '2026-08-24T11:29:00.000Z',
+    paid: { private_metric: 17 },
+    sales: { private_metric: 9 },
+    experiments: { private_hypothesis: 'fixture-only' },
+    retrieval: { receipt_ref: legacyReceiptRef },
+  });
+  const legacyContext = prepareContextSnapshot(root, routine, accessResults);
+  assert(legacyContext.input_refs.includes(legacyReceiptRef));
+  write(join(root, artifactRef), {
+    observed: '2026-08-24T11:29:00.000Z',
+    paid: { private_metric: 17 },
+    sales: { private_metric: 9 },
+    experiments: { private_hypothesis: 'fixture-only' },
+    retrieval: { receipt_ref: acceptedReceiptRef },
+  });
 
   assert.throws(() => prepareContextSnapshot(root, {
     ...routine,
@@ -273,7 +313,7 @@ try {
   const requiredSystem = {
     ...system,
     sources: system.sources.map((item) => (
-      item.source_id === 'gbrain-index' ? { ...item, required: true } : item
+      item.source_id === 'operational-memory-index' ? { ...item, required: true } : item
     )),
   };
   write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), requiredSystem);
@@ -287,6 +327,18 @@ try {
   assert.throws(
     () => prepareContextSnapshot(root, profileMismatchRoutine, accessResults),
     /context-retrieval-receipt-profile-invalid/,
+  );
+
+  const providerMismatchId = 'retrieval-receipt-fixture-provider-mismatch';
+  const providerMismatchRef = `retrieval-receipt:${providerMismatchId}`;
+  writePrivate(
+    join(root, '.cerebro', 'runtime', 'receipts', 'retrieval', `${providerMismatchId}.json`),
+    retrievalReceipt(providerMismatchId, { provider_ref: 'other-provider' }),
+  );
+  writeArtifactReceiptRef(providerMismatchRef);
+  assert.throws(
+    () => prepareContextSnapshot(root, routine, accessResults),
+    /context-retrieval-receipt-identity-invalid/,
   );
 
   const privacyId = 'retrieval-receipt-fixture-privacy';

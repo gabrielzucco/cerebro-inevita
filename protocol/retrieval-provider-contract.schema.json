@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/protocol/retrieval-provider-contract.schema.json",
+  "title": "Retrieval Provider Contract V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "provider_id",
+    "name",
+    "version",
+    "status",
+    "interface",
+    "driver",
+    "corpus",
+    "privacy",
+    "assurance",
+    "license"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "provider_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "status": { "enum": ["active", "degraded", "disabled"] },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operations", "receipt_kind", "fail_mode"],
+      "properties": {
+        "operations": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["retrieve", "resolve-context", "health"] }
+        },
+        "receipt_kind": { "const": "retrieval-receipt" },
+        "fail_mode": { "const": "closed" }
+      }
+    },
+    "driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implementation", "implementation_version", "transport", "adapter_ref", "profile_ref"],
+      "properties": {
+        "implementation": { "$ref": "#/$defs/id" },
+        "implementation_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "transport": { "$ref": "#/$defs/id" },
+        "adapter_ref": { "$ref": "#/$defs/local_ref" },
+        "profile_ref": { "$ref": "#/$defs/local_ref" }
+      }
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref", "catalog_ref", "policy"],
+      "properties": {
+        "source_ref": { "$ref": "#/$defs/id" },
+        "catalog_ref": { "$ref": "#/$defs/local_ref" },
+        "policy": { "const": "explicit-allowlist" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_only", "query_persisted", "content_persisted_in_receipt", "third_party_zone_indexed"],
+      "properties": {
+        "local_only": { "const": true },
+        "query_persisted": { "const": false },
+        "content_persisted_in_receipt": { "const": false },
+        "third_party_zone_indexed": { "const": false }
+      }
+    },
+    "assurance": { "enum": ["declared", "receipt-audited", "runtime-enforced"] },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spdx", "notice_ref"],
+      "properties": {
+        "spdx": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "notice_ref": { "type": "string", "pattern": "^(?:https://|[A-Za-z0-9.])[A-Za-z0-9_./:\\-]{1,511}$" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "local_ref": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$"
+    }
+  }
+}

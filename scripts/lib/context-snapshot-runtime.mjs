@@ -27,6 +27,7 @@ const MAX_RETRIEVAL_RECEIPT_BYTES = 256 * 1024;
 const POINTER_RE = /^\/(?:[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*)?$/;
 const RETRIEVAL_RECEIPT_REF_RE = /^retrieval-receipt:(retrieval-receipt-[A-Za-z0-9-]{8,128})$/;
 const DOCUMENT_REF_RE = /^document:[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+const PROVIDER_REF_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const FORBIDDEN_RECEIPT_KEYS = new Set(['query', 'snippet', 'content', 'raw_error', 'prompt', 'output']);
 const RETRIEVAL_RECEIPT_KEYS = new Set([
@@ -42,11 +43,15 @@ const RETRIEVAL_RECEIPT_KEYS = new Set([
   'completed_at',
   'latency_ms',
   'adapter_invoked',
+  'provider_ref',
   'transport',
   'selected_refs',
   'evidence',
   'privacy',
 ]);
+const LEGACY_RETRIEVAL_RECEIPT_KEYS = new Set(
+  [...RETRIEVAL_RECEIPT_KEYS].filter((key) => key !== 'provider_ref'),
+);
 const RETRIEVAL_EVIDENCE_KEYS = new Set(['candidate_similarity', 'domain_coverage', 'agreement']);
 const RETRIEVAL_PRIVACY_KEYS = new Set([
   'query_recorded',
@@ -149,7 +154,7 @@ function validNullableNumber(value) {
   return value === null || (typeof value === 'number' && Number.isFinite(value));
 }
 
-function safeRetrievalReceipt(root, artifactValue, selection) {
+function safeRetrievalReceipt(root, artifactValue, selection, expectedProviderRef) {
   const resolved = jsonPointer(artifactValue, selection.retrieval_receipt_pointer);
   if (!resolved.found || typeof resolved.value !== 'string') {
     throw new Error('context-retrieval-receipt-ref-missing');
@@ -186,13 +191,20 @@ function safeRetrievalReceipt(root, artifactValue, selection) {
     throw new Error('context-retrieval-receipt-json-invalid');
   }
   if (hasForbiddenReceiptKey(receipt)) throw new Error('context-retrieval-receipt-payload-forbidden');
-  if (!hasExactKeys(receipt, RETRIEVAL_RECEIPT_KEYS)
+  const currentReceipt = hasExactKeys(receipt, RETRIEVAL_RECEIPT_KEYS);
+  const legacyReceipt = hasExactKeys(receipt, LEGACY_RETRIEVAL_RECEIPT_KEYS)
+    && receipt.transport === 'gbrain-vector-daemon';
+  if ((!currentReceipt && !legacyReceipt)
     || !hasExactKeys(receipt.evidence, RETRIEVAL_EVIDENCE_KEYS)
     || !hasExactKeys(receipt.privacy, RETRIEVAL_PRIVACY_KEYS)) {
     throw new Error('context-retrieval-receipt-shape-invalid');
   }
+  const observedProviderRef = legacyReceipt ? 'local-semantic-retrieval' : receipt.provider_ref;
   if (receipt.protocol_version !== 1 || receipt.kind !== 'retrieval-receipt'
-    || receipt.receipt_id !== receiptId || receipt.transport !== 'gbrain-vector-daemon') {
+    || receipt.receipt_id !== receiptId
+    || !PROVIDER_REF_RE.test(observedProviderRef || '')
+    || observedProviderRef !== expectedProviderRef
+    || !PROVIDER_REF_RE.test(receipt.transport || '')) {
     throw new Error('context-retrieval-receipt-identity-invalid');
   }
   if (!SHA256_RE.test(receipt.query_sha256 || '') || !SHA256_RE.test(receipt.profile_sha256 || '')
@@ -378,7 +390,11 @@ export function prepareContextSnapshot(root, routineContract, accessResults) {
     }
     const sourceValue = sourceContract(root, source.source_id);
     if (selection.retrieval_receipt_pointer) {
-      const retrievalReceipt = safeRetrievalReceipt(root, artifact.value, selection);
+      const providerRef = sourceValue.connector?.binding_ref;
+      if (!PROVIDER_REF_RE.test(providerRef || '')) {
+        throw new Error('context-retrieval-provider-binding-missing');
+      }
+      const retrievalReceipt = safeRetrievalReceipt(root, artifact.value, selection, providerRef);
       retrievalReceiptRefs.push(retrievalReceipt.receiptRef);
       if (retrievalReceipt.receipt.decision !== 'accepted') {
         const reasonCode = retrievalReceipt.receipt.decision === 'insufficient_evidence'

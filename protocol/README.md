@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os dezoito envelopes
+## Os envelopes do protocolo
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -55,6 +55,9 @@ conteúdo bruto.
 - `handoff-receipt.schema.json`: prova de um handoff real — `chain_id` genérico de runtime, Run
   produtor, artefato com hash e schema validado, resultado do gate, Run consumidor e modo
 `replay` ou `live` (replay nunca se apresenta como execução original). Reference-only.
+- `retrieval-provider-contract.schema.json`: separa a interface estável de recuperação do driver
+  substituível. Declara operações, transporte, corpus allowlist, privacidade, assurance e licença;
+  Systems e Rotinas dependem do `provider_id`, nunca da implementação open source atual.
 
 Run Record V2 pode declarar `chain_id`, `mode`, `experiment_ref` e `handoff_refs`. A chain é
 genérica: existe para qualquer pipeline entre Sistemas; Experimento apenas aponta para ela quando
@@ -176,6 +179,7 @@ node scripts/protocol-validate.mjs judgment protocol/examples/judgment-receipt.v
 node scripts/protocol-validate.mjs correction protocol/examples/correction-run-receipt.v1.json
 node scripts/protocol-validate.mjs learning protocol/examples/learning-candidate.v1.json
 node scripts/protocol-validate.mjs trace protocol/examples/execution-trace-event.v1.json
+node scripts/protocol-validate.mjs retrieval-provider protocol/examples/retrieval-provider-contract.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
 

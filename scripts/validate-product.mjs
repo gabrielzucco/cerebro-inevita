@@ -26,6 +26,7 @@ import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
 import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
 import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
+import { validateRetrievalProviderContract } from './lib/retrieval-provider-protocol.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -53,6 +54,7 @@ const required = [
   'protocol/execution-trace-event.schema.json',
   'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
   'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
+  'protocol/retrieval-provider-contract.schema.json',
   'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
   'protocol/examples/brain-manifest.v1.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
@@ -69,6 +71,7 @@ const required = [
   'protocol/examples/execution-trace-event.v1.json',
   'protocol/examples/experiment-contract.v1.json', 'protocol/examples/experiment-state.v1.json',
   'protocol/examples/handoff-contract.v1.json', 'protocol/examples/handoff-receipt.v1.json',
+  'protocol/examples/retrieval-provider-contract.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -113,6 +116,7 @@ const required = [
   'scripts/lib/execution-trace-runtime.mjs', 'scripts/lib/evaluation-runtime.mjs',
   'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
   'scripts/lib/handoff-protocol.mjs', 'scripts/lib/compatibility-diagnostic.mjs',
+  'scripts/lib/retrieval-provider-protocol.mjs',
   'scripts/lib/json-schema-runtime.mjs', 'scripts/lib/replay-runtime.mjs',
   'scripts/compatibility-diagnostic.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
@@ -138,6 +142,7 @@ const required = [
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   'scripts/test-experiment-protocol.mjs',
   'scripts/test-handoff-protocol.mjs', 'scripts/test-compatibility-diagnostic.mjs',
+  'scripts/test-retrieval-provider-protocol.mjs',
   'scripts/test-replay-runtime.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
@@ -186,6 +191,7 @@ for (const [label, path, validate] of [
   ['example experiment state v1', 'protocol/examples/experiment-state.v1.json', validateExperimentState],
   ['example handoff contract v1', 'protocol/examples/handoff-contract.v1.json', validateHandoffContract],
   ['example handoff receipt v1', 'protocol/examples/handoff-receipt.v1.json', validateHandoffReceipt],
+  ['example retrieval provider v1', 'protocol/examples/retrieval-provider-contract.v1.json', validateRetrievalProviderContract],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
