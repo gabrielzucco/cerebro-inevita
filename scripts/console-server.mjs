@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,6 +122,201 @@ function listJsonDir(root, relative) {
 
 function countDir(root, relative) {
   try { return readdirSync(resolve(root, relative)).filter((name) => !name.startsWith('.')).length; } catch { return 0; }
+}
+
+const COMPANY_MAP_SPEC = [
+  {
+    id: 'business', name: 'Estratégia & negócio',
+    purpose: 'O que a empresa decidiu vender, medir e construir.',
+    entries: [
+      { id: 'offers', name: 'Ofertas', refs: ['meu-negocio/oferta.md', '01-nucleo-privado/operacao-comunidade/_OFERTAS.md'] },
+      { id: 'funnel', name: 'Funil', refs: ['01-nucleo-privado/operacao-comunidade/_FUNIL-DIARIO.md'] },
+      { id: 'decisions', name: 'Decisões', refs: ['meu-negocio/decisoes', '01-nucleo-privado/decisoes', '01-nucleo-privado/meu-negocio/decisoes'] },
+      { id: 'experiments', name: 'Experimentos', refs: ['.cerebro/contracts/experiments', '.cerebro/runtime/experiments'] },
+      { id: 'projects', name: 'Projetos', refs: ['01-nucleo-privado/projetos'] },
+    ],
+  },
+  {
+    id: 'marketing-sales', name: 'Marketing & vendas',
+    purpose: 'O que a empresa publica, testa e aprende para gerar demanda.',
+    entries: [
+      { id: 'content', name: 'Produção por autor', refs: ['01-nucleo-privado/producao-conteudo/gabriel', '01-nucleo-privado/producao-conteudo/turra', '01-nucleo-privado/producao-conteudo/vini'] },
+      { id: 'ads', name: 'Biblioteca de Ads', refs: ['01-nucleo-privado/producao-conteudo/ads/entregues', '01-nucleo-privado/producao-conteudo/ads/vini', '01-nucleo-privado/producao-conteudo/ads/zucco'] },
+      { id: 'ads-inbox', name: 'Ads para classificar', refs: ['01-nucleo-privado/producao-conteudo/ads/_a-classificar'] },
+      { id: 'ideas', name: 'Ideias', refs: ['01-nucleo-privado/producao-conteudo/ads/ideias', '01-nucleo-privado/producao-conteudo/Banco de ideias — conteudo da viagem (voz do Gabriel).md'] },
+      { id: 'content-map', name: 'Mapa de conteúdo', refs: ['01-nucleo-privado/producao-conteudo/_MAPA-CONTEUDO.md'] },
+      { id: 'voice-atoms', name: 'Átomos de voz', refs: ['01-nucleo-privado/producao-conteudo/atomos-voz'] },
+    ],
+  },
+  {
+    id: 'product-delivery', name: 'Produto & entrega',
+    purpose: 'O que transforma conhecimento em experiência, capacidade e resultado.',
+    entries: [
+      { id: 'systems', name: 'Sistemas', refs: ['sistemas', '01-nucleo-privado/sistemas', '.cerebro/contracts/systems'], view: 'systems' },
+      { id: 'skills', name: 'Skills', refs: ['skills', '01-nucleo-privado/skills', '.agents/skills'] },
+      { id: 'delivery', name: 'Entregas em construção', refs: ['01-nucleo-privado/projetos/implementacao-cerebro-servico', '01-nucleo-privado/projetos/produto-lancamento-2026-07'] },
+      { id: 'cases', name: 'Cases & resultados', refs: ['01-nucleo-privado/operacao/o-que-melhorou', '01-nucleo-privado/sistemas/_MELHORIAS.md'] },
+      { id: 'releases', name: 'Produto & releases', refs: ['VERSION', '.cerebro/version', '01-nucleo-privado/sistemas/produto-cerebro'] },
+    ],
+  },
+  {
+    id: 'community', name: 'Comunidade',
+    purpose: 'Quem participa, quais encontros acontecem e como a experiência é operada.',
+    entries: [
+      { id: 'founders', name: 'Founders', refs: ['01-nucleo-privado/founders'] },
+      { id: 'community-ops', name: 'Operação da comunidade', refs: ['01-nucleo-privado/operacao-comunidade'] },
+      { id: 'dispatches', name: 'Disparos', refs: ['01-nucleo-privado/operacao-comunidade/disparos'] },
+      { id: 'meetings', name: 'Encontros Society', refs: ['01-nucleo-privado/operacao-comunidade/encontros-society'] },
+      { id: 'community-memory', name: 'Memória compartilhável', refs: ['comunidade', '01-nucleo-privado/comunidade'] },
+    ],
+  },
+  {
+    id: 'research', name: 'Pesquisa & referências',
+    purpose: 'Evidência de campo, repertório externo e linguagem própria da empresa.',
+    entries: [
+      { id: 'third-party', name: 'Dados de terceiros', refs: ['02-dados-terceiros'], sealed: true },
+      { id: 'references', name: 'Referências', refs: ['conhecimento', '01-nucleo-privado/referencias'] },
+      { id: 'concepts', name: 'Conceitos', refs: ['01-nucleo-privado/conceitos'] },
+      { id: 'founder-voice', name: 'Falas dos founders', refs: ['01-nucleo-privado/founders/falas'] },
+      { id: 'notes', name: 'Notas de trabalho', refs: ['01-nucleo-privado/notas'] },
+    ],
+  },
+  {
+    id: 'operations-technology', name: 'Operação & tecnologia',
+    purpose: 'Como o Cérebro roda, deixa recibos e continua confiável.',
+    entries: [
+      { id: 'operations', name: 'Operação', refs: ['operacao', '01-nucleo-privado/operacao'] },
+      { id: 'dailies', name: 'Dailies', refs: ['meu-negocio/dailies', '01-nucleo-privado/founders/dailies'] },
+      { id: 'routines', name: 'Rotinas do Cérebro', refs: ['.cerebro/contracts/routines'], view: 'routines' },
+      { id: 'sources', name: 'Contratos de Fontes', refs: ['.cerebro/contracts/sources'], view: 'sources' },
+      { id: 'receipts', name: 'Painel & recibos', refs: ['01-nucleo-privado/painel'] },
+    ],
+  },
+];
+
+function summarizeBrainRefs(root, refs) {
+  const brainRoot = resolve(root);
+  let count = 0;
+  let lastChanged = 0;
+  const observedRefs = [];
+  const walk = (target) => {
+    let stat;
+    try { stat = statSync(target); } catch { return; }
+    if (stat.isFile()) {
+      count += 1;
+      lastChanged = Math.max(lastChanged, stat.mtimeMs);
+      return;
+    }
+    if (!stat.isDirectory()) return;
+    let entries = [];
+    try { entries = readdirSync(target, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const child = resolve(target, entry.name);
+      if (entry.isDirectory()) walk(child);
+      else if (entry.isFile()) {
+        count += 1;
+        try { lastChanged = Math.max(lastChanged, statSync(child).mtimeMs); } catch { /* metadado opcional */ }
+      }
+    }
+  };
+  for (const ref of refs) {
+    const target = resolve(root, ref);
+    if (target !== brainRoot && !target.startsWith(`${brainRoot}${sep}`)) continue;
+    if (!existsSync(target)) continue;
+    observedRefs.push(ref);
+    walk(target);
+  }
+  return {
+    count,
+    available: observedRefs.length > 0,
+    observed_refs: observedRefs,
+    last_changed: lastChanged ? new Date(lastChanged).toISOString() : null,
+  };
+}
+
+export function companyMapModel(root, { model, sources, round, contextGaps = 0 } = {}) {
+  const semanticCounts = new Map([
+    ['systems', model?.systems?.length || 0],
+    ['experiments', model?.experiments?.length || 0],
+    ['routines', model?.routines?.length || 0],
+    ['sources', sources?.length || 0],
+  ]);
+  const units = new Map([
+    ['systems', ['Sistema', 'Sistemas']],
+    ['experiments', ['experimento', 'experimentos']],
+    ['routines', ['rotina', 'rotinas']],
+    ['sources', ['Fonte', 'Fontes']],
+  ]);
+  const domains = COMPANY_MAP_SPEC.map((domain) => ({
+    id: domain.id,
+    name: domain.name,
+    purpose: domain.purpose,
+    entries: domain.entries.map((entry) => {
+      const observed = summarizeBrainRefs(root, entry.refs);
+      return {
+        id: entry.id,
+        name: entry.name,
+        sealed: entry.sealed === true,
+        view: entry.view || null,
+        ...observed,
+        count: semanticCounts.has(entry.id) ? semanticCounts.get(entry.id) : observed.count,
+        unit: units.get(entry.id) || ['item', 'itens'],
+      };
+    }).filter((entry) => entry.available),
+  })).filter((domain) => domain.entries.length);
+  const daily = domains.flatMap((domain) => domain.entries).find((entry) => entry.id === 'dailies');
+  const observedSources = (sources || []).filter((source) => source.last_access || source.freshness_observed);
+  const routines = [
+    ...(daily ? [{
+      routine_id: 'daily-humana',
+      name: 'Daily dos founders',
+      state: 'human-capture',
+      schedule: 'Ritual humano',
+      output: `${daily.count} registros de mudança, decisão e aprendizado`,
+      last_observed: daily.last_changed,
+    }] : []),
+    ...((model?.routines || []).map((routine) => {
+      const receiptDates = (Array.isArray(routine.receipts) ? routine.receipts : [])
+        .map((receipt) => receipt.completed_at || receipt.started_at || receipt.occurred_at)
+        .filter(Boolean).sort().reverse();
+      return {
+        routine_id: routine.routine_id,
+        name: routine.name,
+        state: routine.health_reason_code,
+        schedule: routine.schedule,
+        output: `${Array.isArray(routine.receipts) ? routine.receipts.length : 0} recibos observados`,
+        last_observed: receiptDates[0] || routine.last_run?.completed_at || null,
+      };
+    })),
+  ];
+  return {
+    generated_at: new Date().toISOString(),
+    privacy: { content_exposed: false, third_party_aggregate_only: true },
+    domains,
+    source_summary: {
+      total: (sources || []).length,
+      observed: observedSources.length,
+      never_observed: Math.max(0, (sources || []).length - observedSources.length),
+    },
+    care: {
+      context_gaps: contextGaps,
+      sources_never_observed: Math.max(0, (sources || []).length - observedSources.length),
+      distill_backlog: round?.tarefas?.find((task) => task.nome.toLowerCase().includes('destila'))?.resumo || null,
+      protocol_issues: model?.issues?.length || 0,
+    },
+    routines,
+    memory_flow: [
+      ['Fonte', 'A realidade continua na casa de verdade.'],
+      ['Bruto', 'Captura preservada, ainda sem interpretação.'],
+      ['Processado', 'Normalizado, transcrito ou classificado.'],
+      ['Destilado', 'Evidência e sentido com proveniência.'],
+      ['Contexto vigente', 'O que pode orientar uma decisão agora.'],
+      ['Sistema', 'Contexto selecionado para um resultado.'],
+      ['Julgamento', 'O humano decide se o resultado serve.'],
+      ['Aprendizado', 'Só o que foi provado volta ao Cérebro.'],
+    ].map(([name, meaning], index) => ({ step: index + 1, name, meaning })),
+  };
 }
 
 // Workspace de um Sistema — o contrato cru + tudo que foi observado dele.
@@ -399,9 +594,11 @@ function anatomyModel(root) {
   const denies = accessReceipts.filter((receipt) => receipt.decision === 'deny' || receipt.decision === 'denied').length;
   const piiTask = roundTask('schema');
   const goldenTask = roundTask('golden') || roundTask('eval do c');
+  const companyMap = companyMapModel(root, { model, sources, round, contextGaps });
 
   return {
     generated_at: new Date().toISOString(),
+    company_map: companyMap,
     identity: {
       canonical: '01-nucleo-privado/_SISTEMAS.md',
       anchors,

@@ -26,6 +26,10 @@ const state = {
     cmpA: '', cmpB: '',
   },
   systems: { category: 'all', query: '' },
+  brain: {
+    mode: (() => { try { return localStorage.getItem('cb-brain-mode') === 'anatomy' ? 'anatomy' : 'company-map'; } catch { return 'company-map'; } })(),
+    query: '',
+  },
   brainGraph: null,
   cases: { list: null, detail: null, form: null, preview: null, actor: '' },
   canvas: {
@@ -94,6 +98,7 @@ const labels = {
   'requested-not-verified': 'Solicitado, não verificado', 'provider-reported': 'Reportado pelo provider', verified: 'Verificado',
   met: 'Atendido', partial: 'Parcial', missing: 'Ausente',
   new: 'Começando do zero', 'organized-context': 'Contexto organizado',
+  'human-capture': 'Captura humana',
   'partial-brain': 'Cérebro parcial', 'inevita-compatible': 'Compatível com INEVITA',
   foundation: 'Fundação', contracted: 'Contratado', operational: 'Operacional',
   valid: 'Válido', invalid: 'Inválido', unassigned: 'Ainda não atribuído', assigned: 'Atribuído',
@@ -737,12 +742,105 @@ function brainFlowStep(number, name, value, description, state_ = 'declared') {
   return `<li class="brain-flow-step"><span>${String(number).padStart(2, '0')}</span><div><p>${escapeHtml(name)}</p><b>${escapeHtml(value)}</b><small>${escapeHtml(description)}</small></div><i class="${escapeHtml(state_)}"></i></li>`;
 }
 
+function renderBrainModeSwitch() {
+  return `<div class="brain-mode-switch" role="tablist" aria-label="Comparar versões do Cérebro">
+    <button type="button" role="tab" data-brain-mode="company-map" class="${state.brain.mode === 'company-map' ? 'active' : ''}" aria-selected="${state.brain.mode === 'company-map'}">Mapa da empresa</button>
+    <button type="button" role="tab" data-brain-mode="anatomy" class="${state.brain.mode === 'anatomy' ? 'active' : ''}" aria-selected="${state.brain.mode === 'anatomy'}">Anatomia atual</button>
+  </div>`;
+}
+
+function brainSearchKey(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+}
+
+function brainCount(value) {
+  return new Intl.NumberFormat('pt-BR').format(Number(value) || 0);
+}
+
+function brainHouseRow(entry) {
+  const changed = entry.last_changed ? `mudou ${fmtDate(entry.last_changed, false)}` : 'sem mudança observada';
+  const unit = entry.count === 1 ? entry.unit?.[0] || 'item' : entry.unit?.[1] || 'itens';
+  return `<li class="company-map-object">
+    <div><strong>${escapeHtml(entry.name)}</strong><span>${brainCount(entry.count)} ${escapeHtml(unit)} · ${escapeHtml(changed)}${entry.sealed ? ' · agregado protegido' : ''}</span></div>
+    ${entry.view ? `<button type="button" data-view="${escapeHtml(entry.view)}" aria-label="Abrir ${escapeHtml(entry.name)}">↗</button>` : ''}
+  </li>`;
+}
+
+function renderCompanyMap(anatomy) {
+  const map = anatomy.company_map;
+  if (!map) return `${renderBrainModeSwitch()}${empty('Mapa da empresa indisponível', 'Este Cérebro ainda não declarou casas reconhecíveis para esta leitura.')}`;
+  const query = brainSearchKey(state.brain.query.trim());
+  const domains = map.domains.map((domain) => {
+    const domainMatches = brainSearchKey(`${domain.name} ${domain.purpose}`).includes(query);
+    const entries = !query || domainMatches
+      ? domain.entries
+      : domain.entries.filter((entry) => brainSearchKey(entry.name).includes(query));
+    return { ...domain, entries };
+  }).filter((domain) => domain.entries.length);
+  const visibleObjects = domains.reduce((total, domain) => total + domain.entries.length, 0);
+  const prioritySources = ['clickup-inevita', 'drive-inevita', 'vault-inevita', 'fathom-calls', 'supabase-inevita', 'platform-inevita'];
+  const sourceById = new Map(anatomy.memory.sources.map((source) => [source.source_id, source]));
+  const sources = prioritySources.map((id) => sourceById.get(id)).filter(Boolean);
+  const care = [
+    map.care.context_gaps ? { value: map.care.context_gaps, label: 'lacunas apareceram em Context Snapshots recentes' } : null,
+    map.care.sources_never_observed ? { value: map.care.sources_never_observed, label: 'Fontes ainda não deixaram observação real' } : null,
+    map.care.distill_backlog ? { value: 'fila', label: shortBrainLabel(map.care.distill_backlog, 96) } : null,
+    map.care.protocol_issues ? { value: map.care.protocol_issues, label: 'inconsistências de protocolo pedem inspeção' } : null,
+  ].filter(Boolean);
+
+  return `${renderBrainModeSwitch()}<div class="company-map-home">
+    <section class="company-map-search">
+      <div><p class="micro">MAPA VIVO</p><h2>Encontre o que existe na empresa.</h2><p>Áreas, conhecimento, Fontes e rotinas — sem transformar o Cérebro em outro ClickUp.</p></div>
+      <label><span>Buscar no mapa da empresa</span><input type="search" data-brain-map-search value="${escapeHtml(state.brain.query)}" placeholder="Ofertas, Ads, founders, decisões…" autocomplete="off"><small>Busca local nos nomes e áreas já mapeados. Não chama modelo.</small></label>
+    </section>
+
+    <div class="company-map-layout">
+      <section class="company-map-main" aria-labelledby="company-map-title">
+        <header><div><p class="micro">EMPRESA</p><h2 id="company-map-title">O que este Cérebro contém</h2></div><span>${visibleObjects} ${visibleObjects === 1 ? 'objeto visível' : 'objetos visíveis'}</span></header>
+        ${domains.length ? `<div class="company-domain-list">${domains.map((domain, index) => `<section class="company-domain">
+          <div class="company-domain-heading"><span>${String(index + 1).padStart(2, '0')}</span><div><h3>${escapeHtml(domain.name)}</h3><p>${escapeHtml(domain.purpose)}</p></div></div>
+          <ul>${domain.entries.map(brainHouseRow).join('')}</ul>
+        </section>`).join('')}</div>` : `<div class="company-map-empty"><strong>Nada no mapa corresponde a “${escapeHtml(state.brain.query)}”.</strong><span>Tente uma casa real, como ofertas, Ads, founders, decisões ou Sistemas.</span></div>`}
+      </section>
+
+      <aside class="company-map-rail">
+        <section class="company-source-brief">
+          <header><div><p class="micro">FONTES</p><h2>De onde a realidade entra</h2></div><span>${map.source_summary.observed}/${map.source_summary.total}</span></header>
+          <ul>${sources.map((source) => {
+            const observedAt = source.last_access?.occurred_at || source.freshness_observed;
+            return `<li><i class="${observedAt ? 'observed' : ''}"></i><div><strong>${escapeHtml(source.name)}</strong><span>${observedAt ? `observada ${fmtDate(observedAt, false)}` : 'declarada, ainda sem observação'}</span></div></li>`;
+          }).join('')}</ul>
+          <button class="action" type="button" data-view="sources">Ver todas as Fontes →</button>
+        </section>
+        <section class="company-care-brief">
+          <p class="micro">PRECISA DE CUIDADO</p>
+          <h2>Saúde da memória</h2>
+          ${care.length ? `<ul>${care.map((item) => `<li><b>${escapeHtml(item.value)}</b><span>${escapeHtml(item.label)}</span></li>`).join('')}</ul>` : '<p class="company-care-clear">Nenhuma lacuna observada pede cuidado agora.</p>'}
+          <button class="action" type="button" data-view="health">Abrir saúde →</button>
+        </section>
+      </aside>
+    </div>
+
+    <section class="company-routines">
+      <header><div><p class="micro">ROTINAS DO CÉREBRO</p><h2>O que mantém o contexto vivo</h2></div><button class="action" type="button" data-view="routines">Inspecionar rotinas →</button></header>
+      <div class="company-routine-list">${map.routines.map((routine) => `<article><div><i class="${routine.state === 'active' || routine.state === 'human-capture' ? 'observed' : ''}"></i><strong>${escapeHtml(routine.name)}</strong><span>${escapeHtml(label(routine.state))} · ${escapeHtml(routine.schedule)}</span></div><p>${escapeHtml(routine.output)}</p>${routine.last_observed ? `<time>${fmtDate(routine.last_observed, false)}</time>` : '<time>sem execução observada</time>'}</article>`).join('')}</div>
+      <div class="daily-purpose"><b>Por que existe daily?</b><span>Para registrar o que mudou, por que mudou e qual decisão nasceu. Tarefa, dono e prazo continuam no ClickUp.</span></div>
+    </section>
+
+    <section class="company-memory-flow">
+      <header><div><p class="micro">MÉTODO EM OPERAÇÃO</p><h2>Como a memória muda de estado</h2><p>As etapas mostram qualidade e proveniência; não são um funil de volume.</p></div></header>
+      <ol>${map.memory_flow.map((step) => `<li><span>${String(step.step).padStart(2, '0')}</span><strong>${escapeHtml(step.name)}</strong><small>${escapeHtml(step.meaning)}</small></li>`).join('')}</ol>
+    </section>
+  </div>`;
+}
+
 function renderAnatomy() {
   const anatomy = state.anatomy;
   if (!anatomy) {
     void loadAnatomy();
     return '<div class="loading"><i></i><span>Compilando a anatomia do estado real…</span></div>';
   }
+  if (state.brain.mode === 'company-map') return renderCompanyMap(anatomy);
   const memory = anatomy.memory;
   const observedSources = memory.sources.filter((source) => source.last_access || source.freshness_observed).length;
   const neverObserved = memory.sources.length - observedSources;
@@ -756,7 +854,7 @@ function renderAnatomy() {
     : 'Nenhuma melhoria provada';
   const recentDecisions = anatomy.identity.recent_decisions.map((decision) => `<li><time>${escapeHtml(decision.date)}</time><span>${escapeHtml(decision.title)}</span></li>`).join('');
 
-  return `<div class="brain-home">
+  return `${renderBrainModeSwitch()}<div class="brain-home">
     <section class="brain-north">
       <div class="brain-north-main">
         <p class="micro">NORTE DO CÉREBRO</p>
@@ -797,14 +895,18 @@ function renderAnatomy() {
 
 async function loadAnatomy() {
   try {
-    const [anatomy, brainGraph] = await Promise.all([
-      getJson('/api/anatomy'),
-      getJson('/api/graphs/brain').catch(() => null),
-    ]);
-    state.anatomy = anatomy;
-    state.brainGraph = brainGraph;
+    state.anatomy = await getJson('/api/anatomy');
+    if (state.brain.mode === 'anatomy') void loadBrainGraph();
     if (state.view === 'anatomy') render();
   } catch { /* a view mostra loading; refresh recarrega */ }
+}
+
+async function loadBrainGraph() {
+  if (state.brainGraph) return;
+  try {
+    state.brainGraph = await getJson('/api/graphs/brain');
+    if (state.view === 'anatomy' && state.brain.mode === 'anatomy') render();
+  } catch { /* Anatomia atual mantém o estado de mapa indisponível */ }
 }
 
 const DECISION_CATEGORIES = {
@@ -1707,7 +1809,7 @@ const renderers = { compatibility: renderCompatibility, today: renderToday, anat
 const titles = {
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
-  anatomy: ['Cérebro', 'O que a empresa sabe, como recupera contexto e onde precisa da tua atenção.'],
+  anatomy: ['Cérebro', 'O que a empresa sabe, de onde vem e como continua vivo.'],
   system: ['Sistema', 'Como este sistema pensa, executa, é julgado e aprende.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
@@ -2606,6 +2708,15 @@ function invalidateCasePreview() {
 }
 
 document.addEventListener('input', (event) => {
+  const brainSearch = event.target.closest('[data-brain-map-search]');
+  if (brainSearch) {
+    state.brain.query = brainSearch.value;
+    render();
+    const restored = $('[data-brain-map-search]');
+    restored?.focus();
+    restored?.setSelectionRange(state.brain.query.length, state.brain.query.length);
+    return;
+  }
   const systemSearch = event.target.closest('[data-system-search]');
   if (systemSearch) {
     state.systems.query = systemSearch.value;
@@ -2669,6 +2780,15 @@ document.addEventListener('click', (event) => {
   const systemCategory = event.target.closest('.system-filter[data-system-category]');
   if (systemCategory) {
     state.systems.category = systemCategory.dataset.systemCategory;
+    render();
+    return;
+  }
+  const brainMode = event.target.closest('[data-brain-mode]');
+  if (brainMode) {
+    state.brain.mode = brainMode.dataset.brainMode;
+    state.brain.query = '';
+    try { localStorage.setItem('cb-brain-mode', state.brain.mode); } catch { /* preferência local */ }
+    if (state.brain.mode === 'anatomy') void loadBrainGraph();
     render();
     return;
   }
