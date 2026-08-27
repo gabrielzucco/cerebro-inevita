@@ -766,6 +766,58 @@ function brainHouseRow(entry) {
   </li>`;
 }
 
+function retrievalStatusLabel(value) {
+  return ({ healthy: 'Operacional', active: 'Ativo', unknown: 'Sem diagnóstico', unavailable: 'Indisponível' })[value] || label(value);
+}
+
+function renderRetrievalHealth(health) {
+  const quality = health?.quality || { measured: false, percent: null };
+  const index = health?.index || {};
+  const operation = health?.operation || { decisions: {} };
+  const snapshots = health?.snapshots || {};
+  const provider = health?.provider || {};
+  const measured = quality.measured && Number.isFinite(quality.percent);
+  const qualityText = measured
+    ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(quality.percent)}%`
+    : 'Não medido';
+  const accepted = operation.decisions?.accepted || 0;
+  const abstained = operation.decisions?.insufficient_evidence || 0;
+  const unavailable = operation.decisions?.retrieval_unavailable || 0;
+  const providerLabel = provider.name || provider.provider_id || 'Provider não declarado';
+  const implementation = provider.implementation
+    ? `${provider.implementation}${provider.implementation_version ? ` ${provider.implementation_version}` : ''}`
+    : 'não observada';
+  const gate = quality.gate_passed === true ? 'gate aprovado' : quality.gate_passed === false ? 'gate reprovado' : 'gate não observado';
+  const scoreAttrs = measured ? `role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${quality.percent}"` : '';
+
+  return `<section class="brain-retrieval-health${measured ? '' : ' is-unmeasured'}" aria-labelledby="retrieval-health-title">
+    <div class="retrieval-quality-score" ${scoreAttrs}>
+      <div class="retrieval-quality-head"><p class="micro">SAÚDE DO CONTEXTO</p><span class="retrieval-live-state"><i class="${operation.current_status === 'healthy' ? 'observed' : ''}"></i>${escapeHtml(retrievalStatusLabel(operation.current_status))}</span></div>
+      <div class="retrieval-quality-value"><strong>${qualityText}</strong><div><h2 id="retrieval-health-title">Qualidade local da recuperação</h2><p>${measured ? `Hit@3 em ${brainCount(quality.cases)} casos auditados` : 'Ainda não existe benchmark auditado para esta instalação'}</p></div></div>
+      <div class="retrieval-quality-track" aria-hidden="true"><i style="width:${measured ? Math.max(0, Math.min(100, quality.percent)) : 0}%"></i></div>
+      <div class="retrieval-quality-proof"><span>${quality.false_positive_percent !== null && quality.false_positive_percent !== undefined ? `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(quality.false_positive_percent)}% falsos positivos` : 'falso positivo não medido'}</span><span>${escapeHtml(gate)}</span><span>${quality.measured_at ? `medido ${fmtDate(quality.measured_at, false)}` : 'sem data de medição'}</span></div>
+      <p class="retrieval-comparison-note">Benchmark local. Comparar empresas exige a mesma versão, conjunto de casos e política de corpus; isto ainda não é ranking da Society.</p>
+    </div>
+
+    <div class="retrieval-evidence-list" aria-label="Evidências da recuperação">
+      <article><p class="micro">ÍNDICE</p><strong>${index.documents === null || index.documents === undefined ? 'Não observado' : `${brainCount(index.documents)} documentos`}</strong><span>${index.orphans === null || index.orphans === undefined ? 'órfãos não medidos' : `${brainCount(index.orphans)} órfãos`} · ${index.updated_at ? `geração ${fmtDate(index.updated_at, false)}` : 'sem geração auditada'}</span></article>
+      <article><p class="micro">OPERAÇÃO REAL</p><strong>${brainCount(accepted)} recuperações aceitas</strong><span>${brainCount(abstained)} abstiveram por evidência insuficiente · ${brainCount(unavailable)} falharam no histórico</span></article>
+      <article><p class="micro">CONTEXT SNAPSHOTS</p><strong>${brainCount(snapshots.complete)}/${brainCount(snapshots.observed)} completos</strong><span>${brainCount(snapshots.gaps)} gaps · ${brainCount(snapshots.conflicts)} conflitos em ${brainCount(snapshots.runs)} Runs</span></article>
+    </div>
+
+    <details class="retrieval-operations">
+      <summary>Como este número foi provado</summary>
+      <dl>
+        <div><dt>Métrica</dt><dd>Hit@3 do último Source Index Receipt concluído</dd></div>
+        <div><dt>Provider</dt><dd>${escapeHtml(providerLabel)}${provider.version ? ` · v${escapeHtml(provider.version)}` : ''}</dd></div>
+        <div><dt>Motor</dt><dd>${escapeHtml(implementation)} · implementação atual e substituível</dd></div>
+        <div><dt>Circuito</dt><dd>${escapeHtml(operation.circuit || 'não observado')}${operation.last_success_at ? ` · sucesso ${fmtDate(operation.last_success_at, false)}` : ''}</dd></div>
+        <div><dt>Privacidade</dt><dd>Query, conteúdo, snippet e erro bruto não aparecem nesta vista</dd></div>
+      </dl>
+    </details>
+  </section>`;
+}
+
 function renderCompanyMap(anatomy) {
   const map = anatomy.company_map;
   if (!map) return `${renderBrainModeSwitch()}${empty('Mapa da empresa indisponível', 'Este Cérebro ainda não declarou casas reconhecíveis para esta leitura.')}`;
@@ -789,6 +841,7 @@ function renderCompanyMap(anatomy) {
   ].filter(Boolean);
 
   return `${renderBrainModeSwitch()}<div class="company-map-home">
+    ${renderRetrievalHealth(anatomy.retrieval_health)}
     <section class="company-map-search">
       <div><p class="micro">MAPA VIVO</p><h2>Encontre o que existe na empresa.</h2><p>Áreas, conhecimento, Fontes e rotinas — sem transformar o Cérebro em outro ClickUp.</p></div>
       <label><span>Buscar no mapa da empresa</span><input type="search" data-brain-map-search value="${escapeHtml(state.brain.query)}" placeholder="Ofertas, Ads, founders, decisões…" autocomplete="off"><small>Busca local nos nomes e áreas já mapeados. Não chama modelo.</small></label>

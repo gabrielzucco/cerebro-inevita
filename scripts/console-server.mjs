@@ -124,6 +124,115 @@ function countDir(root, relative) {
   try { return readdirSync(resolve(root, relative)).filter((name) => !name.startsWith('.')).length; } catch { return 0; }
 }
 
+function healthRunRecords(root) {
+  let lines = [];
+  try {
+    lines = readFileSync(resolve(root, '.cerebro/runtime/ledger/runs.jsonl'), 'utf8')
+      .split('\n').map((line) => line.trim()).filter(Boolean);
+  } catch { return []; }
+  const latest = new Map();
+  for (const line of lines) {
+    try {
+      const record = JSON.parse(line);
+      if (typeof record.run_id === 'string') latest.set(record.run_id, record);
+    } catch { /* linha inválida não pode fabricar saúde */ }
+  }
+  return [...latest.values()];
+}
+
+function oneDecimalPercent(value) {
+  return Number.isFinite(value) && value >= 0 && value <= 1
+    ? Math.round(value * 1000) / 10
+    : null;
+}
+
+export function retrievalHealthModel(root) {
+  const providers = listJsonDir(root, '.cerebro/contracts/providers');
+  const provider = providers.find((item) => item.status === 'active') || providers[0] || null;
+  const indexReceipts = listJsonDir(root, '.cerebro/runtime/receipts/indexing')
+    .filter((receipt) => receipt.status === 'completed' && receipt.benchmark)
+    .sort((left, right) => String(left.completed_at || left.started_at || '')
+      .localeCompare(String(right.completed_at || right.started_at || '')));
+  const currentIndex = indexReceipts.at(-1) || null;
+  let runtimeHealth = null;
+  try { runtimeHealth = JSON.parse(readFileSync(resolve(root, '.cerebro/runtime/retrieval/health.json'), 'utf8')); } catch { runtimeHealth = null; }
+
+  const retrievalReceipts = listJsonDir(root, '.cerebro/runtime/receipts/retrieval');
+  const decisions = { accepted: 0, insufficient_evidence: 0, retrieval_unavailable: 0 };
+  for (const receipt of retrievalReceipts) {
+    if (Object.hasOwn(decisions, receipt.decision)) decisions[receipt.decision] += 1;
+  }
+  const latencies = retrievalReceipts.map((receipt) => receipt.latency_ms)
+    .filter(Number.isFinite).sort((left, right) => left - right);
+  const lastRetrievalAt = retrievalReceipts
+    .map((receipt) => receipt.completed_at || receipt.started_at).filter(Boolean).sort().at(-1) || null;
+
+  const runs = healthRunRecords(root);
+  const snapshots = runs.filter((record) => record.protocol_version === 2 && record.context_snapshot);
+  const completeSnapshots = snapshots.filter((record) => ['accesses', 'gaps', 'conflicts']
+    .every((field) => Array.isArray(record.context_snapshot?.[field])));
+  const benchmark = currentIndex?.benchmark || null;
+  const qualityPercent = oneDecimalPercent(benchmark?.hit_at_3);
+  const falsePositivePercent = oneDecimalPercent(benchmark?.false_positive_rate);
+
+  return {
+    generated_at: new Date().toISOString(),
+    quality: {
+      measured: qualityPercent !== null && Number.isFinite(benchmark?.cases) && benchmark.cases > 0,
+      metric: 'hit_at_3',
+      percent: qualityPercent,
+      cases: Number.isFinite(benchmark?.cases) ? benchmark.cases : null,
+      false_positive_percent: falsePositivePercent,
+      gate_passed: typeof benchmark?.gate_passed === 'boolean' ? benchmark.gate_passed : null,
+      measured_at: currentIndex?.completed_at || null,
+      receipt_ref: currentIndex?.receipt_id ? `source-index-receipt:${currentIndex.receipt_id}` : null,
+    },
+    index: {
+      status: currentIndex?.status || 'unavailable',
+      documents: Number.isFinite(currentIndex?.document_count) ? currentIndex.document_count : null,
+      orphans: Array.isArray(currentIndex?.orphan_refs) ? currentIndex.orphan_refs.length : null,
+      updated_at: currentIndex?.completed_at || null,
+      provider_ref: currentIndex?.provider_ref || provider?.provider_id || null,
+    },
+    provider: {
+      provider_id: provider?.provider_id || currentIndex?.provider_ref || null,
+      name: provider?.name || null,
+      version: provider?.version || currentIndex?.provider_version || null,
+      status: provider?.status || null,
+      implementation: provider?.driver?.implementation || currentIndex?.driver?.implementation || null,
+      implementation_version: provider?.driver?.implementation_version || currentIndex?.driver?.implementation_version || null,
+      assurance: provider?.assurance || null,
+    },
+    operation: {
+      current_status: runtimeHealth?.status || (provider ? 'unknown' : 'unavailable'),
+      circuit: runtimeHealth?.circuit || null,
+      consecutive_failures: Number.isFinite(runtimeHealth?.consecutive_failures) ? runtimeHealth.consecutive_failures : null,
+      last_success_at: runtimeHealth?.last_success_at || null,
+      last_retrieval_at: lastRetrievalAt,
+      receipts: retrievalReceipts.length,
+      decisions,
+      median_latency_ms: latencies.length ? latencies[Math.floor(latencies.length / 2)] : null,
+    },
+    snapshots: {
+      runs: runs.length,
+      observed: snapshots.length,
+      complete: completeSnapshots.length,
+      gaps: snapshots.reduce((total, record) => total + (record.context_snapshot?.gaps?.length || 0), 0),
+      conflicts: snapshots.reduce((total, record) => total + (record.context_snapshot?.conflicts?.length || 0), 0),
+    },
+    privacy: {
+      content_exposed: false,
+      query_exposed: false,
+      raw_error_exposed: false,
+      local_only: provider?.privacy?.local_only !== false,
+    },
+    comparability: {
+      network_ready: false,
+      requires: ['benchmark_version', 'case_set', 'corpus_policy'],
+    },
+  };
+}
+
 const COMPANY_MAP_SPEC = [
   {
     id: 'business', name: 'Estratégia & negócio',
@@ -595,10 +704,12 @@ function anatomyModel(root) {
   const piiTask = roundTask('schema');
   const goldenTask = roundTask('golden') || roundTask('eval do c');
   const companyMap = companyMapModel(root, { model, sources, round, contextGaps });
+  const retrievalHealth = retrievalHealthModel(root);
 
   return {
     generated_at: new Date().toISOString(),
     company_map: companyMap,
+    retrieval_health: retrievalHealth,
     identity: {
       canonical: '01-nucleo-privado/_SISTEMAS.md',
       anchors,
