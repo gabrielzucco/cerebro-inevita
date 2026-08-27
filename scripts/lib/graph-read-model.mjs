@@ -76,7 +76,7 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
   const nodes = [];
   const edges = [];
   for (const area of model.areas) {
-    nodes.push(graphNode(`area:${area.area_ref}`, 'area', area.name, 'declared', {
+    nodes.push(graphNode(`area:${area.operating_area}`, 'area', area.name, 'declared', {
       system_count: area.system_refs.length,
       routine_count: area.routine_refs.length,
     }));
@@ -91,8 +91,8 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
         result: system.result,
         migration_stage: system.migration_stage,
       }));
-    edges.push(graphEdge(`edge:area:${system.area_ref}:${system.system_id}`,
-      `area:${system.area_ref}`, systemId, 'contains'));
+    edges.push(graphEdge(`edge:area:${system.operating_area}:${system.system_id}`,
+      `area:${system.operating_area}`, systemId, 'contains'));
     for (const source of system.source_refs.filter((item) => item.source_id)) {
       edges.push(graphEdge(`edge:source:${source.source_id}:${system.system_id}`,
         `source:${source.source_id}`, systemId, source.role));

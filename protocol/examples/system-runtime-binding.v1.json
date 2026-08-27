@@ -1,0 +1,25 @@
+{
+  "protocol_version": 1,
+  "binding_id": "system-runtime-next-best-gtm-local",
+  "system_ref": "next-best-gtm",
+  "kind": "local-system",
+  "host_ref": "host-owner-local",
+  "workspace_ref": "company-brain-local",
+  "workspace_path": "sistemas/next-best-gtm",
+  "interface": {
+    "role": "primary-web-ui",
+    "kind": "web-ui",
+    "url": "http://localhost:3300/",
+    "launch_mode": "external-browser",
+    "healthcheck": {
+      "method": "HEAD",
+      "timeout_ms": 800
+    }
+  },
+  "status": "installed",
+  "observed_at": "2026-08-27T16:00:00.000Z",
+  "privacy": {
+    "credential_stored": false,
+    "content_shared_with_inevita": false
+  }
+}

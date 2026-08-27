@@ -14,11 +14,14 @@ const CASES = readdirSync(availableRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory() && existsSync(join(availableRoot, entry.name, 'manifest.json')))
   .map((entry) => {
     const manifest = JSON.parse(readFileSync(join(availableRoot, entry.name, 'manifest.json'), 'utf8'));
+    const releasePath = join(availableRoot, entry.name, 'release.json');
+    const release = existsSync(releasePath) ? JSON.parse(readFileSync(releasePath, 'utf8')) : null;
     return {
       slug: entry.name,
       name: manifest.name || entry.name,
-      minimumBrain: manifest.release?.minimum_brain_version || '',
-      gated: manifest.validation?.access_mode === 'approved_participants',
+      minimumBrain: release?.compatibility.minimum_brain_version || manifest.release?.minimum_brain_version || '',
+      gated: release?.publication.access_mode === 'approved-participants' || manifest.validation?.access_mode === 'approved_participants',
+      hasRelease: Boolean(release),
       hasExperimento: existsSync(join(availableRoot, entry.name, 'experimento.template.md')),
       hasSkill: existsSync(join(availableRoot, entry.name, 'skill', 'SKILL.md')),
       hasRecibo: existsSync(join(availableRoot, entry.name, 'recibo-evals.template.md')),
@@ -42,7 +45,7 @@ function run(script, args, sandbox, expectFailure = false) {
 const MEMBER_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 const OTHER_MEMBER_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
-function testCase({ slug, name, minimumBrain, gated, hasExperimento, hasSkill, hasRecibo }) {
+function testCase({ slug, name, minimumBrain, gated, hasRelease, hasExperimento, hasSkill, hasRecibo }) {
   const sandbox = mkdtempSync(join(tmpdir(), 'cerebro-system-install-'));
   try {
     writeFileSync(join(sandbox, 'COMECE-AQUI.md'), '# teste\n');
@@ -80,6 +83,7 @@ function testCase({ slug, name, minimumBrain, gated, hasExperimento, hasSkill, h
     }
     if (readFileSync(feedback, 'utf8') !== 'FEEDBACK-PRIVADO\n') throw new Error('feedback foi sobrescrito');
     const expectedFiles = ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md', 'configuracao.md', 'capability.json'];
+    if (hasRelease) expectedFiles.push('release.json', 'contract.json');
     if (hasExperimento) expectedFiles.push('experimento.md');
     if (hasRecibo) expectedFiles.push('recibo-evals.template.md');
     for (const file of expectedFiles) {

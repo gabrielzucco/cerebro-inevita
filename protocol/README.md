@@ -24,6 +24,12 @@ conteúdo bruto.
   (`codex` ou `claude`) já autenticado pelo dono; nunca contém OAuth ou API key.
 - `collector-binding.schema.json`: binding privado para uma preparação determinística confiável
   (`python3` ou `node` por argv fechado) produzir um snapshot antes da interpretação do modelo.
+- `system-runtime-binding.schema.json`: binding privado entre um Sistema instalado e sua superfície
+  web local. O System Contract declara o papel da interface; este binding resolve host, workspace,
+  URL e healthcheck da instalação sem publicar credencial, conteúdo ou topologia privada.
+- `experience-manifest.schema.json`: personalidade publicada que o Cockpit pode projetar sem
+  incorporar o front-end do Sistema. Declara publisher, assinatura, marca mínima e superfícies;
+  nunca host, URL, workspace, dado da empresa, resultado, permissão ou julgamento.
 - `routine-run-receipt.schema.json`: recibo privado de cada tentativa, com status, reason code e
   referências de entrada/saída, mas sem prompt, output ou erro cru. Se o binding nem existe, o
   adapter fica honestamente `unresolved` e a execução é negada antes de ler o prompt.
@@ -90,6 +96,19 @@ Todo Sistema pode ter implementação própria. Para entrar no control plane, pr
 Sistema V2 também declara prioridade, seleção, frescor, conflito, fallback, parada, orçamento e
 proveniência da recuperação. Toda execução V2 deixa o Context Snapshot correspondente.
 
+## Release Manifest V1
+
+`release-manifest.schema.json` descreve a unidade distribuível sem repetir o Sistema. Ele declara
+versão, canal, compatibilidade mínima do Cérebro, referências para System Contract, Capability
+Contract e Experience Manifest opcional, além do estado de publicação, acesso, prova acumulada e
+fronteira de telemetria.
+
+O Release Manifest não pode conter resultado, Fonte, pipeline, permissão operacional, host, URL,
+workspace, credencial, marca ou design system. Essas verdades permanecem, respectivamente, no
+System Contract, Runtime Binding privado e Experience Manifest. `validated` exige publicação,
+acesso público e os gates quantitativos cumpridos; um release piloto nunca entra silenciosamente
+na prateleira validada.
+
 ## Brain Manifest V1 + diagnóstico de compatibilidade
 
 `.cerebro/manifest.json` identifica uma instalação compatível sem virar inventário paralelo. Ele
@@ -128,6 +147,7 @@ O plano sempre preserva o que já é canônico e mantém migração em
 | Routine Contract | V1 | — |
 | Executor Binding | V1 privado | — |
 | Collector Binding | V1 privado | — |
+| Experience Manifest | V1 publicado | — |
 | Routine Run Receipt | V1 privado | — |
 | Routine Migration Readback | V1 privado | — |
 | Judgment Receipt | V1 privado | — |
@@ -173,6 +193,8 @@ node scripts/protocol-validate.mjs receipt protocol/examples/access-receipt.v1.j
 node scripts/protocol-validate.mjs routine protocol/examples/routine-contract.v1.json
 node scripts/protocol-validate.mjs executor protocol/examples/executor-binding.v1.json
 node scripts/protocol-validate.mjs collector protocol/examples/collector-binding.v1.json
+node scripts/protocol-validate.mjs system-runtime protocol/examples/system-runtime-binding.v1.json
+node scripts/protocol-validate.mjs experience protocol/examples/experience-manifest.v1.json
 node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
 node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-migration.v1.json
 node scripts/protocol-validate.mjs judgment protocol/examples/judgment-receipt.v1.json

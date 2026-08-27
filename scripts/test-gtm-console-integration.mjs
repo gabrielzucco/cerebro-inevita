@@ -15,7 +15,8 @@ assert.deepEqual(validateSystemContract(contract), [], 'System Contract do GTM p
 assert.deepEqual(validateCapabilityContract(capability), [], 'Capability do GTM precisa ser válida');
 assert.equal(contract.protocol_version, 2);
 assert.equal(contract.version, '1.4.3');
-assert.equal(contract.extensions.interface_ref, 'http://localhost:3300/');
+assert.equal(contract.extensions.interface_role, 'primary-web-ui');
+assert.equal(contract.extensions.interface_ref, undefined, 'endereço local pertence ao Runtime Binding privado');
 assert.equal(contract.extensions.migration_stage, 'configured');
 assert.match(contract.extensions.next_gate, /primeiro Run.*ledger do Company Brain/i);
 assert.doesNotMatch(JSON.stringify(contract), /gbrain|supabase/i, 'contrato de recuperação não pode acoplar provider');
@@ -26,7 +27,9 @@ const gtm = model.systems.find((system) => system.contract_id === 'next-best-gtm
 assert(gtm, 'GTM precisa aparecer no catálogo local');
 assert.equal(gtm.name, 'GTM');
 assert.equal(gtm.contract_ref, 'sistemas/next-best-gtm/contract.json');
-assert.equal(gtm.interface_ref, 'http://localhost:3300/');
+assert.equal(gtm.interface_expected, true);
+assert.equal(gtm.interface_ref, null);
+assert.equal(gtm.runtime_binding_status, 'unbound');
 assert.equal(gtm.retrieval_status, 'declared');
 assert.equal(gtm.source_refs.filter((source) => source.required).length, 3);
 

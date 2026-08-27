@@ -27,6 +27,10 @@ import { validateExperimentContract, validateExperimentState } from './lib/exper
 import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
 import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
 import { validateRetrievalProviderContract } from './lib/retrieval-provider-protocol.mjs';
+import { validateSystemRuntimeBinding } from './lib/system-runtime-binding.mjs';
+import { validateExperienceManifest } from './lib/experience-manifest.mjs';
+import { validateSocietyPackageManifest } from './lib/society-catalog-read-model.mjs';
+import { validateReleaseManifest } from './lib/release-manifest.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -55,6 +59,9 @@ const required = [
   'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
   'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
   'protocol/retrieval-provider-contract.schema.json',
+  'protocol/system-runtime-binding.schema.json',
+  'protocol/experience-manifest.schema.json',
+  'protocol/release-manifest.schema.json',
   'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
   'protocol/examples/brain-manifest.v1.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
@@ -72,6 +79,8 @@ const required = [
   'protocol/examples/experiment-contract.v1.json', 'protocol/examples/experiment-state.v1.json',
   'protocol/examples/handoff-contract.v1.json', 'protocol/examples/handoff-receipt.v1.json',
   'protocol/examples/retrieval-provider-contract.v1.json',
+  'protocol/examples/system-runtime-binding.v1.json',
+  'protocol/examples/experience-manifest.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -86,6 +95,7 @@ const required = [
   'sistemas/next-best-gtm/manifest.md', 'sistemas/next-best-gtm/pipeline.md',
   'sistemas/next-best-gtm/evals.md', 'sistemas/next-best-gtm/changelog.md',
   'sistemas/next-best-gtm/capability.json', 'sistemas/next-best-gtm/contract.json',
+  'sistemas/next-best-gtm/experience.json',
   '.claude/skills/operar/SKILL.md',
   '.claude/skills/fonte/SKILL.md',
   '.claude/skills/arquiteto/SKILL.md',
@@ -120,6 +130,11 @@ const required = [
   'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
   'scripts/lib/handoff-protocol.mjs', 'scripts/lib/compatibility-diagnostic.mjs',
   'scripts/lib/retrieval-provider-protocol.mjs',
+  'scripts/lib/system-runtime-binding.mjs',
+  'scripts/lib/experience-manifest.mjs',
+  'scripts/lib/society-catalog-read-model.mjs',
+  'scripts/lib/release-manifest.mjs',
+  'scripts/lib/skill-read-model.mjs',
   'scripts/lib/json-schema-runtime.mjs', 'scripts/lib/replay-runtime.mjs',
   'scripts/compatibility-diagnostic.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
@@ -143,9 +158,14 @@ const required = [
   'scripts/test-console-server.mjs',
   'scripts/test-system-launcher-workspace.mjs',
   'scripts/test-system-workspace-dedup-v1.mjs',
+  'scripts/test-company-brain-skills-v1.mjs',
   'scripts/test-company-brain-product-cut-v1.mjs',
   'scripts/test-company-brain-launcher-hierarchy-v1.mjs',
   'scripts/test-company-brain-orientation-v1.mjs',
+  'scripts/test-company-brain-native-capabilities-v0.mjs',
+  'scripts/test-experience-manifest-v1.mjs',
+  'scripts/test-society-catalog-v0.mjs',
+  'scripts/test-release-manifest-v1.mjs',
   'scripts/test-gtm-console-integration.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
@@ -156,6 +176,8 @@ const required = [
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/release.json',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/contract.json',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/rotinas.md',
@@ -201,6 +223,12 @@ for (const [label, path, validate] of [
   ['example handoff contract v1', 'protocol/examples/handoff-contract.v1.json', validateHandoffContract],
   ['example handoff receipt v1', 'protocol/examples/handoff-receipt.v1.json', validateHandoffReceipt],
   ['example retrieval provider v1', 'protocol/examples/retrieval-provider-contract.v1.json', validateRetrievalProviderContract],
+  ['example system runtime binding v1', 'protocol/examples/system-runtime-binding.v1.json', validateSystemRuntimeBinding],
+  ['example experience manifest v1', 'protocol/examples/experience-manifest.v1.json', validateExperienceManifest],
+  ['GTM experience manifest', 'sistemas/next-best-gtm/experience.json', validateExperienceManifest],
+  ['Society briefing package manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json', validateSocietyPackageManifest],
+  ['Society briefing Release Manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/release.json', validateReleaseManifest],
+  ['Society briefing System Contract', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/contract.json', validateSystemContract],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -587,6 +615,7 @@ const layout = JSON.parse(readFileSync(join(ROOT, '.cerebro', 'layout.json'), 'u
 if (layout.version !== 3) errors.push('layout precisa estar no protocolo v3');
 for (const key of [
   'activationBrief', 'configuration', 'activationContract', 'systemContract', 'sourceContracts',
+  'experienceManifests',
   'accessGrants', 'accessReceipts', 'runLedger', 'learningRegister',
   'routineContracts', 'executorBindings', 'routineReceipts', 'routineState', 'routineOutputs',
   'routineJudgments',
@@ -668,4 +697,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 19 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 21 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

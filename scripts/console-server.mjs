@@ -15,7 +15,9 @@ import {
   resumeRoutine,
   runRoutine,
 } from './lib/routine-runtime.mjs';
-import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { buildConsoleReadModel, listConsoleSystems, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { buildSkillReadModel } from './lib/skill-read-model.mjs';
+import { buildSocietyCatalogReadModel } from './lib/society-catalog-read-model.mjs';
 import { latestRunRecords } from './lib/system-protocol.mjs';
 import { saveCanvasLayout } from './lib/canvas-layout-runtime.mjs';
 import {
@@ -43,6 +45,7 @@ import {
   readCorrectionComparison,
   rerunWithCorrection,
 } from './lib/correction-loop.mjs';
+import { systemInterfaceHealth } from './lib/system-interface-health.mjs';
 
 // Índice derivado do conhecimento: varre SOMENTE 01-nucleo-privado (fosso, baixo
 // risco), nunca 02-dados-terceiros. Reconstruível a cada chamada; não cria verdade.
@@ -304,7 +307,161 @@ function runIntegrity(record, retrievalReceipt) {
   };
 }
 
-export function brainControlCenterModel(root, { sources = [], retrievalHealth = null } = {}) {
+const NATIVE_CAPABILITY_SPEC = [
+  {
+    id: 'sources',
+    name: 'Conectar e observar Fontes',
+    promise: 'Fazer a realidade entrar sem tirar o dado da sua casa de verdade.',
+    skill_ids: ['fonte', 'revisar'],
+    action: { kind: 'brain-mode', ref: 'memory', label: 'Abrir memória' },
+    consumes: (contract) => Array.isArray(contract.sources) && contract.sources.length > 0,
+  },
+  {
+    id: 'memory',
+    name: 'Processar e destilar memória',
+    promise: 'Transformar material bruto em contexto aprovado que pode voltar a trabalhar.',
+    skill_ids: ['guardar', 'daily', 'reindex'],
+    action: { kind: 'brain-mode', ref: 'memory', label: 'Ver ciclo da memória' },
+    consumes: (contract) => Array.isArray(contract.sources) && contract.sources.length > 0,
+  },
+  {
+    id: 'retrieval',
+    name: 'Recuperar contexto',
+    promise: 'Selecionar evidência relevante, declarar gaps e se abster quando não há base.',
+    skill_ids: ['teste'],
+    action: { kind: 'brain-mode', ref: 'recovery', label: 'Ver recuperação' },
+    consumes: (contract) => Boolean(contract.retrieval),
+  },
+  {
+    id: 'structure',
+    name: 'Estruturar operações e Sistemas',
+    promise: 'Converter trabalho observado em contratos, pipelines, gates e resultados repetíveis.',
+    skill_ids: ['arquiteto', 'sistematizar'],
+    action: { kind: 'view', ref: 'systems', label: 'Abrir Sistemas' },
+    consumes: () => true,
+  },
+  {
+    id: 'evaluation',
+    name: 'Testar e avaliar',
+    promise: 'Comparar cada execução à régua declarada sem confundir output com resultado.',
+    skill_ids: ['teste', 'operar'],
+    action: { kind: 'brain-mode', ref: 'recovery', label: 'Inspecionar Runs' },
+    consumes: (contract) => Boolean(contract.eval),
+  },
+  {
+    id: 'learning',
+    name: 'Aprender com julgamento',
+    promise: 'Ligar martelo, correção, outcome e replay antes de promover uma mudança.',
+    skill_ids: ['operar'],
+    action: { kind: 'brain-mode', ref: 'learning', label: 'Ver aprendizado' },
+    consumes: (contract) => Boolean(contract.learning),
+  },
+];
+
+function capabilityState(condition, fallbackAvailable) {
+  if (condition) return 'operational';
+  return fallbackAvailable ? 'available' : 'declared';
+}
+
+export function nativeCapabilitiesModel({
+  skillCatalog = { skills: [] },
+  systemContracts = [],
+  sourceCounts = { total: 0, observed: 0 },
+  health = {},
+  runs = [],
+  judgments = [],
+  corrections = [],
+  candidates = [],
+} = {}) {
+  const skillsById = new Map((skillCatalog.skills || []).map((skill) => [skill.skill_id, skill]));
+  const quality = health.quality || { measured: false, percent: null, cases: 0 };
+  const provider = health.provider || {};
+  const evaluatedRuns = runs.filter((run) => run.eval_passed !== null && run.eval_passed !== undefined);
+  const runsWithOutcomes = runs.filter((run) => Number(run.outcomes) > 0);
+  const learningSignals = judgments.length + corrections.length + candidates.length + runsWithOutcomes.length;
+
+  return NATIVE_CAPABILITY_SPEC.map((spec, index) => {
+    const skills = spec.skill_ids.map((skillId) => skillsById.get(skillId)).filter(Boolean)
+      .map((skill) => ({
+        skill_id: skill.skill_id,
+        name: skill.name,
+        status: skill.installation_status,
+      }));
+    const skillAvailable = skills.some((skill) => skill.status === 'available');
+    const installedSkills = skills.filter((skill) => skill.status !== 'motor-only');
+    const motorSkills = skills.filter((skill) => skill.status === 'motor-only');
+    const consumers = systemContracts.filter(spec.consumes).map((contract) => ({
+      system_id: contract.system_id,
+      name: contract.name || contract.system_id,
+    }));
+    let state = 'declared';
+    let proof = { headline: 'Sem evidência observada', detail: 'A capacidade existe no método, mas ainda não deixou prova local.' };
+    let activeProvider = null;
+
+    if (spec.id === 'sources') {
+      state = capabilityState(sourceCounts.observed > 0, skillAvailable);
+      proof = {
+        headline: `${sourceCounts.observed}/${sourceCounts.total} Fontes observadas`,
+        detail: sourceCounts.observed
+          ? 'Acesso ou marcador de frescor existe para estas Fontes.'
+          : 'Contratos e Skills não provam que uma Fonte já foi observada.',
+      };
+    } else if (spec.id === 'memory') {
+      state = skillAvailable ? 'available' : 'declared';
+      proof = {
+        headline: `${installedSkills.length} instaladas · ${motorSkills.length} no motor`,
+        detail: 'Bruto, processado e destilado ainda não emitem recibos canônicos; disponibilidade não vira operação inventada.',
+      };
+    } else if (spec.id === 'retrieval') {
+      state = quality.measured ? 'measured'
+        : health.operation?.current_status === 'healthy' ? 'operational'
+          : provider.provider_id || provider.name ? 'available' : 'declared';
+      proof = quality.measured && Number.isFinite(quality.percent)
+        ? { headline: `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(quality.percent)}% Hit@3`, detail: `${quality.cases || 0} casos no último benchmark auditado.` }
+        : { headline: 'Benchmark não medido', detail: 'Provider disponível não é prova de qualidade de recuperação.' };
+      activeProvider = provider.provider_id || provider.name ? {
+        provider_id: provider.provider_id || null,
+        name: provider.name || provider.provider_id,
+        implementation: provider.implementation || null,
+        implementation_version: provider.implementation_version || null,
+        substitutable: true,
+      } : null;
+    } else if (spec.id === 'structure') {
+      state = capabilityState(systemContracts.length > 0, skillAvailable);
+      proof = {
+        headline: `${systemContracts.length} System Contracts`,
+        detail: systemContracts.length ? 'Resultados e fronteiras já possuem envelope constitucional.' : 'Nenhum Sistema formalizado nesta instalação.',
+      };
+    } else if (spec.id === 'evaluation') {
+      state = capabilityState(evaluatedRuns.length > 0, skillAvailable);
+      proof = {
+        headline: `${evaluatedRuns.length}/${runs.length} Runs avaliados`,
+        detail: evaluatedRuns.length ? 'Eval observado no ledger local; julgamento humano continua separado.' : 'Evals declarados sem execução observada.',
+      };
+    } else if (spec.id === 'learning') {
+      state = capabilityState(learningSignals > 0, skillAvailable);
+      proof = {
+        headline: `${judgments.length} julgamentos · ${candidates.length} candidatos`,
+        detail: `${corrections.length} correções e ${runsWithOutcomes.length} Runs com outcome; promoção continua humana e versionada.`,
+      };
+    }
+
+    return {
+      id: spec.id,
+      position: index + 1,
+      name: spec.name,
+      promise: spec.promise,
+      state,
+      proof,
+      skills,
+      provider: activeProvider,
+      systems: { count: consumers.length, items: consumers.slice(0, 4) },
+      action: spec.action,
+    };
+  });
+}
+
+export function brainControlCenterModel(root, { sources = [], retrievalHealth = null, systems = [] } = {}) {
   const health = retrievalHealth || retrievalHealthModel(root);
   const records = healthRunRecords(root);
   const systemContracts = listJsonDir(root, '.cerebro/contracts/systems');
@@ -404,9 +561,21 @@ export function brainControlCenterModel(root, { sources = [], retrievalHealth = 
     orphanJudgments + duplicateJudgments > 0 ? { code: 'judgment-reconciliation', count: orphanJudgments + duplicateJudgments } : null,
     !candidates.length ? { code: 'learning-candidates-empty', count: 0 } : null,
   ].filter(Boolean);
+  const skillCatalog = buildSkillReadModel(root, { systems });
+  const capabilities = nativeCapabilitiesModel({
+    skillCatalog,
+    systemContracts,
+    sourceCounts: { total: totalSources, observed: observedSources },
+    health,
+    runs,
+    judgments,
+    corrections,
+    candidates,
+  });
 
   return {
     generated_at: new Date().toISOString(),
+    capabilities,
     overview: {
       sources: { total: totalSources, observed: observedSources, unobserved: Math.max(0, totalSources - observedSources) },
       runs: { total: runs.length, ...integrityCounts },
@@ -943,7 +1112,7 @@ function anatomyModel(root) {
   const goldenTask = roundTask('golden') || roundTask('eval do c');
   const companyMap = companyMapModel(root, { model, sources, round, contextGaps });
   const retrievalHealth = retrievalHealthModel(root);
-  const controlCenter = brainControlCenterModel(root, { sources, retrievalHealth });
+  const controlCenter = brainControlCenterModel(root, { sources, retrievalHealth, systems: model.systems });
 
   return {
     generated_at: new Date().toISOString(),
@@ -1171,6 +1340,8 @@ export function createConsoleServer({
   clock = () => new Date(),
   sessionToken = opaqueToken(),
   csrfToken = opaqueToken(),
+  interfaceFetch = globalThis.fetch,
+  interfaceHealthTimeoutCeilingMs = 2000,
 } = {}) {
   const brainRoot = resolve(root || process.cwd());
   recognizeConsoleBrain(brainRoot);
@@ -1221,9 +1392,36 @@ export function createConsoleServer({
         send(response, 200, systemWorkspace(brainRoot, ref));
         return;
       }
+      if (request.method === 'GET' && url.pathname.startsWith('/api/systems/') && url.pathname.endsWith('/interface-health')) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const ref = decodeURIComponent(url.pathname.slice('/api/systems/'.length, -'/interface-health'.length));
+        if (!SAFE_REF_RE.test(ref)) throw new Error('not-found');
+        send(response, 200, await systemInterfaceHealth(brainRoot, ref, {
+          fetchImpl: interfaceFetch,
+          timeoutCeilingMs: interfaceHealthTimeoutCeilingMs,
+          clock,
+        }));
+        return;
+      }
       if (request.method === 'GET' && url.pathname === '/api/anatomy') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, anatomyModel(brainRoot));
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/skills') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const issues = [];
+        const systems = listConsoleSystems(brainRoot, { issues });
+        const catalog = buildSkillReadModel(brainRoot, { systems });
+        send(response, 200, { ...catalog, issues: [...issues, ...catalog.issues] });
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/society') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const issues = [];
+        const installedSystems = listConsoleSystems(brainRoot, { issues });
+        const catalog = buildSocietyCatalogReadModel(brainRoot, { installedSystems });
+        send(response, 200, { ...catalog, issues: [...issues, ...catalog.issues] });
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/runs') {

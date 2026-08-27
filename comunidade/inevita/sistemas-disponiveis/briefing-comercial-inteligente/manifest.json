@@ -36,6 +36,18 @@
     "writes_external_systems_automatically": false,
     "requires_source_by_source_consent": true
   },
+  "requirements": {
+    "real_event": "uma reunião real",
+    "source_roles": [
+      {
+        "role": "commercial-source",
+        "label": "Fonte comercial autorizada",
+        "required": true,
+        "examples": ["arquivo", "export manual"]
+      }
+    ],
+    "human_approval_before_external_write": true
+  },
   "telemetry": {
     "content": false,
     "allowed": [

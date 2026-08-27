@@ -126,6 +126,10 @@ function validateSystemShape(errors, value, version) {
     'correction_policy', 'promotion_threshold', 'requires_replay', 'requires_human_approval',
   ]);
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
+  if (object(value.extensions) && value.extensions.interface_role !== undefined
+    && !ID_RE.test(value.extensions.interface_role || '')) {
+    errors.push('extensions.interface_role inválido');
+  }
 }
 
 function validateRetrieval(errors, retrieval, sources) {

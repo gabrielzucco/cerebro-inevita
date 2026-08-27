@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/system-runtime-binding-v1.json",
+  "title": "INEVITA System Runtime Binding V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "binding_id", "system_ref", "kind", "host_ref",
+    "workspace_ref", "workspace_path", "interface", "status", "observed_at", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "binding_id": { "$ref": "#/$defs/ref" },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "kind": { "const": "local-system" },
+    "host_ref": { "$ref": "#/$defs/ref" },
+    "workspace_ref": { "$ref": "#/$defs/ref" },
+    "workspace_path": {
+      "oneOf": [
+        { "const": "." },
+        { "$ref": "#/$defs/local_ref" }
+      ]
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "kind", "url", "launch_mode", "healthcheck"],
+      "properties": {
+        "role": { "$ref": "#/$defs/id" },
+        "kind": { "const": "web-ui" },
+        "url": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "launch_mode": { "const": "external-browser" },
+        "healthcheck": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "timeout_ms"],
+          "properties": {
+            "method": { "const": "HEAD" },
+            "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 2000 }
+          }
+        }
+      }
+    },
+    "status": { "enum": ["installed", "missing", "degraded"] },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["credential_stored", "content_shared_with_inevita"],
+      "properties": {
+        "credential_stored": { "const": false },
+        "content_shared_with_inevita": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\.?/)(?!.*?/\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

@@ -18,14 +18,14 @@ const state = {
   selectedJudgment: null,
   selectedExperiment: null,
   busy: false,
-  areaFilter: (() => { try { return localStorage.getItem('cb-area') || ''; } catch { return ''; } })(),
+  operatingAreaFilter: (() => { try { return localStorage.getItem('cb-operating-area') || ''; } catch { return ''; } })(),
   runs: {
     data: null,
     filters: { system: '', mode: '', status: '', decision: '', snapshot: '' },
     sort: { key: 'when', dir: 'desc' },
     cmpA: '', cmpB: '',
   },
-  systems: { category: 'all', query: '' },
+  systems: { category: 'all', query: '', interfaceHealth: {} },
   brain: {
     mode: (() => {
       try {
@@ -36,6 +36,8 @@ const state = {
     query: '',
   },
   brainGraph: null,
+  skills: { origin: 'company', status: 'all', link: 'all', query: '', data: null, loading: false, error: null },
+  society: { filter: 'all', query: '', data: null, loading: false, error: null, selected: null },
   cases: { list: null, detail: null, form: null, preview: null, actor: '' },
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
@@ -101,7 +103,10 @@ const labels = {
   run: 'Execução', handoff: 'Handoff', model: 'Modelo', connector: 'Conector',
   replay: 'Replay', live: 'Ao vivo',
   'requested-not-verified': 'Solicitado, não verificado', 'provider-reported': 'Reportado pelo provider', verified: 'Verificado',
-  met: 'Atendido', partial: 'Parcial', missing: 'Ausente',
+  met: 'Atendido', partial: 'Parcial', missing: 'Ausente', installed: 'Instalado', degraded: 'Degradado',
+  available: 'Alinhada', 'motor-only': 'Só no motor', company: 'Da empresa', engine: 'Do motor',
+  'authentication-required': 'Login necessário', 'read-only': 'Somente leitura', 'workspace-write': 'Escrita no workspace',
+  'codex-cli': 'Codex CLI', 'claude-code': 'Claude Code',
   new: 'Começando do zero', 'organized-context': 'Contexto organizado',
   'human-capture': 'Captura humana',
   'partial-brain': 'Cérebro parcial', 'inevita-compatible': 'Compatível com INEVITA',
@@ -368,7 +373,9 @@ function wsMatrix(ws) {
     ['pipeline', 'Pipeline', `${ws.contract.pipeline.length} etapa(s) declaradas`, ws.contract.pipeline.length > 0, 'how'],
     ['routines', 'Rotinas', `${ws.routines.length} rotina(s) · ${receiptsTotal} recibo(s)`, receiptsTotal > 0, 'config'],
     ['skills', 'Skills', ws.contract.capability ? `capability ${ws.contract.capability.capability_id} v${ws.contract.capability.version}` : 'nenhuma declarada', false, 'how'],
-    ['interfaces', 'Interfaces', ws.system.interface_ref ? 'interface própria ligada' : 'nenhuma declarada', Boolean(ws.system.interface_ref), 'overview'],
+    ['interfaces', 'Interfaces', ws.system.runtime_binding
+      ? `${ws.system.runtime_binding.binding_id} · ${label(ws.system.runtime_binding.status)}`
+      : ws.system.interface_expected ? 'interface esperada · binding ausente' : 'sem interface própria', Boolean(ws.system.runtime_binding), 'overview'],
     ['gates', 'Gates', ws.contract.eval ? `${(ws.contract.eval.deterministic_gates || []).length} determinístico(s) · ${(ws.contract.eval.human_questions || []).length} pergunta(s) humanas` : 'não declarados', ws.judgments.length > 0, 'how'],
     ['evals', 'Evals', evalsTotal ? `${evalsPassed}/${evalsTotal} passaram em execuções reais` : 'nenhum eval observado', evalsTotal > 0, 'runs'],
     ['learning', 'Aprendizado', outcomes ? `${outcomes} run(s) com outcomes` : 'nenhum outcome registrado', outcomes > 0, 'learning'],
@@ -612,6 +619,7 @@ function wsLearning(ws) {
 
 function wsConfig(ws) {
   const interfaceUrl = safeSystemInterfaceUrl(ws.system.interface_ref);
+  const experience = ws.system.experience;
   return `<div class="ws-stack">
     ${ws.routines.length ? ws.routines.map((routine) => `<section class="organ"><header class="organ-head"><div><h3>${escapeHtml(routine.name)}</h3><p>declarado × observado</p></div></header>
       <dl class="ws-dl">
@@ -628,7 +636,11 @@ function wsConfig(ws) {
         <div><dt>Recuperação</dt><dd>v${escapeHtml(ws.contract.retrieval?.version || '—')}</dd></div>
         <div><dt>Eval</dt><dd>v${escapeHtml(ws.contract.eval?.version || '—')}</dd></div>
         <div><dt>Interface</dt><dd>${interfaceUrl ? `<a class="copy-ref" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(interfaceUrl)} ↗</a>` : 'nenhuma interface segura declarada'}</dd></div>
-        <div><dt>Manifest</dt><dd>${ws.system.source_manifest_ref ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(ws.system.source_manifest_ref)}">copiar caminho ⧉</button>` : '—'}</dd></div>
+        <div><dt>Experience Manifest</dt><dd>${experience ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(experience.manifest_ref)}">${escapeHtml(experience.experience_id)} ⧉</button> · v${experience.protocol_version} ${prov('declarado')}` : `não publicado ${prov('declarado')}`}</dd></div>
+        <div><dt>Publisher</dt><dd>${experience ? `${escapeHtml(experience.publisher.display_name)} · ${escapeHtml(publisherKindLabel(experience.publisher.kind))}` : '—'}</dd></div>
+        <div><dt>Superfície publicada</dt><dd>${experience ? `<code>${escapeHtml(experience.primary_surface.role)}</code> · ${escapeHtml(experience.primary_surface.launch_label)}` : '—'}</dd></div>
+        <div><dt>Runtime Binding</dt><dd>${ws.system.runtime_binding ? `<code>${escapeHtml(ws.system.runtime_binding.binding_id)}</code> · ${escapeHtml(label(ws.system.runtime_binding.status))} ${prov('observado')}` : `${ws.system.interface_expected ? 'não instalado' : 'não exigido'} ${prov('observado')}`}</dd></div>
+        <div><dt>Manifest do Sistema</dt><dd>${ws.system.source_manifest_ref ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(ws.system.source_manifest_ref)}">copiar caminho ⧉</button>` : '—'}</dd></div>
       </dl></section>
   </div>`;
 }
@@ -649,9 +661,11 @@ function renderSystemWorkspace() {
   return `<div class="ws">
     <div class="ws-top">
       <button class="action" data-view="systems">← Sistemas</button>
+      ${systemIdentity(ws.system, 'is-workspace')}
+      <span class="ws-experience"><b>${escapeHtml(ws.system.experience?.presentation?.tagline || ws.system.name)}</b><small>${ws.system.experience ? `Publicado por ${escapeHtml(ws.system.experience.publisher.display_name)}` : 'Identidade constitucional'}</small></span>
       ${badge(ws.system.migration_stage, ws.system.migration_stage === 'active' ? 'good' : 'neutral')}
       <span class="system-kind-mark" aria-hidden="true">● Sistema</span>
-      <span class="muted">${escapeHtml(label(ws.system.area_ref))} · v${escapeHtml(ws.system.version)} · ${ws.records.length} execuções · ${ws.judgments.filter((item) => item.judgment.status === 'pending').length} para julgar</span>
+      <span class="muted">${escapeHtml(operatingAreaName(ws.system.operating_area))} · ${escapeHtml(businessFunctionName(ws.system.business_function))} · v${escapeHtml(ws.system.version)} · ${ws.records.length} execuções · ${ws.judgments.filter((item) => item.judgment.status === 'pending').length} para julgar</span>
       <span class="canvas-spacer"></span>
       ${systemLaunchAction(ws.system)}
     </div>
@@ -721,9 +735,7 @@ function renderBrainGraphPreview(graph) {
   }).join('');
   const nodeMarkup = nodes.map((node) => {
     const position = positions.get(node.id);
-    const areaLabel = node.kind === 'area'
-      ? businessAreaLabel(node.id.replace(/^area:/, ''), node.label)
-      : node.label;
+    const areaLabel = node.label;
     const showLabel = ['area', 'system', 'source'].includes(node.kind);
     return `<g class="brain-preview-node brain-preview-node--${escapeHtml(node.kind)}${node.actual ? ' is-actual' : ''}" transform="translate(${position.x} ${position.y})">
       <title>${escapeHtml(areaLabel)} · ${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</title>
@@ -911,6 +923,69 @@ function careLabel(item) {
   })[item.code] || label(item.code);
 }
 
+function nativeCapabilityStateLabel(stateValue) {
+  return ({
+    declared: 'Declarada',
+    available: 'Disponível',
+    operational: 'Operacional',
+    measured: 'Medida',
+  })[stateValue] || label(stateValue);
+}
+
+function nativeCapabilityStateTone(stateValue) {
+  return ({
+    declared: 'neutral',
+    available: 'neutral',
+    operational: 'good',
+    measured: 'good',
+  })[stateValue] || 'neutral';
+}
+
+function nativeCapabilityAction(action) {
+  if (!action) return '';
+  const attribute = action.kind === 'view'
+    ? `data-view="${escapeHtml(action.ref)}"`
+    : `data-brain-mode="${escapeHtml(action.ref)}"`;
+  return `<button type="button" class="native-capability-action" ${attribute}>${escapeHtml(action.label)} →</button>`;
+}
+
+function renderNativeCapabilities(capabilities = []) {
+  if (!capabilities.length) return `<section class="native-capabilities">
+    <header><div><p class="micro">CAPACIDADES NATIVAS</p><h2>O que vem com o Cérebro</h2></div></header>
+    <p class="brain-clear-state">Nenhuma capacidade nativa foi projetada por esta instalação.</p>
+  </section>`;
+
+  return `<section class="native-capabilities" aria-labelledby="native-capabilities-title">
+    <header>
+      <div><p class="micro">CAPACIDADES NATIVAS</p><h2 id="native-capabilities-title">O que vem com o Cérebro</h2><p>Capacidade é permanente. Skill é o instrumento. Provider é substituível. Sistema consome essa base para executar trabalho próprio.</p></div>
+      <button type="button" class="action" data-view="skills">Ver Skills →</button>
+    </header>
+    <div class="native-capability-grid">${capabilities.map((capability) => {
+      const skillSummary = capability.skills.length
+        ? capability.skills.map((skill) => `<span class="native-capability-skill ${skill.status === 'available' ? '' : 'is-degraded'}" title="${escapeHtml(label(skill.status))}">${escapeHtml(skill.name || skill.skill_id)}${skill.status === 'motor-only' ? ' · motor' : ''}</span>`).join('')
+        : '<span class="native-capability-none">nenhuma instalada</span>';
+      const consumerSummary = capability.systems.count
+        ? `${brainCount(capability.systems.count)} ${capability.systems.count === 1 ? 'Sistema usa' : 'Sistemas usam'}`
+        : 'nenhum Sistema consome';
+      const providerSummary = capability.provider
+        ? `<div><dt>Provider atual</dt><dd><b>${escapeHtml(capability.provider.name || capability.provider.provider_id)}</b>${capability.provider.implementation ? ` · via ${escapeHtml(capability.provider.implementation)}` : ''} <small>· substituível</small></dd></div>`
+        : '';
+      return `<article class="native-capability-card state-${escapeHtml(capability.state)}">
+        <div class="native-capability-heading"><span>${String(capability.position).padStart(2, '0')}</span>${badge(capability.state, nativeCapabilityStateTone(capability.state), nativeCapabilityStateLabel(capability.state))}</div>
+        <h3>${escapeHtml(capability.name)}</h3>
+        <p>${escapeHtml(capability.promise)}</p>
+        <div class="native-capability-proof"><small>PROVA LOCAL</small><strong>${escapeHtml(capability.proof.headline)}</strong><span>${escapeHtml(capability.proof.detail)}</span></div>
+        <dl>
+          <div><dt>Skills</dt><dd class="native-capability-skills">${skillSummary}</dd></div>
+          <div><dt>Sistemas</dt><dd>${escapeHtml(consumerSummary)}</dd></div>
+          ${providerSummary}
+        </dl>
+        <footer>${nativeCapabilityAction(capability.action)}${capability.skills.length ? '<button type="button" data-view="skills">Inspecionar Skills</button>' : ''}</footer>
+      </article>`;
+    }).join('')}</div>
+  </section>`;
+}
+
 function renderBrainOverview(anatomy) {
   const center = anatomy.control_center;
   const overview = center.overview;
@@ -927,6 +1002,8 @@ function renderBrainOverview(anatomy) {
         <button type="button" class="action" data-brain-mode="recovery">Inspecionar Runs →</button>
       </div>
     </section>
+
+    ${renderNativeCapabilities(center.capabilities)}
 
     <section class="brain-fact-lines" aria-label="Leitura atual do Cérebro">
       <article><p class="micro">MEMÓRIA OBSERVADA</p><strong>${brainCount(sources.observed)} de ${brainCount(sources.total)} Fontes</strong><span>${sources.unobserved ? `${brainCount(sources.unobserved)} ainda não deixaram acesso ou marcador observado.` : 'Todas as Fontes declaradas deixaram observação.'}</span><button type="button" data-brain-mode="memory">Ver memória →</button></article>
@@ -1081,7 +1158,7 @@ function decisionCategory(category) {
 
 function renderToday() {
   const ids = [...state.model.today.needs_attention, ...state.model.today.ready_to_work, ...state.model.today.active];
-  const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean).filter((routine) => inActiveArea(systemAreaRef(routine.system_ref)));
+  const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean).filter((routine) => inActiveOperatingArea(systemOperatingArea(routine.system_ref)));
   const pending = visibleJudgments().filter((item) => item.judgment.status === 'pending');
   const queue = state.decisions;
   const decisionRows = queue?.available ? queue.open.map((item, index) => `<div class="decision-row" role="listitem">
@@ -1099,8 +1176,7 @@ function canvasRefOptions() {
   if (state.canvas.scope === 'system') {
     const byArea = new Map();
     for (const system of visibleSystems()) {
-      const area = state.model.areas.find((item) => item.area_ref === system.area_ref);
-      const areaName = businessAreaLabel(system.area_ref, area?.name || 'Sem área');
+      const areaName = operatingAreaName(system.operating_area);
       if (!byArea.has(areaName)) byArea.set(areaName, []);
       byArea.get(areaName).push(system);
     }
@@ -1241,7 +1317,7 @@ function renderJudgments() {
 }
 
 function renderAreas() {
-  return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(businessAreaLabel(area.area_ref, area.name))}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">RESPONSABILIDADE OPERACIONAL</p><h2>Áreas responsáveis</h2></div><p>Áreas declaram quem responde internamente. Funções empresariais classificam o trabalho no Launcher e na Society.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA RESPONSÁVEL</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área responsável declarada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
 }
 
 function systemOperational(system) {
@@ -1285,47 +1361,120 @@ function safeSystemInterfaceUrl(value) {
   if (!value) return null;
   try {
     const url = new URL(value);
-    const localHttp = url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname);
+    const localHttp = url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
     return url.protocol === 'https:' || localHttp ? url.href : null;
   } catch { return null; }
 }
 
-function systemLaunchAction(system, label_ = 'Abrir') {
-  const interfaceUrl = safeSystemInterfaceUrl(system.interface_ref);
-  if (!interfaceUrl) {
-    return `<button class="system-app-link" type="button" disabled title="Interface própria não declarada">${escapeHtml(label_)}</button>`;
+async function loadSystemInterfaceHealth(system) {
+  const id = system.system_id;
+  if (!id || state.systems.interfaceHealth[id]) return;
+  state.systems.interfaceHealth[id] = { status: 'checking' };
+  try {
+    state.systems.interfaceHealth[id] = await getJson(`/api/systems/${encodeURIComponent(id)}/interface-health`);
+  } catch {
+    state.systems.interfaceHealth[id] = { status: 'unavailable', reason_code: 'interface-healthcheck-failed' };
   }
-  return `<a class="system-app-link" data-system-launch="${escapeHtml(system.system_id)}" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label_)} ↗</a>`;
+  if (state.view === 'systems' || state.view === 'system') render();
 }
 
-const SYSTEM_CATEGORIES = [
-  { id: 'all', label: 'Todos' },
+function ensureSystemInterfaceHealth(system) {
+  if (!safeSystemInterfaceUrl(system?.interface_ref)) return;
+  void loadSystemInterfaceHealth(system);
+}
+
+function ensureVisibleSystemInterfaceHealth() {
+  if (state.view === 'systems') visibleSystems().forEach(ensureSystemInterfaceHealth);
+  if (state.view === 'system' && state.workspace?.data) ensureSystemInterfaceHealth(state.workspace.data.system);
+}
+
+function systemLaunchAction(system) {
+  const interfaceUrl = safeSystemInterfaceUrl(system.interface_ref);
+  if (!interfaceUrl) {
+    const invalid = Boolean(system.interface_ref);
+    const missing = Boolean(system.interface_expected);
+    return `<span class="system-interface-state ${invalid ? 'invalid' : 'missing'}" data-interface-health="${invalid ? 'invalid' : missing ? 'not-installed' : 'not-declared'}">${invalid ? 'Interface não suportada' : missing ? 'Aplicação não instalada' : 'Sem interface própria'}</span>`;
+  }
+  const health = state.systems.interfaceHealth[system.system_id];
+  if (!health || health.status === 'checking') {
+    return '<span class="system-interface-state checking" data-interface-health="checking"><i></i>Verificando aplicação…</span>';
+  }
+  if (health.status === 'unavailable') {
+    const reason = health.reason_code === 'interface-timeout' ? 'A aplicação não respondeu a tempo' : 'A aplicação não respondeu agora';
+    return `<span class="system-interface-state unavailable" data-interface-health="unavailable" title="${escapeHtml(reason)}">Aplicação indisponível</span>`;
+  }
+  if (health.status === 'not-installed') {
+    return '<span class="system-interface-state missing" data-interface-health="not-installed">Aplicação não instalada</span>';
+  }
+  if (!['available', 'not-checkable'].includes(health.status)) {
+    return '<span class="system-interface-state unavailable" data-interface-health="unavailable">Aplicação indisponível</span>';
+  }
+  const unverified = health.status === 'not-checkable';
+  const launchLabel = system.experience?.primary_surface?.launch_label || 'Abrir aplicação';
+  return `<a class="system-app-link${unverified ? ' is-unverified' : ' is-primary'}" data-interface-health="${escapeHtml(health.status)}" data-system-launch="${escapeHtml(system.system_id)}" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer"${unverified ? ' title="Disponibilidade não verificada pelo Cockpit"' : ''}>${escapeHtml(launchLabel)} <span aria-hidden="true">↗</span></a>`;
+}
+
+const FALLBACK_BUSINESS_FUNCTIONS = [
   { id: 'sales', label: 'Vendas' },
   { id: 'marketing', label: 'Marketing' },
   { id: 'product', label: 'Produto' },
   { id: 'operations', label: 'Operações' },
   { id: 'community', label: 'Comunidade' },
-  { id: 'data-tech', label: 'Dados & Tecnologia' },
+  { id: 'data-technology', label: 'Dados & Tecnologia' },
 ];
 
-function systemBusinessCategory(system) {
-  const ref = `${system.system_id} ${system.name}`.toLowerCase();
-  if (/comercial|vendas|atendimento|oferta/.test(ref)) return 'sales';
-  if (/conteúdo|conteudo|vsl|funil|aquisição|aquisicao/.test(ref)) return 'marketing';
-  if (/comunidade|society|onboarding/.test(ref)) return 'community';
-  if (/produto|ativação|ativacao/.test(ref)) return 'product';
-  if (/cérebro|cerebro|inteligência|inteligencia|context foundry|portfólio|portfolio/.test(ref)) return 'data-tech';
-  return 'operations';
+const FALLBACK_OPERATING_AREAS = new Map([
+  ['commercial', 'Comercial'],
+  ['operations-technology', 'Operações & Tecnologia'],
+  ['product-community', 'Produto & Comunidade'],
+]);
+
+function businessFunctions() {
+  const declared = state.model?.system_taxonomy?.business_functions;
+  return [{ id: 'all', label: 'Todos' }, ...(declared?.length ? declared : FALLBACK_BUSINESS_FUNCTIONS)];
 }
 
-function systemAccentSlot(system) {
-  const hash = [...system.system_id].reduce((total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0, 7);
-  return hash % 6;
+function businessFunctionName(value) {
+  return businessFunctions().find((item) => item.id === value)?.label || 'Não classificada';
+}
+
+function operatingAreaName(value) {
+  return state.model?.system_taxonomy?.operating_areas.find((item) => item.id === value)?.label
+    || state.model?.areas.find((item) => item.operating_area === value)?.name
+    || FALLBACK_OPERATING_AREAS.get(value)
+    || 'Geral';
+}
+
+function systemBusinessFunction(system) {
+  return system.business_function || 'unclassified';
 }
 
 function systemInitials(system) {
   const words = String(system.name || system.system_id).replace(/^Sistema de\s+/i, '').split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase();
+}
+
+function systemIdentity(system, modifier = '') {
+  const mark = system.experience?.presentation?.mark;
+  if (!mark || mark.kind !== 'monogram') {
+    return `<div class="system-identity${modifier ? ` ${modifier}` : ''}" aria-hidden="true"><span>${escapeHtml(systemInitials(system))}</span></div>`;
+  }
+  const accent = String(mark.accent || '#ECEBEA');
+  const red = Number.parseInt(accent.slice(1, 3), 16);
+  const green = Number.parseInt(accent.slice(3, 5), 16);
+  const blue = Number.parseInt(accent.slice(5, 7), 16);
+  const foreground = ((red * 299) + (green * 587) + (blue * 114)) / 1000 > 148 ? '#08090B' : '#FFFFFF';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44"><rect width="44" height="44" rx="8" fill="${accent}"/><text x="22" y="23" fill="${foreground}" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="750" text-anchor="middle" dominant-baseline="middle">${mark.text}</text></svg>`;
+  const source = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  return `<div class="system-identity is-published${modifier ? ` ${modifier}` : ''}"><img src="${escapeHtml(source)}" alt="Marca de ${escapeHtml(system.name)}"></div>`;
+}
+
+function systemPublisher(system) {
+  return system.experience?.publisher || null;
+}
+
+function publisherKindLabel(kind) {
+  return kind === 'organization' ? 'organização' : kind === 'person' ? 'pessoa' : label(kind);
 }
 
 function operationalOwnerLabel(value) {
@@ -1339,15 +1488,18 @@ function systemCard(system) {
   const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
   const operational = systemOperational(system);
   const preflight = systemPreflight(system);
-  const category = SYSTEM_CATEGORIES.find((item) => item.id === systemBusinessCategory(system));
-  return `<article class="system-launcher-card system-accent-${systemAccentSlot(system)}" data-kind="system" data-system-category="${escapeHtml(category.id)}">
+  const businessFunction = systemBusinessFunction(system);
+  const publisher = systemPublisher(system);
+  const tagline = system.experience?.presentation?.tagline || null;
+  return `<article class="system-launcher-card" data-kind="system" data-system-category="${escapeHtml(businessFunction)}">
     <div class="system-card-head">
-      <div class="system-identity" aria-hidden="true"><span>${escapeHtml(systemInitials(system))}</span></div>
-      <div class="system-card-title"><p class="micro">${escapeHtml(category.label)} · v${escapeHtml(system.version)}</p><h3>${escapeHtml(system.name)}</h3></div>
+      ${systemIdentity(system)}
+      <div class="system-card-title"><p class="micro">${escapeHtml(businessFunctionName(businessFunction))} · v${escapeHtml(system.version)}</p><h3>${escapeHtml(system.name)}</h3></div>
       ${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}
     </div>
+    ${tagline ? `<p class="system-tagline">${escapeHtml(tagline)}</p>` : ''}
     <p class="system-result">${escapeHtml(system.result)}</p>
-    <div class="system-owner"><span class="system-owner-avatar" aria-hidden="true">${escapeHtml(operationalOwnerLabel(system.operational_owner).slice(0, 1))}</span><span><small>Dono operacional</small><b>${escapeHtml(operationalOwnerLabel(system.operational_owner))}</b></span></div>
+    <div class="system-owner"><span class="system-owner-avatar" aria-hidden="true">${escapeHtml((publisher?.display_name || operationalOwnerLabel(system.operational_owner)).slice(0, 1))}</span><span><small>${publisher ? 'Publicado por' : 'Dono operacional'}</small><b>${escapeHtml(publisher?.display_name || operationalOwnerLabel(system.operational_owner))}</b></span></div>
     <div class="system-health" data-readiness="${preflight.status}">${badge(preflight.status, preflight.tone, preflight.label)}<span>${operational.pendingJudgments ? `${operational.pendingJudgments} para julgar` : 'Sem julgamento pendente'}</span></div>
     <div class="system-compact-stats">
       <span><b>${operational.lastRun ? fmtDate(operational.lastRun.completed_at, false) : 'Nunca'}</b><small>Último Run</small></span>
@@ -1366,18 +1518,156 @@ function renderSystems() {
   if (!available.length) return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div></div>${empty('Nenhum Sistema nesta área', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}`;
   const query = state.systems.query.trim().toLocaleLowerCase('pt-BR');
   const systems = available.filter((system) => {
-    const categoryMatch = state.systems.category === 'all' || systemBusinessCategory(system) === state.systems.category;
-    const searchMatch = !query || `${system.name} ${system.result} ${operationalOwnerLabel(system.operational_owner)}`.toLocaleLowerCase('pt-BR').includes(query);
+    const categoryMatch = state.systems.category === 'all' || systemBusinessFunction(system) === state.systems.category;
+    const searchMatch = !query || `${system.name} ${system.result} ${system.experience?.presentation?.tagline || ''} ${system.experience?.publisher?.display_name || ''} ${operationalOwnerLabel(system.operational_owner)}`.toLocaleLowerCase('pt-BR').includes(query);
     return categoryMatch && searchMatch;
   });
-  const categoryButtons = SYSTEM_CATEGORIES.map((category) => {
-    const count = category.id === 'all' ? available.length : available.filter((system) => systemBusinessCategory(system) === category.id).length;
+  const categoryButtons = businessFunctions().map((category) => {
+    const count = category.id === 'all' ? available.length : available.filter((system) => systemBusinessFunction(system) === category.id).length;
     return `<button type="button" class="system-filter${state.systems.category === category.id ? ' active' : ''}" data-system-category="${escapeHtml(category.id)}"${count ? '' : ' disabled'}>${escapeHtml(category.label)} <b>${count}</b></button>`;
   }).join('');
+  const scopeSummary = state.operatingAreaFilter
+    ? `${available.length} de ${state.model.systems.length} Sistemas na área ${operatingAreaName(state.operatingAreaFilter)}`
+    : `${available.length} Sistemas neste Cérebro`;
+  const visibleSummary = systems.length === available.length ? scopeSummary : `${systems.length} visíveis · ${scopeSummary}`;
+  const lifecycle = ['active', 'configured', 'mapped'].map((stage) => {
+    const count = available.filter((system) => system.migration_stage === stage).length;
+    const name = { active: 'ativos', configured: 'configurados', mapped: 'mapeados' }[stage];
+    return `${count} ${name}`;
+  }).join(' · ');
   return `<div class="section-heading"><div><p class="eyebrow">LAUNCHER</p><h2>Meus Sistemas</h2></div><p>Abrir entra na aplicação própria. Inspecionar mantém contratos, contexto, Runs e confiança no Cockpit.</p></div>
-    <div class="systems-launcher-toolbar"><label><span>Buscar Sistema</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome, resultado ou responsável" autocomplete="off"></label><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div>
-    <div class="systems-results"><span>${systems.length} de ${available.length} instalados neste Cérebro</span><small>Catálogo público e publisher entram na Society.</small></div>
+    <div class="systems-launcher-toolbar"><label><span>Buscar Sistema</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome, resultado, publisher ou responsável" autocomplete="off"></label><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div>
+    <div class="systems-results"><span>${escapeHtml(visibleSummary)}</span><small>${escapeHtml(lifecycle)} · identidade publicada pelo Experience Manifest; catálogo público entra na Society.</small></div>
     <div class="systems-market-grid">${systems.map(systemCard).join('') || empty('Nenhum Sistema encontrado', 'Limpe a busca ou escolha outra função empresarial.')}</div>`;
+}
+
+const SKILL_ACRONYMS = new Set(['ads', 'cub', 'gtm', 'icp', 'ui', 'ux', 'vsl']);
+const SKILL_LOWERCASE_WORDS = new Set(['a', 'as', 'com', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'para']);
+
+function skillTitle(value) {
+  return String(value || '').split('-').map((word, index) => (
+    SKILL_ACRONYMS.has(word) ? word.toUpperCase()
+      : index > 0 && SKILL_LOWERCASE_WORDS.has(word) ? word
+        : word.charAt(0).toUpperCase() + word.slice(1)
+  )).join(' ');
+}
+
+function skillOriginLabel(skill) {
+  if (skill.origins.length === 2) return 'Empresa + motor';
+  return skill.origins[0] === 'company' ? 'Da empresa' : 'Do motor';
+}
+
+function skillStatusBadge(skill) {
+  const status = skill.installation_status;
+  const copy = status === 'available' ? 'Alinhada nos runtimes'
+    : status === 'degraded' ? 'Precisa sincronizar'
+      : 'Não instalada aqui';
+  return badge(status, status === 'available' ? 'good' : status === 'degraded' ? 'warn' : 'neutral', copy);
+}
+
+function skillSystems(skill) {
+  return skill.system_refs.map((ref) => systemByRef(ref)).filter(Boolean);
+}
+
+function skillCard(skill) {
+  const systems = skillSystems(skill);
+  return `<article class="skill-card" data-skill-status="${escapeHtml(skill.installation_status)}">
+    <div class="skill-card-head"><div class="skill-mark" aria-hidden="true">/</div><div><p class="micro">${escapeHtml(skillOriginLabel(skill))}</p><h3>${escapeHtml(skillTitle(skill.name))}</h3></div>${skillStatusBadge(skill)}</div>
+    <code class="skill-id">/${escapeHtml(skill.skill_id)}</code>
+    <p class="skill-description">${escapeHtml(skill.description)}</p>
+    <div class="skill-system-links"><small>${systems.length ? `${systems.length} ${systems.length === 1 ? 'Sistema declara' : 'Sistemas declaram'}` : 'Sem vínculo contratual'}</small>${systems.slice(0, 3).map((system) => `<button type="button" data-open-system="${escapeHtml(system.system_id)}">${escapeHtml(system.name)}</button>`).join('')}</div>
+    <button type="button" class="skill-inspect" data-open-skill="${escapeHtml(skill.skill_id)}">Inspecionar capacidade</button>
+  </article>`;
+}
+
+function executorCard(executor) {
+  const ready = executor.auth_status === 'ready';
+  return `<article class="skill-executor">
+    <div><p class="micro">${escapeHtml(executor.binding_id)}</p><h3>${escapeHtml(label(executor.adapter))}</h3></div>
+    ${badge(executor.auth_status, ready ? 'good' : executor.auth_status === 'authentication-required' ? 'warn' : 'bad')}
+    <dl><div><dt>Modelo padrão</dt><dd><code>${escapeHtml(executor.default_model)}</code></dd></div><div><dt>Permissão</dt><dd>${escapeHtml(label(executor.permission_profile))}</dd></div><div><dt>Observado</dt><dd>${escapeHtml(fmtDate(executor.observed_at, false))}</dd></div></dl>
+  </article>`;
+}
+
+function renderSkills() {
+  const catalog = state.skills.data;
+  if (!catalog) {
+    if (state.skills.error) return empty('Catálogo de Skills indisponível', 'Atualize o Console para tentar recompilar as capacidades locais.');
+    if (!state.skills.loading) void loadSkills();
+    return '<div class="loading"><i></i><span>Compilando Skills e vínculos locais…</span></div>';
+  }
+  const all = catalog.skills || [];
+  const query = state.skills.query.trim().toLocaleLowerCase('pt-BR');
+  const visible = all.filter((skill) => {
+    const originMatch = state.skills.origin === 'all' || skill.origins.includes(state.skills.origin);
+    const statusMatch = state.skills.status === 'all' || skill.installation_status === state.skills.status;
+    const linked = skill.system_refs.length > 0;
+    const linkMatch = state.skills.link === 'all' || (state.skills.link === 'linked' ? linked : !linked);
+    const searchHaystack = `${skill.skill_id} ${skill.name} ${skill.description} ${skillSystems(skill).map((system) => system.name).join(' ')}`.toLocaleLowerCase('pt-BR');
+    return originMatch && statusMatch && linkMatch && (!query || searchHaystack.includes(query));
+  });
+  const counts = catalog.counts;
+  const originFilters = [
+    ['company', 'Nesta empresa', counts.company],
+    ['engine', 'No motor', counts.engine],
+    ['all', 'Todas', counts.unique],
+  ].map(([value, copy, count]) => `<button type="button" class="skill-filter${state.skills.origin === value ? ' active' : ''}" data-skill-origin="${value}">${copy} <b>${count}</b></button>`).join('');
+  const statusFilters = [
+    ['all', 'Qualquer estado'],
+    ['available', 'Alinhadas'],
+    ['degraded', 'A sincronizar'],
+    ['motor-only', 'Só no motor'],
+  ].map(([value, copy]) => `<button type="button" class="skill-filter${state.skills.status === value ? ' active' : ''}" data-skill-status-filter="${value}">${copy}</button>`).join('');
+  const linkFilters = [
+    ['all', 'Todos os vínculos'], ['linked', 'Ligadas a Sistemas'], ['unlinked', 'Sem vínculo'],
+  ].map(([value, copy]) => `<button type="button" class="skill-filter${state.skills.link === value ? ' active' : ''}" data-skill-link="${value}">${copy}</button>`).join('');
+  const scopeNote = state.operatingAreaFilter
+    ? `Skills atravessam áreas; o filtro ${operatingAreaName(state.operatingAreaFilter)} não esconde capacidades do Cérebro.`
+    : 'Skills pertencem ao Cérebro inteiro; Sistemas apenas declaram quais delas consomem.';
+  return `<div class="skills-hero">
+      <div><p class="eyebrow">CAPACIDADES INSTALADAS</p><h2>Skills</h2><p>Know-how executável que os Sistemas usam. Não são aplicações, não prometem resultado sozinhas e não viram produtos na Society.</p></div>
+      <div class="skills-kpis"><span><b>${counts.company}</b><small>nesta empresa</small></span><span><b>${counts.available}</b><small>alinhadas</small></span><span class="${counts.degraded ? 'attention' : ''}"><b>${counts.degraded}</b><small>a sincronizar</small></span><span><b>${counts.linked}</b><small>com vínculo explícito</small></span></div>
+    </div>
+    <div class="skills-boundary"><span>${counts.unique} capacidades únicas · ${counts.engine} publicadas no motor · ${counts.shared} compartilhada entre os catálogos</span><small>${escapeHtml(scopeNote)}</small></div>
+    <div class="skills-toolbar"><label><span>Buscar Skill</span><input type="search" data-skill-search value="${escapeHtml(state.skills.query)}" placeholder="Nome, tarefa ou Sistema" autocomplete="off"></label><div class="skill-filter-group" aria-label="Origem">${originFilters}</div><div class="skill-filter-group" aria-label="Saúde">${statusFilters}</div><div class="skill-filter-group" aria-label="Vínculo">${linkFilters}</div></div>
+    <div class="skills-results"><span>${visible.length} visíveis</span><small><code>.claude/skills</code> é fonte; <code>.agents/skills</code> é runtime derivado.</small></div>
+    <div class="skills-grid">${visible.map(skillCard).join('') || empty('Nenhuma Skill encontrada', 'Limpe a busca ou escolha outro filtro.')}</div>
+    <section class="skill-executors-section"><div class="section-heading"><div><p class="eyebrow">EXECUÇÃO RELACIONADA</p><h2>Modelos não são Skills</h2></div><p>Bindings dizem onde uma capacidade pode executar. O modelo é declarado pelo provider; não representa qualidade ou produto instalado.</p></div><div class="skill-executors">${catalog.executors.map(executorCard).join('') || empty('Nenhum executor ligado', 'Skills continuam catalogadas, mas não há binding local de modelo.')}</div><div class="boundary-note"><b>Fronteira local</b>O Cockpit mostra adapter, política e autenticação. Credenciais, corpo da Skill, prompt e output não entram neste read model.</div></section>`;
+}
+
+function openSkill(skillId) {
+  const skill = state.skills.data?.skills?.find((item) => item.skill_id === skillId);
+  if (!skill) return;
+  const systems = skillSystems(skill);
+  const companyRuntime = skill.company
+    ? skill.company.agent_runtime_present
+      ? skill.company.agent_runtime_aligned ? 'Alinhado à fonte canônica' : 'Divergente da fonte canônica'
+      : 'Runtime derivado ausente'
+    : 'Não instalada nesta empresa';
+  $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">SKILL</p><h2>${escapeHtml(skillTitle(skill.name))}</h2>${skillStatusBadge(skill)}</div>
+    <code class="skill-drawer-id">/${escapeHtml(skill.skill_id)}</code>
+    <div class="boundary-note"><b>Capacidade, não aplicativo</b>Esta Skill encapsula julgamento executável. O resultado, os gates e a personalidade continuam pertencendo ao Sistema que a usa.</div>
+    <section class="drawer-section"><h3>Quando usar</h3><p>${escapeHtml(skill.description)}</p></section>
+    <section class="drawer-section"><h3>Instalação</h3><dl><div><dt>Origem</dt><dd>${escapeHtml(skillOriginLabel(skill))}</dd></div><div><dt>Fonte da empresa</dt><dd>${skill.company ? `<code>${escapeHtml(skill.company.canonical_ref)}</code>` : 'Não instalada'}</dd></div><div><dt>Runtime de agentes</dt><dd>${escapeHtml(companyRuntime)}</dd></div><div><dt>Pacote do motor</dt><dd>${skill.engine ? `<code>${escapeHtml(skill.engine.canonical_ref)}</code>` : 'Não publicada no motor'}</dd></div></dl></section>
+    <section class="drawer-section"><h3>Sistemas que declaram · ${systems.length}</h3><div class="node-links">${systems.map((system) => entityLink('data-open-system', system.system_id, system.name, label(system.migration_stage), 'system')).join('') || '<p class="muted">Nenhum manifesto nomeia esta Skill. O Console não infere dependência pelo nome.</p>'}</div></section>
+    <div class="boundary-note"><b>Reference-only</b>O corpo privado da Skill não é enviado ao navegador. Este inspetor recebe apenas metadata, estado dos runtimes e referências explícitas.</div>`;
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+}
+
+async function loadSkills() {
+  if (state.skills.loading) return;
+  state.skills.loading = true;
+  state.skills.error = null;
+  try {
+    state.skills.data = await getJson('/api/skills');
+  } catch (error) {
+    state.skills.error = error.message;
+  } finally {
+    state.skills.loading = false;
+    if (state.view === 'skills') render();
+    if (typeof palette !== 'undefined' && palette.open) paletteRender();
+  }
 }
 
 function renderSources() {
@@ -1428,7 +1718,7 @@ function allCanvasExecutions() {
     mode: state.model.run_records?.find((record) => record.run_id === receipt.run_id)?.mode || null,
   }));
   const receivedRunIds = new Set(receipts.map((receipt) => receipt.run_id));
-  const standalone = (state.model.run_records || []).filter((record) => !receivedRunIds.has(record.run_id) && inActiveArea(systemAreaRef(record.system_ref))).map((record) => ({
+  const standalone = (state.model.run_records || []).filter((record) => !receivedRunIds.has(record.run_id) && inActiveOperatingArea(systemOperatingArea(record.system_ref))).map((record) => ({
     selector_ref: record.run_record_ref,
     run_id: record.run_id,
     label: `${label(record.system_ref)}${record.experiment_ref ? ` · ${record.experiment_ref}` : ''}`,
@@ -1472,7 +1762,7 @@ function runsEntries() {
       ...entry,
       system,
       system_name: system?.name || entry.system_ref,
-      area_ref: system?.area_ref || null,
+      operating_area: system?.operating_area || null,
       routine_name: routine?.name || entry.routine_ref,
       decision: runDecision(entry),
       when: entry.completed_at || entry.started_at || '',
@@ -1482,7 +1772,7 @@ function runsEntries() {
 
 function runsVisibleEntries() {
   const filters = state.runs.filters;
-  const list = runsEntries().filter((entry) => inActiveArea(entry.area_ref)
+  const list = runsEntries().filter((entry) => inActiveOperatingArea(entry.operating_area)
     && (!filters.system || entry.system?.system_id === filters.system || entry.system_ref === filters.system)
     && (!filters.mode || (entry.mode || 'none') === filters.mode)
     && (!filters.status || entry.status === filters.status)
@@ -1503,7 +1793,7 @@ function runsVisibleEntries() {
 
 function runsFilterBar(visible, total) {
   const filters = state.runs.filters;
-  const entries = runsEntries().filter((entry) => inActiveArea(entry.area_ref));
+  const entries = runsEntries().filter((entry) => inActiveOperatingArea(entry.operating_area));
   const options = (key, values, labelOf) => values.map((option) => `<option value="${escapeHtml(option)}"${filters[key] === option ? ' selected' : ''}>${escapeHtml(labelOf(option))}</option>`).join('');
   const distinct = (map) => [...new Set(entries.map(map).filter(Boolean))].sort();
   const systems = [...new Map(entries.filter((entry) => entry.system).map((entry) => [entry.system.system_id, entry.system_name])).entries()].sort((left, right) => left[1].localeCompare(right[1], 'pt-BR'));
@@ -1514,7 +1804,7 @@ function runsFilterBar(visible, total) {
     <label>Status <select data-runs-filter="status"><option value="">todos</option>${options('status', distinct((entry) => entry.status), label)}</select></label>
     <label>Decisão <select data-runs-filter="decision"><option value="">todas</option>${options('decision', [...distinct((entry) => entry.decision), ...(entries.some((entry) => !entry.decision) ? ['none'] : [])], (option) => option === 'none' ? 'sem decisão' : label(option))}</select></label>
     <label>Snapshot <select data-runs-filter="snapshot"><option value="">todos</option><option value="with"${filters.snapshot === 'with' ? ' selected' : ''}>com contexto</option><option value="without"${filters.snapshot === 'without' ? ' selected' : ''}>sem snapshot</option></select></label>
-    <span class="runs-count muted">${visible} de ${total} execuções${state.areaFilter ? ' · área ativa' : ''}</span>
+    <span class="runs-count muted">${visible} de ${total} execuções${state.operatingAreaFilter ? ` · ${escapeHtml(operatingAreaName(state.operatingAreaFilter))}` : ''}</span>
     ${active ? '<button type="button" class="table-action" data-runs-clear>limpar filtros</button>' : ''}
   </div>`;
 }
@@ -1609,7 +1899,7 @@ function renderRuns() {
     return '<div class="loading"><i></i><span>Unificando recibos e ledger de runs…</span></div>';
   }
   if (state.runs.data.error) return empty('Execuções indisponíveis', label(state.runs.data.error));
-  const total = runsEntries().filter((entry) => inActiveArea(entry.area_ref)).length;
+  const total = runsEntries().filter((entry) => inActiveOperatingArea(entry.operating_area)).length;
   const visible = runsVisibleEntries();
   const issues = (state.runs.data.issues || []).map((issue) => `<div class="experiment-gap">${escapeHtml(label(issue.reason_code))} · <code>${escapeHtml(issue.ref)}</code></div>`).join('');
   const sortMark = (key) => state.runs.sort.key === key ? `<b>${state.runs.sort.dir === 'asc' ? '↑' : '↓'}</b>` : '';
@@ -1660,7 +1950,115 @@ function renderHealth() {
 }
 
 function renderSociety() {
-  return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
+  const catalog = state.society.data;
+  if (!catalog) {
+    if (state.society.error) return empty('Society indisponível', 'O catálogo local não pôde ser compilado. Atualize o Cockpit para tentar novamente.');
+    if (!state.society.loading) void loadSociety();
+    return '<div class="loading"><i></i><span>Compilando o catálogo local da Society…</span></div>';
+  }
+  if (state.society.selected) {
+    const selected = catalog.systems.find((system) => system.system_id === state.society.selected);
+    if (selected) return renderSocietyDetail(selected);
+    state.society.selected = null;
+  }
+  return renderSocietyCatalog(catalog);
+}
+
+function societyStatus(system) {
+  if (system.availability === 'validated') return badge('validated', 'good', 'Validado na rede');
+  return badge('validation', 'warn', 'Em validação');
+}
+
+function societyPublisher(system) {
+  return system.experience?.publisher?.display_name || 'Publisher não publicado';
+}
+
+function societyValidationProgress(system) {
+  if (system.availability !== 'validation') return '';
+  const validation = system.validation;
+  return `<div class="society-proof-mini"><span><b>${validation.verified_real_cycles}/${validation.required_real_cycles}</b> ciclos reais</span><span><b>${validation.verified_distinct_member_brains}/${validation.required_distinct_member_brains}</b> Cérebros</span></div>`;
+}
+
+function societyCard(system) {
+  return `<article class="society-card">
+    <div class="society-card-top">${systemIdentity(system)}${societyStatus(system)}</div>
+    <div class="society-card-meta"><span>${escapeHtml(system.release.channel)}</span><code>v${escapeHtml(system.release.version)}</code></div>
+    <h3>${escapeHtml(system.name)}</h3>
+    <p>${escapeHtml(system.result)}</p>
+    <div class="society-publisher"><span aria-hidden="true">◎</span><div><small>Publicado por</small><b>${escapeHtml(societyPublisher(system))}</b></div></div>
+    ${societyValidationProgress(system)}
+    <button type="button" class="society-card-action" data-society-open="${escapeHtml(system.system_id)}">Ver ficha <span aria-hidden="true">→</span></button>
+  </article>`;
+}
+
+function renderSocietyCatalog(catalog) {
+  const query = state.society.query.trim().toLocaleLowerCase('pt-BR');
+  const visible = catalog.systems.filter((system) => {
+    const filterMatch = state.society.filter === 'all' || system.availability === state.society.filter;
+    const haystack = `${system.name} ${system.result} ${system.setpoint} ${societyPublisher(system)}`.toLocaleLowerCase('pt-BR');
+    return filterMatch && (!query || haystack.includes(query));
+  });
+  const filters = [
+    ['all', 'Todos', catalog.counts.visible],
+    ['validated', 'Validados', catalog.counts.validated],
+    ['validation', 'Em validação', catalog.counts.validation],
+  ].map(([value, copy, count]) => `<button type="button" class="society-filter${state.society.filter === value ? ' active' : ''}" data-society-filter="${value}">${copy} <b>${count}</b></button>`).join('');
+  return `<section class="society-catalog">
+    <header class="society-hero"><div><p class="eyebrow">CATÁLOGO LOCAL DA REDE</p><h2>Society</h2><p>Descubra Sistemas publicados pela rede, confira a prova e entenda o que eles exigem antes de instalar no seu Cérebro.</p></div><div class="society-counts"><span><b>${catalog.counts.validated}</b><small>validados</small></span><span><b>${catalog.counts.validation}</b><small>em validação</small></span></div></header>
+    <div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · versão · prova agregada</b><span>Permanece local</span><b>Fontes · contexto · outputs · decisões</b></div>
+    <div class="society-toolbar"><label><span>Buscar Sistema</span><input type="search" data-society-search value="${escapeHtml(state.society.query)}" placeholder="Resultado, nome ou publisher" autocomplete="off"></label><div class="society-filters" aria-label="Estado de publicação">${filters}</div></div>
+    <div class="society-results"><span>${visible.length} ${visible.length === 1 ? 'Sistema visível' : 'Sistemas visíveis'}</span><small>O catálogo é local; instalar nunca envia seu contexto para a Society.</small></div>
+    <div class="society-catalog-grid">${visible.map(societyCard).join('') || empty('Nenhum Sistema neste recorte', 'Altere a busca ou escolha outro estado de publicação.')}</div>
+  </section>`;
+}
+
+function societyRequirementList(system) {
+  const sources = system.requirements.source_roles.map((source) => `<li><span>Fonte</span><b>${escapeHtml(source.label)}</b><small>${source.required ? 'Obrigatória' : 'Opcional'} · ${source.examples.map(escapeHtml).join(' ou ')}</small></li>`).join('');
+  return `${sources}<li><span>Evento real</span><b>${escapeHtml(system.requirements.real_event)}</b><small>O primeiro valor precisa acontecer no trabalho real.</small></li><li><span>Company Brain</span><b>v${escapeHtml(system.release.minimum_brain_version)} ou superior</b><small>Compatibilidade mínima publicada pelo pacote.</small></li>`;
+}
+
+function societyInstallPanel(system) {
+  if (system.installation_status === 'installed') {
+    return `<div class="society-install-state is-installed"><span>Instalado neste Cérebro</span><b>O pacote está disponível pelo mesmo <code>system_id</code>.</b></div>`;
+  }
+  if (system.install_action === 'approval-required') {
+    return `<div class="society-install-state"><button type="button" disabled>Acesso por seleção</button><p>Este piloto ainda recruta participantes aprovados. A instalação pública só abre depois dos gates de validação.</p></div>`;
+  }
+  return `<div class="society-install-state"><button type="button" disabled>Instalação ainda não conectada</button><p>A ficha está pronta; a mutação de instalação continua fora deste V0.</p></div>`;
+}
+
+function renderSocietyDetail(system) {
+  const validation = system.validation;
+  const publisher = system.experience?.publisher;
+  return `<section class="society-detail">
+    <button type="button" class="society-back" data-society-back>← Voltar ao catálogo</button>
+    <header class="society-detail-hero"><div class="society-detail-identity">${systemIdentity(system, 'large')}<div><p class="micro">${escapeHtml(system.release.channel)} · v${escapeHtml(system.release.version)}</p><h2>${escapeHtml(system.name)}</h2><p>${escapeHtml(system.result)}</p></div></div><div class="society-detail-state">${societyStatus(system)}<span>${escapeHtml(system.installation_status === 'installed' ? 'Instalado neste Cérebro' : 'Não instalado')}</span></div></header>
+    <div class="society-detail-layout"><main>
+      <section class="society-detail-section"><p class="eyebrow">PROMESSA CONTRATADA</p><h3>O que muda no trabalho</h3><dl><div><dt>Resultado</dt><dd>${escapeHtml(system.result)}</dd></div><div><dt>Primeiro valor</dt><dd>${escapeHtml(system.first_value)}</dd></div><div><dt>Régua</dt><dd>${escapeHtml(system.setpoint)}</dd></div></dl></section>
+      <section class="society-detail-section"><p class="eyebrow">ANTES DE INSTALAR</p><h3>O que este Sistema precisa</h3><ul class="society-requirements">${societyRequirementList(system)}</ul></section>
+      <section class="society-detail-section"><p class="eyebrow">AUTORIDADE E PRIVACIDADE</p><h3>O que ele pode fazer</h3><div class="society-permissions"><span><i>${system.privacy.connects_sources_automatically ? '×' : '✓'}</i>Não conecta Fontes sozinho</span><span><i>${system.privacy.writes_external_systems_automatically ? '×' : '✓'}</i>Não escreve no CRM sozinho</span><span><i>${system.privacy.requires_source_by_source_consent ? '✓' : '×'}</i>Consentimento Fonte a Fonte</span><span><i>${system.requirements.human_approval_before_external_write ? '✓' : '×'}</i>Aprovação humana antes de escrever fora</span></div></section>
+    </main><aside>
+      ${societyInstallPanel(system)}
+      <section class="society-proof"><p class="eyebrow">PROVA DA REDE</p><h3>${system.availability === 'validated' ? 'Validação concluída' : 'Ainda em validação'}</h3><div><span><b>${validation.verified_real_cycles}</b><small>de ${validation.required_real_cycles} ciclos reais</small></span><span><b>${validation.verified_distinct_member_brains}</b><small>de ${validation.required_distinct_member_brains} Cérebros</small></span></div><ul><li class="${validation.requires_eval_pass ? '' : 'muted'}">Eval precisa passar</li><li class="${validation.requires_repeat_use ? '' : 'muted'}">Uso repetido é obrigatório</li><li class="${validation.requires_human_approval ? '' : 'muted'}">Julgamento humano é obrigatório</li></ul></section>
+      <section class="society-publisher-card"><p class="eyebrow">PUBLICAÇÃO</p><h3>${escapeHtml(publisher?.display_name || 'Publisher não publicado')}</h3><p>${publisher ? `Identidade declarada por ${escapeHtml(publisherKindLabel(publisher.kind))} no Experience Manifest.` : 'O pacote ainda não publicou um Experience Manifest. O Cockpit usa uma identidade neutra e não inventa autoria.'}</p><code>${escapeHtml(system.package_ref)}</code></section>
+    </aside></div>
+    <div class="boundary-note"><b>Catálogo ≠ Cérebro compartilhado</b>A Society distribui contratos, capacidade e atualizações. Seu contexto, outputs e julgamentos permanecem nesta empresa.</div>
+  </section>`;
+}
+
+async function loadSociety() {
+  if (state.society.loading) return;
+  state.society.loading = true;
+  state.society.error = null;
+  try {
+    state.society.data = await getJson('/api/society');
+  } catch (error) {
+    state.society.error = error.message;
+  } finally {
+    state.society.loading = false;
+    if (state.view === 'society') render();
+    if (typeof palette !== 'undefined' && palette.open) paletteRender();
+  }
 }
 
 /* --- Decision Case: o Console prepara o caso, o humano dá o martelo ---
@@ -1961,7 +2359,7 @@ async function rollbackCase() {
   }
 }
 
-const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, skills: renderSkills, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
@@ -1970,6 +2368,7 @@ const titles = {
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
+  skills: ['Skills', 'Capacidades executáveis disponíveis nesta empresa e no motor do Company Brain.'],
   sources: ['Fontes', 'Casas de verdade, autoridade, frescor e garantia de acesso.'],
   experiments: ['Experimentos', 'Hipótese, execução, medição, martelo e aprendizado ligados ao Sistema.'],
   routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
@@ -1984,7 +2383,7 @@ const titles = {
 // A que pergunta do operador cada view responde — vira o eyebrow da topbar.
 const viewGroups = {
   today: 'Operação', judgments: 'Operação', cases: 'Operação', routines: 'Operação', runs: 'Operação',
-  anatomy: 'Cérebro',
+  anatomy: 'Cérebro', skills: 'Cérebro',
   system: 'Sistemas', systems: 'Sistemas',
   canvas: 'Estrutura', areas: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
   compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
@@ -2001,44 +2400,36 @@ function systemByRef(ref) {
 function refMatchesSystem(ref, system) {
   return ref === system.system_id || ref === system.contract_id;
 }
-function systemAreaRef(systemId) {
-  return systemByRef(systemId)?.area_ref || null;
+function systemOperatingArea(systemId) {
+  return systemByRef(systemId)?.operating_area || null;
 }
-function inActiveArea(areaRef) {
-  return !state.areaFilter || areaRef === state.areaFilter;
+function inActiveOperatingArea(operatingArea) {
+  return !state.operatingAreaFilter || operatingArea === state.operatingAreaFilter;
 }
 function visibleSystems() {
-  return state.model.systems.filter((system) => inActiveArea(system.area_ref));
+  return state.model.systems.filter((system) => inActiveOperatingArea(system.operating_area));
 }
 function visibleSources() {
-  if (!state.areaFilter) return state.model.sources;
+  if (!state.operatingAreaFilter) return state.model.sources;
   const used = new Set(visibleSystems().flatMap((system) => system.source_refs.map((ref) => sourceRefId(ref))));
   return state.model.sources.filter((source) => used.has(source.source_id));
 }
 function visibleRoutines() {
-  return state.model.routines.filter((routine) => inActiveArea(systemAreaRef(routine.system_ref)));
+  return state.model.routines.filter((routine) => inActiveOperatingArea(systemOperatingArea(routine.system_ref)));
 }
 function visibleExperiments() {
-  return (state.model.experiments || []).filter((experiment) => inActiveArea(systemAreaRef(experiment.system_ref)));
+  return (state.model.experiments || []).filter((experiment) => inActiveOperatingArea(systemOperatingArea(experiment.system_ref)));
 }
 function visibleJudgments() {
-  return state.model.judgments.filter((item) => inActiveArea(systemAreaRef(item.system_ref)));
-}
-
-function businessAreaLabel(areaRef, fallback = 'Geral') {
-  return ({
-    crescimento: 'Comercial',
-    fundacao: 'Operações & Tecnologia',
-    'produto-comunidade': 'Produto & Comunidade',
-  })[areaRef] || fallback;
+  return state.model.judgments.filter((item) => inActiveOperatingArea(systemOperatingArea(item.system_ref)));
 }
 
 function renderAreaSwitcher() {
   const host = $('#area-switcher');
   if (!host || !state.model) return;
-  host.innerHTML = `<p class="nav-group">Área</p>
-    <button class="area-pill${state.areaFilter ? '' : ' active'}" data-area-filter=""><i></i>Toda a empresa</button>
-    ${state.model.areas.map((area) => `<button class="area-pill${state.areaFilter === area.area_ref ? ' active' : ''}" data-area-filter="${escapeHtml(area.area_ref)}"><i></i>${escapeHtml(businessAreaLabel(area.area_ref, area.name))}<b>${area.system_refs.length}</b></button>`).join('')}`;
+  host.innerHTML = `<p class="nav-group">Área responsável</p>
+    <button class="area-pill${state.operatingAreaFilter ? '' : ' active'}" data-operating-area-filter=""><i></i>Toda a empresa</button>
+    ${state.model.areas.map((area) => `<button class="area-pill${state.operatingAreaFilter === area.operating_area ? ' active' : ''}" data-operating-area-filter="${escapeHtml(area.operating_area)}"><i></i>${escapeHtml(area.name)}<b>${area.system_refs.length}</b></button>`).join('')}`;
 }
 
 // Views irmãs viram abas dentro da mesma superfície.
@@ -2047,7 +2438,7 @@ const tabGroups = [
   ['areas', 'sources', 'experiments'],
   ['compatibility', 'governance', 'health'],
 ];
-const tabCounts = { judgments: 'judgments', routines: 'routines', systems: 'systems', sources: 'sources', areas: 'areas', experiments: 'experiments' };
+const tabCounts = { judgments: 'judgments', routines: 'routines', systems: 'systems', skills: 'skills', sources: 'sources', areas: 'areas', experiments: 'experiments' };
 
 function tabstrip() {
   const group = tabGroups.find((views) => views.includes(state.view));
@@ -2069,7 +2460,7 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   renderAreaSwitcher();
-  const hidesSummary = ['canvas', 'system', 'systems'].includes(state.view) || state.view === 'anatomy';
+  const hidesSummary = ['canvas', 'system', 'systems', 'skills', 'society'].includes(state.view) || state.view === 'anatomy';
   $('#summary').innerHTML = hidesSummary ? '' : summaryCards();
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
@@ -2085,6 +2476,7 @@ function render() {
     const views = (element.dataset.views || element.dataset.view).split(',');
     element.classList.toggle('active', views.includes(state.view));
   });
+  ensureVisibleSystemInterfaceHealth();
   if (state.view === 'canvas') void mountCanvasView();
 }
 
@@ -2426,8 +2818,8 @@ async function mountCanvasView() {
     $('#canvas-list').innerHTML = canvasList(graph);
     const pendingFocus = state.canvas.pendingFocus;
     state.canvas.pendingFocus = null;
-    if (state.canvas.scope === 'brain' && !pendingFocus && state.areaFilter) {
-      const areaNode = graph.nodes.find((item) => item.kind === 'area' && (item.id === `area:${state.areaFilter}` || item.id.endsWith(state.areaFilter)));
+    if (state.canvas.scope === 'brain' && !pendingFocus && state.operatingAreaFilter) {
+      const areaNode = graph.nodes.find((item) => item.kind === 'area' && item.id === `area:${state.operatingAreaFilter}`);
       if (areaNode) state.canvas.pendingFocus = areaNode.id;
     }
     const areaPendingFocus = state.canvas.pendingFocus;
@@ -2849,6 +3241,11 @@ async function loadModel() {
   state.decisions = decisions;
   state.anatomy = null;
   state.brainGraph = null;
+  state.skills.data = null;
+  state.skills.error = null;
+  state.society.data = null;
+  state.society.error = null;
+  state.society.selected = null;
   state.runs.data = null;
   render();
 }
@@ -2880,6 +3277,24 @@ document.addEventListener('input', (event) => {
     const restored = $('[data-system-search]');
     restored?.focus();
     restored?.setSelectionRange(state.systems.query.length, state.systems.query.length);
+    return;
+  }
+  const skillSearch = event.target.closest('[data-skill-search]');
+  if (skillSearch) {
+    state.skills.query = skillSearch.value;
+    render();
+    const restored = $('[data-skill-search]');
+    restored?.focus();
+    restored?.setSelectionRange(state.skills.query.length, state.skills.query.length);
+    return;
+  }
+  const societySearch = event.target.closest('[data-society-search]');
+  if (societySearch) {
+    state.society.query = societySearch.value;
+    render();
+    const restored = $('[data-society-search]');
+    restored?.focus();
+    restored?.setSelectionRange(state.society.query.length, state.society.query.length);
     return;
   }
   const field = event.target.closest('[data-case-field]');
@@ -2939,6 +3354,19 @@ document.addEventListener('click', (event) => {
     render();
     return;
   }
+  const skillOrigin = event.target.closest('[data-skill-origin]');
+  if (skillOrigin) { state.skills.origin = skillOrigin.dataset.skillOrigin; render(); return; }
+  const skillStatus = event.target.closest('[data-skill-status-filter]');
+  if (skillStatus) { state.skills.status = skillStatus.dataset.skillStatusFilter; render(); return; }
+  const skillLink = event.target.closest('[data-skill-link]');
+  if (skillLink) { state.skills.link = skillLink.dataset.skillLink; render(); return; }
+  const skillOpen = event.target.closest('[data-open-skill]');
+  if (skillOpen) { openSkill(skillOpen.dataset.openSkill); return; }
+  const societyFilter = event.target.closest('[data-society-filter]');
+  if (societyFilter) { state.society.filter = societyFilter.dataset.societyFilter; render(); return; }
+  const societyOpen = event.target.closest('[data-society-open]');
+  if (societyOpen) { state.society.selected = societyOpen.dataset.societyOpen; render(); return; }
+  if (event.target.closest('[data-society-back]')) { state.society.selected = null; render(); return; }
   const brainMode = event.target.closest('[data-brain-mode]');
   if (brainMode) {
     state.brain.mode = brainMode.dataset.brainMode;
@@ -2952,12 +3380,12 @@ document.addEventListener('click', (event) => {
   if (brainRun) { openBrainRun(brainRun.dataset.openBrainRun); return; }
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
-  const areaPill = event.target.closest('[data-area-filter]');
+  const areaPill = event.target.closest('[data-operating-area-filter]');
   if (areaPill) {
     closeDrawer();
-    state.areaFilter = areaPill.dataset.areaFilter;
-    try { localStorage.setItem('cb-area', state.areaFilter); } catch { /* preferência local */ }
-    if (state.canvas.scope === 'system' && state.canvas.ref && !inActiveArea(systemAreaRef(state.canvas.ref))) state.canvas.ref = null;
+    state.operatingAreaFilter = areaPill.dataset.operatingAreaFilter;
+    try { localStorage.setItem('cb-operating-area', state.operatingAreaFilter); } catch { /* preferência local */ }
+    if (state.canvas.scope === 'system' && state.canvas.ref && !inActiveOperatingArea(systemOperatingArea(state.canvas.ref))) state.canvas.ref = null;
     if (state.canvas.scope === 'run') state.canvas.ref = null;
     state.canvas.positions = null;
     render();
@@ -3122,11 +3550,15 @@ document.addEventListener('change', (event) => {
 $('#close-drawer').addEventListener('click', closeDrawer);
 $('#drawer-backdrop').addEventListener('click', closeDrawer);
 $('#refresh').addEventListener('click', async () => {
-  try { await loadModel(); toast('Estado local recompilado.'); } catch (error) { toast(label(error.message), 'bad'); }
+  try {
+    state.systems.interfaceHealth = {};
+    await loadModel();
+    toast('Estado local recompilado.');
+  } catch (error) { toast(label(error.message), 'bad'); }
 });
 document.addEventListener('keydown', (event) => {
   if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement
-    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment], [role="button"][data-case-open], [role="button"][data-open-brain-run]')) {
+    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-skill], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment], [role="button"][data-case-open], [role="button"][data-open-brain-run], [role="button"][data-society-open]')) {
     event.preventDefault();
     event.target.click();
     return;
@@ -3163,6 +3595,10 @@ function paletteItems() {
       glyph: 'systems', title: system.name, hint: 'Sistema → Inspecionar operação',
       run: () => { closeDrawer(); openWorkspace(system.system_id); },
     }));
+    (state.skills.data?.skills || []).forEach((skill) => items.push({
+      glyph: 'skills', title: skillTitle(skill.name), hint: `Skill · ${skillOriginLabel(skill)}`,
+      run: () => { state.view = 'skills'; render(); openSkill(skill.skill_id); },
+    }));
     (model.experiments || []).forEach((experiment) => items.push({
       glyph: 'experiments', title: experiment.name, hint: experiment.experiment_id,
       run: () => { state.view = 'experiments'; render(); openExperiment(experiment.experiment_id); },
@@ -3182,6 +3618,7 @@ function paletteRender() {
 
 function openPalette() {
   palette.open = true; palette.query = ''; palette.index = 0;
+  if (!state.skills.data && !state.skills.loading) void loadSkills();
   $('#palette').hidden = false; $('#palette-backdrop').hidden = false;
   const input = $('#palette-input');
   input.value = '';

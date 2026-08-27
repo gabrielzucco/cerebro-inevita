@@ -9,8 +9,8 @@ const css = readFileSync(resolve(root, 'console/styles.css'), 'utf8');
 
 assert.match(
   app,
-  /\['canvas', 'system', 'systems'\]\.includes\(state\.view\)/,
-  'Launcher não deve repetir o resumo operacional de Hoje',
+  /\['canvas', 'system', 'systems', 'skills'\]\.includes\(state\.view\)/,
+  'Launcher e catálogo de capacidades não devem repetir o resumo operacional de Hoje',
 );
 assert.match(
   css,

@@ -15,12 +15,14 @@ import {
 import { decisionCaseIdFor } from './lib/decision-case.mjs';
 import { createConsoleServer } from './console-server.mjs';
 import { bootstrapLegacyConsole, previewLegacyConsoleBootstrap } from './console-bootstrap.mjs';
+import { saveSystemRuntimeBinding } from './lib/system-runtime-binding.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'company-brain-console-'));
 const legacyRoot = mkdtempSync(join(tmpdir(), 'company-brain-legacy-console-'));
 const externalRuntimeRoot = mkdtempSync(join(tmpdir(), 'company-brain-external-runtime-'));
 const calls = [];
 const collectorCalls = [];
+const interfaceCalls = [];
 
 function write(path, value) {
   mkdirSync(dirname(path), { recursive: true });
@@ -124,6 +126,7 @@ try {
     routineContracts: '.cerebro/contracts/routines',
     executorBindings: '.cerebro/runtime/executors',
     collectorBindings: '.cerebro/runtime/collectors',
+    systemRuntimeBindings: '.cerebro/runtime/system-bindings',
     routineReceipts: '.cerebro/runtime/receipts/routines',
     routineState: '.cerebro/runtime/routines',
     routineOutputs: '.cerebro/runtime/outputs/routines',
@@ -181,6 +184,7 @@ try {
       portfolio_name: 'Funil e Crescimento',
       migration_stage: 'active',
       human_maturity: 'instrumentado',
+      interface_role: 'primary-web-ui',
       source_manifest_ref: 'sistemas/funil.md',
       component_statuses: { pipeline: 'ativo', routines: 'ativo', evals: 'ativo' },
       next_gate: 'julgar o próximo run',
@@ -191,6 +195,12 @@ try {
     system_id: 'projetar-vendas',
     name: 'Projetar próxima ação comercial',
     extensions: { area_ref: 'vendas' },
+  });
+  saveSystemRuntimeBinding(root, {
+    ...example('system-runtime-binding.v1.json'),
+    binding_id: 'system-runtime-funil-local',
+    system_ref: 'funil-crescimento',
+    workspace_path: '.',
   });
 
   for (const [grantId, sourceRef] of [
@@ -242,6 +252,10 @@ try {
     sessionToken: 'fixed-session-token',
     csrfToken: 'fixed-csrf-token',
     clock: () => new Date('2026-08-24T11:29:00.000Z'),
+    interfaceFetch: async (url, options) => {
+      interfaceCalls.push({ url, options });
+      return { status: 204 };
+    },
     spawnCollector: (command, args) => {
       collectorCalls.push({ command, args });
       write(join(root, '.automacao', '_FUNIL-ULTIMO.json'), {
@@ -282,8 +296,31 @@ try {
   assert.equal(await requestWithHost(base, 'attacker.example'), 421, 'DNS rebinding host precisa ser negado');
   const cookie = page.cookie.split(';', 1)[0];
   assert.equal((await request(base, '/api/console')).status, 403);
+  assert.equal((await request(base, '/api/skills')).status, 403);
+  assert.equal((await request(base, '/api/society')).status, 403);
   const session = await request(base, '/api/session', { cookie });
   assert.equal(session.value.csrf_token, 'fixed-csrf-token');
+  const skillsCatalog = await request(base, '/api/skills', { cookie });
+  assert.equal(skillsCatalog.status, 200);
+  assert.equal(skillsCatalog.value.counts.company, 0);
+  assert.equal(skillsCatalog.value.counts.engine, 18);
+  assert.equal(skillsCatalog.value.privacy.skill_body_exposed, false);
+  const societyCatalog = await request(base, '/api/society', { cookie });
+  assert.equal(societyCatalog.status, 200);
+  assert.equal(societyCatalog.value.counts.validation, 1);
+  assert.equal(societyCatalog.value.counts.validated, 0);
+  assert.equal(societyCatalog.value.privacy.source_content_exposed, false);
+
+  assert.equal((await request(base, '/api/systems/funil-crescimento/interface-health')).status, 403);
+  const interfaceHealth = await request(base, '/api/systems/funil-crescimento/interface-health', { cookie });
+  assert.equal(interfaceHealth.status, 200);
+  assert.equal(interfaceHealth.value.status, 'available');
+  assert.equal(interfaceHealth.value.http_status, 204);
+  assert.equal(interfaceCalls.length, 1);
+  assert.equal(interfaceCalls[0].options.method, 'HEAD');
+  const missingInterface = await request(base, '/api/systems/projetar-vendas/interface-health', { cookie });
+  assert.equal(missingInterface.value.status, 'not-declared');
+  assert.equal(interfaceCalls.length, 1, 'interface ausente não pode produzir chamada de rede');
 
   assert.equal((await request(base, '/api/graphs/brain')).status, 403);
   const brainGraph = await request(base, '/api/graphs/brain', { cookie });
@@ -300,6 +337,8 @@ try {
   assert.equal(consoleView.value.counts.sources, 3);
   assert.equal(consoleView.value.counts.experiments, 1);
   assert.equal(consoleView.value.counts.routines, 2);
+  assert.equal(consoleView.value.counts.skills, 0);
+  assert.equal('skills' in consoleView.value, false, 'metadata de Skills deve carregar só na view dedicada');
   assert.equal(consoleView.value.counts.judgments, 0);
   assert.equal(consoleView.value.compatibility.target.classification, 'partial-brain');
   assert.equal(consoleView.value.compatibility.target.activation_stage, 'contracted');
@@ -311,6 +350,9 @@ try {
   assert.equal(mappedFunnel.contract_id, 'analisar-funil');
   assert.equal(mappedFunnel.migration_stage, 'active');
   assert.equal(mappedFunnel.source_manifest_ref, 'sistemas/funil.md');
+  assert.equal(mappedFunnel.interface_ref_source, 'runtime-binding');
+  assert.equal(mappedFunnel.runtime_binding_status, 'installed');
+  assert.equal(mappedFunnel.runtime_binding.binding_id, 'system-runtime-funil-local');
   const funnel = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(funnel.health_reason_code, 'legacy-schedule-not-paused');
   assert.equal(funnel.preparation.status, 'ready');

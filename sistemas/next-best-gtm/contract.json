@@ -170,7 +170,7 @@
     "migration_stage": "configured",
     "human_maturity": "operacional · integração constitucional pendente",
     "source_manifest_ref": "sistemas/next-best-gtm/manifest.md",
-    "interface_ref": "http://localhost:3300/",
+    "interface_role": "primary-web-ui",
     "area_ref": "crescimento",
     "component_statuses": {
       "pipeline": "repetivel",

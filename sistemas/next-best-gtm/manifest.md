@@ -7,7 +7,7 @@ version: 1.4.3
 status: configured
 owner: responsavel-crescimento
 result: uma próxima ação de crescimento explicável e julgável
-interface: http://localhost:3300/
+interface: primary-web-ui
 privacy: private-local
 ```
 
@@ -15,6 +15,8 @@ privacy: private-local
 
 O frontend, o motor e a fila privada continuam fora do Cockpit. O Company Brain conhece referências,
 contratos, prontidão, Runs e recibos; não copia contatos, recomendações ou conteúdo de conversa.
+O endereço da aplicação pertence ao System Runtime Binding privado da instalação, nunca a este
+manifesto publicável.
 
 O runtime real antecede o protocolo constitucional. Por isso o Sistema entra como configurado e só
 passa a ativo depois de um Run Record válido e um julgamento registrados no Company Brain.
