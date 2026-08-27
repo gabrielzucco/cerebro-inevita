@@ -12,13 +12,13 @@ existe no contrato, a interface usa um monograma neutro e não inventa marca.
 
 ## Acceptance criteria
 
-- [ ] Todos os cards compartilham a mesma superfície, borda, raio e comportamento de hover.
-- [ ] Nenhum card usa gradiente, filete lateral ou borda colorida por categoria.
-- [ ] Vendas, Marketing e demais funções aparecem apenas como metadado discreto.
-- [ ] O slot de identidade permanece pronto para receber imagem ou marca real, mas usa monograma
+- [x] Todos os cards compartilham a mesma superfície, borda, raio e comportamento de hover.
+- [x] Nenhum card usa gradiente, filete lateral ou borda colorida por categoria.
+- [x] Vendas, Marketing e demais funções aparecem apenas como metadado discreto.
+- [x] O slot de identidade permanece pronto para receber imagem ou marca real, mas usa monograma
       neutro enquanto o contrato não declara um asset.
-- [ ] `Abrir` e `Inspecionar` usam a mesma gramática constitucional; cor de categoria não vira CTA.
-- [ ] O Launcher preserva leitura compacta, foco visível e funcionamento em desktop e mobile.
+- [x] `Abrir` e `Inspecionar` usam a mesma gramática constitucional; cor de categoria não vira CTA.
+- [x] O Launcher preserva leitura compacta, foco visível e funcionamento em desktop e mobile.
 
 ## Fora deste corte
 
@@ -38,3 +38,7 @@ existe no contrato, a interface usa um monograma neutro e não inventa marca.
 - `node scripts/test-system-launcher-workspace.mjs`
 - `npm test`
 - QA visual no Company Brain real em `http://127.0.0.1:4782`, desktop e mobile.
+
+Resultado: testes estruturais e `npm test` verdes. QA real em 1440×1000 e 375×812 confirmou
+superfície e borda idênticas nos cards, categoria em texto neutro, ausência de filete/gradiente,
+filtro Marketing retornando os três Sistemas corretos, zero erro de console e zero overflow móvel.
