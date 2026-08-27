@@ -1809,7 +1809,8 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
   nav button { grid-template-columns: 18px; justify-content: center; min-height: 38px; font-size: 0; }
   nav button b { display: none; }
   .local-boundary { justify-content: center; }
-  .nav-hint { justify-content: center; }
+  .nav-hint, .collapse-nav { justify-content: center; }
+  .collapse-nav span:not(.nav-glyph), .collapse-nav kbd { display: none; }
   main { padding: var(--s4) var(--s4) var(--s6); }
   .topbar { display: block; }
   .top-actions { margin-top: var(--s3); }
