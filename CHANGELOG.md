@@ -1,5 +1,16 @@
 # Mudanças do cérebro INEVITA
 
+## v1.34.0 — 2026-08-27 · “toda instalação tem dono”
+
+- **Vínculo de acesso vira gate de ativação:** a skill `comecar` confirma
+  `.cerebro/install-credential` ou `.cerebro/acesso-email` antes do sprint. Quem veio pela
+  plataforma não sente nada (a credencial já resolve); quem clonou direto informa o e-mail do
+  acesso — sem vínculo, a ativação não acontece.
+- **Fim do “opcional, não bloqueia nada”:** o passo de oferecer e-mail depois do output saiu; o
+  `company-brain-sprint` não re-pergunta o que o gate já resolveu.
+- **Nada além do vínculo muda:** conteúdo, fontes e outputs continuam locais; o que sai da máquina
+  segue sendo o recibo de uso que o ping já enviava.
+
 ## v1.33.0 — 2026-08-24 · “instalação ganhou recibo próprio e identidade opaca”
 
 - **Ativação determinística:** `activate.mjs` cria ou reutiliza o `install_id`, registra o início
