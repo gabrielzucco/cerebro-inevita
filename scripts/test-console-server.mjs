@@ -275,6 +275,9 @@ try {
   assert.equal(page.status, 200);
   assert(page.value.includes('Company Brain'));
   assert(page.value.includes('data-view="compatibility"'));
+  const appBundle = await request(base, '/app.js');
+  assert.equal(appBundle.status, 200);
+  assert(appBundle.value.includes('TEMPO DO RUN'));
   assert.equal(calls.length, 0, 'abrir a UI não pode executar modelo');
   assert.equal(await requestWithHost(base, 'attacker.example'), 421, 'DNS rebinding host precisa ser negado');
   const cookie = page.cookie.split(';', 1)[0];
@@ -356,6 +359,9 @@ try {
   assert.equal(runGraph.value.graph_type, 'run');
   assert.equal(runGraph.value.trace_origin, 'recorded');
   assert(runGraph.value.trace_events > 0);
+  assert.equal(runGraph.value.trace_timing.assurance, 'event-derived');
+  assert.equal(runGraph.value.trace_timing.critical_path.some((stage) => stage.step_type === 'capability'), true);
+  assert.equal(runGraph.value.trace_timing.nested_stages.some((stage) => stage.step_type === 'model'), true);
   assert.equal(runGraph.value.nodes.find((node) => node.id === 'capability').state, 'completed');
   assert.equal(runGraph.value.nodes.some((node) => node.kind === 'stage'), false);
   assert(runGraph.value.nodes.some((node) => node.kind === 'artifact' && node.actual));

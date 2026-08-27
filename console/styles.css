@@ -1223,6 +1223,52 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
 .canvas-origin span { color: var(--run); font: 640 10px var(--font-mono); letter-spacing: .1em; }
 .canvas-origin b { color: var(--text-3); font: 480 10px var(--font-mono); }
 
+/* Waterfall compacto do Run: duração derivada do trace, nunca telemetria inventada. */
+.run-timing {
+  position: absolute; z-index: 5;
+  left: var(--s3); top: 58px;
+  width: min(350px, calc(100% - 340px));
+  padding: 12px;
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--r-lg);
+  background: var(--overlay);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-lift);
+}
+.run-timing[hidden] { display: none; }
+.run-timing-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); }
+.run-timing-head .micro { margin: 0 0 2px; color: var(--run); }
+.run-timing-head strong { color: var(--text); font: 650 var(--fs-title)/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.run-timing-head > span { color: var(--text-3); font: 500 10px var(--font-mono); }
+.run-timing-bars { display: grid; gap: 3px; margin-top: 10px; }
+.run-timing-row {
+  display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  width: 100%; min-height: 24px; padding: 2px 4px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--text-3);
+  text-align: left; cursor: pointer;
+}
+.run-timing-row:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+.run-timing-row > progress { width: 74px; height: 4px; overflow: hidden; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .06); accent-color: var(--run); }
+.run-timing-row > progress::-webkit-progress-bar { border-radius: 999px; background: rgba(255, 255, 255, .06); }
+.run-timing-row > progress::-webkit-progress-value { border-radius: 999px; background: rgba(78, 156, 245, .62); }
+.run-timing-row > progress::-moz-progress-bar { border-radius: 999px; background: rgba(78, 156, 245, .62); }
+.run-timing-row.dominant > progress { filter: drop-shadow(0 0 5px rgba(78, 156, 245, .7)); }
+.run-timing-row.dominant > progress::-webkit-progress-value { background: var(--run); }
+.run-timing-row.dominant > progress::-moz-progress-bar { background: var(--run); }
+.run-timing-row b { overflow: hidden; font: 540 10px var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.run-timing-row strong { color: var(--text-2); font: 590 10px var(--font-mono); font-variant-numeric: tabular-nums; }
+.run-timing-row:disabled { cursor: default; }
+.run-timing-model {
+  display: flex; justify-content: space-between; gap: var(--s2); width: 100%;
+  padding: 6px 4px 3px 86px; border: 0; background: transparent; color: var(--text-3);
+  font: 500 9px var(--font-mono); cursor: pointer;
+}
+.run-timing-model:hover { color: var(--text-2); }
+.run-timing-model b { overflow: hidden; max-width: 190px; color: var(--kind-skill); font-weight: 560; text-overflow: ellipsis; white-space: nowrap; }
+.run-timing-foot { display: flex; justify-content: space-between; gap: var(--s2); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--hairline); color: var(--text-3); font: 500 9px var(--font-mono); }
+.run-timing-foot b { color: var(--text-3); font-weight: 500; }
+.run-timing-limited { margin: 10px 0 0; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.45; }
+
 .canvas-legend {
   position: absolute; z-index: 4;
   left: var(--s3); bottom: var(--s3);
@@ -1564,6 +1610,7 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
   .compat-score { width: 88px; height: 88px; }
   .compat-guarantee { grid-column: auto; grid-template-columns: 1fr; }
   .canvas-toolbar { flex-wrap: wrap; justify-content: center; max-width: calc(100% - 24px); }
+  .run-timing { width: calc(100% - 24px); max-width: 350px; top: 106px; }
   .canvas-inspector { position: static; width: auto; margin-top: var(--s3); max-height: 260px; }
   .canvas-stage-shell { height: auto; min-height: 480px; }
   .canvas-graph-pane { position: relative; min-height: 480px; }

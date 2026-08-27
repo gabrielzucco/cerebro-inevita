@@ -554,6 +554,16 @@ export async function runRoutine(root, routineId, {
     let execution = { ok: false, reason_code: 'executor-failed' };
     let attempts = 0;
     let lastFailure = null;
+    tracer.emit({
+      stepId: 'model',
+      stepType: 'model',
+      state: 'running',
+      parentStepId: 'capability',
+      modelRef: contract.executor.requested_model,
+      assurance: 'requested-not-verified',
+      inputRefs: governedInputRefs,
+      extensions: { adapter: binding.adapter },
+    });
     for (let attempt = 1; attempt <= contract.operations.retry.max_attempts; attempt += 1) {
       attempts = attempt;
       execution = runModelExecutor(executorBinding, contract, prompt, {
@@ -581,6 +591,16 @@ export async function runRoutine(root, routineId, {
     }
 
     if (!execution.ok) {
+      tracer.emit({
+        stepId: 'model',
+        stepType: 'model',
+        state: 'failed',
+        parentStepId: 'capability',
+        modelRef: contract.executor.requested_model,
+        assurance: 'requested-not-verified',
+        reasonCode: execution.reason_code,
+        extensions: { adapter: binding.adapter, attempts },
+      });
       traceTerminal('failed', execution.reason_code);
       return { status: 'failed', receipt: lastFailure.value, receipt_ref: lastFailure.ref };
     }

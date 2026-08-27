@@ -452,8 +452,147 @@ function traceNodeId(event) {
   if (event.step_type === 'connector' && event.connector_ref) return `connector:${event.connector_ref}`;
   if (event.step_type === 'capability' || event.step_type === 'run') return 'capability';
   if (event.step_type === 'output') return 'output';
+  if (event.step_type === 'eval') return 'gate:1';
   if (event.step_type === 'judgment') return 'judgment';
   return null;
+}
+
+const TRACE_TERMINAL_STATES = new Set(['completed', 'failed', 'denied', 'skipped']);
+const TRACE_TIMED_TYPES = new Set(['collector', 'retrieval', 'capability', 'model', 'output', 'eval']);
+
+function traceTime(value) {
+  const parsed = Date.parse(value || '');
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function receiptDuration(startedAt, completedAt) {
+  const start = traceTime(startedAt);
+  const end = traceTime(completedAt);
+  return start !== null && end !== null && end >= start ? end - start : null;
+}
+
+// Read model derivado: timestamps já são verdade append-only do trace. Não grava
+// duração no ledger e não inventa tempo quando falta o par running → terminal.
+export function deriveTraceTiming(events, {
+  startedAt = null,
+  completedAt = null,
+  origin = 'recorded',
+} = {}) {
+  const ordered = [...events].sort((left, right) => left.sequence - right.sequence);
+  const runStart = ordered.find((event) => event.step_type === 'run' && event.state === 'running');
+  const runEnd = [...ordered].reverse().find((event) => event.step_type === 'run'
+    && TRACE_TERMINAL_STATES.has(event.state));
+  const totalDuration = receiptDuration(
+    runStart?.occurred_at || startedAt,
+    runEnd?.occurred_at || completedAt,
+  );
+  if (!ordered.length) return {
+    assurance: 'total-only',
+    total_duration_ms: totalDuration,
+    measured_duration_ms: 0,
+    unattributed_duration_ms: totalDuration,
+    coverage_ratio: 0,
+    dominant_step_id: null,
+    critical_path: [],
+    nested_stages: [],
+  };
+
+  const stages = [];
+  const paired = new Set();
+  for (const [index, event] of ordered.entries()) {
+    if (event.state !== 'running' || event.step_type === 'run' || !TRACE_TIMED_TYPES.has(event.step_type)) continue;
+    const nextStart = ordered.findIndex((candidate, candidateIndex) => candidateIndex > index
+      && candidate.step_id === event.step_id && candidate.step_type === event.step_type
+      && candidate.state === 'running');
+    const windowEnd = nextStart === -1 ? ordered.length : nextStart;
+    const terminal = ordered.slice(index + 1, windowEnd).filter((candidate) => candidate.step_id === event.step_id
+      && candidate.step_type === event.step_type && TRACE_TERMINAL_STATES.has(candidate.state)).at(-1);
+    const start = traceTime(event.occurred_at);
+    const end = traceTime(terminal?.occurred_at);
+    const duration = start !== null && end !== null && end >= start ? end - start : null;
+    paired.add(`${event.step_type}:${event.step_id}`);
+    stages.push({
+      step_id: event.step_id,
+      step_type: event.step_type,
+      state: terminal?.state || 'running',
+      started_at: event.occurred_at,
+      completed_at: terminal?.occurred_at || null,
+      duration_ms: duration,
+      measurement: duration === null ? 'open' : 'paired-events',
+      node_id: traceNodeId(terminal || event),
+      parent_step_id: event.parent_step_id,
+      started_sequence: event.sequence,
+    });
+  }
+  for (const event of ordered) {
+    const key = `${event.step_type}:${event.step_id}`;
+    if (paired.has(key) || event.step_type !== 'model') continue;
+    stages.push({
+      step_id: event.step_id,
+      step_type: event.step_type,
+      state: event.state,
+      started_at: null,
+      completed_at: event.occurred_at,
+      duration_ms: null,
+      measurement: 'completion-only',
+      node_id: traceNodeId(event),
+      parent_step_id: event.parent_step_id,
+      started_sequence: event.sequence,
+    });
+  }
+  const judgment = [...ordered].reverse().find((event) => event.step_type === 'judgment');
+  const criticalPath = stages.filter((stage) => stage.parent_step_id === 'run')
+    .sort((left, right) => left.started_sequence - right.started_sequence);
+  if (judgment) criticalPath.push({
+    step_id: judgment.step_id,
+    step_type: judgment.step_type,
+    state: judgment.state,
+    started_at: judgment.occurred_at,
+    completed_at: null,
+    duration_ms: null,
+    measurement: 'state-marker',
+    node_id: traceNodeId(judgment),
+    parent_step_id: judgment.parent_step_id,
+    started_sequence: judgment.sequence,
+  });
+  const measured = criticalPath.reduce((sum, stage) => sum + (stage.duration_ms || 0), 0);
+  const dominant = criticalPath.filter((stage) => stage.duration_ms !== null)
+    .sort((left, right) => right.duration_ms - left.duration_ms)[0] || null;
+  const clean = (stage) => {
+    const { started_sequence: _sequence, parent_step_id: _parent, ...publicStage } = stage;
+    return {
+      ...publicStage,
+      share_of_total: stage.duration_ms !== null && totalDuration > 0 ? stage.duration_ms / totalDuration : null,
+    };
+  };
+  return {
+    assurance: origin === 'recorded' ? 'event-derived' : 'reconstructed-events',
+    total_duration_ms: totalDuration,
+    measured_duration_ms: measured,
+    unattributed_duration_ms: totalDuration === null ? null : Math.max(0, totalDuration - measured),
+    coverage_ratio: totalDuration > 0 ? Math.min(1, measured / totalDuration) : measured === 0 ? 0 : 1,
+    dominant_step_id: dominant?.step_id || null,
+    critical_path: criticalPath.map(clean),
+    nested_stages: stages.filter((stage) => stage.parent_step_id !== 'run')
+      .sort((left, right) => left.started_sequence - right.started_sequence)
+      .map(clean),
+  };
+}
+
+function annotateTraceTiming(graph, timing) {
+  for (const stage of [...timing.critical_path, ...timing.nested_stages]) {
+    if (!stage.node_id) continue;
+    const node = graph.nodes.find((item) => item.id === stage.node_id);
+    if (!node) continue;
+    node.details = {
+      ...node.details,
+      timing_measurement: stage.measurement,
+      ...(stage.duration_ms === null ? {} : {
+        duration_ms: stage.duration_ms,
+        duration_share: stage.share_of_total,
+      }),
+    };
+  }
 }
 
 function runIdFromRef(ref) {
@@ -651,14 +790,26 @@ export function buildRunGraph(root, receiptId) {
         step_type: event.step_type,
         state: event.state,
         occurred_at: event.occurred_at,
+        elapsed_ms: Math.max(0, Date.parse(event.occurred_at) - Date.parse(events[0].occurred_at)),
         node_id: traceNodeId(event),
       }));
+    graph.trace_timing = deriveTraceTiming(events, {
+      startedAt: receipt.started_at,
+      completedAt: receipt.completed_at,
+      origin: graph.trace_origin,
+    });
     applyRecordedTrace(graph, events);
+    annotateTraceTiming(graph, graph.trace_timing);
   } else {
     graph.trace_origin = 'reconstructed';
     graph.trace_ref = null;
     graph.trace_events = 0;
     graph.trace_timeline = [];
+    graph.trace_timing = deriveTraceTiming([], {
+      startedAt: receipt.started_at,
+      completedAt: receipt.completed_at,
+      origin: 'reconstructed',
+    });
     applyReconstructedTrace(root, graph, receipt, record);
   }
   try {

@@ -269,6 +269,8 @@ try {
   const manualTrace = readExecutionTrace(root, manual.receipt.run_id);
   assert(manualTrace.every((event) => event.chain_id === 'chain-routine-test-001' && event.mode === 'replay'));
   assert.equal(manualTrace.find((event) => event.step_type === 'model')?.assurance, 'requested-not-verified');
+  assert.deepEqual(manualTrace.filter((event) => event.step_type === 'model').map((event) => event.state),
+    ['running', 'completed']);
   assert.equal(manualTrace.find((event) => event.step_type === 'connector')?.connector_ref, 'paid-media');
 
   assert.throws(() => activateRoutine(root, 'funil-diario-cerebro', manual.receipt_ref, 'role-marketing-owner', {

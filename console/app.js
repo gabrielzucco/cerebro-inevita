@@ -29,6 +29,15 @@ const fmtDate = (value, withTime = true) => value ? new Intl.DateTimeFormat('pt-
   dateStyle: 'short', ...(withTime ? { timeStyle: 'short' } : {}),
 }).format(new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value)) : '—';
 
+function fmtDuration(value) {
+  if (!Number.isFinite(value) || value < 0) return '—';
+  if (value < 1000) return `${Math.round(value)} ms`;
+  if (value < 60_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0).replace('.0', '')}s`;
+  const minutes = Math.floor(value / 60_000);
+  const seconds = Math.round((value % 60_000) / 1000);
+  return seconds === 60 ? `${minutes + 1}min` : `${minutes}min ${String(seconds).padStart(2, '0')}s`;
+}
+
 const labels = {
   active: 'Ativa',
   'ready-manual-run': 'Pronta para replay',
@@ -747,6 +756,33 @@ function systemCockpit(system) {
   </div>`;
 }
 
+const TIMING_LABELS = {
+  collector: 'Coleta', retrieval: 'Contexto', capability: 'Execução / modelo',
+  model: 'Modelo', output: 'Entrega', eval: 'Avaliação', judgment: 'Julgamento',
+};
+
+function runTimingPanel(graph) {
+  const timing = graph.trace_timing;
+  if (!timing) return '';
+  if (timing.assurance === 'total-only') return `<div class="run-timing-head"><div><p class="micro">TEMPO DO RUN</p><strong>${fmtDuration(timing.total_duration_ms)}</strong></div><span>total disponível</span></div><p class="run-timing-limited">Trace reconstruído: não existe granularidade suficiente para atribuir duração às etapas.</p>`;
+  const measured = timing.coverage_ratio > 0.999 ? '≈100' : String(Math.round((timing.coverage_ratio || 0) * 100));
+  const rows = timing.critical_path.map((stage) => {
+    const share = stage.duration_ms === null ? 0 : Math.max(0, (stage.share_of_total || 0) * 100);
+    const shareLabel = share < 0.1 ? share.toFixed(3) : share.toFixed(1);
+    const dominant = stage.step_id === timing.dominant_step_id;
+    return `<button type="button" class="run-timing-row${dominant ? ' dominant' : ''}" ${stage.node_id ? `data-canvas-inspect-node="${escapeHtml(stage.node_id)}"` : 'disabled'}>
+      <progress max="100" value="${share}" aria-label="${shareLabel}% do tempo total"></progress>
+      <b>${escapeHtml(TIMING_LABELS[stage.step_type] || label(stage.step_type))}</b>
+      <strong>${stage.duration_ms === null ? escapeHtml(label(stage.state)) : fmtDuration(stage.duration_ms)}</strong>
+    </button>`;
+  }).join('');
+  const model = timing.nested_stages.find((stage) => stage.step_type === 'model');
+  const modelNote = model
+    ? `<button type="button" class="run-timing-model" ${model.node_id ? `data-canvas-inspect-node="${escapeHtml(model.node_id)}"` : 'disabled'}><span>↳ Modelo</span><b>${model.duration_ms === null ? 'duração não separada neste trace' : fmtDuration(model.duration_ms)}</b></button>`
+    : '';
+  return `<div class="run-timing-head"><div><p class="micro">TEMPO DO RUN</p><strong>${fmtDuration(timing.total_duration_ms)}</strong></div><span>${measured}% medido pelo trace</span></div><div class="run-timing-bars">${rows}</div>${modelNote}<div class="run-timing-foot"><span>${timing.dominant_step_id ? `Gargalo: ${escapeHtml(TIMING_LABELS[timing.critical_path.find((stage) => stage.step_id === timing.dominant_step_id)?.step_type] || timing.dominant_step_id)}` : 'Sem etapa dominante'}</span><b>${fmtDuration(timing.unattributed_duration_ms)} entre etapas</b></div>`;
+}
+
 function renderCanvas() {
   const hasRef = state.canvas.scope !== 'brain';
   const areaTitle = state.canvas.scope === 'brain' ? 'Mapa da Empresa'
@@ -762,6 +798,7 @@ function renderCanvas() {
         <div class="canvas-area-title">${escapeHtml(areaTitle)}</div>
         <div id="operational-canvas" class="operational-canvas"><div class="loading"><i></i><span>Compilando grafo local…</span></div></div>
         <div id="canvas-origin" class="canvas-origin"></div>
+        <section id="run-timing" class="run-timing" hidden aria-label="Duração por etapa do Run"></section>
         <div class="canvas-legend" aria-label="Legenda de estados">
           <span class="declared"><i></i>Declarado</span><span class="running"><i></i>Executando</span><span class="completed"><i></i>Concluído</span><span class="gap"><i></i>Lacuna</span><span class="failed"><i></i>Falhou</span>
         </div>
@@ -1773,7 +1810,7 @@ function playTraceReplay() {
       element.classList.add('is-focused');
       previous = element;
     }
-    ticker.innerHTML = `<b>${index + 1}/${timeline.length}</b> ${escapeHtml(event.step_id)} · ${escapeHtml(label(event.state))}`;
+    ticker.innerHTML = `<b>${index + 1}/${timeline.length}</b> ${escapeHtml(event.step_id)} · ${escapeHtml(label(event.state))} · t+${fmtDuration(event.elapsed_ms)}`;
     index += 1;
     replay.timer = setTimeout(step, stepMs);
   };
@@ -1807,6 +1844,11 @@ async function mountCanvasView() {
     if (state.view !== 'canvas') return;
     state.canvas.graph = graph;
     state.canvas.positions = null;
+    const timingPanel = $('#run-timing');
+    if (timingPanel && graph.graph_type === 'run') {
+      timingPanel.innerHTML = runTimingPanel(graph);
+      timingPanel.hidden = false;
+    }
     $('#canvas-origin').innerHTML = graph.trace_origin
       ? `<span>${graph.run?.mode ? escapeHtml(label(graph.run.mode).toUpperCase()) : graph.trace_origin === 'recorded' ? 'TRACE V1' : 'TRACE RECONSTRUÍDO'}</span><b>${escapeHtml(graph.run?.chain_id ? `${graph.run.chain_id} · ${graph.trace_events} eventos` : graph.trace_origin === 'recorded' ? `${graph.trace_events} eventos` : 'granularidade limitada')}</b>`
       : `<span>CONTRATO</span><b>${graph.nodes.length} nós · ${graph.edges.length} arestas</b>`;
