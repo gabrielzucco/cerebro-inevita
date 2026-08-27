@@ -38,6 +38,18 @@ Canvas completo como exploração lazy.
 
 Evidência: captura desktop da tela `Cérebro` emitida na sessão antes da correção.
 
+## FINDING-003 — Barra nativa compete com os filtros no mobile
+
+Impacto: polimento
+Status: aberto
+
+Eu noto que a lista horizontal de funções empresariais mostra uma barra cinza grossa logo abaixo
+dos filtros em 375×812. O gesto de rolagem é útil; o cromo nativo é que parece uma falha visual.
+
+Correção: manter a rolagem horizontal por toque e teclado, escondendo somente a barra decorativa.
+
+Evidência: captura mobile da tela `Sistemas` emitida na sessão antes da correção.
+
 ## Quick wins incorporados
 
 - Remover o resumo de `Hoje` da página Cérebro.
@@ -54,4 +66,3 @@ Evidência: captura desktop da tela `Cérebro` emitida na sessão antes da corre
 - Cards são necessários: sim no Launcher; excessivos no Cérebro.
 - Movimento melhora a hierarquia: não se aplica nestas views.
 - O design sobreviveria sem sombras decorativas: sim.
-

@@ -529,6 +529,8 @@ th[data-runs-sort] b { margin-left: 3px; color: var(--text); }
 .systems-launcher-toolbar input { min-height: 38px; padding: 0 var(--s3); color: var(--text); border: 1px solid var(--hairline); border-radius: var(--r-md); outline: 0; background: var(--surface); font: 500 var(--fs-meta) var(--font-sans); text-transform: none; letter-spacing: 0; }
 .systems-launcher-toolbar input:focus { border-color: var(--hairline-2); box-shadow: 0 0 0 3px rgba(255, 255, 255, .045); }
 .systems-filter-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s1); }
+.systems-filter-row { scrollbar-width: none; }
+.systems-filter-row::-webkit-scrollbar { display: none; }
 .system-filter { min-height: 34px; padding: 0 10px; color: var(--text-3); border: 1px solid var(--hairline); border-radius: 999px; background: transparent; font: 520 var(--fs-micro) var(--font-sans); cursor: pointer; }
 .system-filter b { margin-left: 4px; color: var(--text-3); font: 560 10px var(--font-mono); }
 .system-filter:hover:not(:disabled) { color: var(--text); border-color: var(--hairline-2); background: rgba(255, 255, 255, .035); }
