@@ -247,6 +247,31 @@ try {
     credential_ref: null,
     receipts: { use_refs: [], revocation_ref: null },
   });
+  registerAccessGrant(root, {
+    protocol_version: 1,
+    grant_id: 'grant-funnel-local-policy',
+    subject: { type: 'system', ref: 'analisar-funil' },
+    scope: {
+      company_ref: 'company-local', unit_ref: 'marketing',
+      system_refs: ['analisar-funil'], source_refs: ['paid-media'], actions: ['read-policy'],
+    },
+    mode: 'read',
+    assurance: 'receipt-audited',
+    custody: 'agent-direct',
+    reason: 'provar que múltiplos grants da mesma Fonte não duplicam input_refs',
+    issued_at: '2026-08-23T00:00:00.000Z',
+    expires_at: null,
+    revoked_at: null,
+    approved_by: 'role-marketing-owner',
+    credential_ref: null,
+    receipts: { use_refs: [], revocation_ref: null },
+  });
+  routineExample.context.access_requests.push({
+    grant_ref: 'grant-funnel-local-policy',
+    source_ref: 'paid-media',
+    action: 'read-policy',
+    mode: 'read',
+  });
   registerRoutineContract(root, routineExample);
   registerRoutineMigration(root, migrationExample);
   saveExecutorBinding(root, bindingExample);
@@ -264,7 +289,8 @@ try {
   assert.equal(manual.status, 'completed');
   assert.equal(manualCalls.length, 1);
   assert.equal(readFileSync(join(root, 'operacao', 'execucoes', 'rotinas', 'funil-diario.md'), 'utf8'), `${outputMarker}\n`);
-  assert.equal(manual.receipt.access_receipt_refs.length, 1);
+  assert.equal(manual.receipt.access_receipt_refs.length, 2);
+  assert.equal(manual.receipt.input_refs.filter((ref) => ref === 'source:paid-media').length, 1);
   assertReferenceOnly(manual.receipt);
   const manualTrace = readExecutionTrace(root, manual.receipt.run_id);
   assert(manualTrace.every((event) => event.chain_id === 'chain-routine-test-001' && event.mode === 'replay'));

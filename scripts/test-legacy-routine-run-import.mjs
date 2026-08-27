@@ -91,6 +91,9 @@ const manifest = {
 
 assert.deepEqual(validateLegacyRoutineRunManifest(manifest), []);
 assert(validateLegacyRoutineRunManifest({ ...manifest, prompt: 'não pode' }).some((error) => error.includes('não é permitido')));
+const traversal = structuredClone(manifest);
+traversal.routines[0].runs[0].input_refs = ['../fora-do-cerebro'];
+assert(validateLegacyRoutineRunManifest(traversal).some((error) => error.includes('referência inválida')));
 const preview = importLegacyRoutineRuns(root, manifest);
 assert.equal(preview.status, 'preview');
 assert.equal(preview.runs.length, 1);

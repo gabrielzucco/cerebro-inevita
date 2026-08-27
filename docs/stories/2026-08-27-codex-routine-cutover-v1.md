@@ -25,8 +25,8 @@ nativo estarem prontos.
 - [x] Repetir a importação é `no-change`; divergência no mesmo recibo é conflito.
 - [x] Recibo preserva versão histórica e aponta somente para referências locais opacas.
 - [x] Trace reconstruído carrega origem, evidência externa e assurance sem copiar prompt/output.
-- [ ] Radar e Personas históricos aparecem no Runs Explorer.
-- [ ] Personas diário possui contrato, prompt, grants e migração próprios.
+- [x] Radar e Personas históricos aparecem no Runs Explorer.
+- [x] Personas diário possui contrato, prompt, grants e migração próprios.
 - [ ] Radar, Personas diário, semanal e mensal completam prova manual nativa.
 - [ ] Automações legadas são pausadas com readback e as rotinas nativas ficam ativas.
 - [ ] Cockpit e validação integral permanecem verdes.

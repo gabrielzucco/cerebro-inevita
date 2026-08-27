@@ -13,7 +13,7 @@ import { writeJsonAtomic } from './system-protocol.mjs';
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
-const LOCAL_REF_RE = /^(?!\.?\.?$)(?!\.?\?\/)(?!.*\/\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
+const LOCAL_REF_RE = /^(?!\.?\.?$)(?!\.?\.?\/)(?!.*\/\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const STATUSES = new Set(['completed', 'failed', 'denied', 'skipped']);
 
 function object(value) {

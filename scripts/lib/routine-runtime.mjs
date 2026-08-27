@@ -103,12 +103,12 @@ function buildReceipt(contract, binding, {
     reason_code: reasonCode,
     started_at: startedAt.toISOString(),
     completed_at: completedAt.toISOString(),
-    input_refs: [
+    input_refs: [...new Set([
       contract.context.prompt_ref,
       ...preparationInputRefs,
       ...supplementalInputRefs,
       ...contract.context.access_requests.map((request) => `source:${request.source_ref}`),
-    ],
+    ])],
     output_ref: outputRef,
     access_receipt_refs: accessReceiptRefs,
     content_shared_with_provider: attempts > 0,
