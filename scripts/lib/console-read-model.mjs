@@ -109,6 +109,7 @@ function listSystemContracts(root, issues) {
           next_gate: contract.extensions?.next_gate || null,
           area_ref: contract.extensions?.area_ref || 'geral',
           result: contract.result.statement,
+          operational_owner: contract.result.owner,
           human_gate: contract.result.human_gate,
           retrieval_status: contract.protocol_version === 2 ? 'declared' : 'retrieval-not-declared',
           source_refs: contract.sources.map((source) => ({

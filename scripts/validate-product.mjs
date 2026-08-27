@@ -142,6 +142,7 @@ const required = [
   'scripts/test-correction-loop.mjs',
   'scripts/test-console-server.mjs',
   'scripts/test-system-launcher-workspace.mjs',
+  'scripts/test-company-brain-product-cut-v1.mjs',
   'scripts/test-gtm-console-integration.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',

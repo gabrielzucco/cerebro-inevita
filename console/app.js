@@ -1,4 +1,14 @@
-import { mountOperationalCanvas } from '/canvas.bundle.js?v=4';
+let operationalCanvasModulePromise = null;
+
+function loadOperationalCanvas() {
+  if (!operationalCanvasModulePromise) {
+    operationalCanvasModulePromise = import('/canvas.bundle.js?v=5').catch((error) => {
+      operationalCanvasModulePromise = null;
+      throw error;
+    });
+  }
+  return operationalCanvasModulePromise;
+}
 
 const state = {
   model: null,
@@ -15,6 +25,7 @@ const state = {
     sort: { key: 'when', dir: 'desc' },
     cmpA: '', cmpB: '',
   },
+  systems: { category: 'all', query: '' },
   cases: { list: null, detail: null, form: null, preview: null, actor: '' },
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
@@ -804,7 +815,8 @@ function canvasRefOptions() {
   if (state.canvas.scope === 'system') {
     const byArea = new Map();
     for (const system of visibleSystems()) {
-      const areaName = state.model.areas.find((area) => area.area_ref === system.area_ref)?.name || 'Sem área';
+      const area = state.model.areas.find((item) => item.area_ref === system.area_ref);
+      const areaName = businessAreaLabel(system.area_ref, area?.name || 'Sem área');
       if (!byArea.has(areaName)) byArea.set(areaName, []);
       byArea.get(areaName).push(system);
     }
@@ -923,7 +935,7 @@ function renderCanvas() {
           <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
         </div>
         ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : ''}
-        ${state.canvas.scope === 'run' ? '<button class="canvas-tool replay" data-canvas-replay>▶ Replay</button>' : ''}
+        ${state.canvas.scope === 'run' ? '<button class="canvas-tool replay" data-canvas-replay disabled aria-describedby="replay-availability">▶ Reproduzir trace</button><span id="replay-availability" class="replay-availability">Confirmando eventos registrados…</span>' : ''}
         <button class="canvas-tool" data-canvas-fit>Mapa inteiro</button>
         <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
         <button class="canvas-tool primary" data-canvas-save disabled>Salvar</button>
@@ -945,7 +957,7 @@ function renderJudgments() {
 }
 
 function renderAreas() {
-  return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(businessAreaLabel(area.area_ref, area.name))}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
 }
 
 function systemOperational(system) {
@@ -994,59 +1006,94 @@ function safeSystemInterfaceUrl(value) {
   } catch { return null; }
 }
 
-function systemLaunchAction(system, label_ = 'Abrir aplicação') {
+function systemLaunchAction(system, label_ = 'Abrir') {
   const interfaceUrl = safeSystemInterfaceUrl(system.interface_ref);
   if (!interfaceUrl) {
-    return `<button class="action" type="button" disabled title="Interface própria não declarada">${escapeHtml(label_)}</button>`;
+    return `<button class="system-app-link" type="button" disabled title="Interface própria não declarada">${escapeHtml(label_)}</button>`;
   }
-  return `<a class="action primary" data-system-launch="${escapeHtml(system.system_id)}" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label_)} ↗</a>`;
+  return `<a class="system-app-link" data-system-launch="${escapeHtml(system.system_id)}" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label_)} ↗</a>`;
+}
+
+const SYSTEM_CATEGORIES = [
+  { id: 'all', label: 'Todos' },
+  { id: 'sales', label: 'Vendas' },
+  { id: 'marketing', label: 'Marketing' },
+  { id: 'product', label: 'Produto' },
+  { id: 'operations', label: 'Operações' },
+  { id: 'community', label: 'Comunidade' },
+  { id: 'data-tech', label: 'Dados & Tecnologia' },
+];
+
+function systemBusinessCategory(system) {
+  const ref = `${system.system_id} ${system.name}`.toLowerCase();
+  if (/comercial|vendas|atendimento|oferta/.test(ref)) return 'sales';
+  if (/conteúdo|conteudo|vsl|funil|aquisição|aquisicao/.test(ref)) return 'marketing';
+  if (/comunidade|society|onboarding/.test(ref)) return 'community';
+  if (/produto|ativação|ativacao/.test(ref)) return 'product';
+  if (/cérebro|cerebro|inteligência|inteligencia|context foundry|portfólio|portfolio/.test(ref)) return 'data-tech';
+  return 'operations';
+}
+
+function systemAccentSlot(system) {
+  const hash = [...system.system_id].reduce((total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0, 7);
+  return hash % 6;
+}
+
+function systemInitials(system) {
+  const words = String(system.name || system.system_id).replace(/^Sistema de\s+/i, '').split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase();
+}
+
+function operationalOwnerLabel(value) {
+  if (!value) return 'Não declarado';
+  return String(value).replace(/^role-/, '').replaceAll('-', ' ').replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function systemCard(system) {
   const configured = system.migration_stage === 'configured';
   const active = system.migration_stage === 'active';
-  const componentStatuses = Object.values(system.component_statuses || {});
-  const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
-  const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
   const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
   const operational = systemOperational(system);
   const preflight = systemPreflight(system);
-  return `<article class="object-card system-launcher-card" data-kind="system">
-    <div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div>
-    <p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p>
-    <h3>${escapeHtml(system.name)}</h3>
-    <p>${escapeHtml(system.result)}</p>
-    <div class="system-preflight" data-readiness="${preflight.status}">
-      <div><span>Pré-diagnóstico</span>${badge(preflight.status, preflight.tone, preflight.label)}</div>
-      <p>${escapeHtml(preflight.detail)}</p>
+  const category = SYSTEM_CATEGORIES.find((item) => item.id === systemBusinessCategory(system));
+  return `<article class="system-launcher-card system-accent-${systemAccentSlot(system)}" data-kind="system" data-system-category="${escapeHtml(category.id)}">
+    <div class="system-card-head">
+      <div class="system-identity" aria-hidden="true"><span>${escapeHtml(systemInitials(system))}</span></div>
+      <div class="system-card-title"><p class="micro">${escapeHtml(category.label)} · v${escapeHtml(system.version)}</p><h3>${escapeHtml(system.name)}</h3></div>
+      ${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}
     </div>
-    ${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}
-    <div class="object-stats system-launcher-stats">
-      <span><b>${system.source_refs.length}</b><small>Fontes</small></span>
+    <p class="system-result">${escapeHtml(system.result)}</p>
+    <div class="system-owner"><span class="system-owner-avatar" aria-hidden="true">${escapeHtml(operationalOwnerLabel(system.operational_owner).slice(0, 1))}</span><span><small>Dono operacional</small><b>${escapeHtml(operationalOwnerLabel(system.operational_owner))}</b></span></div>
+    <div class="system-health" data-readiness="${preflight.status}">${badge(preflight.status, preflight.tone, preflight.label)}<span>${operational.pendingJudgments ? `${operational.pendingJudgments} para julgar` : 'Sem julgamento pendente'}</span></div>
+    <div class="system-compact-stats">
+      <span><b>${operational.lastRun ? fmtDate(operational.lastRun.completed_at, false) : 'Nunca'}</b><small>Último Run</small></span>
       <span><b>${operational.records.length}</b><small>Runs</small></span>
-      <span><b>${operational.pendingJudgments}</b><small>Para julgar</small></span>
-      <span><b>${operational.lastRun ? fmtDate(operational.lastRun.completed_at, false) : 'Nunca'}</b><small>Última execução</small></span>
-      ${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b><small>Componentes ativos</small></span>` : ''}
+      <span><b>${system.source_refs.length}</b><small>Fontes</small></span>
     </div>
-    <div class="system-card-actions">
+    <div class="system-compact-actions">
+      <button type="button" data-open-system="${escapeHtml(system.system_id)}">Inspecionar</button>
       ${systemLaunchAction(system)}
-      <button class="action" type="button" data-open-system="${escapeHtml(system.system_id)}">Inspecionar operação →</button>
     </div>
   </article>`;
 }
 
 function renderSystems() {
-  const systems = visibleSystems();
-  if (!systems.length) return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div></div>${empty('Nenhum Sistema nesta área', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}`;
-  // Sem filtro, a lista é a jornada: agrupada por Área, nunca um dropdown gigante.
-  const groups = state.areaFilter
-    ? [[null, systems]]
-    : [
-      ...state.model.areas.map((area) => [area, systems.filter((system) => system.area_ref === area.area_ref)]),
-      [{ name: 'Sem área declarada' }, systems.filter((system) => !state.model.areas.some((area) => area.area_ref === system.area_ref))],
-    ].filter(([, grouped]) => grouped.length);
+  const available = visibleSystems();
+  if (!available.length) return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div></div>${empty('Nenhum Sistema nesta área', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}`;
+  const query = state.systems.query.trim().toLocaleLowerCase('pt-BR');
+  const systems = available.filter((system) => {
+    const categoryMatch = state.systems.category === 'all' || systemBusinessCategory(system) === state.systems.category;
+    const searchMatch = !query || `${system.name} ${system.result} ${operationalOwnerLabel(system.operational_owner)}`.toLocaleLowerCase('pt-BR').includes(query);
+    return categoryMatch && searchMatch;
+  });
+  const categoryButtons = SYSTEM_CATEGORIES.map((category) => {
+    const count = category.id === 'all' ? available.length : available.filter((system) => systemBusinessCategory(system) === category.id).length;
+    return `<button type="button" class="system-filter${state.systems.category === category.id ? ' active' : ''}" data-system-category="${escapeHtml(category.id)}"${count ? '' : ' disabled'}>${escapeHtml(category.label)} <b>${count}</b></button>`;
+  }).join('');
   return `<div class="section-heading"><div><p class="eyebrow">LAUNCHER</p><h2>Meus Sistemas</h2></div><p>Abrir entra na aplicação própria. Inspecionar mantém contratos, contexto, Runs e confiança no Cockpit.</p></div>
-    ${groups.map(([area, grouped]) => `${area ? `<div class="subheading"><h3>${escapeHtml(area.name)}</h3><span>${grouped.length}</span></div>` : ''}<div class="object-grid" style="margin-bottom: var(--s5)">${grouped.map(systemCard).join('')}</div>`).join('')}`;
+    <div class="systems-launcher-toolbar"><label><span>Buscar Sistema</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome, resultado ou responsável" autocomplete="off"></label><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div>
+    <div class="systems-results"><span>${systems.length} de ${available.length} instalados neste Cérebro</span><small>Catálogo público e publisher entram na Society.</small></div>
+    <div class="systems-market-grid">${systems.map(systemCard).join('') || empty('Nenhum Sistema encontrado', 'Limpe a busca ou escolha outra função empresarial.')}</div>`;
 }
 
 function renderSources() {
@@ -1694,12 +1741,20 @@ function visibleJudgments() {
   return state.model.judgments.filter((item) => inActiveArea(systemAreaRef(item.system_ref)));
 }
 
+function businessAreaLabel(areaRef, fallback = 'Geral') {
+  return ({
+    crescimento: 'Comercial',
+    fundacao: 'Operações & Tecnologia',
+    'produto-comunidade': 'Produto & Comunidade',
+  })[areaRef] || fallback;
+}
+
 function renderAreaSwitcher() {
   const host = $('#area-switcher');
   if (!host || !state.model) return;
   host.innerHTML = `<p class="nav-group">Área</p>
     <button class="area-pill${state.areaFilter ? '' : ' active'}" data-area-filter=""><i></i>Toda a empresa</button>
-    ${state.model.areas.map((area) => `<button class="area-pill${state.areaFilter === area.area_ref ? ' active' : ''}" data-area-filter="${escapeHtml(area.area_ref)}"><i></i>${escapeHtml(area.name)}<b>${area.system_refs.length}</b></button>`).join('')}`;
+    ${state.model.areas.map((area) => `<button class="area-pill${state.areaFilter === area.area_ref ? ' active' : ''}" data-area-filter="${escapeHtml(area.area_ref)}"><i></i>${escapeHtml(businessAreaLabel(area.area_ref, area.name))}<b>${area.system_refs.length}</b></button>`).join('')}`;
 }
 
 // Views irmãs viram abas dentro da mesma superfície.
@@ -1836,10 +1891,13 @@ function startParticles() {
   const canvas = $('#canvas-particles');
   if (!canvas) return;
   const context = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   const resize = () => { canvas.width = canvas.clientWidth * dpr; canvas.height = canvas.clientHeight * dpr; };
   resize();
-  const TOTAL = 230;
+  const lowPower = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
+    || (navigator.deviceMemory && navigator.deviceMemory <= 4)
+    || navigator.connection?.saveData;
+  const TOTAL = lowPower ? 36 : 72;
   const particles = Array.from({ length: TOTAL }, (_, index) => ({
     angle: (index / TOTAL) * Math.PI * 2 * 7.3,
     radius: index % 3 ? 0.02 + ((index * 17) % 80) / 80 * 0.11 : 0.14 + ((index * 37) % 100) / 100 * 0.34,
@@ -1878,9 +1936,22 @@ function startParticles() {
     }
     if (!reduced) frame = requestAnimationFrame(draw);
   };
-  frame = requestAnimationFrame(draw);
+  const syncVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    } else if (!reduced && !frame) {
+      frame = requestAnimationFrame(draw);
+    }
+  };
+  if (reduced) draw(0); else frame = requestAnimationFrame(draw);
   window.addEventListener('resize', resize);
-  state.canvas.stopParticles = () => { cancelAnimationFrame(frame); window.removeEventListener('resize', resize); };
+  document.addEventListener('visibilitychange', syncVisibility);
+  state.canvas.stopParticles = () => {
+    cancelAnimationFrame(frame);
+    window.removeEventListener('resize', resize);
+    document.removeEventListener('visibilitychange', syncVisibility);
+  };
 }
 
 // DIRECTORY do conhecimento — como o cérebro está distribuído e o que é mais
@@ -1944,12 +2015,34 @@ function openSourceDrawer(sourceId) {
    Só coreografa o que o ledger registrou; estados finais voltam ao real no fim. */
 const replay = { playing: false, timer: 0 };
 
+function traceReplayEvents(graph = state.canvas.graph) {
+  return (graph?.trace_timeline || []).filter((event) => event.node_id);
+}
+
+function syncTraceReplayAvailability(graph) {
+  const button = $('[data-canvas-replay]');
+  const status = $('#replay-availability');
+  if (!button) return;
+  const replayEvents = traceReplayEvents(graph).length;
+  button.disabled = replayEvents === 0;
+  button.textContent = '▶ Reproduzir trace';
+  button.title = replayEvents
+    ? `Reproduzir ${replayEvents} eventos observados deste trace`
+    : 'Run anterior à instrumentação detalhada — resultado preservado, replay visual indisponível';
+  if (status) {
+    status.textContent = replayEvents
+      ? `${replayEvents} eventos registrados`
+      : 'Resultado preservado · replay visual indisponível neste Run';
+    status.classList.toggle('unavailable', replayEvents === 0);
+  }
+}
+
 function stopTraceReplay(restore = true) {
   clearTimeout(replay.timer);
   replay.playing = false;
   $('#replay-ticker')?.remove();
   const button = $('[data-canvas-replay]');
-  if (button) button.textContent = '▶ Replay';
+  if (button) button.textContent = '▶ Reproduzir trace';
   if (!restore) return;
   for (const element of document.querySelectorAll('#operational-canvas .brain-node')) {
     if (element.dataset.replayClass) {
@@ -1960,7 +2053,7 @@ function stopTraceReplay(restore = true) {
 }
 
 function playTraceReplay() {
-  const timeline = (state.canvas.graph?.trace_timeline || []).filter((event) => event.node_id);
+  const timeline = traceReplayEvents();
   if (!timeline.length) { toast('Este run não tem trace com eventos para reproduzir.', 'bad'); return; }
   if (replay.playing) { stopTraceReplay(); return; }
   replay.playing = true;
@@ -2029,10 +2122,14 @@ async function mountCanvasView() {
     return;
   }
   try {
-    const graph = await getJson(canvasEndpoint());
+    const [graph, { mountOperationalCanvas }] = await Promise.all([
+      getJson(canvasEndpoint()),
+      loadOperationalCanvas(),
+    ]);
     if (state.view !== 'canvas') return;
     state.canvas.graph = graph;
     state.canvas.positions = null;
+    syncTraceReplayAvailability(graph);
     const timingPanel = $('#run-timing');
     if (timingPanel && graph.graph_type === 'run') {
       timingPanel.innerHTML = runTimingPanel(graph);
@@ -2481,6 +2578,15 @@ function invalidateCasePreview() {
 }
 
 document.addEventListener('input', (event) => {
+  const systemSearch = event.target.closest('[data-system-search]');
+  if (systemSearch) {
+    state.systems.query = systemSearch.value;
+    render();
+    const restored = $('[data-system-search]');
+    restored?.focus();
+    restored?.setSelectionRange(state.systems.query.length, state.systems.query.length);
+    return;
+  }
   const field = event.target.closest('[data-case-field]');
   if (!field || !state.cases.form) return;
   const key = field.dataset.caseField;
@@ -2532,6 +2638,12 @@ document.addEventListener('click', (event) => {
   if (event.target.closest('[data-case-preview]')) { void previewCase(); return; }
   if (event.target.closest('[data-case-apply]')) { void applyCase(); return; }
   if (event.target.closest('[data-case-rollback]')) { void rollbackCase(); return; }
+  const systemCategory = event.target.closest('.system-filter[data-system-category]');
+  if (systemCategory) {
+    state.systems.category = systemCategory.dataset.systemCategory;
+    render();
+    return;
+  }
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
   const areaPill = event.target.closest('[data-area-filter]');
