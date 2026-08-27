@@ -13,26 +13,27 @@ contexto vivo. Tarefa operacional continua no ClickUp; somente cuidado da memór
 
 ## Acceptance criteria
 
-- [ ] `Mapa da empresa` e `Anatomia atual` podem ser comparados na mesma página sem duplicar rotas.
-- [ ] O modo novo abre por padrão e a preferência de comparação permanece apenas nesta máquina.
-- [ ] O mapa usa casas reais do Cérebro e funções empresariais reconhecíveis, nunca os clusters
+- [x] `Mapa da empresa` e `Anatomia atual` podem ser comparados na mesma página sem duplicar rotas.
+- [x] O modo novo abre por padrão e a preferência de comparação permanece apenas nesta máquina.
+- [x] O mapa usa casas reais do Cérebro e funções empresariais reconhecíveis, nunca os clusters
       internos `crescimento`, `fundacao` e `produto-comunidade`.
-- [ ] Negócio, Mercado, Marketing, Produto & Entrega, Comunidade e Operação & Tecnologia mostram
-      objetos reais com contagem e última mudança, sem abrir conteúdo privado ou PII.
-- [ ] A busca filtra somente o mapa já carregado; a interface não finge pergunta sem endpoint de
+- [x] Estratégia & Negócio, Marketing & Vendas, Produto & Entrega, Comunidade, Pesquisa & Referências
+      e Operação & Tecnologia mostram objetos reais com contagem e última mudança, sem abrir
+      conteúdo privado ou PII.
+- [x] A busca filtra somente o mapa já carregado; a interface não finge pergunta sem endpoint de
       retrieval ligado ao produto.
-- [ ] Fontes aparecem como panorama de origem, autoridade e observação, com porta para a superfície
+- [x] Fontes aparecem como panorama de origem, autoridade e observação, com porta para a superfície
       dona da configuração.
-- [ ] `Precisa de cuidado` contém somente saúde da memória: lacunas, Fonte nunca observada,
+- [x] `Precisa de cuidado` contém somente saúde da memória: lacunas, Fonte nunca observada,
       destilação pendente ou conflito — nunca tarefas do ClickUp.
-- [ ] Dailies aparecem como rotina de captura de mudança e decisão, não como gerenciador de tarefa.
-- [ ] O método fica legível como fluxo de estado `Fonte → Bruto → Processado → Destilado → Contexto
+- [x] Dailies aparecem como rotina de captura de mudança e decisão, não como gerenciador de tarefa.
+- [x] O método fica legível como fluxo de estado `Fonte → Bruto → Processado → Destilado → Contexto
       vigente → Sistema → Julgamento → Aprendizado`, sem sugerir que contagens distintas são funil.
-- [ ] Sistemas permanecem no Launcher; no Cérebro aparecem apenas como consumidores e produtores de
+- [x] Sistemas permanecem no Launcher; no Cérebro aparecem apenas como consumidores e produtores de
       contexto.
-- [ ] O grafo inteiro continua disponível no Canvas e não é carregado pelo modo novo.
-- [ ] Desktop e mobile ficam sem overflow, sem mosaico genérico de cards e sem nova carga pesada.
-- [ ] Teste estrutural novo cobre o modo comparável; testes da Anatomia atual continuam verdes.
+- [x] O grafo inteiro continua disponível no Canvas e não é carregado pelo modo novo.
+- [x] Desktop e mobile ficam sem overflow, sem mosaico genérico de cards e sem nova carga pesada.
+- [x] Teste estrutural novo cobre o modo comparável; testes da Anatomia atual continuam verdes.
 
 ## Fora deste corte
 
@@ -53,4 +54,18 @@ contexto vivo. Tarefa operacional continua no ClickUp; somente cuidado da memór
 
 ## Verificação
 
-- Pendente.
+- Comparação manual: o seletor alterna os dois modos na mesma rota e a Anatomia só busca o grafo
+  quando é aberta.
+- Mapa real: 31 objetos em seis domínios, 17 Sistemas, 15 experimentos, 15 Fontes e duas rotinas.
+- Busca manual por `Ads`: dois objetos filtrados em Marketing & Vendas; nenhuma chamada a modelo.
+- Mobile `375 × 812`: `scrollWidth 360` para `innerWidth 375`; navegação recolhida sem texto vazando.
+- Leitura do mapa no servidor local: aproximadamente 37 ms sobre o vault atual.
+- `node scripts/test-company-brain-company-map-v0.mjs` — verde.
+- `node scripts/test-company-brain-orientation-v1.mjs` — verde.
+- `node scripts/test-company-brain-launcher-hierarchy-v1.mjs` — verde.
+- `node scripts/test-company-brain-product-cut-v1.mjs` — verde.
+- `node scripts/test-system-workspace-dedup-v1.mjs` — verde.
+- `node scripts/test-canvas-layout-readability.mjs` — verde.
+- `node scripts/test-console-server.mjs` — verde.
+- `npm test` — verde: 19 envelopes, três Sistemas e 33 arquivos de Skills sincronizados.
+- O projeto não declara scripts `lint` ou `typecheck` no `package.json`.
