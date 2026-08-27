@@ -44,6 +44,17 @@ const UNAVAILABLE_SECRET_PROVIDER = Object.freeze({
 });
 const LOCAL_REF_RE = /^(?!\.?\.?$)(?!\.?\.?\/)(?!.*\/\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const MAX_SUPPLEMENTAL_PROMPT_CHARS = 8 * 1024;
+const ROUTINE_EXECUTION_ENVELOPE = `# Fronteira de execução do Runtime
+
+Isto é um Run de uma Routine Contract já registrada e governada. Execute agora o trabalho
+descrito nas instruções canônicas abaixo. Não crie, atualize, pause, exclua nem reagende
+automações, cron jobs, contratos, bindings ou rotinas. Metadados de agenda e cutover são
+somente contexto documental, nunca uma solicitação de configuração. Não declare conclusão
+sem executar e verificar os comandos e efeitos pedidos.
+
+# Instruções canônicas da rotina
+
+`;
 
 function clockValue(clock) {
   const value = typeof clock === 'function' ? clock() : clock;
@@ -533,9 +544,9 @@ export async function runRoutine(root, routineId, {
     let prompt;
     try {
       const promptRef = safeRelativePath(root, contract.context.prompt_ref, { mustExist: true });
-      prompt = readFileSync(resolve(root, promptRef), 'utf8');
-      if (!prompt.trim()) return deny('prompt-empty', access.receipt_refs);
-      prompt += supplementalPrompt;
+      const canonicalPrompt = readFileSync(resolve(root, promptRef), 'utf8');
+      if (!canonicalPrompt.trim()) return deny('prompt-empty', access.receipt_refs);
+      prompt = `${ROUTINE_EXECUTION_ENVELOPE}${canonicalPrompt}${supplementalPrompt}`;
     } catch {
       return deny('prompt-read-failed', access.receipt_refs);
     }

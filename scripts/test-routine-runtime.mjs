@@ -87,7 +87,10 @@ function fakeCodex({ sequence = ['success'], calls }) {
   return (command, args, options) => {
     calls.push({ command, args, options });
     assert.equal(command, 'codex');
-    assert.equal(options.input, `${promptMarker}\n`);
+    assert(options.input.includes(`${promptMarker}\n`));
+    assert(options.input.startsWith('# Fronteira de execução do Runtime'));
+    assert(options.input.includes('Não crie, atualize, pause, exclua nem reagende'));
+    assert(options.input.includes('# Instruções canônicas da rotina'));
     assert.equal(args.includes(promptMarker), false);
     assert.equal(args.some((arg) => arg.includes(promptMarker)), false);
     const outcome = sequence[Math.min(calls.length - 1, sequence.length - 1)];
@@ -561,7 +564,9 @@ try {
     spawn: (command, args, options) => {
       claudeCalls.push({ command, args, options });
       assert.equal(command, 'claude');
-      assert.equal(options.input, `${promptMarker}\n`);
+      assert(options.input.startsWith('# Fronteira de execução do Runtime'));
+      assert(options.input.includes(`${promptMarker}\n`));
+      assert(options.input.includes('Não crie, atualize, pause, exclua nem reagende'));
       assert.equal(args.some((arg) => arg.includes(promptMarker)), false);
       return { status: 0, stdout: JSON.stringify({ result: outputMarker }), stderr: '' };
     },
@@ -622,6 +627,25 @@ try {
   });
   assert.equal(merelyDeclaredSkill.ok, true);
   assert.deepEqual(merelyDeclaredSkill.skill_loads, []);
+
+  const writableOutputTemp = join(root, '.cerebro', 'runtime', 'outputs', 'routines', '.workspace-write.tmp');
+  const writableExecutor = runModelExecutor({
+    ...bindingExample,
+    workspace_path: root,
+    permission_profile: 'workspace-write',
+  }, {
+    ...skillRoutine,
+    permission_mode: 'workspace-write',
+  }, `${promptMarker}\n`, {
+    outputTempPath: writableOutputTemp,
+    spawn: (_command, args) => {
+      assert.equal(args.includes('--approve-for-me'), true);
+      assert.equal(args.includes('-s'), false);
+      write(args[args.indexOf('-o') + 1], `${outputMarker}\n`);
+      return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
+    },
+  });
+  assert.equal(writableExecutor.ok, true);
 
   const receiptFiles = readdirSync(join(root, '.cerebro', 'runtime', 'receipts', 'routines'));
   assert(receiptFiles.length >= 10);

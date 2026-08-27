@@ -128,10 +128,13 @@ export function createExecutorBinding({
 }
 
 function codexArgs(binding, routine, outputTempPath) {
+  const permissionArgs = routine.permission_mode === 'workspace-write'
+    ? ['--approve-for-me']
+    : ['-s', routine.permission_mode];
   return [
     'exec', '--ephemeral', '--json',
     '-C', binding.workspace_path,
-    '-s', routine.permission_mode,
+    ...permissionArgs,
     '-m', routine.executor.requested_model,
     '-c', `model_reasoning_effort="${routine.executor.reasoning_effort}"`,
     '-o', outputTempPath,
