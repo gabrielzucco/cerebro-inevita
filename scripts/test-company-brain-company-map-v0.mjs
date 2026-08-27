@@ -10,14 +10,14 @@ const app = readFileSync(resolve(root, 'console/app.js'), 'utf8');
 const css = readFileSync(resolve(root, 'console/styles.css'), 'utf8');
 const server = readFileSync(resolve(root, 'scripts/console-server.mjs'), 'utf8');
 
-assert.match(app, /mode: \(\(\) => \{ try \{ return localStorage\.getItem\('cb-brain-mode'\) === 'anatomy' \? 'anatomy' : 'company-map'/, 'Mapa da empresa deve abrir por padrão');
-assert.match(app, /data-brain-mode="company-map"/, 'comparação sem modo Mapa da empresa');
-assert.match(app, /data-brain-mode="anatomy"/, 'comparação precisa preservar Anatomia atual');
+assert.match(app, /\? saved : 'overview'/, 'Visão geral deve abrir por padrão');
+assert.match(app, /\['memory', 'Memória'\]/, 'Mapa da empresa precisa sobreviver dentro de Memória');
+assert.match(app, /\['architecture', 'Arquitetura'\]/, 'grafo estrutural precisa sobreviver dentro de Arquitetura');
 assert.match(app, /function renderCompanyMap\(anatomy\)/, 'renderer do mapa vivo ausente');
 assert.match(app, /data-brain-map-search/, 'mapa precisa de busca local');
 assert.match(app, /Não chama modelo/, 'busca precisa declarar a fronteira honesta');
 assert.match(app, /anatomy\.company_map/, 'experiência deve ler o read model do mapa');
-assert.match(app, /void loadBrainGraph\(\)/, 'Anatomia atual deve carregar o grafo quando escolhida');
+assert.match(app, /state\.brain\.mode === 'architecture'.*void loadBrainGraph\(\)/s, 'Arquitetura deve carregar o grafo quando escolhida');
 
 const loadAnatomy = app.match(/async function loadAnatomy\(\) \{([\s\S]*?)\n\}\n\nasync function loadBrainGraph/)?.[1] || '';
 assert.doesNotMatch(loadAnatomy, /api\/graphs\/brain/, 'modo novo não pode baixar o grafo no primeiro carregamento');

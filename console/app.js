@@ -27,7 +27,12 @@ const state = {
   },
   systems: { category: 'all', query: '' },
   brain: {
-    mode: (() => { try { return localStorage.getItem('cb-brain-mode') === 'anatomy' ? 'anatomy' : 'company-map'; } catch { return 'company-map'; } })(),
+    mode: (() => {
+      try {
+        const saved = localStorage.getItem('cb-brain-mode');
+        return ['overview', 'memory', 'recovery', 'learning', 'architecture'].includes(saved) ? saved : 'overview';
+      } catch { return 'overview'; }
+    })(),
     query: '',
   },
   brainGraph: null,
@@ -743,9 +748,15 @@ function brainFlowStep(number, name, value, description, state_ = 'declared') {
 }
 
 function renderBrainModeSwitch() {
-  return `<div class="brain-mode-switch" role="tablist" aria-label="Comparar versões do Cérebro">
-    <button type="button" role="tab" data-brain-mode="company-map" class="${state.brain.mode === 'company-map' ? 'active' : ''}" aria-selected="${state.brain.mode === 'company-map'}">Mapa da empresa</button>
-    <button type="button" role="tab" data-brain-mode="anatomy" class="${state.brain.mode === 'anatomy' ? 'active' : ''}" aria-selected="${state.brain.mode === 'anatomy'}">Anatomia atual</button>
+  const tabs = [
+    ['overview', 'Visão geral'],
+    ['memory', 'Memória'],
+    ['recovery', 'Recuperação'],
+    ['learning', 'Aprendizado'],
+    ['architecture', 'Arquitetura'],
+  ];
+  return `<div class="brain-mode-switch" role="tablist" aria-label="Áreas do Cérebro">
+    ${tabs.map(([id, name]) => `<button type="button" role="tab" data-brain-mode="${id}" class="${state.brain.mode === id ? 'active' : ''}" aria-selected="${state.brain.mode === id}">${name}</button>`).join('')}
   </div>`;
 }
 
@@ -794,7 +805,7 @@ function renderRetrievalHealth(health) {
     <div class="retrieval-quality-score" ${scoreAttrs}>
       <div class="retrieval-quality-head"><p class="micro">SAÚDE DO CONTEXTO</p><span class="retrieval-live-state"><i class="${operation.current_status === 'healthy' ? 'observed' : ''}"></i>${escapeHtml(retrievalStatusLabel(operation.current_status))}</span></div>
       <div class="retrieval-quality-value"><strong>${qualityText}</strong><div><h2 id="retrieval-health-title">Qualidade local da recuperação</h2><p>${measured ? `Hit@3 em ${brainCount(quality.cases)} casos auditados` : 'Ainda não existe benchmark auditado para esta instalação'}</p></div></div>
-      <div class="retrieval-quality-track" aria-hidden="true"><i style="width:${measured ? Math.max(0, Math.min(100, quality.percent)) : 0}%"></i></div>
+      <progress class="retrieval-quality-track" max="100" value="${measured ? Math.max(0, Math.min(100, quality.percent)) : 0}" aria-label="${measured ? `${quality.percent}% no benchmark Hit@3` : 'Benchmark não medido'}"></progress>
       <div class="retrieval-quality-proof"><span>${quality.false_positive_percent !== null && quality.false_positive_percent !== undefined ? `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(quality.false_positive_percent)}% falsos positivos` : 'falso positivo não medido'}</span><span>${escapeHtml(gate)}</span><span>${quality.measured_at ? `medido ${fmtDate(quality.measured_at, false)}` : 'sem data de medição'}</span></div>
       <p class="retrieval-comparison-note">Benchmark local. Comparar empresas exige a mesma versão, conjunto de casos e política de corpus; isto ainda não é ranking da Society.</p>
     </div>
@@ -820,7 +831,7 @@ function renderRetrievalHealth(health) {
 
 function renderCompanyMap(anatomy) {
   const map = anatomy.company_map;
-  if (!map) return `${renderBrainModeSwitch()}${empty('Mapa da empresa indisponível', 'Este Cérebro ainda não declarou casas reconhecíveis para esta leitura.')}`;
+  if (!map) return empty('Mapa da empresa indisponível', 'Este Cérebro ainda não declarou casas reconhecíveis para esta leitura.');
   const query = brainSearchKey(state.brain.query.trim());
   const domains = map.domains.map((domain) => {
     const domainMatches = brainSearchKey(`${domain.name} ${domain.purpose}`).includes(query);
@@ -840,8 +851,7 @@ function renderCompanyMap(anatomy) {
     map.care.protocol_issues ? { value: map.care.protocol_issues, label: 'inconsistências de protocolo pedem inspeção' } : null,
   ].filter(Boolean);
 
-  return `${renderBrainModeSwitch()}<div class="company-map-home">
-    ${renderRetrievalHealth(anatomy.retrieval_health)}
+  return `<div class="company-map-home">
     <section class="company-map-search">
       <div><p class="micro">MAPA VIVO</p><h2>Encontre o que existe na empresa.</h2><p>Áreas, conhecimento, Fontes e rotinas — sem transformar o Cérebro em outro ClickUp.</p></div>
       <label><span>Buscar no mapa da empresa</span><input type="search" data-brain-map-search value="${escapeHtml(state.brain.query)}" placeholder="Ofertas, Ads, founders, decisões…" autocomplete="off"><small>Busca local nos nomes e áreas já mapeados. Não chama modelo.</small></label>
@@ -880,10 +890,128 @@ function renderCompanyMap(anatomy) {
       <div class="daily-purpose"><b>Por que existe daily?</b><span>Para registrar o que mudou, por que mudou e qual decisão nasceu. Tarefa, dono e prazo continuam no ClickUp.</span></div>
     </section>
 
-    <section class="company-memory-flow">
-      <header><div><p class="micro">MÉTODO EM OPERAÇÃO</p><h2>Como a memória muda de estado</h2><p>As etapas mostram qualidade e proveniência; não são um funil de volume.</p></div></header>
-      <ol>${map.memory_flow.map((step) => `<li><span>${String(step.step).padStart(2, '0')}</span><strong>${escapeHtml(step.name)}</strong><small>${escapeHtml(step.meaning)}</small></li>`).join('')}</ol>
+  </div>`;
+}
+
+function integrityLabel(value) {
+  return ({ complete: 'Completo', limited: 'Limitado', blocked: 'Bloqueado' })[value] || label(value);
+}
+
+function integrityTone(value) {
+  return ({ complete: 'good', limited: 'warn', blocked: 'bad' })[value] || 'neutral';
+}
+
+function careLabel(item) {
+  return ({
+    'sources-unobserved': 'Fontes declaradas ainda não deixaram observação real',
+    'runs-limited': 'Runs operaram com alguma limitação explícita',
+    'runs-blocked': 'Runs foram bloqueados antes de sustentar resultado',
+    'judgment-reconciliation': 'recibos de julgamento precisam de reconciliação com o ledger',
+    'learning-candidates-empty': 'nenhum candidato de aprendizado foi materializado',
+  })[item.code] || label(item.code);
+}
+
+function renderBrainOverview(anatomy) {
+  const center = anatomy.control_center;
+  const overview = center.overview;
+  const runs = overview.runs;
+  const sources = overview.sources;
+  const quality = overview.benchmark;
+  const benchmark = quality.measured ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(quality.percent)}% Hit@3` : 'Não medido';
+  return `<div class="brain-control-view brain-overview">
+    <section class="brain-overview-lead">
+      <div><p class="micro">ESTADO OPERACIONAL</p><h2>O que este Cérebro consegue sustentar hoje.</h2><p>Sem confundir volume de arquivos, qualidade do benchmark e qualidade de cada execução.</p></div>
+      <div class="brain-run-balance" aria-label="Integridade dos Runs">
+        <strong>${brainCount(runs.complete)}<small> completos</small></strong>
+        <span>${brainCount(runs.limited)} limitados · ${brainCount(runs.blocked)} bloqueados · ${brainCount(runs.total)} no total</span>
+        <button type="button" class="action" data-brain-mode="recovery">Inspecionar Runs →</button>
+      </div>
     </section>
+
+    <section class="brain-fact-lines" aria-label="Leitura atual do Cérebro">
+      <article><p class="micro">MEMÓRIA OBSERVADA</p><strong>${brainCount(sources.observed)} de ${brainCount(sources.total)} Fontes</strong><span>${sources.unobserved ? `${brainCount(sources.unobserved)} ainda não deixaram acesso ou marcador observado.` : 'Todas as Fontes declaradas deixaram observação.'}</span><button type="button" data-brain-mode="memory">Ver memória →</button></article>
+      <article><p class="micro">RECUPERAÇÃO</p><strong>${escapeHtml(benchmark)}</strong><span>${quality.measured ? `${brainCount(quality.cases)} casos auditados · benchmark local, não ranking da Society.` : 'Ainda não existe benchmark auditado nesta instalação.'}</span><button type="button" data-brain-mode="recovery">Ver prova →</button></article>
+      <article><p class="micro">APRENDIZADO</p><strong>${brainCount(overview.learning.candidates)} candidatos</strong><span>${brainCount(overview.learning.judgments)} julgamentos · ${brainCount(overview.learning.outcomes)} Runs com outcome. Julgar não promove melhoria sozinho.</span><button type="button" data-brain-mode="learning">Ver ciclo →</button></article>
+      <article><p class="micro">PRONTIDÃO DOS SISTEMAS</p><strong>Não calculada</strong><span>As políticas de frescor e prontidão ainda são textuais; o Console não transforma isso em falso semáforo.</span><button type="button" data-brain-mode="architecture">Ver o que falta →</button></article>
+    </section>
+
+    <section class="brain-care-list">
+      <header><div><p class="micro">PEDE ATENÇÃO</p><h2>O que merece cuidado agora</h2></div><span>${overview.care.length} sinais</span></header>
+      ${overview.care.length ? `<ol>${overview.care.map((item) => `<li><b>${item.count === 0 ? '—' : brainCount(item.count)}</b><span>${escapeHtml(careLabel(item))}</span></li>`).join('')}</ol>` : '<p class="brain-clear-state">Nenhum sinal operacional pede atenção agora.</p>'}
+    </section>
+  </div>`;
+}
+
+function renderBrainMemory(anatomy) {
+  const memory = anatomy.control_center.memory;
+  return `<div class="brain-control-view brain-memory-view">
+    <section class="brain-lifecycle">
+      <header><div><p class="micro">ESTADOS DA MEMÓRIA</p><h2>O que é medido — e o que ainda não é.</h2><p>Contagem de pasta não substitui recibo de captura, processamento ou destilação.</p></div></header>
+      <ol>${memory.lifecycle.map((step) => `<li class="${step.measured ? 'is-measured' : 'is-unmeasured'}"><span>${escapeHtml(step.name)}</span><strong>${step.measured ? brainCount(step.value) : 'Não instrumentado'}</strong><small>${step.measured ? escapeHtml(step.unit || 'objetos observados') : 'a transição ainda não emite recibo canônico'}</small></li>`).join('')}</ol>
+      <div class="brain-freshness-note"><b>Frescor por Fonte · não calculado</b><span>${brainCount(memory.freshness.declared_policies)} políticas declaradas em texto; falta uma regra machine-readable para comparar vigência.</span></div>
+    </section>
+    ${renderCompanyMap(anatomy)}
+  </div>`;
+}
+
+function renderBrainRecovery(anatomy) {
+  const recovery = anatomy.control_center.recovery;
+  return `<div class="brain-control-view brain-recovery-view">
+    ${renderRetrievalHealth(anatomy.retrieval_health)}
+    <section class="brain-run-ledger">
+      <header><div><p class="micro">QUALIDADE POR EXECUÇÃO</p><h2>O contexto que cada Run realmente recebeu</h2><p>Completo, limitado ou bloqueado nasce das dimensões do recibo — nunca de um score inventado.</p></div><div class="brain-integrity-legend"><span><i class="complete"></i>${brainCount(recovery.counts.complete)} completos</span><span><i class="limited"></i>${brainCount(recovery.counts.limited)} limitados</span><span><i class="blocked"></i>${brainCount(recovery.counts.blocked)} bloqueados</span></div></header>
+      <div class="brain-run-table" role="table" aria-label="Runs e contexto recuperado">
+        <div class="brain-run-row brain-run-head" role="row"><span>Run / Sistema</span><span>Contexto</span><span>Recuperação</span><span>Martelo</span><span></span></div>
+        ${recovery.runs.map((run) => `<button type="button" class="brain-run-row" role="row" data-open-brain-run="${escapeHtml(run.run_id)}">
+          <span><strong>${escapeHtml(run.system_name)}</strong><small>${fmtDate(run.completed_at || run.started_at, false)} · ${escapeHtml(run.run_id)}</small></span>
+          <span>${badge(run.integrity.state, integrityTone(run.integrity.state), integrityLabel(run.integrity.state))}<small>${brainCount(run.integrity.references)} refs · ${brainCount(run.integrity.accesses)} Fontes</small></span>
+          <span><strong>${run.retrieval.mode === 'semantic-provider' ? 'Provider semântico' : 'Coleta contratual'}</strong><small>${run.retrieval.mode === 'semantic-provider' ? escapeHtml(label(run.retrieval.decision || run.retrieval.status)) : 'sem recuperação semântica solicitada'}</small></span>
+          <span><strong>${escapeHtml(label(run.judgment?.verdict || run.human_decision || 'pending'))}</strong><small>${run.outcomes ? `${brainCount(run.outcomes)} outcomes` : 'sem outcome'}</small></span>
+          <span aria-hidden="true">→</span>
+        </button>`).join('')}
+      </div>
+    </section>
+  </div>`;
+}
+
+function renderBrainLearning(anatomy) {
+  const learning = anatomy.control_center.learning;
+  const runs = anatomy.control_center.recovery.runs.filter((run) => run.judgments || run.outcomes || run.correction_linked);
+  const issues = learning.reconciliation.orphan_judgments + learning.reconciliation.duplicate_judgments;
+  return `<div class="brain-control-view brain-learning-view">
+    <section class="brain-learning-lead">
+      <div><p class="micro">CICLO DE APRENDIZADO</p><h2>${learning.candidates ? `${brainCount(learning.candidates)} melhorias aguardam prova.` : 'Ainda não existe melhoria pronta para promoção.'}</h2><p>Julgamento registra confiança. Outcome prova efeito. Só então uma mudança pode voltar ao Sistema.</p></div>
+      <ol><li><span>01</span><b>${brainCount(learning.judgments)}</b><small>julgamentos</small></li><li><span>02</span><b>${brainCount(learning.corrections)}</b><small>correções</small></li><li><span>03</span><b>${brainCount(learning.outcomes)}</b><small>Runs com outcome</small></li><li><span>04</span><b>${brainCount(learning.candidates)}</b><small>candidatos</small></li></ol>
+    </section>
+
+    <section class="brain-learning-status ${learning.candidates ? '' : 'is-empty'}">
+      <div><p class="micro">CANDIDATOS</p><h2>${learning.candidates ? 'Fila materializada' : 'Nenhum candidato materializado'}</h2><p>${learning.candidates ? 'A promoção continua dependente de prova e martelo humano.' : 'Isso não significa que o Cérebro não aprendeu nada; significa que nenhum Learning Candidate Receipt foi emitido.'}</p></div>
+      <span>${learning.promotions.measured ? brainCount(learning.promotions.value) : 'Promoções · não instrumentadas'}</span>
+    </section>
+
+    <section class="brain-learning-ledger">
+      <header><div><p class="micro">LINHAGEM OBSERVADA</p><h2>Runs que chegaram a julgamento ou outcome</h2></div><span>${runs.length} Runs</span></header>
+      ${runs.length ? `<ul>${runs.map((run) => `<li><div><strong>${escapeHtml(run.system_name)}</strong><span>${fmtDate(run.completed_at || run.started_at, false)} · ${escapeHtml(run.run_id)}</span></div><span>${run.judgments ? `${run.judgments} julgamento${run.judgments === 1 ? '' : 's'}` : 'sem recibo de julgamento'} · ${run.outcomes ? `${run.outcomes} outcome${run.outcomes === 1 ? '' : 's'}` : 'sem outcome'}</span><button type="button" data-open-brain-run="${escapeHtml(run.run_id)}">Inspecionar →</button></li>`).join('')}</ul>` : '<p class="brain-clear-state">Nenhum Run chegou ao ciclo observado.</p>'}
+    </section>
+
+    <section class="brain-reconciliation ${issues ? 'has-issues' : ''}"><div><p class="micro">RECONCILIAÇÃO</p><h2>${issues ? `${brainCount(issues)} inconsistências pedem revisão` : 'Ledger e recibos conciliados'}</h2></div><p>${brainCount(learning.reconciliation.orphan_judgments)} julgamento aponta para Run ausente · ${brainCount(learning.reconciliation.duplicate_judgments)} julgamento excedente no mesmo Run.</p></section>
+  </div>`;
+}
+
+function renderBrainArchitecture(anatomy) {
+  const architecture = anatomy.control_center.architecture;
+  const provider = architecture.provider;
+  return `<div class="brain-control-view brain-architecture-view">
+    <section class="brain-architecture-lead"><div><p class="micro">INFRAESTRUTURA GOVERNADA</p><h2>O protocolo é o produto. O motor é substituível.</h2><p>Sistemas consomem um contrato genérico de recuperação; a implementação atual fica atrás dessa fronteira.</p></div><dl><div><dt>Retrieval Provider</dt><dd>${escapeHtml(provider.name || provider.provider_id || 'não declarado')}${provider.version ? ` · v${escapeHtml(provider.version)}` : ''}</dd></div><div><dt>Implementação atual</dt><dd>${escapeHtml(provider.implementation || 'não observada')}${provider.implementation_version ? ` ${escapeHtml(provider.implementation_version)}` : ''} · substituível</dd></div><div><dt>Estado operacional</dt><dd>${escapeHtml(retrievalStatusLabel(architecture.operation.current_status))} · circuito ${escapeHtml(architecture.operation.circuit || 'não observado')}</dd></div></dl></section>
+
+    <section class="brain-architecture-contracts">
+      <header><div><p class="micro">CONTRATOS</p><h2>A camada constitucional</h2></div></header>
+      <dl><div><dt>System Contracts</dt><dd>${brainCount(architecture.protocol.system_contracts)}</dd><span>declaram fontes, recuperação, evidência e condições de parada</span></div><div><dt>Source Contracts</dt><dd>${brainCount(architecture.protocol.source_contracts)}</dd><span>declaram casa de verdade, binding e política de frescor</span></div><div><dt>Retrieval Contract</dt><dd>${architecture.protocol.retrieval_versions.length ? architecture.protocol.retrieval_versions.map((version) => `v${escapeHtml(version)}`).join(' · ') : 'não observado'}</dd><span>lido pela experiência e pelo runtime</span></div><div><dt>Índice atual</dt><dd>${architecture.index.documents == null ? 'não observado' : `${brainCount(architecture.index.documents)} docs`}</dd><span>${architecture.index.updated_at ? `geração ${fmtDate(architecture.index.updated_at, false)}` : 'sem geração auditada'}</span></div></dl>
+    </section>
+
+    ${renderBrainGraphPreview(state.brainGraph)}
+    <p class="brain-graph-disclaimer">Este grafo é um mapa estrutural para inspeção. Ele não prova GraphRAG nem participa da recuperação observada hoje.</p>
+    <section class="brain-privacy-boundary"><p class="micro">FRONTEIRA DE PRIVACIDADE</p><div><strong>Referências, não payload.</strong><span>Esta área não expõe query, conteúdo, snippet, hashes completos ou erro bruto.</span></div></section>
   </div>`;
 }
 
@@ -891,65 +1019,40 @@ function renderAnatomy() {
   const anatomy = state.anatomy;
   if (!anatomy) {
     void loadAnatomy();
-    return '<div class="loading"><i></i><span>Compilando a anatomia do estado real…</span></div>';
+    return '<div class="loading"><i></i><span>Compilando contratos e recibos do Cérebro…</span></div>';
   }
-  if (state.brain.mode === 'company-map') return renderCompanyMap(anatomy);
-  const memory = anatomy.memory;
-  const observedSources = memory.sources.filter((source) => source.last_access || source.freshness_observed).length;
-  const neverObserved = memory.sources.length - observedSources;
-  const attention = anatomy.attention;
-  const execution = anatomy.execution;
-  const judgment = anatomy.judgment;
-  const learning = anatomy.learning;
-  const governance = anatomy.governance;
-  const learningValue = learning.candidates || learning.corrections
-    ? `${learning.candidates} candidatos · ${learning.corrections} correções`
-    : 'Nenhuma melhoria provada';
-  const recentDecisions = anatomy.identity.recent_decisions.map((decision) => `<li><time>${escapeHtml(decision.date)}</time><span>${escapeHtml(decision.title)}</span></li>`).join('');
+  if (!anatomy.control_center) return `${renderBrainModeSwitch()}${empty('Centro operacional indisponível', 'Atualize o Console para recompilar este read model.')}`;
+  const views = {
+    overview: renderBrainOverview,
+    memory: renderBrainMemory,
+    recovery: renderBrainRecovery,
+    learning: renderBrainLearning,
+    architecture: renderBrainArchitecture,
+  };
+  return `${renderBrainModeSwitch()}${(views[state.brain.mode] || renderBrainOverview)(anatomy)}`;
+}
 
-  return `${renderBrainModeSwitch()}<div class="brain-home">
-    <section class="brain-north">
-      <div class="brain-north-main">
-        <p class="micro">NORTE DO CÉREBRO</p>
-        <h2>${anatomy.identity.anchors.length} ideias orientam as decisões desta empresa.</h2>
-        <ol class="brain-anchor-list">${anatomy.identity.anchors.map((anchor_, index) => `<li><span>${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(anchor_)}</strong></li>`).join('')}</ol>
-        <details class="brain-decisions"><summary>${anatomy.identity.recent_decisions.length} decisões recentes continuam em vigor</summary><ul>${recentDecisions}</ul></details>
-      </div>
-      <aside class="brain-memory-brief">
-        <div><p class="micro">ESTADO DA MEMÓRIA</p>${prov('observado')}</div>
-        <strong>${observedSources}<small> de ${memory.sources.length} Fontes observadas</small></strong>
-        <p>${neverObserved ? `${neverObserved} ainda não apareceram em acesso ou frescor real.` : 'Todas as Fontes contratadas já deixaram observação.'}</p>
-        ${memory.distill_backlog ? `<span>Fila de destilação · ${escapeHtml(memory.distill_backlog)}</span>` : ''}
-        <button class="action" type="button" data-view="sources">Ver Fontes e frescor →</button>
-      </aside>
-    </section>
-
-    ${renderBrainGraphPreview(state.brainGraph)}
-
-    <section class="brain-context-section">
-      <div class="brain-section-head"><div><p class="micro">CONTEXTO EM MOVIMENTO</p><h2>Como o Cérebro sai de informação e chega a uma decisão</h2><p>Ele detecta o que falta, recupera só o necessário e mantém o humano no martelo.</p></div></div>
-      <ol class="brain-context-flow">
-        ${brainFlowStep(1, 'Atenção', `${attention.context_gaps} lacunas`, `${attention.sources_never_observed} Fontes nunca entraram em um Context Snapshot`, attention.context_gaps ? 'gap' : 'observed')}
-        ${brainFlowStep(2, 'Recuperação', `${attention.retrieval_declared}/${attention.systems_total} Sistemas`, 'declaram como selecionar, resolver conflito e recusar contexto insuficiente')}
-        ${brainFlowStep(3, 'Context Snapshot', `${attention.runs_with_context} execuções`, 'registraram referências e contexto sem expor prompt ou output', 'observed')}
-        ${brainFlowStep(4, 'Sistema', `${execution.by_stage.active} ativos`, `${execution.recent_runs.length} Runs recentes · evals ${execution.evals_passed}/${execution.evals_total}`, 'observed')}
-        ${brainFlowStep(5, 'Julgamento', `${judgment.vault_queue_open} decisões`, `${judgment.routine_pending} outputs esperam martelo humano`, judgment.vault_queue_open ? 'gap' : 'observed')}
-        ${brainFlowStep(6, 'Aprendizado', learningValue, `${learning.runs_with_outcomes} Runs possuem outcome; mudança só volta depois de prova`, learning.candidates ? 'observed' : 'declared')}
-      </ol>
-    </section>
-
-    <section class="brain-actions">
-      <article><p class="micro">AGORA</p><strong>${judgment.vault_queue_open} decisões pedem teu martelo</strong><span>${judgment.late7} estão abertas há sete dias ou mais${judgment.oldest_days != null ? ` · mais antiga ${judgment.oldest_days}d` : ''}.</span><button class="action primary" type="button" data-view="today">Ir para Hoje →</button></article>
-      <article><p class="micro">SISTEMAS</p><strong>${execution.by_stage.active} ativos · ${execution.by_stage.configured} configurados</strong><span>O trabalho tem personalidade própria; o Cérebro mantém contexto e confiança.</span><button class="action" type="button" data-view="systems">Ver Sistemas →</button></article>
-      <article><p class="micro">CONFIANÇA</p><strong>${governance.protocol_score ?? '—'}% do protocolo observado</strong><span>${governance.grants_total} grants ativos · ${governance.pii_gate ? escapeHtml(governance.pii_gate.summary) : 'gate de privacidade não observado'}.</span><button class="action" type="button" data-view="governance">Ver saúde e permissões →</button></article>
-    </section>
-  </div>`;
+function openBrainRun(runId) {
+  const run = state.anatomy?.control_center?.recovery?.runs.find((entry) => entry.run_id === runId);
+  if (!run) return;
+  const expectedSources = run.expected.required_sources.length
+    ? run.expected.required_sources.map((source) => `<li><div><strong>${escapeHtml(source.role || source.source_id)}</strong><span>${escapeHtml(source.source_id || 'Fonte sem id')}</span></div><small>${escapeHtml(source.freshness || 'frescor não declarado')}</small></li>`).join('')
+    : '<li><span>Nenhuma Fonte obrigatória observada no contrato.</span></li>';
+  const observedSources = run.observed.sources.length
+    ? run.observed.sources.map((source) => `<li><div><strong>${escapeHtml(source.role || source.source_id)}</strong><span>${escapeHtml(source.source_id || 'Fonte sem id')}</span></div><small>${brainCount(source.selected_refs)} refs · ${escapeHtml(label(source.assurance))} · frescor ${source.freshness_observed ? 'marcado' : 'não verificável'}</small></li>`).join('')
+    : '<li><span>Nenhuma Fonte observada no Context Snapshot.</span></li>';
+  const issues = [...run.observed.gaps.map((item) => ({ ...item, kind: 'Gap' })), ...run.observed.conflicts.map((item) => ({ ...item, kind: 'Conflito' })), ...run.observed.fallbacks.map((item) => ({ ...item, kind: 'Fallback' }))];
+  showDrawerShell(`<div class="drawer-head"><p class="eyebrow">CONTEXT SNAPSHOT · ${escapeHtml(run.system_id)}</p><h2>${escapeHtml(run.system_name)}</h2>${badge(run.integrity.state, integrityTone(run.integrity.state), integrityLabel(run.integrity.state))}<p>${fmtDate(run.completed_at || run.started_at)} · ${escapeHtml(run.run_id)}</p></div>
+    <section class="drawer-section brain-run-contract"><h3>Contrato esperado</h3><p class="section-help">O que o System Contract exige antes da execução.</p><ul>${expectedSources}</ul><dl><div><dt>Fontes opcionais</dt><dd>${brainCount(run.expected.optional_sources)}</dd></div><div><dt>Evidência mínima</dt><dd>${run.expected.minimum_refs == null ? 'não declarada' : `${brainCount(run.expected.minimum_refs)} ref por claim`}</dd></div><div><dt>Condições de parada</dt><dd>${brainCount(run.expected.stop_conditions)}</dd></div><div><dt>Fallback</dt><dd>${run.expected.fallback_enabled ? 'permitido pelo contrato' : 'não permitido'}</dd></div></dl></section>
+    <section class="drawer-section brain-run-observed"><h3>Contexto observado</h3><p class="section-help">Contagens e garantias do Run Record V2; conteúdo e referências privadas permanecem fechados.</p><ul>${observedSources}</ul><dl><div><dt>Referências</dt><dd>${brainCount(run.integrity.references)}</dd></div><div><dt>Marcadores de frescor</dt><dd>${brainCount(run.integrity.freshness_markers)}/${brainCount(run.integrity.accesses)}</dd></div><div><dt>Eval</dt><dd>${run.eval_passed == null ? 'pendente' : run.eval_passed ? 'passou' : 'falhou'}</dd></div><div><dt>Recuperação</dt><dd>${run.retrieval.mode === 'semantic-provider' ? escapeHtml(label(run.retrieval.decision || run.retrieval.status)) : 'coleta direta/contratual'}</dd></div></dl></section>
+    <section class="drawer-section"><h3>Limitações declaradas</h3>${issues.length ? `<div class="brain-run-issues">${issues.map((item) => `<span><b>${escapeHtml(item.kind)}</b>${escapeHtml(item.source_role || 'contexto')} · ${escapeHtml(label(item.reason_code))}</span>`).join('')}</div>` : '<p class="brain-clear-state">Nenhum gap, conflito ou fallback registrado.</p>'}</section>
+    <section class="drawer-section brain-run-privacy"><h3>Privacidade</h3><p>Query, conteúdo, snippets, referências selecionadas, hashes e erro bruto não foram enviados para esta vista.</p></section>`);
 }
 
 async function loadAnatomy() {
   try {
     state.anatomy = await getJson('/api/anatomy');
-    if (state.brain.mode === 'anatomy') void loadBrainGraph();
+    if (state.brain.mode === 'architecture') void loadBrainGraph();
     if (state.view === 'anatomy') render();
   } catch { /* a view mostra loading; refresh recarrega */ }
 }
@@ -958,8 +1061,8 @@ async function loadBrainGraph() {
   if (state.brainGraph) return;
   try {
     state.brainGraph = await getJson('/api/graphs/brain');
-    if (state.view === 'anatomy' && state.brain.mode === 'anatomy') render();
-  } catch { /* Anatomia atual mantém o estado de mapa indisponível */ }
+    if (state.view === 'anatomy' && state.brain.mode === 'architecture') render();
+  } catch { /* Arquitetura mantém o estado de mapa indisponível */ }
 }
 
 const DECISION_CATEGORIES = {
@@ -2841,10 +2944,12 @@ document.addEventListener('click', (event) => {
     state.brain.mode = brainMode.dataset.brainMode;
     state.brain.query = '';
     try { localStorage.setItem('cb-brain-mode', state.brain.mode); } catch { /* preferência local */ }
-    if (state.brain.mode === 'anatomy') void loadBrainGraph();
+    if (state.brain.mode === 'architecture') void loadBrainGraph();
     render();
     return;
   }
+  const brainRun = event.target.closest('[data-open-brain-run]');
+  if (brainRun) { openBrainRun(brainRun.dataset.openBrainRun); return; }
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
   const areaPill = event.target.closest('[data-area-filter]');
@@ -3021,7 +3126,7 @@ $('#refresh').addEventListener('click', async () => {
 });
 document.addEventListener('keydown', (event) => {
   if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement
-    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment], [role="button"][data-case-open]')) {
+    && event.target.matches('[role="button"][data-open-system], [role="button"][data-open-source], [role="button"][data-open-routine], [role="button"][data-open-experiment], [role="button"][data-case-open], [role="button"][data-open-brain-run]')) {
     event.preventDefault();
     event.target.click();
     return;

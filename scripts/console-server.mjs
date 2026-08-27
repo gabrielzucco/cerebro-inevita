@@ -120,6 +120,23 @@ function listJsonDir(root, relative) {
   } catch { return []; }
 }
 
+function listJsonTree(root, relative) {
+  const values = [];
+  const walk = (directory) => {
+    let entries;
+    try { entries = readdirSync(directory, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const target = resolve(directory, entry.name);
+      if (entry.isDirectory()) walk(target);
+      else if (entry.isFile() && entry.name.endsWith('.json')) {
+        try { values.push(JSON.parse(readFileSync(target, 'utf8'))); } catch { /* recibo inválido não vira verdade */ }
+      }
+    }
+  };
+  walk(resolve(root, relative));
+  return values;
+}
+
 function countDir(root, relative) {
   try { return readdirSync(resolve(root, relative)).filter((name) => !name.startsWith('.')).length; } catch { return 0; }
 }
@@ -229,6 +246,227 @@ export function retrievalHealthModel(root) {
     comparability: {
       network_ready: false,
       requires: ['benchmark_version', 'case_set', 'corpus_policy'],
+    },
+  };
+}
+
+function retrievalReceiptId(record) {
+  for (const access of record.context_snapshot?.accesses || []) {
+    const match = String(access.query || '').match(/retrieval-receipt:(retrieval-receipt-[a-z0-9-]+)/i);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function safeIssue(issue) {
+  if (typeof issue === 'string') return { reason_code: issue };
+  return {
+    source_role: issue?.source_role || issue?.role || null,
+    reason_code: issue?.reason_code || issue?.code || issue?.status || 'not-declared',
+  };
+}
+
+function runIntegrity(record, retrievalReceipt) {
+  const snapshot = record.context_snapshot;
+  const accesses = Array.isArray(snapshot?.accesses) ? snapshot.accesses : [];
+  const gaps = Array.isArray(snapshot?.gaps) ? snapshot.gaps : [];
+  const conflicts = Array.isArray(snapshot?.conflicts) ? snapshot.conflicts : [];
+  const fallbacks = Array.isArray(snapshot?.fallbacks) ? snapshot.fallbacks : [];
+  const references = accesses.reduce((total, access) => total
+    + (Array.isArray(access.selected_refs) ? access.selected_refs.length : 0), 0);
+  const freshnessMarkers = accesses.filter((access) => Boolean(access.freshness_marker)).length;
+  const reasons = [];
+
+  if (record.status !== 'completed') reasons.push('run-not-completed');
+  if (!snapshot) reasons.push('context-snapshot-missing');
+  if (retrievalReceipt?.decision === 'retrieval_unavailable') reasons.push('retrieval-unavailable');
+  if (conflicts.length) reasons.push('unresolved-conflict');
+  const blocked = reasons.length > 0;
+
+  if (!blocked) {
+    if (gaps.length) reasons.push('context-gap');
+    if (fallbacks.length) reasons.push('fallback-used');
+    if (!accesses.length || !references) reasons.push('references-missing');
+    if (accesses.length && freshnessMarkers !== accesses.length) reasons.push('freshness-not-verifiable');
+    if (record.eval?.passed === null || record.eval?.passed === undefined) reasons.push('eval-pending');
+    if (retrievalReceipt?.decision === 'insufficient_evidence') reasons.push('insufficient-evidence');
+  }
+
+  return {
+    state: blocked ? 'blocked' : reasons.length ? 'limited' : 'complete',
+    reasons,
+    accesses: accesses.length,
+    references,
+    freshness_markers: freshnessMarkers,
+    gaps: gaps.map(safeIssue),
+    conflicts: conflicts.map(safeIssue),
+    fallbacks: fallbacks.map(safeIssue),
+  };
+}
+
+export function brainControlCenterModel(root, { sources = [], retrievalHealth = null } = {}) {
+  const health = retrievalHealth || retrievalHealthModel(root);
+  const records = healthRunRecords(root);
+  const systemContracts = listJsonDir(root, '.cerebro/contracts/systems');
+  const sourceContracts = listJsonDir(root, '.cerebro/contracts/sources');
+  const contractsBySystem = new Map(systemContracts.map((contract) => [contract.system_id, contract]));
+  const retrievalReceipts = listJsonDir(root, '.cerebro/runtime/receipts/retrieval');
+  const retrievalById = new Map(retrievalReceipts.map((receipt) => [receipt.receipt_id, receipt]));
+  const judgments = listJsonTree(root, '.cerebro/runtime/judgments');
+  const corrections = listJsonTree(root, '.cerebro/runtime/corrections');
+  const candidates = listJsonTree(root, '.cerebro/runtime/learning-candidates');
+  const runIds = new Set(records.map((record) => record.run_id));
+  const judgmentsByRun = new Map();
+  for (const judgment of judgments) {
+    if (!judgment.run_id) continue;
+    const current = judgmentsByRun.get(judgment.run_id) || [];
+    current.push(judgment);
+    judgmentsByRun.set(judgment.run_id, current);
+  }
+
+  const runs = records.map((record) => {
+    const contract = contractsBySystem.get(record.system_id) || null;
+    const receiptId = retrievalReceiptId(record);
+    const retrieval = receiptId ? retrievalById.get(receiptId) || null : null;
+    const integrity = runIntegrity(record, retrieval);
+    const runJudgments = (judgmentsByRun.get(record.run_id) || [])
+      .sort((left, right) => String(right.decided_at || '').localeCompare(String(left.decided_at || '')));
+    const expectedSources = Array.isArray(contract?.sources) ? contract.sources : [];
+    const observedSources = (record.context_snapshot?.accesses || []).map((access) => ({
+      role: access.source_ref?.role || access.role || null,
+      source_id: access.source_ref?.id || null,
+      selected_refs: Array.isArray(access.selected_refs) ? access.selected_refs.length : 0,
+      assurance: access.assurance || null,
+      window_observed: Boolean(access.window),
+      freshness_observed: Boolean(access.freshness_marker),
+    }));
+    return {
+      run_id: record.run_id,
+      system_id: record.system_id,
+      system_name: contract?.name || record.system_id,
+      system_version: record.system_version || contract?.version || null,
+      status: record.status || 'unknown',
+      mode: record.mode || null,
+      started_at: record.started_at || null,
+      completed_at: record.completed_at || null,
+      integrity,
+      retrieval: receiptId ? {
+        mode: 'semantic-provider',
+        status: retrieval?.status || 'receipt-missing',
+        decision: retrieval?.decision || null,
+        reason_code: retrieval?.reason_code || null,
+        latency_ms: Number.isFinite(retrieval?.latency_ms) ? retrieval.latency_ms : null,
+        selected_refs: Array.isArray(retrieval?.selected_refs) ? retrieval.selected_refs.length : null,
+      } : { mode: 'contractual-direct', status: 'not-requested', decision: null, reason_code: null, latency_ms: null, selected_refs: null },
+      expected: {
+        contract_observed: Boolean(contract),
+        required_sources: expectedSources.filter((source) => source.required).map((source) => ({
+          role: source.role || null,
+          source_id: source.source_id || null,
+          freshness: source.freshness || null,
+        })),
+        optional_sources: expectedSources.filter((source) => !source.required).length,
+        minimum_refs: Number.isFinite(contract?.retrieval?.evidence?.minimum_refs) ? contract.retrieval.evidence.minimum_refs : null,
+        stop_conditions: Array.isArray(contract?.retrieval?.stop_conditions) ? contract.retrieval.stop_conditions.length : 0,
+        fallback_enabled: contract?.retrieval?.fallback?.enabled === true,
+      },
+      observed: {
+        snapshot_at: record.context_snapshot?.observed_at || null,
+        sources: observedSources,
+        gaps: integrity.gaps,
+        conflicts: integrity.conflicts,
+        fallbacks: integrity.fallbacks,
+      },
+      eval_passed: record.eval?.passed ?? null,
+      human_decision: record.human_decision || null,
+      judgment: runJudgments[0] ? { verdict: runJudgments[0].verdict || null, decided_at: runJudgments[0].decided_at || null } : null,
+      judgments: runJudgments.length,
+      outcomes: Array.isArray(record.outcomes) ? record.outcomes.length : 0,
+      correction_linked: Boolean(record.correction_ref),
+    };
+  }).sort((left, right) => String(right.completed_at || right.started_at || '')
+    .localeCompare(String(left.completed_at || left.started_at || '')));
+
+  const integrityCounts = runs.reduce((counts, run) => {
+    counts[run.integrity.state] += 1;
+    return counts;
+  }, { complete: 0, limited: 0, blocked: 0 });
+  const observedSources = sources.filter((source) => source.last_access || source.freshness_observed).length;
+  const totalSources = sources.length || sourceContracts.length;
+  const orphanJudgments = judgments.filter((judgment) => judgment.run_id && !runIds.has(judgment.run_id)).length;
+  const duplicateJudgments = [...judgmentsByRun.values()].reduce((total, values) => total + Math.max(0, values.length - 1), 0);
+  const runsWithOutcomes = records.filter((record) => Array.isArray(record.outcomes) && record.outcomes.length).length;
+  const freshPolicies = sourceContracts.filter((contract) => Boolean(contract.freshness?.policy)).length;
+  const care = [
+    totalSources - observedSources > 0 ? { code: 'sources-unobserved', count: totalSources - observedSources } : null,
+    integrityCounts.limited > 0 ? { code: 'runs-limited', count: integrityCounts.limited } : null,
+    integrityCounts.blocked > 0 ? { code: 'runs-blocked', count: integrityCounts.blocked } : null,
+    orphanJudgments + duplicateJudgments > 0 ? { code: 'judgment-reconciliation', count: orphanJudgments + duplicateJudgments } : null,
+    !candidates.length ? { code: 'learning-candidates-empty', count: 0 } : null,
+  ].filter(Boolean);
+
+  return {
+    generated_at: new Date().toISOString(),
+    overview: {
+      sources: { total: totalSources, observed: observedSources, unobserved: Math.max(0, totalSources - observedSources) },
+      runs: { total: runs.length, ...integrityCounts },
+      systems_readiness: {
+        measured: false,
+        blocked: null,
+        reason_code: 'machine-readable-freshness-and-readiness-missing',
+      },
+      benchmark: health.quality,
+      learning: { candidates: candidates.length, outcomes: runsWithOutcomes, judgments: judgments.length },
+      care,
+    },
+    memory: {
+      lifecycle: [
+        { id: 'source', name: 'Fonte', measured: true, value: observedSources, total: totalSources, unit: 'Fontes observadas' },
+        { id: 'raw', name: 'Bruto', measured: false, value: null, reason_code: 'capture-transition-receipt-missing' },
+        { id: 'processed', name: 'Processado', measured: false, value: null, reason_code: 'processing-transition-receipt-missing' },
+        { id: 'distilled', name: 'Destilado', measured: false, value: null, reason_code: 'distillation-transition-receipt-missing' },
+        { id: 'current-context', name: 'Contexto vigente', measured: Number.isFinite(health.index.documents), value: health.index.documents, unit: 'documentos no corpus explícito do piloto', reason_code: Number.isFinite(health.index.documents) ? null : 'index-receipt-missing' },
+      ],
+      freshness: {
+        measured: false,
+        declared_policies: freshPolicies,
+        total_sources: sourceContracts.length,
+        reason_code: 'freshness-policy-not-machine-readable',
+      },
+    },
+    recovery: {
+      benchmark: health.quality,
+      operation: health.operation,
+      index: health.index,
+      counts: integrityCounts,
+      runs,
+    },
+    learning: {
+      judgments: judgments.length,
+      corrections: corrections.length,
+      outcomes: runsWithOutcomes,
+      candidates: candidates.length,
+      promotions: { measured: false, value: null, reason_code: 'promotion-receipts-not-instrumented' },
+      reconciliation: { orphan_judgments: orphanJudgments, duplicate_judgments: duplicateJudgments },
+    },
+    architecture: {
+      provider: health.provider,
+      index: health.index,
+      operation: health.operation,
+      protocol: {
+        system_contracts: systemContracts.length,
+        source_contracts: sourceContracts.length,
+        retrieval_versions: [...new Set(systemContracts.map((contract) => contract.retrieval?.version).filter(Boolean))],
+      },
+      privacy: health.privacy,
+      graph: { role: 'structural-map', participates_in_retrieval: false },
+    },
+    privacy: {
+      content_exposed: false,
+      query_exposed: false,
+      selected_refs_exposed: false,
+      hashes_exposed: false,
+      raw_error_exposed: false,
     },
   };
 }
@@ -705,11 +943,13 @@ function anatomyModel(root) {
   const goldenTask = roundTask('golden') || roundTask('eval do c');
   const companyMap = companyMapModel(root, { model, sources, round, contextGaps });
   const retrievalHealth = retrievalHealthModel(root);
+  const controlCenter = brainControlCenterModel(root, { sources, retrievalHealth });
 
   return {
     generated_at: new Date().toISOString(),
     company_map: companyMap,
     retrieval_health: retrievalHealth,
+    control_center: controlCenter,
     identity: {
       canonical: '01-nucleo-privado/_SISTEMAS.md',
       anchors,
