@@ -1784,7 +1784,7 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   renderAreaSwitcher();
-  $('#summary').innerHTML = ['canvas', 'system'].includes(state.view) ? '' : summaryCards();
+  $('#summary').innerHTML = ['canvas', 'system', 'systems'].includes(state.view) ? '' : summaryCards();
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
   if (state.canvas.stopParticles) { state.canvas.stopParticles(); state.canvas.stopParticles = null; }
