@@ -304,17 +304,22 @@ function renderRoutines() {
     <div class="routine-list">${visibleRoutines().length ? visibleRoutines().map(routineCard).join('') : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
 }
 
-/* Workspace do Sistema — sete abas sobre o contrato cru + o observado. */
+/* Workspace do Sistema — trabalho fora; confiança e operação dentro do Cockpit. */
 
 const WS_TABS = [
-  ['overview', 'Visão geral'], ['architecture', 'Arquitetura'], ['runs', 'Execuções'],
-  ['experiments', 'Experimentos'], ['judgment', 'Julgamento'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
+  ['overview', 'Visão geral'], ['canvas', 'Canvas'], ['runs', 'Execuções'],
+  ['judgment', 'Julgamento'], ['governance', 'Governança'],
 ];
 
 function openWorkspace(ref, tab = 'overview') {
   closeDrawer();
   state.view = 'system';
-  state.workspace = { ref, tab, data: state.workspace?.ref === ref ? state.workspace.data : null };
+  state.workspace = {
+    ref,
+    tab,
+    canvasMode: state.workspace?.ref === ref ? state.workspace.canvasMode || 'contract' : 'contract',
+    data: state.workspace?.ref === ref ? state.workspace.data : null,
+  };
   render();
   if (!state.workspace.data) void loadWorkspace(ref);
 }
@@ -338,13 +343,13 @@ function wsMatrix(ws) {
   const receiptsTotal = ws.routines.reduce((total, routine) => total + routine.receipts, 0);
   const outcomes = ws.records.filter((record) => (record.outcomes || []).length).length;
   const rows = [
-    ['pipeline', 'Pipeline', `${ws.contract.pipeline.length} etapa(s) declaradas`, ws.contract.pipeline.length > 0, 'architecture'],
-    ['routines', 'Rotinas', `${ws.routines.length} rotina(s) · ${receiptsTotal} recibo(s)`, receiptsTotal > 0, 'config'],
-    ['skills', 'Skills', ws.contract.capability ? `capability ${ws.contract.capability.capability_id} v${ws.contract.capability.version}` : 'nenhuma declarada', false, 'architecture'],
+    ['pipeline', 'Pipeline', `${ws.contract.pipeline.length} etapa(s) declaradas`, ws.contract.pipeline.length > 0, 'canvas'],
+    ['routines', 'Rotinas', `${ws.routines.length} rotina(s) · ${receiptsTotal} recibo(s)`, receiptsTotal > 0, 'governance'],
+    ['skills', 'Skills', ws.contract.capability ? `capability ${ws.contract.capability.capability_id} v${ws.contract.capability.version}` : 'nenhuma declarada', false, 'canvas'],
     ['interfaces', 'Interfaces', ws.system.interface_ref ? 'interface própria ligada' : 'nenhuma declarada', Boolean(ws.system.interface_ref), 'overview'],
-    ['gates', 'Gates', ws.contract.eval ? `${(ws.contract.eval.deterministic_gates || []).length} determinístico(s) · ${(ws.contract.eval.human_questions || []).length} pergunta(s) humanas` : 'não declarados', ws.judgments.length > 0, 'architecture'],
+    ['gates', 'Gates', ws.contract.eval ? `${(ws.contract.eval.deterministic_gates || []).length} determinístico(s) · ${(ws.contract.eval.human_questions || []).length} pergunta(s) humanas` : 'não declarados', ws.judgments.length > 0, 'canvas'],
     ['evals', 'Evals', evalsTotal ? `${evalsPassed}/${evalsTotal} passaram em execuções reais` : 'nenhum eval observado', evalsTotal > 0, 'runs'],
-    ['learning', 'Aprendizado', outcomes ? `${outcomes} run(s) com outcomes` : 'nenhum outcome registrado', outcomes > 0, 'learning'],
+    ['learning', 'Aprendizado', outcomes ? `${outcomes} run(s) com outcomes` : 'nenhum outcome registrado', outcomes > 0, 'overview'],
   ];
   return `<div class="ws-matrix">${rows.map(([key, name, evidence, observed, tab]) => {
     const declared = statuses[key] || 'ausente';
@@ -359,10 +364,52 @@ function wsMatrix(ws) {
   }).join('')}</div>`;
 }
 
+function wsMetricGroup(kind, title, rows) {
+  return `<section class="ws-metric-group" data-metric-kind="${kind}"><p class="micro">${escapeHtml(title)}</p>
+    ${rows.map(([name, value, proof = 'observado']) => `<div><span>${escapeHtml(name)}</span><b>${escapeHtml(String(value))}</b>${prov(proof)}</div>`).join('')}
+  </section>`;
+}
+
+function wsMetrics(ws) {
+  const failed = ws.records.filter((record) => record.status === 'failed').length;
+  const snapshots = ws.records.filter((record) => record.context_snapshot).length;
+  const gaps = ws.records.reduce((total, record) => total + (record.context_snapshot?.gaps || []).length, 0);
+  const conflicts = ws.records.reduce((total, record) => total + (record.context_snapshot?.conflicts || []).length, 0);
+  const pending = ws.judgments.filter((item) => item.judgment.status === 'pending').length;
+  const approved = ws.judgments.filter((item) => item.judgment.verdict === 'approved').length;
+  const corrections = ws.records.filter((record) => record.correction_ref).length;
+  const outcomes = ws.records.filter((record) => (record.outcomes || []).length).length;
+  const lastRun = ws.records[0];
+  return `<div class="ws-metrics" aria-label="Métricas separadas do Sistema">
+    ${wsMetricGroup('operation', 'Operação', [
+      ['Runs registrados', ws.records.length],
+      ['Falhas observadas', failed],
+      ['Última execução', lastRun ? fmtDate(lastRun.completed_at, false) : 'nunca'],
+    ])}
+    ${wsMetricGroup('context', 'Contexto', [
+      ['Snapshots', snapshots],
+      ['Lacunas', gaps],
+      ['Conflitos', conflicts],
+    ])}
+    ${wsMetricGroup('trust', 'Confiança', [
+      ['Pendentes', pending],
+      ['Aprovados', approved],
+      ['Correções', corrections],
+    ])}
+    ${wsMetricGroup('value', 'Valor', [
+      ['Runs com outcome', outcomes],
+      ['Benchmark', 'não calculado', 'declarado'],
+      ['Repetição provada', outcomes > 1 ? `${outcomes} outcomes` : 'sem prova'],
+    ])}
+  </div>`;
+}
+
 function wsOverview(ws) {
   const result = ws.contract.result || {};
   const lastRun = ws.records[0];
-  return `<div class="ws-grid">
+  return `<div class="ws-stack">
+    ${wsMetrics(ws)}
+    <div class="ws-grid">
     <section class="organ"><header class="organ-head"><div><h3>Para que este sistema existe</h3></div></header>
       <p class="organ-answer">${escapeHtml(ws.system.result)} ${prov('declarado')}</p>
       <dl class="ws-dl">
@@ -376,10 +423,54 @@ function wsOverview(ws) {
       ${ws.system.next_gate ? `<div class="organ-gaps"><span>Próximo gate: ${escapeHtml(ws.system.next_gate)}</span></div>` : ''}
     </section>
     <section class="organ"><header class="organ-head"><div><h3>Os sete componentes</h3><p>estado declarado × evidência observada</p></div></header>${wsMatrix(ws)}</section>
+    </div>
   </div>`;
 }
 
-function wsArchitecture(ws) {
+function wsCanvasFlow(stages) {
+  return `<div class="ws-canvas-flow" role="list">${stages.map((stage, index) => `<div class="ws-flow-step" role="listitem" data-flow-kind="${escapeHtml(stage.kind)}">
+    <p class="micro">${escapeHtml(stage.label)}</p><b>${escapeHtml(stage.value)}</b><small>${escapeHtml(stage.detail)}</small>
+  </div>${index < stages.length - 1 ? '<span class="ws-flow-arrow" aria-hidden="true">→</span>' : ''}`).join('')}</div>`;
+}
+
+function wsCanvasContract(ws) {
+  const retrieval = ws.contract.retrieval;
+  const capability = ws.contract.capability;
+  const evalContract = ws.contract.eval;
+  const result = ws.contract.result || {};
+  const sourceNames = ws.sources.map((source) => source.name);
+  const stages = [
+    { kind: 'source', label: 'Fontes', value: `${ws.sources.length} declaradas`, detail: sourceNames.join(' · ') || 'nenhuma declarada' },
+    { kind: 'retrieval', label: 'Recuperação', value: retrieval ? `contrato v${retrieval.version}` : 'não declarada', detail: retrieval ? `${(retrieval.source_roles || []).length} papéis de contexto` : 'sem política recuperável' },
+    { kind: 'system', label: 'Pipeline', value: `${ws.contract.pipeline.length} etapas`, detail: ws.contract.pipeline.map((step) => step.name || step.step_id || step.state).filter(Boolean).join(' → ') || 'nenhuma etapa' },
+    { kind: 'system', label: 'Capability', value: capability ? capability.capability_id : 'não declarada', detail: capability ? `v${capability.version}` : 'sem contrato de capacidade' },
+    { kind: 'gate', label: 'Gates', value: evalContract ? `${(evalContract.deterministic_gates || []).length + (evalContract.human_questions || []).length} declarados` : 'não declarados', detail: result.definition_of_done || 'definição de pronto ausente' },
+    { kind: 'judgment', label: 'Julgamento', value: result.human_gate || ws.system.human_gate || 'não declarado', detail: 'o Sistema não julga a própria resposta' },
+  ];
+  return `<div class="ws-stack">
+    <section class="organ ws-canvas-organ"><header class="organ-head"><div><h3>Fluxo declarado</h3><p>System Contract e contratos associados — nenhuma execução inferida.</p></div></header>${wsCanvasFlow(stages)}</section>
+    <section class="organ"><header class="organ-head"><div><h3>Política de recuperação ${retrieval ? `v${escapeHtml(retrieval.version)}` : ''}</h3><p>o backend de contexto que o Sistema pode consumir</p></div></header>
+      ${retrieval ? `<div class="table-wrap organ-table"><table><thead><tr><th>Papel</th><th>Seleção</th><th>Filtros</th><th>Janela</th><th>Frescor exigido</th><th>Se indisponível</th></tr></thead><tbody>${(retrieval.source_roles || []).map((role) => `<tr><td><b>${role.priority}</b> ${escapeHtml(role.role)}</td><td>${escapeHtml(role.selection || '—')}</td><td>${(role.filters || []).map((filter) => `<code>${escapeHtml(filter)}</code>`).join(' ')}</td><td>${escapeHtml(role.window || '—')}</td><td>${escapeHtml(role.required_freshness || '—')}</td><td>${escapeHtml(role.on_unavailable || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="gap-mark">Recuperação não declarada.</p>'}
+    </section>
+  </div>`;
+}
+
+function wsCanvasLastRun(ws) {
+  const record = ws.records[0];
+  if (!record) return empty('Nenhum Run registrado', 'O Canvas não inventa execução. O primeiro Run Record aparecerá aqui.');
+  const snapshot = record.context_snapshot;
+  const stages = [
+    { kind: 'source', label: 'Contexto', value: snapshot ? `${snapshot.accesses.length} fontes` : 'não registrado', detail: snapshot ? `${(snapshot.gaps || []).length} lacunas · ${(snapshot.conflicts || []).length} conflitos` : 'sem Context Snapshot' },
+    { kind: 'retrieval', label: 'Recuperação', value: snapshot?.retrieval_version ? `v${snapshot.retrieval_version}` : 'não registrada', detail: record.mode ? `modo ${label(record.mode)}` : 'modo não registrado' },
+    { kind: 'system', label: 'Execução', value: label(record.status), detail: record.run_id },
+    { kind: 'system', label: 'Outputs', value: `${(record.output_refs || []).length} referências`, detail: 'conteúdo privado não exposto' },
+    { kind: 'gate', label: 'Eval', value: record.eval?.passed === true ? 'passou' : record.eval?.passed === false ? 'falhou' : 'não medido', detail: record.eval?.version ? `v${record.eval.version}` : 'sem versão registrada' },
+    { kind: 'judgment', label: 'Julgamento', value: label(record.human_decision || 'pending'), detail: (record.outcomes || []).length ? `${record.outcomes.length} outcomes registrados` : 'resultado real sem prova' },
+  ];
+  return `<div class="ws-stack"><section class="organ ws-canvas-organ"><header class="organ-head"><div><h3>Último caminho observado</h3><p>${fmtDate(record.completed_at)} · ${escapeHtml(record.run_id)}</p></div><button class="action" data-canvas-jump-run="${escapeHtml(wsRunSelector(record))}">Abrir trace no Canvas →</button></header>${wsCanvasFlow(stages)}</section></div>`;
+}
+
+function wsCanvasCurrent(ws) {
   const retrieval = ws.contract.retrieval;
   const sourceRows = ws.sources.map((source) => `<tr>
     <td><button type="button" class="table-action" data-open-source="${escapeHtml(source.source_id)}">${escapeHtml(source.name)}</button><small>${escapeHtml(source.role)}</small></td>
@@ -402,6 +493,25 @@ function wsArchitecture(ws) {
     <section class="organ"><header class="organ-head"><div><h3>Pipeline · ${ws.contract.pipeline.length} etapas</h3></div></header>
       <ul class="organ-list">${ws.contract.pipeline.map((step, index) => `<li><span>${index + 1}</span>${escapeHtml(step.name || step.step_id || step.state || JSON.stringify(step).slice(0, 60))}</li>`).join('')}</ul>
       ${ws.contract.eval ? `<p class="muted">Gates determinísticos: ${(ws.contract.eval.deterministic_gates || []).map((gate) => `<code>${escapeHtml(gate)}</code>`).join(' ')}</p>` : ''}</section>
+  </div>`;
+}
+
+function wsCanvas(ws) {
+  const mode = state.workspace?.canvasMode || 'contract';
+  const body = mode === 'current' ? wsCanvasCurrent(ws) : mode === 'last-run' ? wsCanvasLastRun(ws) : wsCanvasContract(ws);
+  return `<div class="ws-stack">
+    <div class="ws-canvas-head">
+      <div><p class="eyebrow">BACKEND OBSERVÁVEL</p><p class="section-help">Contrato, instalação e execução são leituras diferentes da mesma operação.</p></div>
+      <div class="ws-canvas-actions">
+        <div class="ws-mode-switch" role="group" aria-label="Leitura do Canvas">
+          <button type="button" data-ws-canvas-mode="contract" class="${mode === 'contract' ? 'active' : ''}">Contrato</button>
+          <button type="button" data-ws-canvas-mode="current" class="${mode === 'current' ? 'active' : ''}">Estado atual</button>
+          <button type="button" data-ws-canvas-mode="last-run" class="${mode === 'last-run' ? 'active' : ''}">Último Run</button>
+        </div>
+        <button class="action" type="button" data-open-system-canvas="${escapeHtml(ws.system.system_id)}">Canvas completo →</button>
+      </div>
+    </div>
+    ${body}
   </div>`;
 }
 
@@ -487,6 +597,7 @@ function wsLearning(ws) {
 }
 
 function wsConfig(ws) {
+  const interfaceUrl = safeSystemInterfaceUrl(ws.system.interface_ref);
   return `<div class="ws-stack">
     ${ws.routines.length ? ws.routines.map((routine) => `<section class="organ"><header class="organ-head"><div><h3>${escapeHtml(routine.name)}</h3><p>declarado × observado</p></div></header>
       <dl class="ws-dl">
@@ -502,7 +613,7 @@ function wsConfig(ws) {
         <div><dt>Contrato</dt><dd><code>${escapeHtml(ws.system.contract_id)}</code> v${escapeHtml(ws.system.version)}</dd></div>
         <div><dt>Recuperação</dt><dd>v${escapeHtml(ws.contract.retrieval?.version || '—')}</dd></div>
         <div><dt>Eval</dt><dd>v${escapeHtml(ws.contract.eval?.version || '—')}</dd></div>
-        <div><dt>Interface</dt><dd>${ws.system.interface_ref ? `<a class="copy-ref" href="${escapeHtml(ws.system.interface_ref)}" target="_blank" rel="noopener">${escapeHtml(ws.system.interface_ref)} ↗</a>` : 'nenhuma declarada'}</dd></div>
+        <div><dt>Interface</dt><dd>${interfaceUrl ? `<a class="copy-ref" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(interfaceUrl)} ↗</a>` : 'nenhuma interface segura declarada'}</dd></div>
         <div><dt>Manifest</dt><dd>${ws.system.source_manifest_ref ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(ws.system.source_manifest_ref)}">copiar caminho ⧉</button>` : '—'}</dd></div>
       </dl></section>
   </div>`;
@@ -513,14 +624,15 @@ function renderSystemWorkspace() {
   if (!workspace) return empty('Nenhum sistema aberto', 'Abra um sistema pela lista ou pelo Canvas.');
   const ws = workspace.data;
   if (!ws) return '<div class="loading"><i></i><span>Abrindo o workspace do sistema…</span></div>';
-  const tabs = { overview: wsOverview, architecture: wsArchitecture, runs: wsRuns, experiments: wsExperiments, judgment: wsJudgment, learning: wsLearning, config: wsConfig };
+  const tabs = { overview: wsOverview, canvas: wsCanvas, runs: wsRuns, judgment: wsJudgment, governance: wsConfig };
   return `<div class="ws">
     <div class="ws-top">
       <button class="action" data-view="systems">← Sistemas</button>
       ${badge(ws.system.migration_stage, ws.system.migration_stage === 'active' ? 'good' : 'neutral')}
-      <span class="muted">${escapeHtml(label(ws.system.area_ref))} · ${ws.records.length} execuções · ${ws.experiments.length} experimentos</span>
+      <span class="system-kind-mark" aria-hidden="true">● Sistema</span>
+      <span class="muted">${escapeHtml(label(ws.system.area_ref))} · v${escapeHtml(ws.system.version)} · ${ws.records.length} execuções · ${ws.judgments.filter((item) => item.judgment.status === 'pending').length} para julgar</span>
       <span class="canvas-spacer"></span>
-      <button class="action" data-open-experiment-system="${escapeHtml(ws.system.system_id)}">Ver no Canvas →</button>
+      ${systemLaunchAction(ws.system)}
     </div>
     <div class="tabstrip" role="tablist">${WS_TABS.map(([id, name]) => `<button role="tab" data-ws-tab="${id}" class="${workspace.tab === id ? 'active' : ''}">${name}${id === 'judgment' && ws.judgments.filter((item) => item.judgment.status === 'pending').length ? `<b>${ws.judgments.filter((item) => item.judgment.status === 'pending').length}</b>` : ''}</button>`).join('')}</div>
     ${(tabs[workspace.tab] || wsOverview)(ws)}
@@ -836,6 +948,35 @@ function renderAreas() {
   return `<div class="section-heading"><div><p class="eyebrow">MAPA PLURAL</p><h2>Áreas da empresa</h2></div><p>Áreas organizam a leitura. Fontes continuam compartilháveis entre Sistemas.</p></div><div class="object-grid">${state.model.areas.map((area) => `<article class="object-card" data-kind="area"><span class="object-index">${String(area.system_refs.length).padStart(2, '0')}</span><p class="micro">ÁREA</p><h3>${escapeHtml(area.name)}</h3><p>${area.system_refs.length} sistema(s) · ${area.routine_refs.length} rotina(s)</p><div class="ref-list">${area.system_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma área mapeada', 'Áreas aparecem quando Sistemas possuem contratos válidos.')}</div>`;
 }
 
+function systemOperational(system) {
+  const records = (state.model.run_records || [])
+    .filter((record) => refMatchesSystem(record.system_ref, system))
+    .sort((left, right) => String(right.completed_at || '').localeCompare(String(left.completed_at || '')));
+  const judgments = (state.model.judgments || []).filter((item) => refMatchesSystem(item.system_ref, system));
+  return {
+    records,
+    lastRun: records[0] || null,
+    pendingJudgments: judgments.filter((item) => item.judgment.status === 'pending').length,
+  };
+}
+
+function safeSystemInterfaceUrl(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const localHttp = url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname);
+    return url.protocol === 'https:' || localHttp ? url.href : null;
+  } catch { return null; }
+}
+
+function systemLaunchAction(system, label_ = 'Abrir aplicação') {
+  const interfaceUrl = safeSystemInterfaceUrl(system.interface_ref);
+  if (!interfaceUrl) {
+    return `<button class="action" type="button" disabled title="Interface própria não declarada">${escapeHtml(label_)}</button>`;
+  }
+  return `<a class="action primary" data-system-launch="${escapeHtml(system.system_id)}" href="${escapeHtml(interfaceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label_)} ↗</a>`;
+}
+
 function systemCard(system) {
   const configured = system.migration_stage === 'configured';
   const active = system.migration_stage === 'active';
@@ -843,7 +984,25 @@ function systemCard(system) {
   const readyComponents = componentStatuses.filter((status) => ['ativo', 'repetivel', 'instrumentado'].includes(status)).length;
   const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
   const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
-  return `<article class="object-card" data-kind="system" data-open-system="${escapeHtml(system.system_id)}" role="button" tabindex="0"><div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div><p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.result)}</p>${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}<div class="object-stats"><span><b>${system.source_refs.length}</b> fontes</span><span><b>${system.retrieval_status === 'declared' ? 'Sim' : 'Não'}</b> retrieval</span>${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b> componentes ativos</span>` : ''}</div></article>`;
+  const operational = systemOperational(system);
+  return `<article class="object-card system-launcher-card" data-kind="system">
+    <div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div>
+    <p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p>
+    <h3>${escapeHtml(system.name)}</h3>
+    <p>${escapeHtml(system.result)}</p>
+    ${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}
+    <div class="object-stats system-launcher-stats">
+      <span><b>${system.source_refs.length}</b><small>Fontes</small></span>
+      <span><b>${operational.records.length}</b><small>Runs</small></span>
+      <span><b>${operational.pendingJudgments}</b><small>Para julgar</small></span>
+      <span><b>${operational.lastRun ? fmtDate(operational.lastRun.completed_at, false) : 'Nunca'}</b><small>Última execução</small></span>
+      ${componentStatuses.length ? `<span><b>${readyComponents}/${componentStatuses.length}</b><small>Componentes ativos</small></span>` : ''}
+    </div>
+    <div class="system-card-actions">
+      ${systemLaunchAction(system)}
+      <button class="action" type="button" data-open-system="${escapeHtml(system.system_id)}">Inspecionar operação →</button>
+    </div>
+  </article>`;
 }
 
 function renderSystems() {
@@ -856,7 +1015,7 @@ function renderSystems() {
       ...state.model.areas.map((area) => [area, systems.filter((system) => system.area_ref === area.area_ref)]),
       [{ name: 'Sem área declarada' }, systems.filter((system) => !state.model.areas.some((area) => area.area_ref === system.area_ref))],
     ].filter(([, grouped]) => grouped.length);
-  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div><p>Mapeado tem contrato. Configurado tem recuperação declarada. Ativo já possui operação governada e recibo.</p></div>
+  return `<div class="section-heading"><div><p class="eyebrow">LAUNCHER</p><h2>Meus Sistemas</h2></div><p>Abrir entra na aplicação própria. Inspecionar mantém contratos, contexto, Runs e confiança no Cockpit.</p></div>
     ${groups.map(([area, grouped]) => `${area ? `<div class="subheading"><h3>${escapeHtml(area.name)}</h3><span>${grouped.length}</span></div>` : ''}<div class="object-grid" style="margin-bottom: var(--s5)">${grouped.map(systemCard).join('')}</div>`).join('')}`;
 }
 
@@ -1465,8 +1624,8 @@ const titles = {
 const viewGroups = {
   today: 'Operação', judgments: 'Operação', cases: 'Operação', routines: 'Operação', runs: 'Operação',
   anatomy: 'Estrutura',
-  system: 'Estrutura',
-  canvas: 'Estrutura', areas: 'Estrutura', systems: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
+  system: 'Sistemas', systems: 'Sistemas',
+  canvas: 'Estrutura', areas: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
   compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
   society: 'Rede',
 };
@@ -1516,7 +1675,7 @@ function renderAreaSwitcher() {
 // Views irmãs viram abas dentro da mesma superfície.
 const tabGroups = [
   ['judgments', 'cases', 'routines', 'runs'],
-  ['systems', 'sources', 'areas', 'experiments'],
+  ['areas', 'sources', 'experiments'],
   ['compatibility', 'governance', 'health'],
 ];
 const tabCounts = { judgments: 'judgments', routines: 'routines', systems: 'systems', sources: 'sources', areas: 'areas', experiments: 'experiments' };
@@ -1541,7 +1700,7 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   renderAreaSwitcher();
-  $('#summary').innerHTML = state.view === 'canvas' ? '' : summaryCards();
+  $('#summary').innerHTML = ['canvas', 'system'].includes(state.view) ? '' : summaryCards();
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
   if (state.canvas.stopParticles) { state.canvas.stopParticles(); state.canvas.stopParticles = null; }
@@ -2416,6 +2575,22 @@ document.addEventListener('click', (event) => {
   if (openSystem) { openWorkspace(openSystem.dataset.openSystem); return; }
   const wsTab = event.target.closest('[data-ws-tab]');
   if (wsTab && state.view === 'system' && state.workspace) { state.workspace.tab = wsTab.dataset.wsTab; render(); return; }
+  const wsCanvasMode = event.target.closest('[data-ws-canvas-mode]');
+  if (wsCanvasMode && state.view === 'system' && state.workspace) {
+    state.workspace.canvasMode = wsCanvasMode.dataset.wsCanvasMode;
+    render();
+    return;
+  }
+  const openSystemCanvas = event.target.closest('[data-open-system-canvas]');
+  if (openSystemCanvas) {
+    state.canvas.scope = 'system';
+    state.canvas.ref = openSystemCanvas.dataset.openSystemCanvas;
+    state.canvas.positions = null;
+    state.view = 'canvas';
+    closeDrawer();
+    render();
+    return;
+  }
   const openSource = event.target.closest('[data-open-source]');
   if (openSource) { openSourceDrawer(openSource.dataset.openSource); return; }
   const focusBrain = event.target.closest('[data-focus-brain-node]');
@@ -2528,8 +2703,8 @@ function paletteItems() {
       run: () => { state.view = 'routines'; render(); openDrawer(routine.routine_id); },
     }));
     (model.systems || []).forEach((system) => items.push({
-      glyph: 'canvas', title: system.name, hint: 'Sistema → Canvas',
-      run: () => { state.canvas.scope = 'system'; state.canvas.ref = system.system_id; state.canvas.positions = null; state.view = 'canvas'; closeDrawer(); render(); },
+      glyph: 'systems', title: system.name, hint: 'Sistema → Inspecionar operação',
+      run: () => { closeDrawer(); openWorkspace(system.system_id); },
     }));
     (model.experiments || []).forEach((experiment) => items.push({
       glyph: 'experiments', title: experiment.name, hint: experiment.experiment_id,

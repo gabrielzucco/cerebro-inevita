@@ -521,10 +521,41 @@ th[data-runs-sort] b { margin-left: 3px; color: var(--text); }
 .card-footer button:hover { color: var(--text); }
 .card-footer button b { margin-left: 5px; color: var(--text-3); }
 
-/* Workspace do Sistema */
-.ws-top { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s2); }
+/* Launcher + workspace operacional do Sistema. A personalidade vive no app;
+   esta casca continua constitucional e usa somente os tokens do Console. */
+.system-launcher-card { cursor: default; }
+.system-launcher-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: var(--s3) 0 0; overflow: hidden; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--hairline); }
+.system-launcher-stats > span { min-width: 0; padding: var(--s2) 10px; background: var(--bg); }
+.system-launcher-stats b { display: block; overflow: hidden; color: var(--text); font: 590 var(--fs-meta) var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.system-launcher-stats small { display: block; margin-top: 2px; overflow: hidden; color: var(--text-3); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+.system-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); margin: var(--s3) 0 0; }
+.system-card-actions .action { display: flex; align-items: center; justify-content: center; text-decoration: none; }
+
+.ws-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-bottom: var(--s2); }
+.ws-top .action { text-decoration: none; }
+.ws-top > .action:last-child { margin-left: auto; }
+.system-kind-mark { color: var(--kind-system); font: 650 var(--fs-micro) var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
 .ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s3); align-items: start; }
 .ws-stack { display: grid; gap: var(--s3); }
+.ws-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); margin-bottom: var(--s3); }
+.ws-metric-group { min-width: 0; padding: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); }
+.ws-metric-group > .micro { display: block; margin: 0 0 var(--s2); color: var(--text-3); font-weight: 650; letter-spacing: .08em; }
+.ws-metric-group > div { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: var(--s1); margin-top: var(--s1); }
+.ws-metric-group > div > span:first-child { min-width: 0; overflow: hidden; color: var(--text-3); font-size: var(--fs-micro); text-overflow: ellipsis; white-space: nowrap; }
+.ws-metric-group > div > b { color: var(--text-2); font: 590 var(--fs-meta) var(--font-mono); text-align: right; }
+.ws-canvas-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
+.ws-canvas-head .section-heading { margin: 0; }
+.ws-canvas-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s2); }
+.ws-canvas-actions .action { text-decoration: none; }
+.ws-mode-switch { display: flex; gap: 2px; padding: 2px; border-radius: var(--r-md); background: rgba(255, 255, 255, .04); }
+.ws-mode-switch button { min-height: 30px; padding: 0 var(--s3); color: var(--text-3); border: 0; border-radius: var(--r-sm); background: transparent; font-size: var(--fs-meta); cursor: pointer; }
+.ws-mode-switch button:hover { color: var(--text); }
+.ws-mode-switch button.active { color: var(--bg); background: var(--text); font-weight: 590; }
+.ws-canvas-flow { display: grid; grid-template-columns: repeat(11, auto); align-items: stretch; gap: var(--s2); overflow-x: auto; padding: var(--s2) 0 var(--s3); }
+.ws-flow-step { min-width: 132px; padding: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--bg); }
+.ws-flow-step b { display: block; margin-bottom: var(--s1); color: var(--text); font-size: var(--fs-meta); }
+.ws-flow-step small { display: block; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.5; }
+.ws-flow-arrow { align-self: center; color: var(--text-3); font-family: var(--font-mono); }
 .ws-dl { margin: 0; }
 .ws-dl > div { display: grid; grid-template-columns: 140px 1fr; gap: var(--s3); padding: 6px 0; border-top: 1px solid var(--hairline); }
 .ws-dl > div:first-child { border-top: 0; }
@@ -558,7 +589,11 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
 .ws-stage b { display: block; color: var(--text); font: 640 22px var(--font-sans); font-variant-numeric: tabular-nums; }
 .ws-stage span { display: block; margin: 2px 0; color: var(--text-2); font-size: var(--fs-meta); font-weight: 560; }
 .ws-stage small { color: var(--text-3); font-size: var(--fs-micro); }
-@media (max-width: 1200px) { .ws-grid { grid-template-columns: 1fr; } .ws-learning { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1200px) {
+  .ws-grid { grid-template-columns: 1fr; }
+  .ws-learning, .ws-metrics { grid-template-columns: repeat(2, 1fr); }
+  .system-launcher-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* Anatomia do Cérebro — espinha de seis módulos + governança lateral */
 .anatomy { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s4); align-items: start; }
@@ -1576,6 +1611,7 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
 @media (max-width: 1280px) {
   .canvas-inspector { width: 260px; }
   .compat-lower-grid { grid-template-columns: 1fr; }
+  .ws-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   main { padding: var(--s5) var(--s5) var(--s7); }
 }
 
@@ -1615,6 +1651,19 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
   .canvas-stage-shell { height: auto; min-height: 480px; }
   .canvas-graph-pane { position: relative; min-height: 480px; }
   .tabstrip { overflow-x: auto; }
+  .ws-canvas-head { display: block; }
+  .ws-canvas-actions { justify-content: flex-start; margin-top: var(--s3); }
+  .ws-canvas-flow { grid-template-columns: 1fr; overflow: visible; }
+  .ws-flow-step { width: 100%; min-width: 0; }
+  .ws-flow-arrow { justify-self: center; transform: rotate(90deg); }
+  .system-card-actions { grid-template-columns: 1fr; }
+  .system-launcher-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ws-top > .action:last-child { width: 100%; margin-left: 0; text-align: center; }
+}
+
+@media (max-width: 520px) {
+  .ws-metrics { grid-template-columns: 1fr; }
+  .ws-dl > div { grid-template-columns: 1fr; gap: var(--s1); }
 }
 
 /* ==========================================================================

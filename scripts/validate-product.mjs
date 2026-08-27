@@ -138,6 +138,7 @@ const required = [
   'scripts/test-judgment-protocol.mjs',
   'scripts/test-correction-loop.mjs',
   'scripts/test-console-server.mjs',
+  'scripts/test-system-launcher-workspace.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   'scripts/test-experiment-protocol.mjs',
