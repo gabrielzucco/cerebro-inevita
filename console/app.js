@@ -25,7 +25,7 @@ const state = {
     sort: { key: 'when', dir: 'desc' },
     cmpA: '', cmpB: '',
   },
-  systems: { category: 'all', query: '', interfaceHealth: {} },
+  systems: { category: 'all', stage: 'all', query: '', interfaceHealth: {} },
   brain: {
     mode: (() => {
       try {
@@ -334,7 +334,7 @@ function renderRoutines() {
 /* Workspace do Sistema — trabalho fora; confiança e operação dentro do Cockpit. */
 
 const WS_TABS = [
-  ['overview', 'Visão geral'], ['how', 'Como funciona'], ['runs', 'Execuções'],
+  ['overview', 'Sobre'], ['how', 'Como funciona'], ['runs', 'Execuções'],
   ['experiments', 'Experimentos'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
 ];
 
@@ -437,9 +437,7 @@ function wsOverview(ws) {
   const result = ws.contract.result || {};
   const lastRun = ws.records[0];
   return `<div class="ws-stack">
-    ${wsMetrics(ws)}
-    <div class="ws-grid">
-    <section class="organ"><header class="organ-head"><div><h3>Para que este sistema existe</h3></div></header>
+    <section class="organ system-about"><header class="organ-head"><div><p class="micro">SOBRE O SISTEMA</p><h3>Para que este sistema existe</h3></div></header>
       <p class="organ-answer">${escapeHtml(ws.system.result)} ${prov('declarado')}</p>
       <dl class="ws-dl">
         <div><dt>Dono</dt><dd>${escapeHtml(result.owner || '—')}</dd></div>
@@ -451,8 +449,8 @@ function wsOverview(ws) {
       </dl>
       ${ws.system.next_gate ? `<div class="organ-gaps"><span>Próximo gate: ${escapeHtml(ws.system.next_gate)}</span></div>` : ''}
     </section>
-    <section class="organ"><header class="organ-head"><div><h3>Os sete componentes</h3><p>estado declarado × evidência observada</p></div></header>${wsMatrix(ws)}</section>
-    </div>
+    <details class="ws-technical-summary"><summary><span><b>Saúde dos sete componentes</b><small>Pipeline, rotinas, Skills, interfaces, gates, evals e aprendizado</small></span><i>Ver estado →</i></summary><section class="organ"><header class="organ-head"><div><h3>Os sete componentes</h3><p>estado declarado × evidência observada</p></div></header>${wsMatrix(ws)}</section></details>
+    <section class="ws-evidence"><div class="section-heading"><div><p class="eyebrow">EVIDÊNCIA OPERACIONAL</p><h2>O que já aconteceu de verdade</h2></div><p>Runs, contexto, julgamento e valor permanecem separados da promessa publicada.</p></div>${wsMetrics(ws)}</section>
   </div>`;
 }
 
@@ -957,30 +955,15 @@ function renderNativeCapabilities(capabilities = []) {
 
   return `<section class="native-capabilities" aria-labelledby="native-capabilities-title">
     <header>
-      <div><p class="micro">CAPACIDADES NATIVAS</p><h2 id="native-capabilities-title">O que vem com o Cérebro</h2><p>Capacidade é permanente. Skill é o instrumento. Provider é substituível. Sistema consome essa base para executar trabalho próprio.</p></div>
+      <div><p class="micro">CAPACIDADES NATIVAS</p><h2 id="native-capabilities-title">O que já vem com o Cérebro</h2><p>Estas capacidades fazem parte do Company Brain. Sistemas usam essa base automaticamente quando o contrato permite; você não precisa rodar um comando. Capacidade é permanente. Skill é o instrumento. Provider é substituível.</p></div>
       <button type="button" class="action" data-view="skills">Ver Skills →</button>
     </header>
     <div class="native-capability-grid">${capabilities.map((capability) => {
-      const skillSummary = capability.skills.length
-        ? capability.skills.map((skill) => `<span class="native-capability-skill ${skill.status === 'available' ? '' : 'is-degraded'}" title="${escapeHtml(label(skill.status))}">${escapeHtml(skill.name || skill.skill_id)}${skill.status === 'motor-only' ? ' · motor' : ''}</span>`).join('')
-        : '<span class="native-capability-none">nenhuma instalada</span>';
-      const consumerSummary = capability.systems.count
-        ? `${brainCount(capability.systems.count)} ${capability.systems.count === 1 ? 'Sistema usa' : 'Sistemas usam'}`
-        : 'nenhum Sistema consome';
-      const providerSummary = capability.provider
-        ? `<div><dt>Provider atual</dt><dd><b>${escapeHtml(capability.provider.name || capability.provider.provider_id)}</b>${capability.provider.implementation ? ` · via ${escapeHtml(capability.provider.implementation)}` : ''} <small>· substituível</small></dd></div>`
-        : '';
       return `<article class="native-capability-card state-${escapeHtml(capability.state)}">
         <div class="native-capability-heading"><span>${String(capability.position).padStart(2, '0')}</span>${badge(capability.state, nativeCapabilityStateTone(capability.state), nativeCapabilityStateLabel(capability.state))}</div>
-        <h3>${escapeHtml(capability.name)}</h3>
-        <p>${escapeHtml(capability.promise)}</p>
-        <div class="native-capability-proof"><small>PROVA LOCAL</small><strong>${escapeHtml(capability.proof.headline)}</strong><span>${escapeHtml(capability.proof.detail)}</span></div>
-        <dl>
-          <div><dt>Skills</dt><dd class="native-capability-skills">${skillSummary}</dd></div>
-          <div><dt>Sistemas</dt><dd>${escapeHtml(consumerSummary)}</dd></div>
-          ${providerSummary}
-        </dl>
-        <footer>${nativeCapabilityAction(capability.action)}${capability.skills.length ? '<button type="button" data-view="skills">Inspecionar Skills</button>' : ''}</footer>
+        <div class="native-capability-copy"><h3>${escapeHtml(capability.name)}</h3><p>${escapeHtml(capability.promise)}</p></div>
+        <div class="native-capability-proof"><small>ESTADO NESTE CÉREBRO</small><strong>${escapeHtml(capability.proof.headline)}</strong></div>
+        <footer>${nativeCapabilityAction(capability.action)}</footer>
       </article>`;
     }).join('')}</div>
   </section>`;
@@ -990,9 +973,6 @@ function renderBrainOverview(anatomy) {
   const center = anatomy.control_center;
   const overview = center.overview;
   const runs = overview.runs;
-  const sources = overview.sources;
-  const quality = overview.benchmark;
-  const benchmark = quality.measured ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(quality.percent)}% Hit@3` : 'Não medido';
   return `<div class="brain-control-view brain-overview">
     <section class="brain-overview-lead">
       <div><p class="micro">ESTADO OPERACIONAL</p><h2>O que este Cérebro consegue sustentar hoje.</h2><p>Sem confundir volume de arquivos, qualidade do benchmark e qualidade de cada execução.</p></div>
@@ -1004,13 +984,6 @@ function renderBrainOverview(anatomy) {
     </section>
 
     ${renderNativeCapabilities(center.capabilities)}
-
-    <section class="brain-fact-lines" aria-label="Leitura atual do Cérebro">
-      <article><p class="micro">MEMÓRIA OBSERVADA</p><strong>${brainCount(sources.observed)} de ${brainCount(sources.total)} Fontes</strong><span>${sources.unobserved ? `${brainCount(sources.unobserved)} ainda não deixaram acesso ou marcador observado.` : 'Todas as Fontes declaradas deixaram observação.'}</span><button type="button" data-brain-mode="memory">Ver memória →</button></article>
-      <article><p class="micro">RECUPERAÇÃO</p><strong>${escapeHtml(benchmark)}</strong><span>${quality.measured ? `${brainCount(quality.cases)} casos auditados · benchmark local, não ranking da Society.` : 'Ainda não existe benchmark auditado nesta instalação.'}</span><button type="button" data-brain-mode="recovery">Ver prova →</button></article>
-      <article><p class="micro">APRENDIZADO</p><strong>${brainCount(overview.learning.candidates)} candidatos</strong><span>${brainCount(overview.learning.judgments)} julgamentos · ${brainCount(overview.learning.outcomes)} Runs com outcome. Julgar não promove melhoria sozinho.</span><button type="button" data-brain-mode="learning">Ver ciclo →</button></article>
-      <article><p class="micro">PRONTIDÃO DOS SISTEMAS</p><strong>Não calculada</strong><span>As políticas de frescor e prontidão ainda são textuais; o Console não transforma isso em falso semáforo.</span><button type="button" data-brain-mode="architecture">Ver o que falta →</button></article>
-    </section>
 
     <section class="brain-care-list">
       <header><div><p class="micro">PEDE ATENÇÃO</p><h2>O que merece cuidado agora</h2></div><span>${overview.care.length} sinais</span></header>
@@ -1161,15 +1134,19 @@ function renderToday() {
   const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean).filter((routine) => inActiveOperatingArea(systemOperatingArea(routine.system_ref)));
   const pending = visibleJudgments().filter((item) => item.judgment.status === 'pending');
   const queue = state.decisions;
-  const decisionRows = queue?.available ? queue.open.map((item, index) => `<div class="decision-row" role="listitem">
+  const decisionRow = (item, index) => `<div class="decision-row" role="listitem">
       <b>${index + 1}</b>
       <div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(decisionCategory(item.category))} · ${escapeHtml(item.first_seen)}</small></div>
       <span class="decision-age${item.age_days >= 30 ? ' overdue' : item.age_days >= 7 ? ' late' : ''}">${item.age_days}d${item.age_days >= 30 ? ' ⚖️' : item.age_days >= 7 ? ' ⏰' : ''}</span>
-    </div>`).join('') : '';
+    </div>`;
+  const decisionRows = queue?.available ? queue.open.slice(0, 5).map(decisionRow).join('') : '';
+  const laterDecisions = queue?.available ? queue.open.slice(5) : [];
+  const priorityRoutines = routines.slice(0, 4);
+  const laterRoutines = routines.slice(4);
   return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div>
-    ${queue?.available ? `<div class="today-block"><div class="subheading"><h3>🔨 Fila única de decisão</h3><span>${queue.open_count} abertas · ${queue.decided_total} decididas</span></div><div class="decision-list" role="list">${decisionRows || '<p class="muted">Fila vazia — nada espera seu martelo.</p>'}</div><div class="boundary-note"><b>Uma fila, um juiz</b>Gerada pelo motor do cérebro (gera_fila_decisao.py) a partir de escalações, experimentos, radar, personas e integração. O veredito acontece na mesa de martelo; o Console mostra a verdade, não a substitui.</div></div>` : ''}
+    ${queue?.available ? `<div class="today-block"><div class="subheading"><h3>🔨 Decidir agora</h3><span>${queue.open_count} abertas · ${queue.decided_total} decididas</span></div><div class="decision-list" role="list">${decisionRows || '<p class="muted">Fila vazia — nada espera seu martelo.</p>'}</div>${laterDecisions.length ? `<details class="today-more"><summary>Ver mais ${laterDecisions.length} decisões</summary><div class="decision-list" role="list">${laterDecisions.map((item, index) => decisionRow(item, index + 5)).join('')}</div></details>` : ''}<div class="boundary-note"><b>Uma fila, um juiz</b>O veredito acontece na mesa de martelo; o Console mostra a verdade, não a substitui.</div></div>` : ''}
     ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
-    <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Nenhuma rotina pede atenção', 'Rotinas ativas e prontas aparecem aqui.')}</div>`;
+    <div class="today-block"><div class="subheading"><h3>Trabalhar agora</h3><span>${routines.length} rotinas no radar</span></div><div class="routine-list">${priorityRoutines.length ? priorityRoutines.map(routineCard).join('') : empty('Nenhuma rotina pede atenção', 'Rotinas ativas e prontas aparecem aqui.')}</div>${laterRoutines.length ? `<details class="today-more"><summary>Ver mais ${laterRoutines.length} rotinas</summary><div class="routine-list">${laterRoutines.map(routineCard).join('')}</div></details>` : ''}</div>`;
 }
 
 function canvasRefOptions() {
@@ -1507,7 +1484,7 @@ function systemCard(system) {
       <span><b>${system.source_refs.length}</b><small>Fontes</small></span>
     </div>
     <div class="system-compact-actions">
-      <button type="button" data-open-system="${escapeHtml(system.system_id)}">Inspecionar</button>
+      <button type="button" data-open-system="${escapeHtml(system.system_id)}">Ver Sistema</button>
       ${systemLaunchAction(system)}
     </div>
   </article>`;
@@ -1519,12 +1496,21 @@ function renderSystems() {
   const query = state.systems.query.trim().toLocaleLowerCase('pt-BR');
   const systems = available.filter((system) => {
     const categoryMatch = state.systems.category === 'all' || systemBusinessFunction(system) === state.systems.category;
+    const stageMatch = state.systems.stage === 'all' || system.migration_stage === state.systems.stage;
     const searchMatch = !query || `${system.name} ${system.result} ${system.experience?.presentation?.tagline || ''} ${system.experience?.publisher?.display_name || ''} ${operationalOwnerLabel(system.operational_owner)}`.toLocaleLowerCase('pt-BR').includes(query);
-    return categoryMatch && searchMatch;
+    return categoryMatch && stageMatch && searchMatch;
+  }).sort((left, right) => {
+    const weight = { active: 0, configured: 1, mapped: 2 };
+    return (weight[left.migration_stage] ?? 3) - (weight[right.migration_stage] ?? 3)
+      || left.name.localeCompare(right.name, 'pt-BR');
   });
   const categoryButtons = businessFunctions().map((category) => {
     const count = category.id === 'all' ? available.length : available.filter((system) => systemBusinessFunction(system) === category.id).length;
     return `<button type="button" class="system-filter${state.systems.category === category.id ? ' active' : ''}" data-system-category="${escapeHtml(category.id)}"${count ? '' : ' disabled'}>${escapeHtml(category.label)} <b>${count}</b></button>`;
+  }).join('');
+  const stageButtons = [['all', 'Todos'], ['active', 'Ativos'], ['configured', 'Configurados'], ['mapped', 'Mapeados']].map(([stage, copy]) => {
+    const count = stage === 'all' ? available.length : available.filter((system) => system.migration_stage === stage).length;
+    return `<button type="button" class="system-filter${state.systems.stage === stage ? ' active' : ''}" data-system-stage="${stage}"${count ? '' : ' disabled'}>${copy} <b>${count}</b></button>`;
   }).join('');
   const scopeSummary = state.operatingAreaFilter
     ? `${available.length} de ${state.model.systems.length} Sistemas na área ${operatingAreaName(state.operatingAreaFilter)}`
@@ -1535,8 +1521,8 @@ function renderSystems() {
     const name = { active: 'ativos', configured: 'configurados', mapped: 'mapeados' }[stage];
     return `${count} ${name}`;
   }).join(' · ');
-  return `<div class="section-heading"><div><p class="eyebrow">LAUNCHER</p><h2>Meus Sistemas</h2></div><p>Abrir entra na aplicação própria. Inspecionar mantém contratos, contexto, Runs e confiança no Cockpit.</p></div>
-    <div class="systems-launcher-toolbar"><label><span>Buscar Sistema</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome, resultado, publisher ou responsável" autocomplete="off"></label><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div>
+  return `<div class="section-heading"><div><p class="eyebrow">LAUNCHER</p><h2>Meus Sistemas</h2></div><p>Conheça o Sistema antes de abrir sua aplicação. Contratos, contexto, Runs e confiança continuam no Cockpit.</p></div>
+    <div class="systems-launcher-toolbar"><label><span>Buscar Sistema</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome, resultado, publisher ou responsável" autocomplete="off"></label><div class="systems-filter-stack"><div><span class="micro">ESTÁGIO</span><div class="systems-filter-row" aria-label="Filtrar por estágio">${stageButtons}</div></div><div><span class="micro">FUNÇÃO</span><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div></div></div>
     <div class="systems-results"><span>${escapeHtml(visibleSummary)}</span><small>${escapeHtml(lifecycle)} · identidade publicada pelo Experience Manifest; catálogo público entra na Society.</small></div>
     <div class="systems-market-grid">${systems.map(systemCard).join('') || empty('Nenhum Sistema encontrado', 'Limpe a busca ou escolha outra função empresarial.')}</div>`;
 }
@@ -1559,9 +1545,9 @@ function skillOriginLabel(skill) {
 
 function skillStatusBadge(skill) {
   const status = skill.installation_status;
-  const copy = status === 'available' ? 'Alinhada nos runtimes'
-    : status === 'degraded' ? 'Precisa sincronizar'
-      : 'Não instalada aqui';
+  const copy = status === 'available' ? 'Alinhada'
+    : status === 'degraded' ? 'Sincronizar'
+      : 'Só no motor';
   return badge(status, status === 'available' ? 'good' : status === 'degraded' ? 'warn' : 'neutral', copy);
 }
 
@@ -1573,10 +1559,9 @@ function skillCard(skill) {
   const systems = skillSystems(skill);
   return `<article class="skill-card" data-skill-status="${escapeHtml(skill.installation_status)}">
     <div class="skill-card-head"><div class="skill-mark" aria-hidden="true">/</div><div><p class="micro">${escapeHtml(skillOriginLabel(skill))}</p><h3>${escapeHtml(skillTitle(skill.name))}</h3></div>${skillStatusBadge(skill)}</div>
-    <code class="skill-id">/${escapeHtml(skill.skill_id)}</code>
     <p class="skill-description">${escapeHtml(skill.description)}</p>
-    <div class="skill-system-links"><small>${systems.length ? `${systems.length} ${systems.length === 1 ? 'Sistema declara' : 'Sistemas declaram'}` : 'Sem vínculo contratual'}</small>${systems.slice(0, 3).map((system) => `<button type="button" data-open-system="${escapeHtml(system.system_id)}">${escapeHtml(system.name)}</button>`).join('')}</div>
-    <button type="button" class="skill-inspect" data-open-skill="${escapeHtml(skill.skill_id)}">Inspecionar capacidade</button>
+    <div class="skill-usage"><span>${systems.length ? `${systems.length} ${systems.length === 1 ? 'Sistema usa' : 'Sistemas usam'}` : 'Ainda sem uso declarado'}</span></div>
+    <button type="button" class="skill-inspect" data-open-skill="${escapeHtml(skill.skill_id)}">Ver Skill</button>
   </article>`;
 }
 
@@ -1625,12 +1610,12 @@ function renderSkills() {
     ? `Skills atravessam áreas; o filtro ${operatingAreaName(state.operatingAreaFilter)} não esconde capacidades do Cérebro.`
     : 'Skills pertencem ao Cérebro inteiro; Sistemas apenas declaram quais delas consomem.';
   return `<div class="skills-hero">
-      <div><p class="eyebrow">CAPACIDADES INSTALADAS</p><h2>Skills</h2><p>Know-how executável que os Sistemas usam. Não são aplicações, não prometem resultado sozinhas e não viram produtos na Society.</p></div>
-      <div class="skills-kpis"><span><b>${counts.company}</b><small>nesta empresa</small></span><span><b>${counts.available}</b><small>alinhadas</small></span><span class="${counts.degraded ? 'attention' : ''}"><b>${counts.degraded}</b><small>a sincronizar</small></span><span><b>${counts.linked}</b><small>com vínculo explícito</small></span></div>
+      <div><p class="eyebrow">COMANDOS ESPECIALIZADOS</p><h2>Skills</h2><p>Instrumentos executáveis que Sistemas e agentes podem usar. Abra uma Skill para entender quando usar, onde está instalada e quais Sistemas a declaram.</p></div>
+      <div class="skills-summary"><strong>${counts.company}</strong><span>nesta empresa</span><i></i><strong>${counts.available}</strong><span>alinhadas</span>${counts.degraded ? `<i></i><strong class="attention">${counts.degraded}</strong><span>a sincronizar</span>` : ''}</div>
     </div>
-    <div class="skills-boundary"><span>${counts.unique} capacidades únicas · ${counts.engine} publicadas no motor · ${counts.shared} compartilhada entre os catálogos</span><small>${escapeHtml(scopeNote)}</small></div>
+    <div class="skills-boundary"><span>${counts.unique} capacidades encontradas</span><small>${escapeHtml(scopeNote)}</small></div>
     <div class="skills-toolbar"><label><span>Buscar Skill</span><input type="search" data-skill-search value="${escapeHtml(state.skills.query)}" placeholder="Nome, tarefa ou Sistema" autocomplete="off"></label><div class="skill-filter-group" aria-label="Origem">${originFilters}</div><div class="skill-filter-group" aria-label="Saúde">${statusFilters}</div><div class="skill-filter-group" aria-label="Vínculo">${linkFilters}</div></div>
-    <div class="skills-results"><span>${visible.length} visíveis</span><small><code>.claude/skills</code> é fonte; <code>.agents/skills</code> é runtime derivado.</small></div>
+    <div class="skills-results"><span>${visible.length} visíveis</span><small>Detalhes técnicos aparecem ao abrir uma Skill.</small></div>
     <div class="skills-grid">${visible.map(skillCard).join('') || empty('Nenhuma Skill encontrada', 'Limpe a busca ou escolha outro filtro.')}</div>
     <section class="skill-executors-section"><div class="section-heading"><div><p class="eyebrow">EXECUÇÃO RELACIONADA</p><h2>Modelos não são Skills</h2></div><p>Bindings dizem onde uma capacidade pode executar. O modelo é declarado pelo provider; não representa qualidade ou produto instalado.</p></div><div class="skill-executors">${catalog.executors.map(executorCard).join('') || empty('Nenhum executor ligado', 'Skills continuam catalogadas, mas não há binding local de modelo.')}</div><div class="boundary-note"><b>Fronteira local</b>O Cockpit mostra adapter, política e autenticação. Credenciais, corpo da Skill, prompt e output não entram neste read model.</div></section>`;
 }
@@ -3351,6 +3336,12 @@ document.addEventListener('click', (event) => {
   const systemCategory = event.target.closest('.system-filter[data-system-category]');
   if (systemCategory) {
     state.systems.category = systemCategory.dataset.systemCategory;
+    render();
+    return;
+  }
+  const systemStage = event.target.closest('.system-filter[data-system-stage]');
+  if (systemStage) {
+    state.systems.stage = systemStage.dataset.systemStage;
     render();
     return;
   }

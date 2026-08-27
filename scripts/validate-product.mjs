@@ -163,6 +163,7 @@ const required = [
   'scripts/test-company-brain-launcher-hierarchy-v1.mjs',
   'scripts/test-company-brain-orientation-v1.mjs',
   'scripts/test-company-brain-native-capabilities-v0.mjs',
+  'scripts/test-company-brain-product-polish-v1.mjs',
   'scripts/test-experience-manifest-v1.mjs',
   'scripts/test-society-catalog-v0.mjs',
   'scripts/test-release-manifest-v1.mjs',

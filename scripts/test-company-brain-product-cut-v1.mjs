@@ -29,7 +29,8 @@ for (const area of ['Comercial', 'Operações & Tecnologia', 'Produto & Comunida
   assert.match(app, new RegExp(area), `área interna sem nome empresarial ${area}`);
 }
 assert.match(app, /system-identity/, 'cards devem ter identidade visual própria');
-assert.match(app, /system-accent-\$\{systemAccentSlot\(system\)\}/, 'identidade deve usar slot constitucional de CSS');
+assert.match(app, /mark\.kind !== 'monogram'/, 'identidade publicada deve respeitar o Experience Manifest');
+assert.match(app, /system-identity is-published/, 'marca publicada deve permanecer contida no módulo de identidade');
 assert.doesNotMatch(app, /style="--system-accent:/, 'identidade não pode relaxar a CSP com estilo inline');
 assert.match(app, /Dono operacional/, 'card deve nomear responsabilidade sem fingir publisher');
 assert.match(readModel, /operational_owner: contract\.result\.owner/, 'read model deve expor dono declarado');
