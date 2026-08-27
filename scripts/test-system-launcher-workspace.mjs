@@ -14,13 +14,13 @@ assert.match(html, /data-view="areas" data-views="areas,sources,experiments"/, '
 assert.doesNotMatch(html, /data-view="areas" data-views="[^"]*systems/, 'Sistemas não pode continuar escondido em Estrutura');
 
 const tabs = app.match(/const WS_TABS = \[([\s\S]*?)\n\];/)?.[1] || '';
-for (const name of ['Visão geral', 'Canvas', 'Execuções', 'Julgamento', 'Governança']) {
+for (const name of ['Visão geral', 'Como funciona', 'Execuções', 'Experimentos', 'Aprendizado', 'Configuração']) {
   assert.match(tabs, new RegExp(name), `workspace deve conter ${name}`);
 }
-for (const oldName of ['Arquitetura', 'Experimentos', 'Aprendizado', 'Configuração']) {
-  assert.doesNotMatch(tabs, new RegExp(oldName), `workspace não deve manter a aba antiga ${oldName}`);
+for (const duplicateName of ['Canvas', 'Julgamento', 'Governança']) {
+  assert.doesNotMatch(tabs, new RegExp(duplicateName), `workspace não deve manter a superfície duplicada ${duplicateName}`);
 }
-assert.equal((tabs.match(/\['/g) || []).length, 5, 'workspace deve expor exatamente cinco superfícies');
+assert.equal((tabs.match(/\['/g) || []).length, 6, 'workspace deve expor exatamente seis superfícies');
 
 const card = app.match(/function systemCard\(system\) \{([\s\S]*?)\n\}/)?.[1] || '';
 assert.match(card, /systemLaunchAction\(system\)/, 'card deve oferecer abertura da aplicação');
@@ -31,9 +31,11 @@ assert.doesNotMatch(card, /<article[^>]+data-open-system=/, 'card inteiro não p
 assert.match(app, /url\.protocol === 'https:' \|\| localHttp/, 'interface externa deve aplicar allowlist de protocolo');
 assert.match(app, /rel="noopener noreferrer"/, 'interface externa deve isolar o opener');
 
-for (const mode of ['Contrato', 'Estado atual', 'Último Run']) {
-  assert.match(app, new RegExp(mode), `Canvas deve oferecer o modo ${mode}`);
+for (const mode of ['Declarado', 'Instalado']) {
+  assert.match(app, new RegExp(mode), `Como funciona deve oferecer o modo ${mode}`);
 }
+assert.doesNotMatch(app, /data-ws-how-mode="last-run"/, 'Como funciona não pode repetir o último Run');
+assert.match(app, /Abrir no Mapa Operacional →/, 'diagrama leve deve apontar para o Mapa Operacional global');
 for (const kind of ['operation', 'context', 'trust', 'value']) {
   assert.match(app, new RegExp(`wsMetricGroup\\('${kind}'`), `métricas devem separar ${kind}`);
 }

@@ -318,8 +318,8 @@ function renderRoutines() {
 /* Workspace do Sistema — trabalho fora; confiança e operação dentro do Cockpit. */
 
 const WS_TABS = [
-  ['overview', 'Visão geral'], ['canvas', 'Canvas'], ['runs', 'Execuções'],
-  ['judgment', 'Julgamento'], ['governance', 'Governança'],
+  ['overview', 'Visão geral'], ['how', 'Como funciona'], ['runs', 'Execuções'],
+  ['experiments', 'Experimentos'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
 ];
 
 function openWorkspace(ref, tab = 'overview') {
@@ -328,7 +328,7 @@ function openWorkspace(ref, tab = 'overview') {
   state.workspace = {
     ref,
     tab,
-    canvasMode: state.workspace?.ref === ref ? state.workspace.canvasMode || 'contract' : 'contract',
+    howMode: state.workspace?.ref === ref ? state.workspace.howMode || 'declared' : 'declared',
     data: state.workspace?.ref === ref ? state.workspace.data : null,
   };
   render();
@@ -354,13 +354,13 @@ function wsMatrix(ws) {
   const receiptsTotal = ws.routines.reduce((total, routine) => total + routine.receipts, 0);
   const outcomes = ws.records.filter((record) => (record.outcomes || []).length).length;
   const rows = [
-    ['pipeline', 'Pipeline', `${ws.contract.pipeline.length} etapa(s) declaradas`, ws.contract.pipeline.length > 0, 'canvas'],
-    ['routines', 'Rotinas', `${ws.routines.length} rotina(s) · ${receiptsTotal} recibo(s)`, receiptsTotal > 0, 'governance'],
-    ['skills', 'Skills', ws.contract.capability ? `capability ${ws.contract.capability.capability_id} v${ws.contract.capability.version}` : 'nenhuma declarada', false, 'canvas'],
+    ['pipeline', 'Pipeline', `${ws.contract.pipeline.length} etapa(s) declaradas`, ws.contract.pipeline.length > 0, 'how'],
+    ['routines', 'Rotinas', `${ws.routines.length} rotina(s) · ${receiptsTotal} recibo(s)`, receiptsTotal > 0, 'config'],
+    ['skills', 'Skills', ws.contract.capability ? `capability ${ws.contract.capability.capability_id} v${ws.contract.capability.version}` : 'nenhuma declarada', false, 'how'],
     ['interfaces', 'Interfaces', ws.system.interface_ref ? 'interface própria ligada' : 'nenhuma declarada', Boolean(ws.system.interface_ref), 'overview'],
-    ['gates', 'Gates', ws.contract.eval ? `${(ws.contract.eval.deterministic_gates || []).length} determinístico(s) · ${(ws.contract.eval.human_questions || []).length} pergunta(s) humanas` : 'não declarados', ws.judgments.length > 0, 'canvas'],
+    ['gates', 'Gates', ws.contract.eval ? `${(ws.contract.eval.deterministic_gates || []).length} determinístico(s) · ${(ws.contract.eval.human_questions || []).length} pergunta(s) humanas` : 'não declarados', ws.judgments.length > 0, 'how'],
     ['evals', 'Evals', evalsTotal ? `${evalsPassed}/${evalsTotal} passaram em execuções reais` : 'nenhum eval observado', evalsTotal > 0, 'runs'],
-    ['learning', 'Aprendizado', outcomes ? `${outcomes} run(s) com outcomes` : 'nenhum outcome registrado', outcomes > 0, 'overview'],
+    ['learning', 'Aprendizado', outcomes ? `${outcomes} run(s) com outcomes` : 'nenhum outcome registrado', outcomes > 0, 'learning'],
   ];
   return `<div class="ws-matrix">${rows.map(([key, name, evidence, observed, tab]) => {
     const declared = statuses[key] || 'ausente';
@@ -438,13 +438,13 @@ function wsOverview(ws) {
   </div>`;
 }
 
-function wsCanvasFlow(stages) {
+function wsProcessFlow(stages) {
   return `<div class="ws-canvas-flow" role="list">${stages.map((stage, index) => `<div class="ws-flow-step" role="listitem" data-flow-kind="${escapeHtml(stage.kind)}">
     <p class="micro">${escapeHtml(stage.label)}</p><b>${escapeHtml(stage.value)}</b><small>${escapeHtml(stage.detail)}</small>
   </div>${index < stages.length - 1 ? '<span class="ws-flow-arrow" aria-hidden="true">→</span>' : ''}`).join('')}</div>`;
 }
 
-function wsCanvasContract(ws) {
+function wsHowDeclared(ws) {
   const retrieval = ws.contract.retrieval;
   const capability = ws.contract.capability;
   const evalContract = ws.contract.eval;
@@ -459,29 +459,14 @@ function wsCanvasContract(ws) {
     { kind: 'judgment', label: 'Julgamento', value: result.human_gate || ws.system.human_gate || 'não declarado', detail: 'o Sistema não julga a própria resposta' },
   ];
   return `<div class="ws-stack">
-    <section class="organ ws-canvas-organ"><header class="organ-head"><div><h3>Fluxo declarado</h3><p>System Contract e contratos associados — nenhuma execução inferida.</p></div></header>${wsCanvasFlow(stages)}</section>
+    <section class="organ ws-canvas-organ"><header class="organ-head"><div><h3>Fluxo declarado</h3><p>System Contract e contratos associados — nenhuma execução inferida.</p></div></header>${wsProcessFlow(stages)}</section>
     <section class="organ"><header class="organ-head"><div><h3>Política de recuperação ${retrieval ? `v${escapeHtml(retrieval.version)}` : ''}</h3><p>o backend de contexto que o Sistema pode consumir</p></div></header>
       ${retrieval ? `<div class="table-wrap organ-table"><table><thead><tr><th>Papel</th><th>Seleção</th><th>Filtros</th><th>Janela</th><th>Frescor exigido</th><th>Se indisponível</th></tr></thead><tbody>${(retrieval.source_roles || []).map((role) => `<tr><td><b>${role.priority}</b> ${escapeHtml(role.role)}</td><td>${escapeHtml(role.selection || '—')}</td><td>${(role.filters || []).map((filter) => `<code>${escapeHtml(filter)}</code>`).join(' ')}</td><td>${escapeHtml(role.window || '—')}</td><td>${escapeHtml(role.required_freshness || '—')}</td><td>${escapeHtml(role.on_unavailable || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="gap-mark">Recuperação não declarada.</p>'}
     </section>
   </div>`;
 }
 
-function wsCanvasLastRun(ws) {
-  const record = ws.records[0];
-  if (!record) return empty('Nenhum Run registrado', 'O Canvas não inventa execução. O primeiro Run Record aparecerá aqui.');
-  const snapshot = record.context_snapshot;
-  const stages = [
-    { kind: 'source', label: 'Contexto', value: snapshot ? `${snapshot.accesses.length} fontes` : 'não registrado', detail: snapshot ? `${(snapshot.gaps || []).length} lacunas · ${(snapshot.conflicts || []).length} conflitos` : 'sem Context Snapshot' },
-    { kind: 'retrieval', label: 'Recuperação', value: snapshot?.retrieval_version ? `v${snapshot.retrieval_version}` : 'não registrada', detail: record.mode ? `modo ${label(record.mode)}` : 'modo não registrado' },
-    { kind: 'system', label: 'Execução', value: label(record.status), detail: record.run_id },
-    { kind: 'system', label: 'Outputs', value: `${(record.output_refs || []).length} referências`, detail: 'conteúdo privado não exposto' },
-    { kind: 'gate', label: 'Eval', value: record.eval?.passed === true ? 'passou' : record.eval?.passed === false ? 'falhou' : 'não medido', detail: record.eval?.version ? `v${record.eval.version}` : 'sem versão registrada' },
-    { kind: 'judgment', label: 'Julgamento', value: label(record.human_decision || 'pending'), detail: (record.outcomes || []).length ? `${record.outcomes.length} outcomes registrados` : 'resultado real sem prova' },
-  ];
-  return `<div class="ws-stack"><section class="organ ws-canvas-organ"><header class="organ-head"><div><h3>Último caminho observado</h3><p>${fmtDate(record.completed_at)} · ${escapeHtml(record.run_id)}</p></div><button class="action" data-canvas-jump-run="${escapeHtml(wsRunSelector(record))}">Abrir trace no Canvas →</button></header>${wsCanvasFlow(stages)}</section></div>`;
-}
-
-function wsCanvasCurrent(ws) {
+function wsHowInstalled(ws) {
   const retrieval = ws.contract.retrieval;
   const sourceRows = ws.sources.map((source) => `<tr>
     <td><button type="button" class="table-action" data-open-source="${escapeHtml(source.source_id)}">${escapeHtml(source.name)}</button><small>${escapeHtml(source.role)}</small></td>
@@ -507,33 +492,51 @@ function wsCanvasCurrent(ws) {
   </div>`;
 }
 
-function wsCanvas(ws) {
-  const mode = state.workspace?.canvasMode || 'contract';
-  const body = mode === 'current' ? wsCanvasCurrent(ws) : mode === 'last-run' ? wsCanvasLastRun(ws) : wsCanvasContract(ws);
+function wsHowItWorks(ws) {
+  const mode = state.workspace?.howMode || 'declared';
+  const body = mode === 'installed' ? wsHowInstalled(ws) : wsHowDeclared(ws);
   return `<div class="ws-stack">
     <div class="ws-canvas-head">
-      <div><p class="eyebrow">BACKEND OBSERVÁVEL</p><p class="section-help">Contrato, instalação e execução são leituras diferentes da mesma operação.</p></div>
+      <div><p class="eyebrow">COMO O SISTEMA FUNCIONA</p><p class="section-help">Arquitetura declarada e instalação observada. Runs e julgamentos vivem em Execuções.</p></div>
       <div class="ws-canvas-actions">
-        <div class="ws-mode-switch" role="group" aria-label="Leitura do Canvas">
-          <button type="button" data-ws-canvas-mode="contract" class="${mode === 'contract' ? 'active' : ''}">Contrato</button>
-          <button type="button" data-ws-canvas-mode="current" class="${mode === 'current' ? 'active' : ''}">Estado atual</button>
-          <button type="button" data-ws-canvas-mode="last-run" class="${mode === 'last-run' ? 'active' : ''}">Último Run</button>
+        <div class="ws-mode-switch" role="group" aria-label="Leitura de como o Sistema funciona">
+          <button type="button" data-ws-how-mode="declared" class="${mode === 'declared' ? 'active' : ''}">Declarado</button>
+          <button type="button" data-ws-how-mode="installed" class="${mode === 'installed' ? 'active' : ''}">Instalado</button>
         </div>
-        <button class="action" type="button" data-open-system-canvas="${escapeHtml(ws.system.system_id)}">Canvas completo →</button>
+        <button class="action" type="button" data-open-system-canvas="${escapeHtml(ws.system.system_id)}">Abrir no Mapa Operacional →</button>
       </div>
     </div>
     ${body}
   </div>`;
 }
 
+function wsJudgmentForRun(ws, record) {
+  return ws.judgments.find((item) => item.run_id === record.run_id) || null;
+}
+
+function wsRunJudgment(ws, record) {
+  const item = wsJudgmentForRun(ws, record);
+  if (!item) {
+    const decision = record.human_decision || 'sem recibo';
+    const origin = record.human_decision ? 'estado no Run Record · sem Judgment Receipt' : 'nenhum Judgment Receipt ligado';
+    return `<div class="ws-run-judgment">${badge(decision)}<small>${origin}</small></div>`;
+  }
+  const current = item.judgment || {};
+  const stateLabel = current.verdict || current.status || 'indisponível';
+  const tone = current.verdict === 'approved' ? 'good' : current.verdict === 'rejected' ? 'bad' : current.status === 'pending' ? 'warn' : 'neutral';
+  return `<div class="ws-run-judgment">${badge(stateLabel, tone)}<button class="table-action" data-open-judgment="${escapeHtml(item.receipt_id)}">${current.status === 'pending' ? 'Julgar' : 'Ver recibo'} →</button></div>`;
+}
+
 function wsRuns(ws) {
-  if (!ws.records.length) return empty('Nenhuma execução no ledger', 'O primeiro run registrado aparece aqui com contexto, eval e comparação.');
+  const pending = ws.judgments.filter((item) => item.judgment.status === 'pending').length;
+  const authority = `<div class="boundary-note ws-run-authority"><div><b>Uma fila constitucional</b>Execuções projeta o estado do julgamento em cada Run. O martelo e o recibo continuam na Caixa de Julgamento global.</div><button class="action" data-view="judgments">Abrir fila${pending ? ` · ${pending} pendente${pending === 1 ? '' : 's'}` : ''} →</button></div>`;
+  if (!ws.records.length) return `<div class="ws-stack">${authority}${empty('Nenhuma execução no ledger', 'O primeiro run registrado aparece aqui com contexto, eval e comparação.')}</div>`;
   const rows = ws.records.map((record) => `<tr>
     <td><strong>${fmtDate(record.completed_at)}</strong><small>${escapeHtml(record.run_id.slice(0, 24))}…</small></td>
     <td>${escapeHtml(label(record.mode || '—'))}</td><td>${badge(record.status)}</td>
     <td>${record.context_snapshot?.accesses?.length ? `${record.context_snapshot.accesses.length} fontes${(record.context_snapshot.gaps || []).length ? ` · <span class="gap-mark">${record.context_snapshot.gaps.length} lacunas</span>` : ''}` : '<span class="muted">sem snapshot</span>'}</td>
     <td>${record.eval?.passed === true ? badge('evaluation-passed', 'good') : record.eval?.passed === false ? badge('evaluation-gate-failed', 'bad') : '<span class="muted">—</span>'}</td>
-    <td>${badge(record.human_decision)}</td>
+    <td>${wsRunJudgment(ws, record)}</td>
     <td><button class="table-action" data-canvas-jump-run="${escapeHtml(wsRunSelector(record))}">trace →</button></td>
   </tr>`).join('');
   const options = ws.records.map((record, index) => `<option value="${index}">${fmtDate(record.completed_at)} · ${escapeHtml(label(record.mode || 'run'))}</option>`);
@@ -541,7 +544,7 @@ function wsRuns(ws) {
     <div class="ws-compare-pick"><label>A <select id="ws-cmp-a">${options.map((option, index) => index === 1 ? option.replace('<option', '<option selected') : option).join('')}</select></label>
     <label>B <select id="ws-cmp-b">${options.map((option, index) => index === 0 ? option.replace('<option', '<option selected') : option).join('')}</select></label></div>
     <div id="ws-compare">${wsCompareTable(ws, 1, 0)}</div></section>` : '<p class="section-help">Comparação disponível a partir de duas execuções.</p>';
-  return `<div class="ws-stack"><div class="table-wrap"><table><thead><tr><th>Quando</th><th>Modo</th><th>Status</th><th>Contexto</th><th>Eval</th><th>Decisão</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${compare}</div>`;
+  return `<div class="ws-stack">${authority}<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Modo</th><th>Status</th><th>Contexto</th><th>Eval</th><th>Julgamento</th><th>Trace</th></tr></thead><tbody>${rows}</tbody></table></div>${compare}</div>`;
 }
 
 function wsCompareTable(ws, indexA, indexB) {
@@ -577,31 +580,20 @@ function wsExperiments(ws) {
   </article>`).join('')}</div>`;
 }
 
-function wsJudgment(ws) {
-  const pending = ws.judgments.filter((item) => item.judgment.status === 'pending');
-  const decided = ws.judgments.filter((item) => item.judgment.status !== 'pending');
-  return `<div class="ws-stack">
-    <div class="subheading"><h3>Pendentes deste sistema</h3><span>${pending.length}</span></div>
-    ${pending.length ? judgmentList(pending) : '<p class="muted">Nenhum output deste sistema espera martelo.</p>'}
-    <div class="subheading"><h3>Julgados</h3><span>${decided.length}</span></div>
-    ${decided.length ? judgmentList(decided) : '<p class="muted">Nenhum julgamento registrado.</p>'}
-    <div class="boundary-note"><b>Fila única</b>Decisões de negócio deste sistema também vivem na fila única do cérebro — o Hoje é a mesa. <button class="action" data-view="today">Ir para a mesa →</button></div>
-  </div>`;
-}
-
 function wsLearning(ws) {
   const learning = ws.contract.learning || {};
   const outcomes = ws.records.filter((record) => (record.outcomes || []).length);
   const corrected = ws.records.filter((record) => record.correction_ref);
+  const replays = ws.records.filter((record) => record.mode === 'replay').length;
   const stages = [
-    ['Candidato', 0, `política: ${learning.correction_policy || '—'} · limiar ${learning.promotion_threshold ?? '—'} casos`],
-    ['Aprovado', corrected.length, 'correções humanas aplicadas a runs'],
-    ['Replay posterior', ws.records.filter((record) => record.mode === 'replay').length, 'reexecuções comparáveis'],
-    ['Melhoria provada', 0, 'nenhuma ainda — exige replay melhor que baseline com martelo'],
+    ['Candidatos', 'não projetado', false, `política: ${learning.correction_policy || '—'} · limiar ${learning.promotion_threshold ?? '—'} casos`],
+    ['Correções', corrected.length, corrected.length > 0, 'correções humanas ligadas a Runs deste Sistema'],
+    ['Replays', replays, replays > 0, 'reexecuções comparáveis observadas'],
+    ['Melhoria provada', 'sem prova', false, 'exige replay melhor que o baseline e novo martelo'],
   ];
   return `<div class="ws-stack">
     <section class="organ"><header class="organ-head"><div><h3>O funil de aprendizado deste sistema</h3><p>candidato → aprovado → replay → provado</p></div></header>
-      <div class="ws-learning">${stages.map(([name, count, help]) => `<div class="ws-stage${count ? ' has' : ''}"><b>${count}</b><span>${escapeHtml(name)}</span><small>${escapeHtml(help)}</small></div>`).join('')}</div>
+      <div class="ws-learning">${stages.map(([name, value, observed, help]) => `<div class="ws-stage${observed ? ' has' : ''}"><b>${escapeHtml(String(value))}</b><span>${escapeHtml(name)}</span><small>${escapeHtml(help)}</small></div>`).join('')}</div>
       <p class="organ-answer">${outcomes.length ? `<b>${outcomes.length}</b> run(s) com outcomes registrados ${prov('observado')} — matéria-prima do próximo candidato.` : `Nenhum outcome registrado ainda ${prov('observado')}.`}</p>
     </section>
   </div>`;
@@ -635,7 +627,14 @@ function renderSystemWorkspace() {
   if (!workspace) return empty('Nenhum sistema aberto', 'Abra um sistema pela lista ou pelo Canvas.');
   const ws = workspace.data;
   if (!ws) return '<div class="loading"><i></i><span>Abrindo o workspace do sistema…</span></div>';
-  const tabs = { overview: wsOverview, canvas: wsCanvas, runs: wsRuns, judgment: wsJudgment, governance: wsConfig };
+  const tabs = {
+    overview: wsOverview,
+    how: wsHowItWorks,
+    runs: wsRuns,
+    experiments: wsExperiments,
+    learning: wsLearning,
+    config: wsConfig,
+  };
   return `<div class="ws">
     <div class="ws-top">
       <button class="action" data-view="systems">← Sistemas</button>
@@ -645,7 +644,7 @@ function renderSystemWorkspace() {
       <span class="canvas-spacer"></span>
       ${systemLaunchAction(ws.system)}
     </div>
-    <div class="tabstrip" role="tablist">${WS_TABS.map(([id, name]) => `<button role="tab" data-ws-tab="${id}" class="${workspace.tab === id ? 'active' : ''}">${name}${id === 'judgment' && ws.judgments.filter((item) => item.judgment.status === 'pending').length ? `<b>${ws.judgments.filter((item) => item.judgment.status === 'pending').length}</b>` : ''}</button>`).join('')}</div>
+    <div class="tabstrip" role="tablist">${WS_TABS.map(([id, name]) => `<button role="tab" data-ws-tab="${id}" class="${workspace.tab === id ? 'active' : ''}">${name}${id === 'runs' && ws.judgments.filter((item) => item.judgment.status === 'pending').length ? `<b>${ws.judgments.filter((item) => item.judgment.status === 'pending').length}</b>` : ''}</button>`).join('')}</div>
     ${(tabs[workspace.tab] || wsOverview)(ws)}
   </div>`;
 }
@@ -2717,9 +2716,9 @@ document.addEventListener('click', (event) => {
   if (openSystem) { openWorkspace(openSystem.dataset.openSystem); return; }
   const wsTab = event.target.closest('[data-ws-tab]');
   if (wsTab && state.view === 'system' && state.workspace) { state.workspace.tab = wsTab.dataset.wsTab; render(); return; }
-  const wsCanvasMode = event.target.closest('[data-ws-canvas-mode]');
-  if (wsCanvasMode && state.view === 'system' && state.workspace) {
-    state.workspace.canvasMode = wsCanvasMode.dataset.wsCanvasMode;
+  const wsHowMode = event.target.closest('[data-ws-how-mode]');
+  if (wsHowMode && state.view === 'system' && state.workspace) {
+    state.workspace.howMode = wsHowMode.dataset.wsHowMode;
     render();
     return;
   }

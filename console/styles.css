@@ -576,8 +576,10 @@ th[data-runs-sort] b { margin-left: 3px; color: var(--text); }
 .ws-top .action { text-decoration: none; }
 .ws-top > .action:last-child { margin-left: auto; }
 .system-kind-mark { color: var(--kind-system); font: 650 var(--fs-micro) var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s3); align-items: start; }
-.ws-stack { display: grid; gap: var(--s3); }
+.ws { min-width: 0; }
+.ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s3); align-items: start; min-width: 0; }
+.ws-stack { display: grid; gap: var(--s3); min-width: 0; }
+.ws-stack > *, .ws .table-wrap { min-width: 0; max-width: 100%; }
 .ws-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); margin-bottom: var(--s3); }
 .ws-metric-group { min-width: 0; padding: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface); }
 .ws-metric-group > .micro { display: block; margin: 0 0 var(--s2); color: var(--text-3); font-weight: 650; letter-spacing: .08em; }
@@ -624,6 +626,11 @@ th[data-runs-sort] b { margin-left: 3px; color: var(--text); }
 .ws-compare-pick label { display: flex; align-items: center; gap: var(--s2); color: var(--text-3); font: 600 var(--fs-micro) var(--font-mono); }
 .ws-compare-pick select { padding: 6px 10px; color: var(--text); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); background: var(--bg); font: 500 var(--fs-meta) var(--font-sans); }
 tr.ws-diff td { background: rgba(78, 156, 245, .07); }
+.ws-run-authority { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); }
+.ws-run-authority > div { min-width: 0; color: var(--text-3); font-size: var(--fs-meta); line-height: 1.5; }
+.ws-run-authority .action { flex: 0 0 auto; }
+.ws-run-judgment { display: flex; align-items: center; gap: var(--s2); min-width: 150px; }
+.ws-run-judgment small { color: var(--text-3); font-size: var(--fs-micro); }
 .ws-learning { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); margin-bottom: var(--s3); }
 .ws-stage { padding: var(--s3); border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--bg); text-align: center; opacity: .55; }
 .ws-stage.has { opacity: 1; border-color: rgba(48, 196, 141, .3); }
@@ -1708,6 +1715,11 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
   .systems-results { display: grid; gap: var(--s1); }
   .systems-market-grid { grid-template-columns: 1fr; }
   .ws-top > .action:last-child { width: 100%; margin-left: 0; text-align: center; }
+  .ws-run-authority { align-items: stretch; flex-direction: column; }
+  .ws-run-authority .action { text-align: center; }
+  .ws-compare-pick { flex-direction: column; gap: var(--s2); }
+  .ws-compare-pick label { min-width: 0; }
+  .ws-compare-pick select { width: 100%; min-width: 0; max-width: 100%; }
 }
 
 @media (max-width: 520px) {
