@@ -1,0 +1,186 @@
+{
+  "protocol_version": 2,
+  "system_id": "next-best-gtm",
+  "name": "Next Best GTM",
+  "version": "1.4.3",
+  "status": "confirmed",
+  "result": {
+    "statement": "transformar sinais reais do negócio em uma próxima ação de crescimento explicável e julgável",
+    "non_success": "gerar ranking genérico, executar contato automaticamente ou atribuir causalidade sem amostra",
+    "output_type": "proxima-acao-gtm",
+    "definition_of_done": "o responsável compreende a evidência, os limites e decide se executa, corrige ou rejeita a ação",
+    "owner": "responsavel-crescimento",
+    "human_gate": "julgar a recomendação e autorizar separadamente qualquer ação externa"
+  },
+  "trigger": {
+    "type": "manual",
+    "description": "quando o responsável quer encontrar a menor próxima ação capaz de mover uma crença ou remover um bloqueio"
+  },
+  "capability": {
+    "capability_id": "priorizar-proxima-acao-gtm",
+    "version": "1.4.3",
+    "origin": "local"
+  },
+  "entities": [
+    { "type": "recommendation", "role": "proxima-acao", "required": true }
+  ],
+  "sources": [
+    {
+      "role": "relacionamento",
+      "source_id": "relationship-signals",
+      "required": true,
+      "access": "read-only",
+      "freshness": "últimos quatorze dias para sinais conversacionais e cento e oitenta dias para histórico",
+      "purpose": "identificar aquisição, ativação, intenção, suporte e progresso sem inventar urgência"
+    },
+    {
+      "role": "comercio-e-entitlement",
+      "source_id": "commerce-signals",
+      "required": true,
+      "access": "read-only",
+      "freshness": "estado atual de compra, checkout, opt-out e entitlement",
+      "purpose": "bloquear compradores, opt-outs e recomendações incompatíveis com o estado real"
+    },
+    {
+      "role": "feedback-e-outcomes",
+      "source_id": "gtm-outcomes",
+      "required": true,
+      "access": "read-only",
+      "freshness": "último julgamento registrado por identidade opaca",
+      "purpose": "respeitar cooldown, correções humanas e outcomes anteriores"
+    },
+    {
+      "role": "prova-disponivel",
+      "source_id": "proof-library",
+      "required": false,
+      "access": "read-only",
+      "freshness": "última versão aprovada",
+      "purpose": "ligar a ação a uma prova coerente sem fabricar claim"
+    }
+  ],
+  "retrieval": {
+    "version": "1.0.0",
+    "source_roles": [
+      {
+        "role": "comercio-e-entitlement",
+        "priority": 1,
+        "selection": "recent",
+        "filters": ["estado canônico", "identidade opaca", "sem ambiente sandbox"],
+        "window": "estado atual e eventos relevantes dos últimos cento e oitenta dias",
+        "required_freshness": "estado atual verificável",
+        "on_unavailable": "stop"
+      },
+      {
+        "role": "feedback-e-outcomes",
+        "priority": 2,
+        "selection": "relevant",
+        "filters": ["último julgamento por identidade", "cooldown vigente", "correções humanas"],
+        "window": "histórico disponível da política atual e anteriores",
+        "required_freshness": "último outcome persistido",
+        "on_unavailable": "stop"
+      },
+      {
+        "role": "relacionamento",
+        "priority": 3,
+        "selection": "mixed",
+        "filters": ["sinais permitidos", "proveniência presente", "janela compatível"],
+        "window": "quatorze dias para conversa e cento e oitenta dias para comportamento",
+        "required_freshness": "janela declarada por tipo de sinal",
+        "on_unavailable": "stop"
+      },
+      {
+        "role": "prova-disponivel",
+        "priority": 4,
+        "selection": "relevant",
+        "filters": ["prova aprovada", "crença compatível"],
+        "window": "versão vigente",
+        "required_freshness": "última aprovação",
+        "on_unavailable": "continue-with-gap"
+      }
+    ],
+    "conflict_policy": "a casa de verdade do estado vence; julgamento humano posterior vence sinal automático anterior",
+    "fallback": {
+      "enabled": true,
+      "order": ["prova-disponivel"],
+      "on_exhausted": "continue-with-gap"
+    },
+    "stop_conditions": [
+      "parar sem estado verificável de compra, entitlement e opt-out",
+      "parar sem histórico de feedback necessário para cooldown e guardas",
+      "parar quando a identidade não puder ser resolvida de forma opaca"
+    ],
+    "context_budget": {
+      "unit": "items",
+      "maximum": 240,
+      "per_source_maximum": 80
+    },
+    "evidence": {
+      "required": true,
+      "provenance": "per-claim",
+      "minimum_refs": 1
+    }
+  },
+  "pipeline": [
+    {
+      "state": "protegido",
+      "input": "sinais autorizados e identidade opaca",
+      "output": "universo elegível sem compradores, opt-outs ou bloqueios terminais",
+      "gate": "guardas de segurança e entitlement passaram"
+    },
+    {
+      "state": "priorizado",
+      "input": "universo elegível, feedback e prova disponível",
+      "output": "próxima ação com crença, evidência, limites e recommendation id",
+      "gate": "ação é explicável e nenhuma comunicação foi enviada"
+    },
+    {
+      "state": "julgado",
+      "input": "recomendação explicável",
+      "output": "aprovação, rejeição, correção ou outcome ligado à linhagem",
+      "gate": "decisão humana registrada antes de qualquer ação externa"
+    }
+  ],
+  "permissions": {
+    "read": ["fontes lógicas autorizadas pelo Cérebro"],
+    "write": ["recomendação, Run Record e recibos locais"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "1.4.3",
+    "deterministic_gates": [
+      "compradores e opt-outs não recebem recomendação comercial",
+      "suporte aberto bloqueia venda",
+      "toda recomendação aponta evidência e identidade opaca",
+      "nenhuma mensagem foi enviada"
+    ],
+    "human_questions": [
+      "A próxima ação está sustentada pelo contexto e você a executaria, corrigiria ou rejeitaria?"
+    ],
+    "outcome_measure": "acao-gtm-julgada",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  },
+  "extensions": {
+    "portfolio_name": "GTM",
+    "migration_stage": "configured",
+    "human_maturity": "operacional · integração constitucional pendente",
+    "source_manifest_ref": "sistemas/next-best-gtm/manifest.md",
+    "interface_ref": "http://localhost:3300/",
+    "area_ref": "crescimento",
+    "component_statuses": {
+      "pipeline": "repetivel",
+      "routines": "repetivel",
+      "skills": "ativo",
+      "interfaces": "ativo",
+      "gates": "instrumentado",
+      "evals": "instrumentado",
+      "learning": "parcial"
+    },
+    "next_gate": "registrar e julgar o primeiro Run do GTM no ledger do Company Brain"
+  }
+}

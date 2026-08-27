@@ -3,7 +3,7 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   confirmLegacySchedulePaused,
@@ -125,12 +125,17 @@ function countDir(root, relative) {
 }
 
 // Workspace de um Sistema — o contrato cru + tudo que foi observado dele.
-function systemWorkspace(root, ref) {
+export function systemWorkspace(root, ref) {
   const model = buildConsoleReadModel(root);
   const system = model.systems.find((item) => item.system_id === ref || item.contract_id === ref);
   if (!system) throw new Error('not-found');
   let contract = {};
-  try { contract = JSON.parse(readFileSync(resolve(root, `.cerebro/contracts/systems/${system.contract_id}.json`), 'utf8')); } catch { contract = {}; }
+  try {
+    const contractPath = resolve(root, system.contract_ref || `.cerebro/contracts/systems/${system.contract_id}.json`);
+    const brainRoot = resolve(root);
+    if (contractPath !== brainRoot && !contractPath.startsWith(`${brainRoot}${sep}`)) throw new Error('not-found');
+    contract = JSON.parse(readFileSync(contractPath, 'utf8'));
+  } catch { contract = {}; }
   const matches = (value) => value === system.system_id || value === system.contract_id;
   const records = latestRunRecords(root).filter((record) => matches(record.system_id))
     .sort((left, right) => String(right.completed_at || '').localeCompare(String(left.completed_at || '')));

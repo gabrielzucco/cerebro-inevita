@@ -96,6 +96,7 @@ function listSystemContracts(root, issues) {
           || (contract.status === 'active' ? 'active' : contract.status === 'proposed' ? 'mapped' : 'configured');
         systems.set(contract.system_id, {
           contract_id: contract.system_id,
+          contract_ref: relative(root, path).replaceAll('\\', '/'),
           system_id: portfolioSystemRef,
           name: contract.extensions?.portfolio_name || contract.name,
           version: contract.version,

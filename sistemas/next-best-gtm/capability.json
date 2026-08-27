@@ -1,0 +1,27 @@
+{
+  "protocol_version": 1,
+  "capability_id": "priorizar-proxima-acao-gtm",
+  "name": "Priorizar próxima ação de GTM",
+  "version": "1.4.3",
+  "task": "Transformar sinais autorizados de relacionamento, comércio e feedback em uma próxima ação explicável para julgamento humano",
+  "when_to_use": ["quando existe contexto verificável e o responsável precisa escolher a menor próxima ação de crescimento"],
+  "when_not_to_use": ["quando faltam guardas de compra, entitlement, opt-out, identidade ou feedback necessário para cooldown"],
+  "input_roles": [
+    { "role": "relacionamento", "required": true, "purpose": "sustentar intenção, ativação, suporte e progresso" },
+    { "role": "comercio-e-entitlement", "required": true, "purpose": "aplicar guardas de compra, checkout, opt-out e acesso" },
+    { "role": "feedback-e-outcomes", "required": true, "purpose": "respeitar julgamento e cooldown anteriores" },
+    { "role": "prova-disponivel", "required": false, "purpose": "ligar ação e crença a prova aprovada" }
+  ],
+  "output": {
+    "type": "proxima-acao-gtm",
+    "definition_of_done": "o responsável entende a evidência e julga a recomendação antes de agir"
+  },
+  "permissions": {
+    "read": ["fontes lógicas autorizadas"],
+    "write": ["recomendação e recibos locais"],
+    "external_actions": false
+  },
+  "human_authority": ["julgar recomendação", "autorizar separadamente qualquer contato ou ação externa"],
+  "evals": ["guardas terminais passam", "evidência por claim", "nenhuma ação externa automática"],
+  "extensions": {}
+}

@@ -960,6 +960,31 @@ function systemOperational(system) {
   };
 }
 
+function systemPreflight(system) {
+  const installedSourceIds = new Set((state.model.sources || []).map((source) => source.source_id));
+  const required = (system.source_refs || []).filter((source) => source.required);
+  const verifiable = required.filter((source) => source.source_id);
+  const found = verifiable.filter((source) => installedSourceIds.has(source.source_id));
+  const missing = verifiable.filter((source) => !installedSourceIds.has(source.source_id));
+  const afterAuthorization = required.filter((source) => !source.source_id);
+  if (missing.length) {
+    return {
+      status: 'context-required', label: 'Precisa preparar contexto', tone: 'warn',
+      detail: `${found.length}/${verifiable.length} Fontes obrigatórias encontradas · ${missing.length} ausente(s)`,
+    };
+  }
+  if (afterAuthorization.length) {
+    return {
+      status: 'verify-after-authorization', label: 'Verificar após autorização', tone: 'neutral',
+      detail: `${afterAuthorization.length} requisito(s) só verificável(is) depois do grant`,
+    };
+  }
+  return {
+    status: 'verify-authorizations', label: 'Fontes encontradas', tone: 'good',
+    detail: `${found.length}/${verifiable.length} Fontes obrigatórias · autorizações ainda precisam ser verificadas`,
+  };
+}
+
 function safeSystemInterfaceUrl(value) {
   if (!value) return null;
   try {
@@ -985,11 +1010,16 @@ function systemCard(system) {
   const contractRef = system.contract_id !== system.system_id ? `<code>${escapeHtml(system.contract_id)}</code>` : `<code>v${escapeHtml(system.version)}</code>`;
   const stageLabel = { mapped: 'Mapeado', configured: 'Configurado', active: 'Ativo' }[system.migration_stage] || label(system.migration_stage);
   const operational = systemOperational(system);
+  const preflight = systemPreflight(system);
   return `<article class="object-card system-launcher-card" data-kind="system">
     <div class="object-card-top">${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}${contractRef}</div>
     <p class="micro">${escapeHtml(system.area_ref)}${system.human_maturity ? ` · ${escapeHtml(system.human_maturity)}` : ''}</p>
     <h3>${escapeHtml(system.name)}</h3>
     <p>${escapeHtml(system.result)}</p>
+    <div class="system-preflight" data-readiness="${preflight.status}">
+      <div><span>Pré-diagnóstico</span>${badge(preflight.status, preflight.tone, preflight.label)}</div>
+      <p>${escapeHtml(preflight.detail)}</p>
+    </div>
     ${system.next_gate ? `<div class="boundary-note"><b>Próximo gate</b>${escapeHtml(system.next_gate)}</div>` : ''}
     <div class="object-stats system-launcher-stats">
       <span><b>${system.source_refs.length}</b><small>Fontes</small></span>
