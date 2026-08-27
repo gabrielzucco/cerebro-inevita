@@ -37,3 +37,11 @@ nativo estarem prontos.
 - `scripts/import-legacy-routine-runs.mjs`
 - `scripts/test-legacy-routine-run-import.mjs`
 - `docs/stories/2026-08-27-codex-routine-cutover-v1.md`
+- `.automacao/rotinas/radar-voz-diario.prompt.md`
+- `.automacao/rotinas/personas-match-diario.prompt.md`
+- `.cerebro/contracts/routines/{radar-voz-diario,personas-match-diario,personas-drift-semanal,personas-upgrade-mensal}.json`
+- `.cerebro/contracts/access-grants/grant-{radar,personas}-*.json`
+- `.cerebro/contracts/systems/{inteligencia-conhecimento,oferta-vendas}.json`
+- `.cerebro/runtime/executors/executor-codex-gabriel.json`
+- `.cerebro/runtime/imports/codex-radar-personas-history-v1.json`
+- `.cerebro/runtime/migrations/routines/{radar-voz-diario,personas-match-diario,personas-drift-semanal,personas-upgrade-mensal}.json`
