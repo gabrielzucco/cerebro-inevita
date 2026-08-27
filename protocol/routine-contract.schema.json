@@ -149,24 +149,41 @@
               "type": "array",
               "minItems": 1,
               "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["source_ref", "selected_pointers", "freshness_pointer"],
-                "properties": {
-                  "source_ref": { "$ref": "#/$defs/ref" },
-                  "selected_pointers": {
-                    "type": "array",
-                    "minItems": 1,
-                    "uniqueItems": true,
-                    "items": { "$ref": "#/$defs/json_pointer" }
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source_ref", "selected_pointers", "freshness_pointer"],
+                    "properties": {
+                      "source_ref": { "$ref": "#/$defs/ref" },
+                      "selected_pointers": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": { "$ref": "#/$defs/json_pointer" }
+                      },
+                      "freshness_pointer": {
+                        "oneOf": [
+                          { "type": "null" },
+                          { "$ref": "#/$defs/json_pointer" }
+                        ]
+                      }
+                    }
                   },
-                  "freshness_pointer": {
-                    "oneOf": [
-                      { "type": "null" },
-                      { "$ref": "#/$defs/json_pointer" }
-                    ]
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source_ref", "retrieval_receipt_pointer", "expected_profile_sha256"],
+                    "properties": {
+                      "source_ref": { "$ref": "#/$defs/ref" },
+                      "retrieval_receipt_pointer": { "$ref": "#/$defs/json_pointer" },
+                      "expected_profile_sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      }
+                    }
                   }
-                }
+                ]
               }
             }
           }

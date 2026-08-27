@@ -521,7 +521,8 @@ function materializeRecordedArtifacts(graph, events, system) {
     }
     if (event.step_type === 'collector') {
       const bindingRefs = event.input_refs.filter((ref) => /^collector-[a-z0-9-]+$/.test(ref));
-      if (bindingRefs.length) setNode(graph, 'collector', event.state, true, { binding_refs: bindingRefs });
+      setNode(graph, 'collector', event.state, true,
+        bindingRefs.length ? { binding_refs: bindingRefs } : {});
     }
     for (const ref of event.input_refs.filter((value) => artifactReference(value)
       && !(event.step_type === 'collector' && /^collector-[a-z0-9-]+$/.test(value)))) {

@@ -141,6 +141,45 @@ try {
   assert.deepEqual(validateRoutineRunReceipt(receiptExample), []);
   assert.deepEqual(validateRoutineMigration(migrationExample), []);
   assert.deepEqual(validateCollectorBinding(collectorExample), []);
+  const retrievalPreparation = {
+    kind: 'trusted-local-command',
+    binding_ref: 'collector-funnel-local',
+    output_ref: '.automacao/context-fixture.json',
+    source_selections: [{
+      source_ref: 'paid-media',
+      retrieval_receipt_pointer: '/retrieval/receipt_ref',
+      expected_profile_sha256: 'a'.repeat(64),
+    }],
+  };
+  assert.deepEqual(validateRoutineContract({
+    ...routineExample,
+    extensions: { preparation: retrievalPreparation },
+  }), []);
+  assert(validateRoutineContract({
+    ...routineExample,
+    extensions: {
+      preparation: {
+        ...retrievalPreparation,
+        source_selections: [{
+          ...retrievalPreparation.source_selections[0],
+          selected_pointers: ['/paid'],
+          freshness_pointer: '/observed',
+        }],
+      },
+    },
+  }).some((error) => error.includes('exatamente um modo')));
+  assert(validateRoutineContract({
+    ...routineExample,
+    extensions: {
+      preparation: {
+        ...retrievalPreparation,
+        source_selections: [{
+          ...retrievalPreparation.source_selections[0],
+          expected_profile_sha256: 'not-a-sha',
+        }],
+      },
+    },
+  }).some((error) => error.includes('expected_profile_sha256')));
   assert(validateCollectorBinding({ ...collectorExample, args: ['-c', 'unsafe'] }).some((error) => error.includes('inseguro')));
   assert(validateRoutineMigration({
     ...migrationExample,

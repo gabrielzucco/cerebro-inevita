@@ -29,6 +29,7 @@ const MIGRATION_STATUSES = new Set([
 const COLLECTOR_EXECUTABLES = new Set(['python3', 'node']);
 const COLLECTOR_ARG_RE = /^(?!-c$)(?!.*[;&|`$<>])[A-Za-z0-9._/:=-]{1,255}$/;
 const JSON_POINTER_RE = /^\/(?:[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*)?$/;
+const SHA256_RE = /^[a-f0-9]{64}$/;
 const WEEKDAY_FROM_INTL = { Mon: 'MO', Tue: 'TU', Wed: 'WE', Thu: 'TH', Fri: 'FR', Sat: 'SA', Sun: 'SU' };
 const SECRET_RE = /Bearer\s+|-----BEGIN .*PRIVATE KEY-----|\b(?:sk|ghp|xoxb)[-_A-Za-z0-9]{12,}/i;
 const MAX_SCHEDULE_LOOKBACK_MINUTES = 62 * 24 * 60;
@@ -241,19 +242,37 @@ export function validateRoutineContract(value) {
           errors.push(`${path} precisa ser objeto`);
           continue;
         }
-        closed(errors, selection, path, ['source_ref', 'selected_pointers', 'freshness_pointer']);
+        closed(errors, selection, path, [
+          'source_ref', 'selected_pointers', 'freshness_pointer',
+          'retrieval_receipt_pointer', 'expected_profile_sha256',
+        ]);
         if (!REF_ID_RE.test(selection.source_ref || '')) errors.push(`${path}.source_ref inválido`);
         sourceRefs.push(selection.source_ref);
-        list(errors, selection.selected_pointers, `${path}.selected_pointers`);
-        const pointers = Array.isArray(selection.selected_pointers) ? selection.selected_pointers : [];
-        if (pointers.length === 0) errors.push(`${path}.selected_pointers precisa ter pelo menos 1 item`);
-        for (const pointer of pointers) {
-          if (!JSON_POINTER_RE.test(pointer || '')) errors.push(`${path}.selected_pointers contém JSON Pointer inválido`);
-        }
-        unique(errors, selection.selected_pointers, `${path}.selected_pointers`);
-        if (selection.freshness_pointer !== null
-          && !JSON_POINTER_RE.test(selection.freshness_pointer || '')) {
-          errors.push(`${path}.freshness_pointer inválido`);
+        const pointerMode = selection.selected_pointers !== undefined
+          || selection.freshness_pointer !== undefined;
+        const receiptMode = selection.retrieval_receipt_pointer !== undefined
+          || selection.expected_profile_sha256 !== undefined;
+        if (pointerMode === receiptMode) {
+          errors.push(`${path} exige exatamente um modo: JSON Pointer ou retrieval receipt`);
+        } else if (pointerMode) {
+          list(errors, selection.selected_pointers, `${path}.selected_pointers`);
+          const pointers = Array.isArray(selection.selected_pointers) ? selection.selected_pointers : [];
+          if (pointers.length === 0) errors.push(`${path}.selected_pointers precisa ter pelo menos 1 item`);
+          for (const pointer of pointers) {
+            if (!JSON_POINTER_RE.test(pointer || '')) errors.push(`${path}.selected_pointers contém JSON Pointer inválido`);
+          }
+          unique(errors, selection.selected_pointers, `${path}.selected_pointers`);
+          if (selection.freshness_pointer !== null
+            && !JSON_POINTER_RE.test(selection.freshness_pointer || '')) {
+            errors.push(`${path}.freshness_pointer inválido`);
+          }
+        } else {
+          if (!JSON_POINTER_RE.test(selection.retrieval_receipt_pointer || '')) {
+            errors.push(`${path}.retrieval_receipt_pointer inválido`);
+          }
+          if (!SHA256_RE.test(selection.expected_profile_sha256 || '')) {
+            errors.push(`${path}.expected_profile_sha256 inválido`);
+          }
         }
       }
       unique(errors, sourceRefs, 'extensions.preparation.source_selections.source_ref');

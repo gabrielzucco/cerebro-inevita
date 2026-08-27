@@ -54,7 +54,17 @@ try {
   write(join(root, '.cerebro', 'contracts', 'systems', 'conteudo.json'), contentSystem);
   const handoff = example('handoff-contract.v1.json');
   registerHandoffContract(root, handoff);
-  registerRoutineContract(root, example('routine-contract.v1.json'));
+  const routine = example('routine-contract.v1.json');
+  registerRoutineContract(root, {
+    ...routine,
+    extensions: {
+      preparation: {
+        kind: 'trusted-local-command',
+        binding_ref: 'collector-funil-local',
+        output_ref: '.automacao/_FUNIL-ULTIMO.json',
+      },
+    },
+  });
 
   const receipt = example('routine-run-receipt.v1.json');
   writeRoutineRunReceipt(root, receipt);
@@ -113,6 +123,10 @@ try {
     stepId: 'run', stepType: 'run', state: 'running', parentStepId: null,
     inputRefs: ['operacao/rotinas/funil-diario.prompt.md'],
   });
+  tracer.emit({
+    stepId: 'collector', stepType: 'collector', state: 'running',
+    inputRefs: ['collector-funil-local'],
+  });
   tracer.emit({ stepId: 'collector', stepType: 'collector', state: 'completed', outputRefs: [collectorRef] });
   tracer.emit({ stepId: 'retrieval', stepType: 'retrieval', state: 'completed', outputRefs: [contextRef] });
   tracer.emit({
@@ -132,7 +146,8 @@ try {
 
   const recorded = buildRunGraph(root, receipt.receipt_id);
   assert.equal(recorded.trace_origin, 'recorded');
-  assert.equal(recorded.trace_events, 8);
+  assert.equal(recorded.trace_events, 9);
+  assert.equal(recorded.nodes.find((node) => node.id === 'collector').state, 'completed');
   assert.equal(recorded.nodes.find((node) => node.id === 'gate:1').state, 'completed');
   assert.equal(recorded.nodes.find((node) => node.id === 'gate:2').state, 'failed');
   assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'instruction' && node.actual));
