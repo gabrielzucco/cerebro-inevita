@@ -26,6 +26,7 @@ const state = {
     cmpA: '', cmpB: '',
   },
   systems: { category: 'all', query: '' },
+  brainGraph: null,
   cases: { list: null, detail: null, form: null, preview: null, actor: '' },
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
@@ -657,22 +658,83 @@ function prov(kind) {
   return `<span class="prov prov--${kind}">${kind.toUpperCase()}</span>`;
 }
 
-function organ({ number, name, question, answer, body, gaps = [], canonical, lastReceipt, action }) {
-  return `<section class="organ">
-    <header class="organ-head"><b>${number}</b><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(question)}</p></div></header>
-    <p class="organ-answer">${answer}</p>
-    ${body || ''}
-    ${gaps.length ? `<div class="organ-gaps">${gaps.map((gap) => `<span>⚠ ${escapeHtml(gap)}</span>`).join('')}</div>` : ''}
-    <footer class="organ-foot">
-      ${canonical ? `<button type="button" class="copy-ref" data-copy-ref="${escapeHtml(canonical)}">${escapeHtml(canonical)} <b>⧉</b></button>` : ''}
-      ${lastReceipt ? `<span class="muted">último recibo · ${escapeHtml(lastReceipt)}</span>` : ''}
-      ${action || ''}
-    </footer>
+function shortBrainLabel(value, max = 30) {
+  const text_ = String(value || '—');
+  return text_.length > max ? `${text_.slice(0, max - 1).trim()}…` : text_;
+}
+
+function brainPreviewLayout(graph) {
+  const positions = new Map();
+  const nodes = graph?.nodes || [];
+  const edges = graph?.edges || [];
+  const byKind = (kind) => nodes.filter((node) => node.kind === kind);
+  const areas = byKind('area');
+  const areaRank = new Map(areas.map((node, index) => [node.id, index]));
+  const parentArea = new Map(edges.filter((edge) => edge.relation === 'contains').map((edge) => [edge.target, edge.source]));
+  const systems = byKind('system').sort((left, right) => {
+    const areaDiff = (areaRank.get(parentArea.get(left.id)) ?? 999) - (areaRank.get(parentArea.get(right.id)) ?? 999);
+    return areaDiff || left.label.localeCompare(right.label, 'pt-BR');
+  });
+  const distribute = (items, x, top = 32, bottom = 448) => items.forEach((node, index) => {
+    const y = items.length < 2 ? (top + bottom) / 2 : top + ((bottom - top) * index) / (items.length - 1);
+    positions.set(node.id, { x, y });
+  });
+
+  distribute(systems, 420);
+  areas.forEach((area, index) => {
+    const children = systems.map((node) => ({ node, position: positions.get(node.id) }))
+      .filter(({ node }) => parentArea.get(node.id) === area.id);
+    const y = children.length
+      ? children.reduce((sum, item) => sum + item.position.y, 0) / children.length
+      : 48 + (index * 360) / Math.max(1, areas.length - 1);
+    positions.set(area.id, { x: 95, y });
+  });
+  distribute(byKind('handoff'), 575, 70, 410);
+  distribute(byKind('routine'), 630, 70, 410);
+  distribute(byKind('source'), 835);
+  distribute(nodes.filter((node) => !positions.has(node.id)), 650, 70, 410);
+  return positions;
+}
+
+function renderBrainGraphPreview(graph) {
+  if (!graph) {
+    return `<section class="brain-map-panel"><div class="brain-section-head"><div><p class="micro">MAPA INTEIRO</p><h2>Como tudo se conecta</h2></div></div><div class="brain-map-loading"><i></i><span>Preparando a visão leve do grafo…</span></div></section>`;
+  }
+  const positions = brainPreviewLayout(graph);
+  const nodes = (graph.nodes || []).filter((node) => positions.has(node.id));
+  const edges = (graph.edges || []).filter((edge) => positions.has(edge.source) && positions.has(edge.target));
+  const counts = nodes.reduce((result, node) => ({ ...result, [node.kind]: (result[node.kind] || 0) + 1 }), {});
+  const edgeMarkup = edges.map((edge) => {
+    const source = positions.get(edge.source);
+    const target = positions.get(edge.target);
+    return `<line class="brain-map-edge${edge.actual ? ' is-actual' : ''}" x1="${source.x}" y1="${source.y}" x2="${target.x}" y2="${target.y}"><title>${escapeHtml(label(edge.relation))}</title></line>`;
+  }).join('');
+  const nodeMarkup = nodes.map((node) => {
+    const position = positions.get(node.id);
+    const areaLabel = node.kind === 'area'
+      ? businessAreaLabel(node.id.replace(/^area:/, ''), node.label)
+      : node.label;
+    const showLabel = ['area', 'system', 'source'].includes(node.kind);
+    return `<g class="brain-preview-node brain-preview-node--${escapeHtml(node.kind)}${node.actual ? ' is-actual' : ''}" transform="translate(${position.x} ${position.y})">
+      <title>${escapeHtml(areaLabel)} · ${escapeHtml(label(node.kind))} · ${escapeHtml(label(node.state))}</title>
+      <circle r="${node.kind === 'area' ? 7 : node.kind === 'system' ? 5 : 3.5}"></circle>
+      ${showLabel ? `<text x="${node.kind === 'area' ? 13 : 9}" y="4">${escapeHtml(shortBrainLabel(areaLabel, node.kind === 'source' ? 24 : 29))}</text>` : ''}
+    </g>`;
+  }).join('');
+  return `<section class="brain-map-panel">
+    <div class="brain-section-head"><div><p class="micro">MAPA INTEIRO</p><h2>Como tudo se conecta</h2><p>Áreas organizam. Sistemas trabalham. Fontes continuam sendo as casas de verdade.</p></div><button class="action" type="button" data-open-brain-map>Explorar o mapa →</button></div>
+    <div class="brain-map-frame">
+      <svg class="brain-map-preview" viewBox="0 0 1000 480" role="img" aria-label="${escapeHtml(graph.subtitle || 'Mapa do Cérebro')}">
+        <g class="brain-map-edges">${edgeMarkup}</g>
+        <g class="brain-map-nodes">${nodeMarkup}</g>
+      </svg>
+    </div>
+    <div class="brain-map-foot"><span><i class="area"></i>${counts.area || 0} áreas</span><span><i class="system"></i>${counts.system || 0} Sistemas</span><span><i class="source"></i>${counts.source || 0} Fontes</span><small>Visão derivada do mesmo contrato usado pelo Canvas.</small></div>
   </section>`;
 }
 
-function anatomyStat(label_, value, kind) {
-  return `<div class="organ-stat"><b>${value}</b><span>${escapeHtml(label_)}</span>${prov(kind)}</div>`;
+function brainFlowStep(number, name, value, description, state_ = 'declared') {
+  return `<li class="brain-flow-step"><span>${String(number).padStart(2, '0')}</span><div><p>${escapeHtml(name)}</p><b>${escapeHtml(value)}</b><small>${escapeHtml(description)}</small></div><i class="${escapeHtml(state_)}"></i></li>`;
 }
 
 function renderAnatomy() {
@@ -689,93 +751,58 @@ function renderAnatomy() {
   const judgment = anatomy.judgment;
   const learning = anatomy.learning;
   const governance = anatomy.governance;
-  const ops = anatomy.brain_ops;
+  const learningValue = learning.candidates || learning.corrections
+    ? `${learning.candidates} candidatos · ${learning.corrections} correções`
+    : 'Nenhuma melhoria provada';
+  const recentDecisions = anatomy.identity.recent_decisions.map((decision) => `<li><time>${escapeHtml(decision.date)}</time><span>${escapeHtml(decision.title)}</span></li>`).join('');
 
-  const sourceRows = memory.sources.map((source) => `<tr>
-    <td><button type="button" class="table-action" data-open-source="${escapeHtml(source.source_id)}">${escapeHtml(source.name)}</button></td>
-    <td>${badge(source.contract_status, source.contract_status === 'active' ? 'good' : 'neutral')}</td>
-    <td>${source.binding_ref ? `<code>${escapeHtml(source.binding_ref)}</code>` : '<span class="muted">—</span>'}</td>
-    <td>${source.grants || '<span class="muted">0</span>'}</td>
-    <td>${source.last_access ? `${escapeHtml(label(source.last_access.decision))} · ${fmtDate(source.last_access.occurred_at, false)}` : '<span class="gap-mark">nunca</span>'}</td>
-    <td>${source.freshness_observed ? fmtDate(source.freshness_observed, false) : '<span class="gap-mark">não observado</span>'}</td>
-  </tr>`).join('');
+  return `<div class="brain-home">
+    <section class="brain-north">
+      <div class="brain-north-main">
+        <p class="micro">NORTE DO CÉREBRO</p>
+        <h2>${anatomy.identity.anchors.length} ideias orientam as decisões desta empresa.</h2>
+        <ol class="brain-anchor-list">${anatomy.identity.anchors.map((anchor_, index) => `<li><span>${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(anchor_)}</strong></li>`).join('')}</ol>
+        <details class="brain-decisions"><summary>${anatomy.identity.recent_decisions.length} decisões recentes continuam em vigor</summary><ul>${recentDecisions}</ul></details>
+      </div>
+      <aside class="brain-memory-brief">
+        <div><p class="micro">ESTADO DA MEMÓRIA</p>${prov('observado')}</div>
+        <strong>${observedSources}<small> de ${memory.sources.length} Fontes observadas</small></strong>
+        <p>${neverObserved ? `${neverObserved} ainda não apareceram em acesso ou frescor real.` : 'Todas as Fontes contratadas já deixaram observação.'}</p>
+        ${memory.distill_backlog ? `<span>Fila de destilação · ${escapeHtml(memory.distill_backlog)}</span>` : ''}
+        <button class="action" type="button" data-view="sources">Ver Fontes e frescor →</button>
+      </aside>
+    </section>
 
-  return `<div class="anatomy">
-    <div class="anatomy-spine">
-      ${organ({
-        number: 1, name: 'Identidade e intenção', question: 'O que orienta este cérebro?',
-        answer: `<b>${anatomy.identity.anchors.length}</b> conceitos-âncora vividos e <b>${anatomy.identity.recent_decisions.length}</b> decisões recentes em vigor. ${prov('declarado')}`,
-        body: `<div class="anchor-chips">${anatomy.identity.anchors.map((anchor_) => `<code>[[${escapeHtml(anchor_)}]]</code>`).join('')}</div>
-          <ul class="organ-list">${anatomy.identity.recent_decisions.map((decision) => `<li><span>${escapeHtml(decision.date)}</span>${escapeHtml(decision.title)}</li>`).join('')}</ul>`,
-        canonical: anatomy.identity.canonical,
-        lastReceipt: anatomy.identity.last_receipt,
-      })}
-      ${organ({
-        number: 2, name: 'Fontes e memória', question: 'O que ele sabe e de onde vem?',
-        answer: `<b>${memory.sources.length}</b> casas de verdade sob contrato ${prov('declarado')} · <b>${observedSources}</b> com acesso ou frescor observado ${prov('observado')} · <b>${neverObserved}</b> nunca observadas.`,
-        body: `<div class="table-wrap organ-table"><table><thead><tr><th>Fonte</th><th>Contrato</th><th>Binding</th><th>Grants</th><th>Último acesso</th><th>Frescor</th></tr></thead><tbody>${sourceRows}</tbody></table></div>
-          ${memory.distill_backlog ? `<p class="muted">Memória semântica · fila de destilação: ${escapeHtml(memory.distill_backlog)} ${prov('observado')}</p>` : ''}`,
-        gaps: neverObserved ? [`${neverObserved} fonte(s) com contrato ativo mas sem nenhum acesso observado — "ativa" ali é contrato, não conexão`] : [],
-        canonical: memory.canonical,
-      })}
-      ${organ({
-        number: 3, name: 'Atenção e recuperação', question: 'Onde falta contexto?',
-        answer: `<b>${attention.retrieval_declared}/${attention.systems_total}</b> sistemas com recuperação declarada ${prov('declarado')} · <b>${attention.runs_with_context}</b> execuções com contexto registrado ${prov('observado')} · <b>${attention.context_gaps}</b> lacunas/conflitos de contexto.`,
-        gaps: [
-          ...(attention.sources_never_observed ? [`${attention.sources_never_observed} fontes nunca entraram num Context Snapshot`] : []),
-          ...(attention.context_gaps ? [`${attention.context_gaps} lacunas ou conflitos registrados em snapshots reais`] : []),
-        ],
-        canonical: '.cerebro/runtime/ledger/runs.jsonl',
-      })}
-      ${organ({
-        number: 4, name: 'Sistemas e execução', question: 'O que está executando?',
-        answer: `<b>${execution.by_stage.active}</b> ativos · <b>${execution.by_stage.configured}</b> configurados · <b>${execution.by_stage.mapped}</b> mapeados ${prov('declarado')} · <b>${execution.recent_runs.length ? execution.recent_runs.length : 0}</b> execuções recentes, evals <b>${execution.evals_passed}/${execution.evals_total}</b> ${prov('observado')}.`,
-        body: `<ul class="organ-list">${execution.recent_runs.map((run) => `<li><span>${fmtDate(run.completed_at, false)}</span>${escapeHtml(label(run.system))} · ${escapeHtml(label(run.mode || 'run'))} · ${escapeHtml(label(run.status))}${run.eval_passed === false ? ' · <b class="gap-mark">eval falhou</b>' : ''}</li>`).join('') || '<li class="muted">Nenhuma execução no ledger.</li>'}</ul>`,
-        canonical: '.cerebro/contracts/systems/',
-        action: '<button class="action" data-view="canvas">Ver no Canvas →</button>',
-      })}
-      ${organ({
-        number: 5, name: 'Julgamento humano', question: 'O que espera julgamento?',
-        answer: `<b>${judgment.vault_queue_open}</b> decisões abertas na fila do cérebro ${prov('observado')} — <b>${judgment.late7}</b> há 7+ dias, mais antiga <b>${judgment.oldest_days ?? '—'}d</b> · <b>${judgment.routine_pending}</b> outputs de rotina pendentes.`,
-        body: judgment.oldest_title ? `<p class="muted">Mais antiga: “${escapeHtml(judgment.oldest_title)}”</p>` : '',
-        gaps: judgment.late30 ? [`${judgment.late30} decisão(ões) há 30+ dias — veredito final na mesa`] : [],
-        canonical: '.automacao/_FILA-DECISAO.json',
-        action: '<button class="action primary" data-view="today">Ir para a mesa (Hoje) →</button>',
-      })}
-      ${organ({
-        number: 6, name: 'Aprendizado', question: 'O que realmente melhorou uma execução posterior?',
-        answer: learning.candidates || learning.corrections
-          ? `<b>${learning.candidates}</b> candidatos e <b>${learning.corrections}</b> correções em curso ${prov('observado')} · <b>${learning.runs_with_outcomes}</b> runs com outcomes registrados.`
-          : `Ainda <b>nenhuma melhoria provada</b> em execução posterior ${prov('observado')} — ${learning.runs_with_outcomes} runs têm outcomes; candidatos exigem 3 casos comparáveis + replay + martelo.`,
-        gaps: !learning.candidates ? ['O loop de aprendizado existe no protocolo mas ainda não tem caso fechado — é o próximo gate do produto'] : [],
-        canonical: learning.improvements_canonical,
-      })}
-      <div class="anatomy-loop">↺ contexto, política ou capacidade versionada volta para a próxima execução</div>
-    </div>
-    <aside class="anatomy-side">
-      <section class="governance-panel">
-        <p class="micro">GOVERNANÇA · TRANSVERSAL</p>
-        <div class="gov-row"><span>Grants ativos</span><b>${governance.grants_total}</b>${prov('declarado')}</div>
-        <div class="gov-row"><span>Recibos de acesso</span><b>${governance.access_receipts}</b>${prov('observado')}</div>
-        <div class="gov-row"><span>Negações</span><b>${governance.denies}</b>${prov('observado')}</div>
-        ${governance.pii_gate ? `<div class="gov-row"><span>Gate schema/PII</span><b>${escapeHtml(governance.pii_gate.summary)}</b>${prov('observado')}</div>` : ''}
-        ${governance.golden_set ? `<div class="gov-row"><span>Golden set</span><b>${escapeHtml(governance.golden_set.summary.split('—')[0].trim())}</b>${prov('observado')}</div>` : ''}
-        <div class="gov-row"><span>Protocolo</span><b>${governance.protocol_score ?? '—'}%</b><button class="action" data-view="compatibility">→</button></div>
-      </section>
-      <section class="governance-panel brain-ops">
-        <p class="micro">OPERAÇÃO DO CÉREBRO · O MANTENEDOR</p>
-        <p class="section-help">O sistema de Fundação que mantém esta arquitetura saudável. Ele mantém o cérebro; ele não é o cérebro.</p>
-        <p class="muted">Última rodada do motor · ${escapeHtml(ops.round_at || '—')} ${prov('observado')}</p>
-        <div class="ops-tasks">${ops.tasks.map((task) => `<div class="ops-task"><i class="health-dot ${task.state === 'ok' ? 'good' : task.state === 'skip' ? 'warn' : 'warn'}"></i><span>${escapeHtml(task.name)}</span><small>${escapeHtml(task.summary || '')}</small></div>`).join('')}</div>
-        <button class="action" data-open-system="cerebro-operacional">Abrir o sistema →</button>
-      </section>
-    </aside>
+    ${renderBrainGraphPreview(state.brainGraph)}
+
+    <section class="brain-context-section">
+      <div class="brain-section-head"><div><p class="micro">CONTEXTO EM MOVIMENTO</p><h2>Como o Cérebro sai de informação e chega a uma decisão</h2><p>Ele detecta o que falta, recupera só o necessário e mantém o humano no martelo.</p></div></div>
+      <ol class="brain-context-flow">
+        ${brainFlowStep(1, 'Atenção', `${attention.context_gaps} lacunas`, `${attention.sources_never_observed} Fontes nunca entraram em um Context Snapshot`, attention.context_gaps ? 'gap' : 'observed')}
+        ${brainFlowStep(2, 'Recuperação', `${attention.retrieval_declared}/${attention.systems_total} Sistemas`, 'declaram como selecionar, resolver conflito e recusar contexto insuficiente')}
+        ${brainFlowStep(3, 'Context Snapshot', `${attention.runs_with_context} execuções`, 'registraram referências e contexto sem expor prompt ou output', 'observed')}
+        ${brainFlowStep(4, 'Sistema', `${execution.by_stage.active} ativos`, `${execution.recent_runs.length} Runs recentes · evals ${execution.evals_passed}/${execution.evals_total}`, 'observed')}
+        ${brainFlowStep(5, 'Julgamento', `${judgment.vault_queue_open} decisões`, `${judgment.routine_pending} outputs esperam martelo humano`, judgment.vault_queue_open ? 'gap' : 'observed')}
+        ${brainFlowStep(6, 'Aprendizado', learningValue, `${learning.runs_with_outcomes} Runs possuem outcome; mudança só volta depois de prova`, learning.candidates ? 'observed' : 'declared')}
+      </ol>
+    </section>
+
+    <section class="brain-actions">
+      <article><p class="micro">AGORA</p><strong>${judgment.vault_queue_open} decisões pedem teu martelo</strong><span>${judgment.late7} estão abertas há sete dias ou mais${judgment.oldest_days != null ? ` · mais antiga ${judgment.oldest_days}d` : ''}.</span><button class="action primary" type="button" data-view="today">Ir para Hoje →</button></article>
+      <article><p class="micro">SISTEMAS</p><strong>${execution.by_stage.active} ativos · ${execution.by_stage.configured} configurados</strong><span>O trabalho tem personalidade própria; o Cérebro mantém contexto e confiança.</span><button class="action" type="button" data-view="systems">Ver Sistemas →</button></article>
+      <article><p class="micro">CONFIANÇA</p><strong>${governance.protocol_score ?? '—'}% do protocolo observado</strong><span>${governance.grants_total} grants ativos · ${governance.pii_gate ? escapeHtml(governance.pii_gate.summary) : 'gate de privacidade não observado'}.</span><button class="action" type="button" data-view="governance">Ver saúde e permissões →</button></article>
+    </section>
   </div>`;
 }
 
 async function loadAnatomy() {
   try {
-    state.anatomy = await getJson('/api/anatomy');
+    const [anatomy, brainGraph] = await Promise.all([
+      getJson('/api/anatomy'),
+      getJson('/api/graphs/brain').catch(() => null),
+    ]);
+    state.anatomy = anatomy;
+    state.brainGraph = brainGraph;
     if (state.view === 'anatomy') render();
   } catch { /* a view mostra loading; refresh recarrega */ }
 }
@@ -1680,7 +1707,7 @@ const renderers = { compatibility: renderCompatibility, today: renderToday, anat
 const titles = {
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
-  anatomy: ['Cérebro', 'A anatomia: como esta empresa transforma contexto em aprendizado reutilizável.'],
+  anatomy: ['Cérebro', 'O que a empresa sabe, como recupera contexto e onde precisa da tua atenção.'],
   system: ['Sistema', 'Como este sistema pensa, executa, é julgado e aprende.'],
   canvas: ['Canvas Operacional', 'Mapa do Cérebro, contrato do Sistema e Execution Trace do Run.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
@@ -1699,7 +1726,7 @@ const titles = {
 // A que pergunta do operador cada view responde — vira o eyebrow da topbar.
 const viewGroups = {
   today: 'Operação', judgments: 'Operação', cases: 'Operação', routines: 'Operação', runs: 'Operação',
-  anatomy: 'Estrutura',
+  anatomy: 'Cérebro',
   system: 'Sistemas', systems: 'Sistemas',
   canvas: 'Estrutura', areas: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
   compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
@@ -1784,7 +1811,8 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   renderAreaSwitcher();
-  $('#summary').innerHTML = ['canvas', 'system', 'systems'].includes(state.view) ? '' : summaryCards();
+  const hidesSummary = ['canvas', 'system', 'systems'].includes(state.view) || state.view === 'anatomy';
+  $('#summary').innerHTML = hidesSummary ? '' : summaryCards();
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
   if (state.canvas.stopParticles) { state.canvas.stopParticles(); state.canvas.stopParticles = null; }
@@ -2562,6 +2590,7 @@ async function loadModel() {
   state.model = model;
   state.decisions = decisions;
   state.anatomy = null;
+  state.brainGraph = null;
   state.runs.data = null;
   render();
 }
@@ -2667,6 +2696,15 @@ document.addEventListener('click', (event) => {
     return;
   }
   if (event.target.closest('[data-canvas-fit]')) { state.canvas.controller?.fit(); return; }
+  if (event.target.closest('[data-open-brain-map]')) {
+    state.canvas.scope = 'brain';
+    state.canvas.ref = null;
+    state.canvas.positions = null;
+    state.view = 'canvas';
+    closeDrawer();
+    render();
+    return;
+  }
   const cycle = event.target.closest('[data-canvas-cycle]');
   if (cycle) { cycleCanvasRef(Number(cycle.dataset.canvasCycle)); return; }
   const jumpRun = event.target.closest('[data-canvas-jump-run]');
