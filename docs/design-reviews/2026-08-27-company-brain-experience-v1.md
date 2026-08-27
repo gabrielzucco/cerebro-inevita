@@ -8,7 +8,10 @@ AI slop baseline: 3/10
 ## FINDING-001 — Launcher compacto demais para reconhecer o Sistema
 
 Impacto: alto  
-Status: aberto
+Status: verificado
+Commit: `cc3e4bd`
+Depois: três Sistemas legíveis por linha, nomes inteiros, resultado em até três linhas e nenhum
+resumo operacional competindo com o Launcher.
 
 Eu noto quatro cards por linha em 1440×1000, com nomes e resultados cortados já na primeira dobra.
 O card existe porque é a interação de abrir/inspecionar, mas a densidade atual faz a grade parecer
@@ -24,7 +27,10 @@ Evidência: captura desktop da tela `Sistemas` emitida na sessão antes da corre
 ## FINDING-002 — Cérebro é um relatório técnico, não uma superfície de orientação
 
 Impacto: alto  
-Status: aberto
+Status: verificado
+Commit: `3779751`
+Depois: quatro âncoras como norte, memória resumida, grafo canônico leve, fluxo em seis etapas e
+portas explícitas para Hoje, Sistemas, Fontes e Confiança.
 
 Eu noto que a página começa repetindo os cinco KPIs de `Hoje`, trata as quatro âncoras como chips de
 código e em seguida despeja uma tabela de 15 Fontes. O mapa inteiro não aparece. A navegação exige
@@ -41,7 +47,9 @@ Evidência: captura desktop da tela `Cérebro` emitida na sessão antes da corre
 ## FINDING-003 — Barra nativa compete com os filtros no mobile
 
 Impacto: polimento
-Status: aberto
+Status: verificado
+Commit: `aefa4b9`
+Depois: filtros continuam roláveis no mobile sem barra cinza; a página permanece sem overflow.
 
 Eu noto que a lista horizontal de funções empresariais mostra uma barra cinza grossa logo abaixo
 dos filtros em 375×812. O gesto de rolagem é útil; o cromo nativo é que parece uma falha visual.
@@ -66,3 +74,21 @@ Evidência: captura mobile da tela `Sistemas` emitida na sessão antes da corre�
 - Cards são necessários: sim no Launcher; excessivos no Cérebro.
 - Movimento melhora a hierarquia: não se aplica nestas views.
 - O design sobreviveria sem sombras decorativas: sim.
+
+## Resultado final
+
+- Findings: 3.
+- Verificados: 3.
+- Best effort, revertidos ou adiados: 0.
+- Design score: 5,2 → 8,5/10.
+- AI slop score: 3 → 1/10.
+- Produto reconhecível na primeira tela: sim.
+- Um âncora visual forte: sim, o mapa inteiro.
+- Página compreensível só pelos títulos: sim.
+- Cada seção tem um trabalho: sim.
+- Cards necessários: sim no Launcher e nas três portas de ação; o Cérebro deixou de ser mosaico.
+- Movimento melhora a hierarquia: o mapa leve fica estático; G6 só entra quando solicitado.
+- O design sobreviveria sem sombras decorativas: sim.
+
+PR summary: Design review encontrou 3 problemas e verificou 3 correções. Design 5,2 → 8,5;
+AI slop 3 → 1.
