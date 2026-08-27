@@ -144,6 +144,8 @@ const required = [
   'scripts/test-system-launcher-workspace.mjs',
   'scripts/test-system-workspace-dedup-v1.mjs',
   'scripts/test-company-brain-product-cut-v1.mjs',
+  'scripts/test-company-brain-launcher-hierarchy-v1.mjs',
+  'scripts/test-company-brain-orientation-v1.mjs',
   'scripts/test-gtm-console-integration.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
