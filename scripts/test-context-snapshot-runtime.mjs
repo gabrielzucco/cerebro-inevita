@@ -19,6 +19,9 @@ import { prepareContextSnapshot } from './lib/context-snapshot-runtime.mjs';
 const root = mkdtempSync(join(tmpdir(), 'company-brain-context-'));
 const external = mkdtempSync(join(tmpdir(), 'company-brain-context-external-'));
 const PROFILE_SHA = 'a'.repeat(64);
+const INDEX_CORPUS_SHA = 'c'.repeat(64);
+const INDEX_RECEIPT_ID = 'source-index-receipt-11111111-1111-4111-8111-111111111111';
+const INDEX_RECEIPT_REF = `source-index-receipt:${INDEX_RECEIPT_ID}`;
 
 function write(path, value) {
   mkdirSync(dirname(path), { recursive: true });
@@ -46,6 +49,8 @@ function retrievalReceipt(receiptId, overrides = {}) {
     adapter_invoked: true,
     provider_ref: 'local-semantic-retrieval',
     transport: 'local-unix-socket',
+    index_receipt_ref: INDEX_RECEIPT_REF,
+    corpus_sha256: INDEX_CORPUS_SHA,
     selected_refs: [
       { rank: 1, document_ref: 'document:system-next-best-commercial-action' },
       { rank: 2, document_ref: 'document:source-commercial-journey' },
@@ -68,10 +73,72 @@ function retrievalReceipt(receiptId, overrides = {}) {
 }
 
 function legacyRetrievalReceipt(receiptId) {
-  const { provider_ref: _providerRef, ...legacy } = retrievalReceipt(receiptId, {
+  const {
+    provider_ref: _providerRef,
+    index_receipt_ref: _indexReceiptRef,
+    corpus_sha256: _corpusSha,
+    ...legacy
+  } = retrievalReceipt(receiptId, {
     transport: 'gbrain-vector-daemon',
   });
   return legacy;
+}
+
+function providerV1RetrievalReceipt(receiptId) {
+  const {
+    index_receipt_ref: _indexReceiptRef,
+    corpus_sha256: _corpusSha,
+    ...providerV1
+  } = retrievalReceipt(receiptId);
+  return providerV1;
+}
+
+function indexReceipt(overrides = {}) {
+  const base = {
+    protocol_version: 1,
+    receipt_id: INDEX_RECEIPT_ID,
+    kind: 'source-index-receipt',
+    provider_ref: 'local-semantic-retrieval',
+    provider_version: '1.0.0',
+    driver: { implementation: 'gbrain', implementation_version: '0.46.30.0' },
+    status: 'completed',
+    reason_code: 'benchmark-gate-passed',
+    plan_sha256: 'd'.repeat(64),
+    corpus_sha256: INDEX_CORPUS_SHA,
+    previous_receipt_ref: null,
+    started_at: '2026-08-24T11:28:00.000Z',
+    completed_at: '2026-08-24T11:28:30.000Z',
+    document_count: 2,
+    updated_refs: [
+      'document:system-next-best-commercial-action',
+      'document:source-commercial-journey',
+    ],
+    orphan_refs: [],
+    documents: [
+      { document_ref: 'document:system-next-best-commercial-action', source_sha256: 'e'.repeat(64) },
+      { document_ref: 'document:source-commercial-journey', source_sha256: 'f'.repeat(64) },
+    ],
+    benchmark: {
+      cases: 75,
+      hit_at_3: 0.91,
+      false_positive_rate: 0,
+      latency_ms: 8000,
+      gate_passed: true,
+    },
+    daemon_restarted: true,
+    privacy: {
+      content_recorded: false,
+      query_recorded: false,
+      third_party_zone_indexed: false,
+    },
+  };
+  return {
+    ...base,
+    ...overrides,
+    driver: { ...base.driver, ...(overrides.driver || {}) },
+    benchmark: { ...base.benchmark, ...(overrides.benchmark || {}) },
+    privacy: { ...base.privacy, ...(overrides.privacy || {}) },
+  };
 }
 
 function example(name) {
@@ -152,6 +219,11 @@ try {
     },
   });
 
+  writePrivate(
+    join(root, '.cerebro', 'runtime', 'receipts', 'indexing', `${INDEX_RECEIPT_ID}.json`),
+    indexReceipt(),
+  );
+
   const acceptedReceiptId = 'retrieval-receipt-fixture-accepted';
   const acceptedReceiptRef = `retrieval-receipt:${acceptedReceiptId}`;
   writePrivate(
@@ -211,6 +283,7 @@ try {
   assert.equal(retrievalAccess.query, `${acceptedReceiptRef}:query-sha256:${'b'.repeat(64)}`);
   assert.equal(retrievalAccess.assurance, 'receipt-audited');
   assert(context.input_refs.includes(acceptedReceiptRef));
+  assert(context.input_refs.includes(INDEX_RECEIPT_REF));
   assert.equal(JSON.stringify(context).includes('semantic_and_domain_evidence'), false);
   assert(existsSync(join(root, context.artifact_path_ref)), 'a cópia privada content-addressed precisa existir');
   assert(readFileSync(join(root, context.artifact_path_ref), 'utf8').includes('private_metric'));
@@ -230,6 +303,30 @@ try {
   });
   const legacyContext = prepareContextSnapshot(root, routine, accessResults);
   assert(legacyContext.input_refs.includes(legacyReceiptRef));
+  write(join(root, artifactRef), {
+    observed: '2026-08-24T11:29:00.000Z',
+    paid: { private_metric: 17 },
+    sales: { private_metric: 9 },
+    experiments: { private_hypothesis: 'fixture-only' },
+    retrieval: { receipt_ref: acceptedReceiptRef },
+  });
+
+  const providerV1Id = 'retrieval-receipt-fixture-provider-v1';
+  const providerV1Ref = `retrieval-receipt:${providerV1Id}`;
+  writePrivate(
+    join(root, '.cerebro', 'runtime', 'receipts', 'retrieval', `${providerV1Id}.json`),
+    providerV1RetrievalReceipt(providerV1Id),
+  );
+  write(join(root, artifactRef), {
+    observed: '2026-08-24T11:29:00.000Z',
+    paid: { private_metric: 17 },
+    sales: { private_metric: 9 },
+    experiments: { private_hypothesis: 'fixture-only' },
+    retrieval: { receipt_ref: providerV1Ref },
+  });
+  const providerV1Context = prepareContextSnapshot(root, routine, accessResults);
+  assert(providerV1Context.input_refs.includes(providerV1Ref));
+  assert.equal(providerV1Context.input_refs.includes(INDEX_RECEIPT_REF), false);
   write(join(root, artifactRef), {
     observed: '2026-08-24T11:29:00.000Z',
     paid: { private_metric: 17 },
@@ -339,6 +436,20 @@ try {
   assert.throws(
     () => prepareContextSnapshot(root, routine, accessResults),
     /context-retrieval-receipt-identity-invalid/,
+  );
+
+  writePrivate(
+    join(root, '.cerebro', 'runtime', 'receipts', 'indexing', `${INDEX_RECEIPT_ID}.json`),
+    indexReceipt({ corpus_sha256: '9'.repeat(64) }),
+  );
+  writeArtifactReceiptRef(acceptedReceiptRef);
+  assert.throws(
+    () => prepareContextSnapshot(root, routine, accessResults),
+    /context-index-receipt-identity-invalid/,
+  );
+  writePrivate(
+    join(root, '.cerebro', 'runtime', 'receipts', 'indexing', `${INDEX_RECEIPT_ID}.json`),
+    indexReceipt(),
   );
 
   const privacyId = 'retrieval-receipt-fixture-privacy';
