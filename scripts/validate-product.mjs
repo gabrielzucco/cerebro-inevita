@@ -28,6 +28,7 @@ import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-p
 import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
 import { validateRetrievalProviderContract } from './lib/retrieval-provider-protocol.mjs';
 import { validateSystemRuntimeBinding } from './lib/system-runtime-binding.mjs';
+import { validateSystemSourceBinding } from './lib/system-source-binding.mjs';
 import { validateExperienceManifest } from './lib/experience-manifest.mjs';
 import { validateSocietyPackageManifest } from './lib/society-catalog-read-model.mjs';
 import { validateReleaseManifest } from './lib/release-manifest.mjs';
@@ -60,6 +61,7 @@ const required = [
   'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
   'protocol/retrieval-provider-contract.schema.json',
   'protocol/system-runtime-binding.schema.json',
+  'protocol/system-source-binding.schema.json',
   'protocol/experience-manifest.schema.json',
   'protocol/release-manifest.schema.json',
   'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
@@ -80,6 +82,7 @@ const required = [
   'protocol/examples/handoff-contract.v1.json', 'protocol/examples/handoff-receipt.v1.json',
   'protocol/examples/retrieval-provider-contract.v1.json',
   'protocol/examples/system-runtime-binding.v1.json',
+  'protocol/examples/system-source-binding.v1.json',
   'protocol/examples/experience-manifest.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
@@ -112,6 +115,8 @@ const required = [
   'operacao/arquitetura/_LEIA.md',
   'scripts/test-architect.mjs',
   'scripts/commission-system.mjs', 'scripts/test-commission-system.mjs',
+  'scripts/system-source-binding.mjs', 'scripts/test-system-source-binding-v1.mjs',
+  'scripts/installation-compatibility.mjs', 'scripts/test-installation-compatibility-v1.mjs',
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
@@ -131,6 +136,7 @@ const required = [
   'scripts/lib/handoff-protocol.mjs', 'scripts/lib/compatibility-diagnostic.mjs',
   'scripts/lib/retrieval-provider-protocol.mjs',
   'scripts/lib/system-runtime-binding.mjs',
+  'scripts/lib/installation-compatibility.mjs',
   'scripts/lib/experience-manifest.mjs',
   'scripts/lib/society-catalog-read-model.mjs',
   'scripts/lib/release-manifest.mjs',
@@ -164,6 +170,7 @@ const required = [
   'scripts/test-company-brain-orientation-v1.mjs',
   'scripts/test-company-brain-native-capabilities-v0.mjs',
   'scripts/test-company-brain-product-polish-v1.mjs',
+  'scripts/test-company-brain-lived-overview-v2.mjs',
   'scripts/test-experience-manifest-v1.mjs',
   'scripts/test-society-catalog-v0.mjs',
   'scripts/test-release-manifest-v1.mjs',
@@ -225,6 +232,7 @@ for (const [label, path, validate] of [
   ['example handoff receipt v1', 'protocol/examples/handoff-receipt.v1.json', validateHandoffReceipt],
   ['example retrieval provider v1', 'protocol/examples/retrieval-provider-contract.v1.json', validateRetrievalProviderContract],
   ['example system runtime binding v1', 'protocol/examples/system-runtime-binding.v1.json', validateSystemRuntimeBinding],
+  ['example system source binding v1', 'protocol/examples/system-source-binding.v1.json', validateSystemSourceBinding],
   ['example experience manifest v1', 'protocol/examples/experience-manifest.v1.json', validateExperienceManifest],
   ['GTM experience manifest', 'sistemas/next-best-gtm/experience.json', validateExperienceManifest],
   ['Society briefing package manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json', validateSocietyPackageManifest],
@@ -698,4 +706,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 21 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 22 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

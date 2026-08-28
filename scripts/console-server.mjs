@@ -46,6 +46,11 @@ import {
   rerunWithCorrection,
 } from './lib/correction-loop.mjs';
 import { systemInterfaceHealth } from './lib/system-interface-health.mjs';
+import {
+  applyManagedBrainUpdate,
+  buildBrainUpdateCenter,
+  checkLatestBrainRelease,
+} from './lib/brain-update-center.mjs';
 
 // Índice derivado do conhecimento: varre SOMENTE 01-nucleo-privado (fosso, baixo
 // risco), nunca 02-dados-terceiros. Reconstruível a cada chamada; não cria verdade.
@@ -1019,6 +1024,7 @@ function runsExplorerModel(root) {
 
 function anatomyModel(root) {
   const model = buildConsoleReadModel(root);
+  const societyCatalog = buildSocietyCatalogReadModel(root, { installedSystems: model.systems });
   const records = latestRunRecords(root);
   const queue = decisionQueue(root);
   const accessReceipts = listJsonDir(root, '.cerebro/runtime/receipts/access');
@@ -1119,6 +1125,11 @@ function anatomyModel(root) {
     company_map: companyMap,
     retrieval_health: retrievalHealth,
     control_center: controlCenter,
+    update_center: buildBrainUpdateCenter(root, {
+      engineRoot: ENGINE_ROOT,
+      compatibilityPercent: model.compatibility?.score?.percent ?? null,
+      societyCounts: societyCatalog.counts,
+    }),
     identity: {
       canonical: '01-nucleo-privado/_SISTEMAS.md',
       anchors,
@@ -1179,7 +1190,8 @@ function anatomyModel(root) {
 
 const COOKIE_NAME = 'cerebro_console_session';
 const MAX_BODY_BYTES = 32 * 1024;
-const STATIC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'console');
+const ENGINE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const STATIC_ROOT = resolve(ENGINE_ROOT, 'console');
 const SAFE_ACTOR_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const SAFE_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
 
@@ -1342,9 +1354,12 @@ export function createConsoleServer({
   csrfToken = opaqueToken(),
   interfaceFetch = globalThis.fetch,
   interfaceHealthTimeoutCeilingMs = 2000,
+  updateFetch = globalThis.fetch,
+  updateRunner,
 } = {}) {
   const brainRoot = resolve(root || process.cwd());
   recognizeConsoleBrain(brainRoot);
+  let remoteUpdate = null;
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || '/', 'http://127.0.0.1');
     const sessionCookie = `${COOKIE_NAME}=${sessionToken}; HttpOnly; SameSite=Strict; Path=/`;
@@ -1406,6 +1421,31 @@ export function createConsoleServer({
       if (request.method === 'GET' && url.pathname === '/api/anatomy') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, anatomyModel(brainRoot));
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/update') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, { ...anatomyModel(brainRoot).update_center, remote: remoteUpdate });
+        return;
+      }
+      if (request.method === 'POST' && url.pathname === '/api/update/check') {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const local = anatomyModel(brainRoot).update_center;
+        remoteUpdate = await checkLatestBrainRelease(local, { fetchImpl: updateFetch, clock });
+        send(response, 200, { ...local, remote: remoteUpdate });
+        return;
+      }
+      if (request.method === 'POST' && url.pathname === '/api/update/apply') {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        if (!remoteUpdate || payload.expected_tag !== remoteUpdate.tag) throw new Error('update-check-required');
+        const result = await applyManagedBrainUpdate(brainRoot, remoteUpdate, {
+          engineRoot: ENGINE_ROOT,
+          ...(updateRunner ? { runner: updateRunner } : {}),
+        });
+        remoteUpdate = null;
+        send(response, 200, { ...anatomyModel(brainRoot).update_center, remote: null, last_update: result });
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/skills') {

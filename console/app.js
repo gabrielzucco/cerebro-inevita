@@ -19,9 +19,10 @@ const state = {
   selectedExperiment: null,
   busy: false,
   operatingAreaFilter: (() => { try { return localStorage.getItem('cb-operating-area') || ''; } catch { return ''; } })(),
+  rerunPending: false,
   runs: {
     data: null,
-    filters: { system: '', mode: '', status: '', decision: '', snapshot: '' },
+    filters: { system: '', routine: '', mode: '', status: '', decision: '', snapshot: '' },
     sort: { key: 'when', dir: 'desc' },
     cmpA: '', cmpB: '',
   },
@@ -30,10 +31,11 @@ const state = {
     mode: (() => {
       try {
         const saved = localStorage.getItem('cb-brain-mode');
-        return ['overview', 'memory', 'recovery', 'learning', 'architecture'].includes(saved) ? saved : 'overview';
+        return ['overview', 'memory', 'recovery', 'learning', 'architecture', 'updates'].includes(saved) ? saved : 'overview';
       } catch { return 'overview'; }
     })(),
     query: '',
+    updates: { data: null, loading: false, checking: false, applying: false, error: null },
   },
   brainGraph: null,
   skills: { origin: 'company', status: 'all', link: 'all', query: '', data: null, loading: false, error: null },
@@ -51,6 +53,26 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character
 const fmtDate = (value, withTime = true) => value ? new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short', ...(withTime ? { timeStyle: 'short' } : {}),
 }).format(new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value)) : '—';
+
+const sameLocalDay = (value, reference = new Date()) => {
+  if (!value) return false;
+  const date = new Date(value);
+  return date.getFullYear() === reference.getFullYear()
+    && date.getMonth() === reference.getMonth()
+    && date.getDate() === reference.getDate();
+};
+const fmtClock = (value) => value ? new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' }).format(new Date(value)) : '—';
+const fmtRelative = (value) => {
+  if (!value) return '—';
+  const diff = Date.parse(value) - Date.now();
+  const minutes = Math.round(Math.abs(diff) / 60000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return diff >= 0 ? `em ${minutes} min` : `há ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return diff >= 0 ? `em ${hours}h` : `há ${hours}h`;
+  const days = Math.round(hours / 24);
+  return diff >= 0 ? `em ${days}d` : `há ${days}d`;
+};
 
 function fmtDuration(value) {
   if (!Number.isFinite(value) || value < 0) return '—';
@@ -211,15 +233,34 @@ function summaryCard([title, value, description, icon, actionable]) {
   return `<article class="summary-card${actionable && Number(value) > 0 ? ' is-actionable' : ''}"><small><span class="summary-icon ${icon}"></span>${title}</small><strong>${value}</strong><p>${description}</p></article>`;
 }
 
+function routineTodayChip(routine) {
+  if (routine.trigger !== 'schedule') return '<span class="run-chip neutral">Sob demanda</span>';
+  const today = routine.receipts.filter((receipt) => sameLocalDay(receipt.started_at || receipt.completed_at));
+  if (!today.length) {
+    return routine.state.status === 'active'
+      ? '<span class="run-chip warn">Ainda não rodou hoje</span>'
+      : '<span class="run-chip neutral">Agenda parada</span>';
+  }
+  const failed = today.filter((receipt) => receipt.status !== 'completed').length;
+  const times = today.length > 1 ? ` · ${today.length}x` : '';
+  if (failed === today.length) return `<span class="run-chip bad">Hoje: só falha${times}</span>`;
+  if (failed) return `<span class="run-chip warn">Rodou hoje${times} · ${failed} falha(s)</span>`;
+  return `<span class="run-chip good">Rodou hoje ${fmtClock(today[0].completed_at || today[0].started_at)}${times}</span>`;
+}
+
 function routineCard(routine) {
   const access = routine.access.length ? routine.access.map((item) => badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')).join('') : '<span class="muted">Sem grants declarados</span>';
-  const next = routine.next_scheduled_at ? `Próxima ${fmtDate(routine.next_scheduled_at)}` : routine.state.status === 'disabled' ? 'Relógio desligado' : 'Sem próxima ocorrência';
+  const last = routine.receipts[0] || null;
+  const next = routine.next_scheduled_at
+    ? `${fmtRelative(routine.next_scheduled_at)} · ${fmtDate(routine.next_scheduled_at)}`
+    : routine.state.status === 'disabled' ? 'Relógio desligado' : 'Sem próxima ocorrência';
   return `<article class="routine-card" data-open-routine="${escapeHtml(routine.routine_id)}" role="button" tabindex="0">
     <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(routine.system_ref)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
-    <p class="routine-purpose">${escapeHtml(routine.schedule)}</p>
-    <div class="routine-meta"><span><b>Executor</b>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</span><span><b>Estado</b>${escapeHtml(next)}</span></div>
+    <div class="run-chips">${routineTodayChip(routine)}${last ? `<span class="run-chip ${tone(last.status)}">Último: ${escapeHtml(label(last.status))} ${escapeHtml(fmtRelative(last.completed_at || last.started_at))}</span>` : '<span class="run-chip neutral">Nunca executou</span>'}</div>
+    <div class="routine-meta"><span><b>Cadência</b>${escapeHtml(routine.schedule)}</span><span><b>Próxima</b>${escapeHtml(next)}</span></div>
+    <div class="routine-meta"><span><b>Executor</b>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</span></div>
     <div class="assurance-row">${access}</div>
-    <div class="card-footer"><span>${routine.receipts.length ? `Último recibo ${fmtDate(routine.receipts[0].completed_at)}` : 'Nenhuma execução registrada'}</span><button data-open-routine="${escapeHtml(routine.routine_id)}">Inspecionar <b>→</b></button></div>
+    <div class="card-footer"><button type="button" class="table-action" data-runs-for-routine="${escapeHtml(routine.routine_id)}">${routine.receipts.length} execução(ões) →</button><button data-open-routine="${escapeHtml(routine.routine_id)}">Inspecionar <b>→</b></button></div>
   </article>`;
 }
 
@@ -757,16 +798,21 @@ function brainFlowStep(number, name, value, description, state_ = 'declared') {
   return `<li class="brain-flow-step"><span>${String(number).padStart(2, '0')}</span><div><p>${escapeHtml(name)}</p><b>${escapeHtml(value)}</b><small>${escapeHtml(description)}</small></div><i class="${escapeHtml(state_)}"></i></li>`;
 }
 
-function renderBrainModeSwitch() {
+function renderBrainModeSwitch(anatomy = {}) {
   const tabs = [
     ['overview', 'Visão geral'],
     ['memory', 'Memória'],
     ['recovery', 'Recuperação'],
     ['learning', 'Aprendizado'],
     ['architecture', 'Arquitetura'],
+    ['updates', 'Atualizações'],
   ];
-  return `<div class="brain-mode-switch" role="tablist" aria-label="Áreas do Cérebro">
+  const installation = anatomy.update_center?.installation || {};
+  const profile = installation.profile === 'legacy-compatible' ? 'Privado compatível'
+    : installation.update_management === 'managed-release' ? 'Canal gerenciado' : 'Instalação local';
+  return `<div class="brain-mode-bar"><div class="brain-mode-switch" role="tablist" aria-label="Áreas do Cérebro">
     ${tabs.map(([id, name]) => `<button type="button" role="tab" data-brain-mode="${id}" class="${state.brain.mode === id ? 'active' : ''}" aria-selected="${state.brain.mode === id}">${name}</button>`).join('')}
+  </div><button type="button" class="brain-version-chip${state.brain.mode === 'updates' ? ' active' : ''}" data-brain-mode="updates"><span>${escapeHtml(profile)}</span><b>v${escapeHtml(installation.version || '—')}</b></button>
   </div>`;
 }
 
@@ -969,26 +1015,102 @@ function renderNativeCapabilities(capabilities = []) {
   </section>`;
 }
 
+function overviewQualityText(quality = {}) {
+  return quality.measured && Number.isFinite(quality.percent)
+    ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(quality.percent)}%`
+    : 'Não medido';
+}
+
+function renderOverviewRecoveryAsset(health = {}) {
+  const quality = health.quality || {};
+  const operation = health.operation || {};
+  const measured = quality.measured && Number.isFinite(quality.percent);
+  const gate = quality.gate_passed === true ? 'Aprovado'
+    : quality.gate_passed === false ? 'Reprovado' : 'Não observado';
+  const falsePositive = quality.false_positive_percent !== null && quality.false_positive_percent !== undefined
+    ? `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(quality.false_positive_percent)}%`
+    : 'Não medido';
+
+  return `<section class="brain-recovery-asset${measured ? '' : ' is-unmeasured'}" aria-labelledby="overview-retrieval-title">
+    <header><p class="micro">QUALIDADE DE RECUPERAÇÃO</p><span class="retrieval-live-state"><i class="${operation.current_status === 'healthy' ? 'observed' : ''}"></i>${escapeHtml(retrievalStatusLabel(operation.current_status))}</span></header>
+    <div class="brain-recovery-asset-value"><strong>${overviewQualityText(quality)}</strong><div><h2 id="overview-retrieval-title">Hit@3</h2><p>${measured ? 'do contexto certo entre as três primeiras referências' : 'benchmark local ainda não auditado'}</p></div></div>
+    <dl>
+      <div><dt>Casos</dt><dd>${quality.cases == null ? '—' : brainCount(quality.cases)}</dd></div>
+      <div><dt>Falsos positivos</dt><dd>${falsePositive}</dd></div>
+      <div><dt>Gate</dt><dd>${escapeHtml(gate)}</dd></div>
+      <div><dt>Medição</dt><dd>${quality.measured_at ? fmtDate(quality.measured_at, false) : 'Sem data'}</dd></div>
+    </dl>
+    <p>Benchmark local. Comparar empresas exige a mesma versão, conjunto de casos e política de corpus; isto ainda não é ranking da Society.</p>
+    <button type="button" class="action" data-brain-mode="recovery">Ver prova e Runs →</button>
+  </section>`;
+}
+
+function renderOverviewCapabilities(capabilities = []) {
+  const visibleIds = new Set(['sources', 'evaluation', 'learning']);
+  const visible = capabilities.filter((capability) => visibleIds.has(capability.id));
+  if (!visible.length) return '<p class="brain-clear-state">Nenhuma capacidade deixou prova local nesta instalação.</p>';
+  return `<div class="brain-supported-grid">${visible.map((capability) => `<article class="state-${escapeHtml(capability.state)}">
+    <div><span>${escapeHtml(nativeCapabilityStateLabel(capability.state))}</span><i></i></div>
+    <h3>${escapeHtml(capability.name)}</h3>
+    <p>${escapeHtml(capability.promise)}</p>
+    <strong>${escapeHtml(capability.proof.headline)}</strong>
+    ${nativeCapabilityAction(capability.action)}
+  </article>`).join('')}</div>`;
+}
+
+function renderOverviewActivity(center, health = {}) {
+  const latestRun = center.recovery.runs[0] || null;
+  const operation = health.operation || {};
+  const index = health.index || {};
+  const accepted = operation.decisions?.accepted || 0;
+  const abstained = operation.decisions?.insufficient_evidence || 0;
+  const failed = operation.decisions?.retrieval_unavailable || 0;
+  const runAt = latestRun?.completed_at || latestRun?.started_at;
+  return `<section class="brain-activity-list">
+    <header><div><p class="micro">ATIVIDADE OBSERVADA</p><h2>O que aconteceu por último</h2></div><span>recibos locais</span></header>
+    <ol>
+      <li><div><span>Último Run</span><strong>${latestRun ? escapeHtml(latestRun.system_name) : 'Nenhum Run observado'}</strong><small>${latestRun ? `${escapeHtml(integrityLabel(latestRun.integrity.state))}${runAt ? ` · ${fmtDate(runAt, false)}` : ''}` : 'o ledger ainda não deixou execução'}</small></div>${latestRun ? '<button type="button" data-brain-mode="recovery">Abrir →</button>' : ''}</li>
+      <li><div><span>Última recuperação</span><strong>${operation.last_retrieval_at ? fmtDate(operation.last_retrieval_at, false) : 'Não observada'}</strong><small>${brainCount(accepted)} aceitas · ${brainCount(abstained)} abstiveram · ${brainCount(failed)} falharam no histórico</small></div><button type="button" data-brain-mode="recovery">Inspecionar →</button></li>
+      <li><div><span>Índice vigente</span><strong>${index.documents == null ? 'Não observado' : `${brainCount(index.documents)} documentos`}</strong><small>${index.updated_at ? `geração ${fmtDate(index.updated_at, false)}` : 'sem geração auditada'}</small></div><button type="button" data-brain-mode="architecture">Ver arquitetura →</button></li>
+    </ol>
+  </section>`;
+}
+
 function renderBrainOverview(anatomy) {
   const center = anatomy.control_center;
   const overview = center.overview;
   const runs = overview.runs;
+  const learning = overview.learning;
   return `<div class="brain-control-view brain-overview">
-    <section class="brain-overview-lead">
-      <div><p class="micro">ESTADO OPERACIONAL</p><h2>O que este Cérebro consegue sustentar hoje.</h2><p>Sem confundir volume de arquivos, qualidade do benchmark e qualidade de cada execução.</p></div>
-      <div class="brain-run-balance" aria-label="Integridade dos Runs">
-        <strong>${brainCount(runs.complete)}<small> completos</small></strong>
-        <span>${brainCount(runs.limited)} limitados · ${brainCount(runs.blocked)} bloqueados · ${brainCount(runs.total)} no total</span>
-        <button type="button" class="action" data-brain-mode="recovery">Inspecionar Runs →</button>
+    <section class="brain-overview-hero">
+      <div class="brain-overview-lead">
+        <div><p class="micro">SEU CÉREBRO HOJE</p><h2>Contexto que já consegue voltar para o trabalho.</h2><p>Aqui você vê o que está vivo, o que foi provado e onde o Cérebro decidiu não inventar.</p></div>
+        <dl class="brain-overview-facts" aria-label="Estado operacional observado">
+          <div><dt>Realidade entrando</dt><dd>${brainCount(overview.sources.observed)}/${brainCount(overview.sources.total)}</dd><span>Fontes observadas</span></div>
+          <div><dt>Trabalho sustentado</dt><dd>${brainCount(runs.complete)}/${brainCount(runs.total)}</dd><span>Runs completos · ${brainCount(runs.limited)} limitados</span></div>
+          <div><dt>Julgamento humano</dt><dd>${brainCount(learning.judgments)}</dd><span>${brainCount(learning.outcomes)} Runs com outcome · ${brainCount(learning.candidates)} candidatos</span></div>
+        </dl>
       </div>
+      ${renderOverviewRecoveryAsset(anatomy.retrieval_health)}
     </section>
 
-    ${renderNativeCapabilities(center.capabilities)}
-
-    <section class="brain-care-list">
-      <header><div><p class="micro">PEDE ATENÇÃO</p><h2>O que merece cuidado agora</h2></div><span>${overview.care.length} sinais</span></header>
-      ${overview.care.length ? `<ol>${overview.care.map((item) => `<li><b>${item.count === 0 ? '—' : brainCount(item.count)}</b><span>${escapeHtml(careLabel(item))}</span></li>`).join('')}</ol>` : '<p class="brain-clear-state">Nenhum sinal operacional pede atenção agora.</p>'}
+    <section class="brain-supported">
+      <header><div><p class="micro">O QUE ELE JÁ SUSTENTA</p><h2>Capacidades que já deixaram prova neste Cérebro</h2><p>Disponibilidade técnica não basta: cada linha mostra o efeito e a evidência observada nesta empresa.</p></div></header>
+      ${renderOverviewCapabilities(center.capabilities)}
     </section>
+
+    <div class="brain-overview-lower">
+      ${renderOverviewActivity(center, anatomy.retrieval_health)}
+      <section class="brain-care-list">
+        <header><div><p class="micro">PEDE ATENÇÃO</p><h2>O que merece cuidado agora</h2></div><span>${overview.care.length} sinais</span></header>
+        ${overview.care.length ? `<ol>${overview.care.map((item) => `<li><b>${item.count === 0 ? '—' : brainCount(item.count)}</b><span>${escapeHtml(careLabel(item))}</span></li>`).join('')}</ol>` : '<p class="brain-clear-state">Nenhum sinal operacional pede atenção agora.</p>'}
+      </section>
+    </div>
+
+    <details class="brain-capability-details">
+      <summary><span><b>Como este Cérebro funciona</b><small>${brainCount(center.capabilities.length)} capacidades nativas · Skills como instrumentos · provider substituível</small></span><i aria-hidden="true">⌄</i></summary>
+      ${renderNativeCapabilities(center.capabilities)}
+    </details>
   </div>`;
 }
 
@@ -1065,6 +1187,86 @@ function renderBrainArchitecture(anatomy) {
   </div>`;
 }
 
+function updateReasonCopy(code) {
+  return {
+    'update-source-not-configured': 'Este Cérebro ainda não aderiu ao canal empacotado de releases.',
+    'git-checkout-update-protected': 'Checkout de desenvolvimento protegido: atualização automática não sobrescreve trabalho local.',
+    'local-updater-missing': 'O updater local ainda não faz parte desta instalação.',
+    'installation-version-missing': 'A instalação precisa de uma versão canônica antes de entrar no canal gerenciado.',
+    'update-check-unavailable': 'Não foi possível consultar a última release agora.',
+    'update-channel-unmanaged': 'Nenhum canal oficial de releases está configurado.',
+    'managed-update-unavailable': 'Esta instalação não aceita atualização automática com segurança.',
+    'managed-update-failed': 'A atualização foi cancelada. O contexto privado permaneceu intacto.',
+    'update-check-required': 'Verifique novamente a última release antes de atualizar.',
+  }[code] || label(code || 'não observado');
+}
+
+function updateRemoteCopy(remote) {
+  if (!remote) return { label: 'Ainda não verificado', tone: 'neutral', detail: 'A consulta externa só acontece quando você pedir.' };
+  return {
+    current: { label: 'Motor em dia', tone: 'good', detail: `A release ${remote.tag} já está nesta instalação.` },
+    'update-available': { label: `Release ${remote.tag} disponível`, tone: 'warn', detail: `Publicada em ${fmtDate(remote.published_at, false)}.` },
+    ahead: { label: 'À frente da última release', tone: 'neutral', detail: `O motor local está além de ${remote.tag}.` },
+    'comparison-unavailable': { label: 'Versões não comparáveis', tone: 'neutral', detail: 'A instalação e o motor usam esquemas de versão diferentes.' },
+  }[remote.status] || { label: label(remote.status), tone: 'neutral', detail: '' };
+}
+
+function renderBrainUpdates(anatomy) {
+  const updates = state.brain.updates;
+  if (!updates.data && !updates.loading) void loadBrainUpdates();
+  const center = updates.data || anatomy.update_center;
+  if (!center) return '<div class="loading"><i></i><span>Lendo versão e canal local…</span></div>';
+  const installation = center.installation;
+  const motor = center.motor;
+  const society = center.society;
+  const remote = center.remote || null;
+  const remoteCopy = updateRemoteCopy(remote);
+  const managed = installation.update_management === 'managed-release';
+  const profile = installation.profile === 'legacy-compatible' ? 'Privado · compatível'
+    : managed ? 'Release gerenciada' : 'Instalação local';
+  const distribution = installation.distribution === 'inevita' ? 'Distribuição INEVITA' : 'Distribuição privada';
+  const checkLabel = updates.checking ? 'Verificando…' : remote ? 'Verificar novamente' : 'Verificar atualização';
+  const applyButton = remote?.status === 'update-available' && motor.can_apply
+    ? `<button type="button" class="action primary" data-update-apply ${updates.applying ? 'disabled' : ''}>${updates.applying ? 'Atualizando…' : `Atualizar para ${escapeHtml(remote.tag)}`}</button>` : '';
+  const unmanagedNote = managed ? 'Esta instalação pode receber uma release publicada com confirmação explícita.'
+    : updateReasonCopy(installation.reason_code);
+  return `<div class="brain-control-view brain-updates-view">
+    <section class="brain-update-hero">
+      <div><p class="micro">VERSÃO E CONTINUIDADE</p><h2>Seu contexto fica. O motor evolui.</h2><p>Compatibilidade, atualização do software e catálogo da Society são estados diferentes — e aparecem separados aqui.</p></div>
+      <div class="brain-update-identity"><span>${escapeHtml(profile)}</span><strong>v${escapeHtml(installation.version)}</strong><small>${escapeHtml(distribution)} · runtime ${escapeHtml(installation.runtime_mode || 'não declarado')}</small></div>
+    </section>
+
+    ${center.last_update ? `<div class="brain-update-result"><b>Motor atualizado para v${escapeHtml(center.last_update.installed_version)}</b><span>Reabra o Console para carregar o código novo. O contexto privado não foi enviado.</span></div>` : ''}
+    ${updates.error ? `<div class="brain-update-error"><b>Verificação interrompida</b><span>${escapeHtml(updateReasonCopy(updates.error))}</span></div>` : ''}
+
+    <section class="brain-update-grid">
+      <article class="brain-update-card">
+        <header><span>01</span><div><p class="micro">CÉREBRO DA EMPRESA</p><h3>Sua instalação privada</h3></div></header>
+        <dl><div><dt>Versão</dt><dd>v${escapeHtml(installation.version)}</dd></div><div><dt>Brain Manifest</dt><dd>${installation.manifest_version ? `v${escapeHtml(installation.manifest_version)}` : 'não observado'}</dd></div><div><dt>Compatibilidade</dt><dd>${installation.compatibility_percent == null ? 'não medida' : `${brainCount(installation.compatibility_percent)}%`}</dd></div><div><dt>Canal</dt><dd>${managed ? 'gerenciado' : 'ainda não gerenciado'}</dd></div></dl>
+        <p>${escapeHtml(unmanagedNote)}</p>
+        ${managed ? '' : '<button type="button" class="text-action" data-view="compatibility">Ver conformidade antes da migração →</button>'}
+      </article>
+
+      <article class="brain-update-card is-motor">
+        <header><span>02</span><div><p class="micro">MOTOR & CONSOLE</p><h3>O software que opera o Cérebro</h3></div></header>
+        <div class="brain-update-status"><span class="${escapeHtml(remoteCopy.tone)}"></span><div><strong>${escapeHtml(remoteCopy.label)}</strong><small>${escapeHtml(remoteCopy.detail)}</small></div></div>
+        <dl><div><dt>Versão local</dt><dd>v${escapeHtml(motor.version)}</dd></div><div><dt>Modo</dt><dd>${motor.mode === 'development-checkout' ? 'checkout de desenvolvimento' : 'release empacotada'}</dd></div><div><dt>Origem</dt><dd>${escapeHtml(motor.source.repo || 'não configurada')}</dd></div><div><dt>Último check</dt><dd>${remote?.checked_at ? fmtDate(remote.checked_at) : 'nunca'}</dd></div></dl>
+        <div class="brain-update-actions"><button type="button" class="action" data-update-check ${!motor.can_check || updates.checking || updates.applying ? 'disabled' : ''}>${escapeHtml(checkLabel)}</button>${applyButton}</div>
+        <small>A consulta envia apenas o nome público do repositório e recebe metadados da release. Nenhuma Fonte, query ou output sai desta máquina.</small>
+      </article>
+
+      <article class="brain-update-card">
+        <header><span>03</span><div><p class="micro">SOCIETY</p><h3>Catálogo distribuído com o motor</h3></div></header>
+        <div class="brain-society-version"><strong>v${escapeHtml(society.distribution_version)}</strong><span>${brainCount(society.visible)} no catálogo · ${brainCount(society.installed)} destes já ${society.installed === 1 ? 'está' : 'estão'} no Cérebro</span></div>
+        <p>Novas fichas, contratos e releases publicados chegam no pacote do motor. Seus Sistemas instalados, grants, julgamentos e contexto continuam locais.</p>
+        <button type="button" class="text-action" data-view="society">Abrir catálogo da Society →</button>
+      </article>
+    </section>
+
+    <section class="brain-update-boundary"><div><p class="micro">GARANTIA DE ATUALIZAÇÃO</p><h3>Motor entra. Contexto não sai.</h3></div><ul><li>sem atualização silenciosa</li><li>release publicada obrigatória</li><li>caminhos do dono preservados</li><li>checkout Git nunca sobrescrito</li></ul></section>
+  </div>`;
+}
+
 function renderAnatomy() {
   const anatomy = state.anatomy;
   if (!anatomy) {
@@ -1078,8 +1280,9 @@ function renderAnatomy() {
     recovery: renderBrainRecovery,
     learning: renderBrainLearning,
     architecture: renderBrainArchitecture,
+    updates: renderBrainUpdates,
   };
-  return `${renderBrainModeSwitch()}${(views[state.brain.mode] || renderBrainOverview)(anatomy)}`;
+  return `${renderBrainModeSwitch(anatomy)}${(views[state.brain.mode] || renderBrainOverview)(anatomy)}`;
 }
 
 function openBrainRun(runId) {
@@ -1105,6 +1308,65 @@ async function loadAnatomy() {
     if (state.brain.mode === 'architecture') void loadBrainGraph();
     if (state.view === 'anatomy') render();
   } catch { /* a view mostra loading; refresh recarrega */ }
+}
+
+async function loadBrainUpdates() {
+  const updates = state.brain.updates;
+  if (updates.loading) return;
+  updates.loading = true;
+  updates.error = null;
+  try {
+    updates.data = await getJson('/api/update');
+  } catch (error) {
+    updates.error = error.message;
+  } finally {
+    updates.loading = false;
+    if (state.view === 'anatomy' && state.brain.mode === 'updates') render();
+  }
+}
+
+async function checkBrainUpdates() {
+  const updates = state.brain.updates;
+  if (updates.checking || updates.applying) return;
+  updates.checking = true;
+  updates.error = null;
+  render();
+  try {
+    updates.data = await mutate('/api/update/check', {});
+    toast(updateRemoteCopy(updates.data.remote).label);
+  } catch (error) {
+    updates.error = error.message;
+    toast(updateReasonCopy(error.message), 'bad');
+  } finally {
+    updates.checking = false;
+    render();
+  }
+}
+
+async function applyBrainUpdate() {
+  const updates = state.brain.updates;
+  const remote = updates.data?.remote;
+  if (updates.applying || remote?.status !== 'update-available') return;
+  const approval = await askConfirm({
+    title: `Atualizar o motor para ${remote.tag}`,
+    body: 'A release publicada substituirá somente arquivos do motor. Contexto, operação, configurações, contribuições e feedback do dono permanecem intactos. Depois será necessário reabrir o Console.',
+    confirmLabel: 'Atualizar motor',
+  });
+  if (!approval) return;
+  updates.applying = true;
+  updates.error = null;
+  render();
+  try {
+    updates.data = await mutate('/api/update/apply', { expected_tag: remote.tag });
+    toast(`Motor atualizado para v${updates.data.last_update.installed_version}. Reabra o Console.`);
+    await loadAnatomy();
+  } catch (error) {
+    updates.error = error.message;
+    toast(updateReasonCopy(error.message), 'bad');
+  } finally {
+    updates.applying = false;
+    render();
+  }
 }
 
 async function loadBrainGraph() {
@@ -1759,6 +2021,7 @@ function runsVisibleEntries() {
   const filters = state.runs.filters;
   const list = runsEntries().filter((entry) => inActiveOperatingArea(entry.operating_area)
     && (!filters.system || entry.system?.system_id === filters.system || entry.system_ref === filters.system)
+    && (!filters.routine || entry.routine_ref === filters.routine || entry.routine_id === filters.routine)
     && (!filters.mode || (entry.mode || 'none') === filters.mode)
     && (!filters.status || entry.status === filters.status)
     && (!filters.decision || (entry.decision || 'none') === filters.decision)
@@ -1783,8 +2046,13 @@ function runsFilterBar(visible, total) {
   const distinct = (map) => [...new Set(entries.map(map).filter(Boolean))].sort();
   const systems = [...new Map(entries.filter((entry) => entry.system).map((entry) => [entry.system.system_id, entry.system_name])).entries()].sort((left, right) => left[1].localeCompare(right[1], 'pt-BR'));
   const active = Object.values(filters).some(Boolean);
+  const routines = [...new Map(entries.filter((entry) => entry.routine_ref || entry.routine_id)
+    .map((entry) => [entry.routine_ref || entry.routine_id, entry.routine_name || entry.routine_ref || entry.routine_id])).entries()]
+    .sort((left, right) => String(left[1]).localeCompare(String(right[1]), 'pt-BR'));
+  const routineCount = (id) => entries.filter((entry) => entry.routine_ref === id || entry.routine_id === id).length;
   return `<div class="runs-filterbar">
     <label>Sistema <select data-runs-filter="system"><option value="">todos</option>${systems.map(([id, name]) => `<option value="${escapeHtml(id)}"${filters.system === id ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select></label>
+    <label>Rotina <select data-runs-filter="routine"><option value="">todas</option>${routines.map(([id, name]) => `<option value="${escapeHtml(id)}"${filters.routine === id ? ' selected' : ''}>${escapeHtml(name)} (${routineCount(id)})</option>`).join('')}</select></label>
     <label>Modo <select data-runs-filter="mode"><option value="">todos</option>${options('mode', [...distinct((entry) => entry.mode), ...(entries.some((entry) => !entry.mode) ? ['none'] : [])], (option) => option === 'none' ? 'sem modo' : label(option))}</select></label>
     <label>Status <select data-runs-filter="status"><option value="">todos</option>${options('status', distinct((entry) => entry.status), label)}</select></label>
     <label>Decisão <select data-runs-filter="decision"><option value="">todas</option>${options('decision', [...distinct((entry) => entry.decision), ...(entries.some((entry) => !entry.decision) ? ['none'] : [])], (option) => option === 'none' ? 'sem decisão' : label(option))}</select></label>
@@ -1951,7 +2219,7 @@ function renderSociety() {
 
 function societyStatus(system) {
   if (system.availability === 'validated') return badge('validated', 'good', 'Validado na rede');
-  return badge('validation', 'warn', 'Em validação');
+  return badge('validation', 'warn', 'Acesso Society · em validação');
 }
 
 function societyPublisher(system) {
@@ -1965,6 +2233,8 @@ function societyValidationProgress(system) {
 }
 
 function societyCard(system) {
+  const compatibility = system.compatibility;
+  const compatibilityCopy = compatibility ? societyCompatibilityCopy(compatibility.status) : null;
   return `<article class="society-card">
     <div class="society-card-top">${systemIdentity(system)}${societyStatus(system)}</div>
     <div class="society-card-meta"><span>${escapeHtml(system.release.channel)}</span><code>v${escapeHtml(system.release.version)}</code></div>
@@ -1972,7 +2242,8 @@ function societyCard(system) {
     <p>${escapeHtml(system.result)}</p>
     <div class="society-publisher"><span aria-hidden="true">◎</span><div><small>Publicado por</small><b>${escapeHtml(societyPublisher(system))}</b></div></div>
     ${societyValidationProgress(system)}
-    <button type="button" class="society-card-action" data-society-open="${escapeHtml(system.system_id)}">Ver ficha <span aria-hidden="true">→</span></button>
+    ${compatibilityCopy ? `<div class="society-compatibility-mini"><span class="${escapeHtml(compatibilityCopy.tone)}"></span><b>${escapeHtml(compatibilityCopy.label)}</b><small>${compatibility.counts.ready_roles}/${compatibility.counts.required_roles} papéis prontos</small></div>` : ''}
+    <button type="button" class="society-card-action" data-society-open="${escapeHtml(system.system_id)}">Ver compatibilidade <span aria-hidden="true">→</span></button>
   </article>`;
 }
 
@@ -1989,27 +2260,80 @@ function renderSocietyCatalog(catalog) {
     ['validation', 'Em validação', catalog.counts.validation],
   ].map(([value, copy, count]) => `<button type="button" class="society-filter${state.society.filter === value ? ' active' : ''}" data-society-filter="${value}">${copy} <b>${count}</b></button>`).join('');
   return `<section class="society-catalog">
-    <header class="society-hero"><div><p class="eyebrow">CATÁLOGO LOCAL DA REDE</p><h2>Society</h2><p>Descubra Sistemas publicados pela rede, confira a prova e entenda o que eles exigem antes de instalar no seu Cérebro.</p></div><div class="society-counts"><span><b>${catalog.counts.validated}</b><small>validados</small></span><span><b>${catalog.counts.validation}</b><small>em validação</small></span></div></header>
+    <header class="society-hero"><div><p class="eyebrow">ACERVO EXCLUSIVO DA REDE</p><h2>Society</h2><p>Membros têm acesso aos Sistemas e capacidades que a INEVITA usa de verdade. Você implanta no seu Cérebro, usa no trabalho real e ajuda a validar o que entra na rede.</p></div><div class="society-counts"><span><b>${catalog.counts.validated}</b><small>validados</small></span><span><b>${catalog.counts.validation}</b><small>com acesso antecipado</small></span></div></header>
     <div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · versão · prova agregada</b><span>Permanece local</span><b>Fontes · contexto · outputs · decisões</b></div>
-    <div class="society-toolbar"><label><span>Buscar Sistema</span><input type="search" data-society-search value="${escapeHtml(state.society.query)}" placeholder="Resultado, nome ou publisher" autocomplete="off"></label><div class="society-filters" aria-label="Estado de publicação">${filters}</div></div>
-    <div class="society-results"><span>${visible.length} ${visible.length === 1 ? 'Sistema visível' : 'Sistemas visíveis'}</span><small>O catálogo é local; instalar nunca envia seu contexto para a Society.</small></div>
+    <div class="society-toolbar"><label><span>Buscar no acervo</span><input type="search" data-society-search value="${escapeHtml(state.society.query)}" placeholder="Resultado, nome ou publisher" autocomplete="off"></label><div class="society-filters" aria-label="Estado de publicação">${filters}</div></div>
+    <div class="society-results"><span>${visible.length} ${visible.length === 1 ? 'capacidade disponível' : 'capacidades disponíveis'}</span><small>O catálogo é local; instalar nunca envia seu contexto para a Society.</small></div>
     <div class="society-catalog-grid">${visible.map(societyCard).join('') || empty('Nenhum Sistema neste recorte', 'Altere a busca ou escolha outro estado de publicação.')}</div>
   </section>`;
 }
 
 function societyRequirementList(system) {
-  const sources = system.requirements.source_roles.map((source) => `<li><span>Fonte</span><b>${escapeHtml(source.label)}</b><small>${source.required ? 'Obrigatória' : 'Opcional'} · ${source.examples.map(escapeHtml).join(' ou ')}</small></li>`).join('');
+  const compatibilityByRole = new Map((system.compatibility?.roles || []).map((role) => [role.role, role]));
+  const sources = system.requirements.source_roles.map((source) => {
+    const role = compatibilityByRole.get(source.role);
+    const stateCopy = role ? societyCompatibilityCopy(role.status).label : 'Não verificado';
+    const binding = role?.current_binding?.source?.name;
+    const viable = role?.candidates?.filter((candidate) => candidate.compatibility === 'semantic-approval-required') || [];
+    const detail = binding || (viable.length ? `${viable.length} candidata(s) mecânica(s)` : source.examples.join(' ou '));
+    return `<li><span>Fonte</span><b>${escapeHtml(source.label)}</b><small>${source.required ? 'Obrigatória' : 'Opcional'} · ${escapeHtml(stateCopy)} · ${escapeHtml(detail)}</small></li>`;
+  }).join('');
   return `${sources}<li><span>Evento real</span><b>${escapeHtml(system.requirements.real_event)}</b><small>O primeiro valor precisa acontecer no trabalho real.</small></li><li><span>Company Brain</span><b>v${escapeHtml(system.release.minimum_brain_version)} ou superior</b><small>Compatibilidade mínima publicada pelo pacote.</small></li>`;
 }
 
+function societyCompatibilityCopy(status) {
+  return {
+    ready: { label: 'Pronto', tone: 'good', detail: 'Papéis aprovados e grants ativos.' },
+    'not-required': { label: 'Pronto', tone: 'good', detail: 'Este Sistema não exige Fontes.' },
+    'needs-mapping': { label: 'Mapeamento necessário', tone: 'warn', detail: 'Há candidatas locais; o dono ainda precisa confirmar a semântica.' },
+    'awaiting-approval': { label: 'Aguardando aprovação', tone: 'warn', detail: 'O vínculo foi proposto, mas binding e grant ainda não estão aprovados.' },
+    'missing-source': { label: 'Fonte ausente', tone: 'bad', detail: 'Ao menos um papel obrigatório não tem candidata mecânica local.' },
+    incompatible: { label: 'Vínculo incompatível', tone: 'bad', detail: 'Um binding atual é ambíguo, inválido, revogado ou expirou.' },
+    degraded: { label: 'Vínculo degradado', tone: 'warn', detail: 'A Fonte existe, mas o vínculo precisa ser revisto.' },
+  }[status] || { label: 'Não verificado', tone: 'neutral', detail: 'O pacote precisa publicar um System Contract compatível.' };
+}
+
+function societyCompatibilityPanel(system) {
+  const compatibility = system.compatibility;
+  if (!compatibility) {
+    return `<section class="society-compatibility"><p class="eyebrow">COMPATIBILIDADE LOCAL</p><h3>Contrato insuficiente</h3><p>Este pacote precisa publicar o System Contract antes de comparar Fontes.</p></section>`;
+  }
+  const copy = societyCompatibilityCopy(compatibility.status);
+  const roles = compatibility.roles.map((role) => {
+    const roleCopy = societyCompatibilityCopy(role.status);
+    const current = role.current_binding?.source?.name || null;
+    const viable = role.candidates.filter((candidate) => candidate.compatibility === 'semantic-approval-required');
+    const sourceLine = current ? `Vinculada a ${current}`
+      : viable.length ? `Candidatas: ${viable.slice(0, 3).map((candidate) => candidate.name).join(' · ')}${viable.length > 3 ? ` · +${viable.length - 3}` : ''}; sem aprovação semântica`
+        : 'Nenhuma Fonte local atende aos checks mecânicos';
+    return `<li><span class="compatibility-dot ${escapeHtml(roleCopy.tone)}"></span><div><b>${escapeHtml(role.role)}</b><small>${escapeHtml(sourceLine)}</small></div><em>${escapeHtml(roleCopy.label)}</em></li>`;
+  }).join('');
+  return `<section class="society-compatibility" data-compatibility-status="${escapeHtml(compatibility.status)}">
+    <p class="eyebrow">COMPATIBILIDADE LOCAL</p>
+    <div class="society-compatibility-head"><h3>${escapeHtml(copy.label)}</h3><span class="compatibility-dot ${escapeHtml(copy.tone)}"></span></div>
+    <p>${escapeHtml(copy.detail)}</p>
+    <ul>${roles}</ul>
+    <div class="society-agent-command"><span>Codex / Claude Code</span><code>${escapeHtml(compatibility.agent_command)}</code><button type="button" data-society-copy-command="${escapeHtml(compatibility.agent_command)}">Copiar comando</button></div>
+    <small>O plano lê somente contratos e referências locais; conteúdo e credenciais não entram no diagnóstico. Conector ativo sem Source Contract ainda conta como Fonte ausente.</small>
+  </section>`;
+}
+
 function societyInstallPanel(system) {
+  const compatibility = system.compatibility;
+  if (!compatibility) {
+    return `<div class="society-install-state"><button type="button" disabled>Verificação indisponível</button><p>Atualize o contrato do pacote antes de instalar.</p></div>`;
+  }
+  if (!compatibility.activation_ready) {
+    const copy = societyCompatibilityCopy(compatibility.status);
+    return `<div class="society-install-state"><button type="button" data-society-copy-command="${escapeHtml(compatibility.agent_command)}">Resolver com o agente</button><p>${escapeHtml(copy.detail)} O pacote ainda não será ativado.</p></div>`;
+  }
   if (system.installation_status === 'installed') {
-    return `<div class="society-install-state is-installed"><span>Instalado neste Cérebro</span><b>O pacote está disponível pelo mesmo <code>system_id</code>.</b></div>`;
+    return `<div class="society-install-state is-installed"><span>Pronto para o primeiro run</span><b>Fontes aprovadas; o output real ainda precisa do julgamento da pessoa.</b></div>`;
   }
   if (system.install_action === 'approval-required') {
-    return `<div class="society-install-state"><button type="button" disabled>Acesso por seleção</button><p>Este piloto ainda recruta participantes aprovados. A instalação pública só abre depois dos gates de validação.</p></div>`;
+    return `<div class="society-install-state"><button type="button" disabled>Acesso Society</button><p>Compatibilidade local confirmada. Membros podem implantar este piloto com acompanhamento da INEVITA.</p></div>`;
   }
-  return `<div class="society-install-state"><button type="button" disabled>Instalação ainda não conectada</button><p>A ficha está pronta; a mutação de instalação continua fora deste V0.</p></div>`;
+  return `<div class="society-install-state"><button type="button" disabled>Pronto para instalar</button><p>A compatibilidade passou; a mutação de instalação continua no agente local com confirmação explícita.</p></div>`;
 }
 
 function renderSocietyDetail(system) {
@@ -2020,6 +2344,7 @@ function renderSocietyDetail(system) {
     <header class="society-detail-hero"><div class="society-detail-identity">${systemIdentity(system, 'large')}<div><p class="micro">${escapeHtml(system.release.channel)} · v${escapeHtml(system.release.version)}</p><h2>${escapeHtml(system.name)}</h2><p>${escapeHtml(system.result)}</p></div></div><div class="society-detail-state">${societyStatus(system)}<span>${escapeHtml(system.installation_status === 'installed' ? 'Instalado neste Cérebro' : 'Não instalado')}</span></div></header>
     <div class="society-detail-layout"><main>
       <section class="society-detail-section"><p class="eyebrow">PROMESSA CONTRATADA</p><h3>O que muda no trabalho</h3><dl><div><dt>Resultado</dt><dd>${escapeHtml(system.result)}</dd></div><div><dt>Primeiro valor</dt><dd>${escapeHtml(system.first_value)}</dd></div><div><dt>Régua</dt><dd>${escapeHtml(system.setpoint)}</dd></div></dl></section>
+      ${societyCompatibilityPanel(system)}
       <section class="society-detail-section"><p class="eyebrow">ANTES DE INSTALAR</p><h3>O que este Sistema precisa</h3><ul class="society-requirements">${societyRequirementList(system)}</ul></section>
       <section class="society-detail-section"><p class="eyebrow">AUTORIDADE E PRIVACIDADE</p><h3>O que ele pode fazer</h3><div class="society-permissions"><span><i>${system.privacy.connects_sources_automatically ? '×' : '✓'}</i>Não conecta Fontes sozinho</span><span><i>${system.privacy.writes_external_systems_automatically ? '×' : '✓'}</i>Não escreve no CRM sozinho</span><span><i>${system.privacy.requires_source_by_source_consent ? '✓' : '×'}</i>Consentimento Fonte a Fonte</span><span><i>${system.requirements.human_approval_before_external_write ? '✓' : '×'}</i>Aprovação humana antes de escrever fora</span></div></section>
     </main><aside>
@@ -2461,6 +2786,13 @@ function render() {
     const views = (element.dataset.views || element.dataset.view).split(',');
     element.classList.toggle('active', views.includes(state.view));
   });
+  if (state.view === 'anatomy') {
+    const strip = $('.brain-mode-switch');
+    const activeMode = strip?.querySelector('button.active');
+    if (strip && activeMode && strip.scrollWidth > strip.clientWidth) {
+      strip.scrollLeft = activeMode.offsetLeft - ((strip.clientWidth - activeMode.offsetWidth) / 2);
+    }
+  }
   ensureVisibleSystemInterfaceHealth();
   if (state.view === 'canvas') void mountCanvasView();
 }
@@ -2979,13 +3311,45 @@ function correctionSection(detail) {
   </section>`;
 }
 
-function correctionButtons(detail) {
+function verdictGuide() {
+  return `<ul class="verdict-guide">
+    <li><b>Aprovar</b> fecha o julgamento. Nada é reexecutado.</li>
+    <li><b>Pedir ajuste</b> guarda sua correção e libera uma reexecução com ela.</li>
+    <li><b>Rejeitar</b> fecha como reprovado e abre caso de eval.</li>
+    <li><b>Propor ação</b> registra intenção local, sem executar.</li>
+  </ul>`;
+}
+
+/* Julgar é local e reversível; reexecutar atravessa a fronteira do provider.
+   As duas coisas moram em zonas separadas para o gesto não confundi-las. */
+function judgmentZones(detail) {
   const actions = detail.correction_actions || {};
+  const history = detail.judgment?.history || [];
+  const current = history.length ? history[history.length - 1] : null;
+  const rerunReady = Boolean(actions.can_rerun_with_correction);
+  const judge = `<div class="zone judge-zone">
+    <p class="zone-label">Julgar · registra decisão local, nada sai desta máquina</p>
+    <div class="drawer-actions judgment-actions">
+      <button class="action${rerunReady ? '' : ' primary'}" data-judgment-action="approve">Aprovar</button>
+      <button class="action warn" data-judgment-action="changes">Pedir ajuste</button>
+      <button class="action" data-judgment-action="reject">Rejeitar</button>
+      <button class="action" data-judgment-action="propose-action">Propor ação</button>
+    </div>
+    ${rerunReady ? '<p class="zone-help">Registrar outro veredito substitui o julgamento atual e descarta a reexecução pendente.</p>' : ''}
+  </div>`;
   const buttons = [];
-  if (actions.can_rerun_with_correction) buttons.push('<button class="action warn" data-correction-action="rerun">Reexecutar com correção</button>');
-  if (actions.can_compare) buttons.push('<button class="action" data-correction-action="compare">Comparar runs</button>');
-  if (actions.can_create_learning_candidate) buttons.push('<button class="action primary" data-correction-action="learn">Criar candidato 1/3</button>');
-  return buttons.join('');
+  if (rerunReady) buttons.push('<button class="action primary" data-correction-action="rerun">Reexecutar com correção<small>envia sua nota ao provider · consome assinatura</small></button>');
+  if (actions.can_compare) buttons.push('<button class="action" data-correction-action="compare">Comparar runs<small>abre baseline e candidato lado a lado</small></button>');
+  if (actions.can_create_learning_candidate) buttons.push('<button class="action" data-correction-action="learn">Criar candidato 1/3<small>ainda exige replay e novo martelo</small></button>');
+  const stateLine = current
+    ? `<div class="judgment-state"><span class="timeline-dot ${tone(current.verdict)}"></span><div><strong>Julgamento atual: ${escapeHtml(label(current.verdict))}</strong><span>${fmtDate(current.decided_at)} · ${escapeHtml(current.actor_ref)}${rerunReady ? ' · 1 reexecução disponível' : ''}</span></div></div>`
+    : '<div class="judgment-state"><span class="timeline-dot warn"></span><div><strong>Ainda não julgado</strong><span>Nenhum veredito registrado para este resultado.</span></div></div>';
+  if (!buttons.length) return `<div class="zone quiet">${stateLine}</div>${judge}`;
+  return `<div class="zone act-zone">
+    <p class="zone-label">Agir sobre este julgamento · executa e atravessa a fronteira do provider</p>
+    ${stateLine}
+    <div class="drawer-actions">${buttons.join('')}</div>
+  </div>${judge}`;
 }
 
 function contextMarkup(context) {
@@ -3032,10 +3396,11 @@ async function openJudgment(receiptId) {
       <section class="drawer-section"><div class="output-heading"><h3>Resultado</h3><span>${detail.output.bytes} bytes</span></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
       ${detail.context_available ? `<section class="drawer-section"><div class="output-heading"><h3>Contexto selecionado</h3><button class="table-action" data-load-context="${escapeHtml(receiptId)}">Abrir Run Record V2 →</button></div><div id="context-slot"></div></section>` : ''}
       ${correctionSection(detail)}
-      <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p><textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
+      <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p>${verdictGuide()}<textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
       <section class="drawer-section"><h3>Histórico imutável</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section>
       <div class="boundary-note action-boundary"><b>Propor não é executar</b>“Propor ação” registra intenção local. Não cria task, não envia mensagem, não publica e não altera Fonte.</div>
-      <div class="drawer-actions judgment-actions">${correctionButtons(detail)}<button class="action primary" data-judgment-action="approve">Aprovar</button><button class="action warn" data-judgment-action="changes">Pedir ajuste</button><button class="action" data-judgment-action="reject">Rejeitar</button><button class="action" data-judgment-action="propose-action">Propor ação</button></div>`;
+      ${judgmentZones(detail)}`;
+    state.rerunPending = Boolean(detail.correction_actions?.can_rerun_with_correction);
   } catch (error) {
     $('#drawer-content').innerHTML = empty('Output indisponível', label(error.message));
     toast(label(error.message), 'bad');
@@ -3055,9 +3420,11 @@ async function performJudgment(action) {
   }
   const approval = await askConfirm({
     title: payload.action_intent === 'propose-action' ? 'Registrar intenção de ação' : `Registrar julgamento · ${label(payload.verdict)}`,
-    body: payload.action_intent === 'propose-action'
+    body: `${payload.action_intent === 'propose-action'
       ? 'A intenção fica local. Nenhuma ação externa será executada.'
-      : 'O histórico anterior será preservado. Nenhuma ação externa será executada.',
+      : 'O histórico anterior será preservado. Nenhuma ação externa será executada.'}${state.rerunPending && !(payload.verdict === 'changes-requested' && payload.action_intent === 'none')
+      ? ' ATENÇÃO: existe uma reexecução com correção ainda não usada. Registrar outro veredito torna o julgamento atual antigo e a reexecução deixa de ser oferecida.'
+      : ''}`,
     confirmLabel: 'Registrar',
     fields: [APPROVED_BY_FIELD],
   });
@@ -3358,12 +3725,23 @@ document.addEventListener('click', (event) => {
   const societyOpen = event.target.closest('[data-society-open]');
   if (societyOpen) { state.society.selected = societyOpen.dataset.societyOpen; render(); return; }
   if (event.target.closest('[data-society-back]')) { state.society.selected = null; render(); return; }
+  const societyCommand = event.target.closest('[data-society-copy-command]');
+  if (societyCommand) {
+    navigator.clipboard?.writeText(societyCommand.dataset.societyCopyCommand).then(
+      () => toast('Comando do diagnóstico copiado.'),
+      () => toast('Não foi possível copiar o comando.', 'bad'),
+    );
+    return;
+  }
+  if (event.target.closest('[data-update-check]')) { void checkBrainUpdates(); return; }
+  if (event.target.closest('[data-update-apply]')) { void applyBrainUpdate(); return; }
   const brainMode = event.target.closest('[data-brain-mode]');
   if (brainMode) {
     state.brain.mode = brainMode.dataset.brainMode;
     state.brain.query = '';
     try { localStorage.setItem('cb-brain-mode', state.brain.mode); } catch { /* preferência local */ }
     if (state.brain.mode === 'architecture') void loadBrainGraph();
+    if (state.brain.mode === 'updates') void loadBrainUpdates();
     render();
     return;
   }
@@ -3442,6 +3820,14 @@ document.addEventListener('click', (event) => {
   }
   if (event.target.closest('[data-runs-clear]')) {
     state.runs.filters = { system: '', mode: '', status: '', decision: '', snapshot: '' };
+    render();
+    return;
+  }
+  const runsForRoutine = event.target.closest('[data-runs-for-routine]');
+  if (runsForRoutine) {
+    state.runs.filters = { system: '', routine: runsForRoutine.dataset.runsForRoutine, mode: '', status: '', decision: '', snapshot: '' };
+    state.view = 'runs';
+    closeDrawer();
     render();
     return;
   }
@@ -3543,7 +3929,9 @@ $('#drawer-backdrop').addEventListener('click', closeDrawer);
 $('#refresh').addEventListener('click', async () => {
   try {
     state.systems.interfaceHealth = {};
+    state.brain.updates.data = null;
     await loadModel();
+    if (state.view === 'anatomy' && state.brain.mode === 'updates') await loadBrainUpdates();
     toast('Estado local recompilado.');
   } catch (error) { toast(label(error.message), 'bad'); }
 });

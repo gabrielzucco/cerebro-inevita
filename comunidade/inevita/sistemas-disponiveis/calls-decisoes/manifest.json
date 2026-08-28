@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "system_id": "briefing-comercial-inteligente",
-  "name": "Briefing Comercial Inteligente",
+  "system_id": "calls-decisoes",
+  "name": "Calls em Decisões",
   "release": {
     "version": "0.1.1",
     "channel": "pilot",
     "minimum_brain_version": "1.11.0"
   },
   "validation": {
-    "program_key": "briefing-comercial-v1",
+    "program_key": "calls-decisoes-v1",
     "stage": "pilot",
     "listed": false,
     "validation_lab_visible": true,
@@ -27,9 +27,9 @@
     "public_catalog": false,
     "validation_lab": true
   },
-  "result": "reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados",
-  "setpoint": "reduzir busca manual sem inventar contexto nem atualizar o CRM silenciosamente",
-  "first_value": "o operador confirma que usaria o briefing em uma reunião real",
+  "result": "reunião deixa decisões, ações, evidências e pendências aprovadas",
+  "setpoint": "transformar uma call real em trabalho acionável sem resumir genericamente nem perder proveniência",
+  "first_value": "o dono confirma que consegue decidir ou agir usando o artefato sem reler a call inteira",
   "privacy": "local-first",
   "permissions": {
     "connects_sources_automatically": false,
@@ -37,30 +37,15 @@
     "requires_source_by_source_consent": true
   },
   "requirements": {
-    "real_event": "uma reunião real",
+    "real_event": "uma reunião real com transcrição legível",
     "source_roles": [
       {
-        "role": "commercial-source",
-        "label": "Fonte comercial autorizada",
+        "role": "transcricao",
+        "label": "Transcrição autorizada",
         "required": true,
-        "examples": ["arquivo", "export manual"]
+        "examples": ["Fathom", "arquivo", "texto colado"]
       }
     ],
     "human_approval_before_external_write": true
-  },
-  "telemetry": {
-    "content": false,
-    "allowed": [
-      "system_id",
-      "release_version",
-      "runtime",
-      "lifecycle_state",
-      "run_id",
-      "eval_version",
-      "eval_passed",
-      "human_decision",
-      "reason_code",
-      "duration_ms"
-    ]
   }
 }

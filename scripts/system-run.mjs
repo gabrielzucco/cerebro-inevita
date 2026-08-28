@@ -12,6 +12,7 @@ import {
   safeRelativePath,
   validateSystemContract,
 } from './lib/system-protocol.mjs';
+import { buildInstallationCompatibility } from './lib/installation-compatibility.mjs';
 
 const ROOT = process.env.CEREBRO_INSTALL_ROOT
   ? resolve(process.env.CEREBRO_INSTALL_ROOT)
@@ -43,9 +44,10 @@ function uniqueRefs(refs) {
 }
 
 function contractFor(stateValue) {
+  const installedPath = join(ROOT, 'sistemas', 'outros-instalados', slug, 'contract.json');
   const path = stateValue.contract_path
     ? resolve(ROOT, stateValue.contract_path)
-    : join(ROOT, '.cerebro', 'contracts', `${slug}.json`);
+    : existsSync(installedPath) ? installedPath : join(ROOT, '.cerebro', 'contracts', `${slug}.json`);
   if (!existsSync(path)) return null;
   const contract = readJson(path, 'System Contract');
   const errors = validateSystemContract(contract);
@@ -155,9 +157,18 @@ if (action === 'start') {
   let entityRefs;
   let sourceRefs;
   try {
+    const compatibility = state.source_bindings && contract
+      ? buildInstallationCompatibility(ROOT, contract, { installed: true })
+      : null;
+    if (compatibility && !compatibility.activation_ready) {
+      fail(`Fontes do Sistema em ${compatibility.status}; rode ${compatibility.agent_command} antes do primeiro run`);
+    }
     entityRefs = parseRoleRefs(options('entity'), '--entity');
     sourceRefs = uniqueRefs([
       ...parseRoleRefs(options('source'), '--source'),
+      ...(compatibility?.roles || [])
+        .filter((role) => role.current_binding?.status === 'ready' && role.current_binding.source)
+        .map((role) => ({ role: role.role, id: role.current_binding.source.source_ref })),
       ...(contract?.sources || [])
         .filter((source) => source.source_id)
         .map((source) => ({ role: source.role, id: source.source_id })),

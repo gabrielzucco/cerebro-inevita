@@ -27,6 +27,9 @@ conteúdo bruto.
 - `system-runtime-binding.schema.json`: binding privado entre um Sistema instalado e sua superfície
   web local. O System Contract declara o papel da interface; este binding resolve host, workspace,
   URL e healthcheck da instalação sem publicar credencial, conteúdo ou topologia privada.
+- `system-source-binding.schema.json`: binding privado entre um papel de Fonte exigido pelo Sistema
+  e um Source Contract já existente na instalação. Ele materializa `papel → Fonte` sem duplicar
+  conector, credencial, conteúdo ou casa da verdade; o Access Grant continua autorizando o acesso.
 - `experience-manifest.schema.json`: personalidade publicada que o Cockpit pode projetar sem
   incorporar o front-end do Sistema. Declara publisher, assinatura, marca mínima e superfícies;
   nunca host, URL, workspace, dado da empresa, resultado, permissão ou julgamento.
@@ -109,6 +112,39 @@ System Contract, Runtime Binding privado e Experience Manifest. `validated` exig
 acesso público e os gates quantitativos cumpridos; um release piloto nunca entra silenciosamente
 na prateleira validada.
 
+## System Source Binding V1
+
+`system-source-binding.schema.json` descreve a aresta local entre um papel do System Contract e um
+Source Contract. O pacote publica o papel abstrato; a instalação escolhe qual Fonte local cumpre
+esse papel. O binding trava versão do Sistema, acesso solicitado, estado de compatibilidade, grant
+e aprovação humana, sempre reference-only.
+
+O mesmo Source Contract pode atender qualquer quantidade de Sistemas. Cada relação recebe binding
+e grant próprios; reutilizar a Fonte nunca reescreve seu contrato nem o Connector Binding. Mais de
+um binding para `system_ref + role` é ambíguo e degrada a instalação. `ready` exige Fonte ativa,
+modo compatível, allowlist estrutural quando presente, Access Grant vigente e mesmo aprovador.
+
+O plano é deliberadamente conservador: valida modo, estado e `source_id` explícito, mas chama o
+resultado de candidato até o humano confirmar que a semântica da Fonte realmente cumpre o papel.
+Nome de fornecedor, conector disponível ou credencial presente nunca provam compatibilidade.
+
+## Installation Compatibility V1
+
+O diagnóstico pré-instalação recompila `System Contract → papéis → Source Contracts → System
+Source Bindings → Access Grants` sem abrir o conteúdo das Fontes. Ele funciona sobre um pacote
+publicado ainda não instalado e devolve estados distintos: `missing-source`, `needs-mapping`,
+`awaiting-approval`, `degraded`, `incompatible` ou `ready`.
+
+```bash
+node scripts/installation-compatibility.mjs plan briefing-comercial-inteligente
+```
+
+`needs-mapping` só diz que existem candidatas que passaram por status e modo; a semântica continua
+pendente. `ready` exige bindings aprovados e grants ativos no instante do diagnóstico. O inventário
+permanece local e a saída omite conteúdo, `home_ref`, `credential_ref` e detalhes do conector.
+Instalar o pacote e ativar o Sistema são etapas diferentes: o primeiro run só abre depois de
+compatibilidade e julgamento humano.
+
 ## Brain Manifest V1 + diagnóstico de compatibilidade
 
 `.cerebro/manifest.json` identifica uma instalação compatível sem virar inventário paralelo. Ele
@@ -147,6 +183,7 @@ O plano sempre preserva o que já é canônico e mantém migração em
 | Routine Contract | V1 | — |
 | Executor Binding | V1 privado | — |
 | Collector Binding | V1 privado | — |
+| System Source Binding | V1 privado | — |
 | Experience Manifest | V1 publicado | — |
 | Routine Run Receipt | V1 privado | — |
 | Routine Migration Readback | V1 privado | — |
@@ -194,6 +231,7 @@ node scripts/protocol-validate.mjs routine protocol/examples/routine-contract.v1
 node scripts/protocol-validate.mjs executor protocol/examples/executor-binding.v1.json
 node scripts/protocol-validate.mjs collector protocol/examples/collector-binding.v1.json
 node scripts/protocol-validate.mjs system-runtime protocol/examples/system-runtime-binding.v1.json
+node scripts/protocol-validate.mjs system-source protocol/examples/system-source-binding.v1.json
 node scripts/protocol-validate.mjs experience protocol/examples/experience-manifest.v1.json
 node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
 node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-migration.v1.json
@@ -204,6 +242,18 @@ node scripts/protocol-validate.mjs trace protocol/examples/execution-trace-event
 node scripts/protocol-validate.mjs retrieval-provider protocol/examples/retrieval-provider-contract.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
+
+O comissionamento de Fontes é sempre preview → aprovação → escrita privada:
+
+```bash
+node scripts/system-source-binding.mjs plan analisar-funil
+node scripts/system-source-binding.mjs bind caminho/binding.json
+node scripts/system-source-binding.mjs bind caminho/binding.json --confirm
+```
+
+`plan` lê somente metadata contratual e não abre a Fonte nem consulta credencial. `bind` sem
+`--confirm` apenas valida e mostra o readback; com confirmação, grava o binding em
+`.cerebro/runtime/system-source-bindings/`, já protegido pela fronteira privada do Cérebro.
 
 O registro simples atual migra de forma aditiva. Sem `--confirm`, o comando mostra o contrato
 anterior, o posterior, o caminho de saída e a estratégia de rollback; ele não abre a Fonte:

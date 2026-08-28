@@ -1,0 +1,61 @@
+{
+  "protocol_version": 1,
+  "system_id": "calls-decisoes",
+  "name": "Calls em Decisões",
+  "version": "0.1.1",
+  "status": "confirmed",
+  "result": {
+    "statement": "reunião deixa decisões, ações, evidências e pendências aprovadas",
+    "non_success": "gerar apenas um resumo bonito, atribuir dono sem fonte ou salvar derivados sem aprovação",
+    "output_type": "decisoes-e-acoes",
+    "definition_of_done": "o dono confirma que usaria o artefato para decidir ou agir",
+    "owner": "dono-do-cerebro",
+    "human_gate": "aprovar decisões, ações e memória candidata antes de salvar"
+  },
+  "trigger": {
+    "type": "event",
+    "description": "quando uma reunião real termina e a transcrição fica legível"
+  },
+  "capability": {
+    "capability_id": "extrair-decisoes-de-call",
+    "version": "0.1.0",
+    "origin": "inevita"
+  },
+  "entities": [
+    { "type": "meeting", "role": "reuniao", "required": false }
+  ],
+  "sources": [
+    {
+      "role": "transcricao",
+      "source_id": null,
+      "required": true,
+      "access": "manual",
+      "freshness": "transcrição integral da reunião-alvo",
+      "purpose": "sustentar decisões, ações e tensões com evidência verificável"
+    }
+  ],
+  "pipeline": [
+    { "state": "recebida", "input": "transcrição autorizada", "output": "fonte identificada", "gate": "acesso e legibilidade confirmados" },
+    { "state": "extraida", "input": "fonte identificada", "output": "decisões e ações candidatas", "gate": "afirmações críticas apontam evidência" },
+    { "state": "aprovada", "input": "candidatas", "output": "artefato utilizável", "gate": "decisão humana registrada" }
+  ],
+  "permissions": {
+    "read": ["transcrição autorizada"],
+    "write": ["derivados e recibos locais"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.0",
+    "deterministic_gates": ["evidência presente", "PII fora dos derivados", "ação sem dono sustentado permanece pendência"],
+    "human_questions": ["As decisões representam o que realmente foi fechado?", "Você consegue agir usando este artefato?"],
+    "outcome_measure": "uso-confirmado",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  },
+  "extensions": {}
+}

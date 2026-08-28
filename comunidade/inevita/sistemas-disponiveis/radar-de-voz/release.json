@@ -1,11 +1,11 @@
 {
   "protocol_version": 1,
-  "release_id": "briefing-comercial-inteligente-v0-1-1",
-  "system_ref": "briefing-comercial-inteligente",
-  "version": "0.1.1",
+  "release_id": "radar-de-voz-v0-1-0",
+  "system_ref": "radar-de-voz",
+  "version": "0.1.0",
   "channel": "pilot",
   "compatibility": {
-    "minimum_brain_version": "1.11.0"
+    "minimum_brain_version": "1.29.0"
   },
   "contracts": {
     "system_contract_ref": "contract.json",
@@ -18,7 +18,7 @@
     "application_required": false
   },
   "validation": {
-    "program_key": "briefing-comercial-v1",
+    "program_key": "radar-de-voz-v1",
     "required_real_cycles": 3,
     "verified_real_cycles": 0,
     "required_distinct_member_brains": 2,

@@ -2,6 +2,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { experienceManifestView, validateExperienceManifest } from './experience-manifest.mjs';
+import { buildInstallationCompatibility } from './installation-compatibility.mjs';
 import { releaseManifestView, validateReleaseManifest } from './release-manifest.mjs';
 import { validateCapabilityContract, validateSystemContract } from './system-protocol.mjs';
 
@@ -266,6 +267,12 @@ export function buildSocietyCatalogReadModel(brainRoot, {
       const view = structured
         ? structuredPackageView(structured, packagePath, catalogRoot, installedIds, issues)
         : packageView(manifest, packagePath, catalogRoot, installedIds, issues);
+      view.compatibility = structured
+        ? buildInstallationCompatibility(brainRoot, structured.contract, {
+          installed: installedIds.has(structured.contract.system_id),
+        })
+        : null;
+      view.compatibility_action = structured ? 'inspect' : 'contract-upgrade-required';
       if (view.availability !== 'hidden') systems.push(view);
     } catch {
       issues.push({ reason_code: 'society-package-invalid', ref: relative(catalogRoot, manifestPath).replaceAll('\\', '/') });

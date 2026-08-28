@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "system_id": "radar-de-voz",
+  "name": "Radar de Voz, Objeções e Prova",
+  "release": {
+    "version": "0.1.0",
+    "channel": "pilot",
+    "minimum_brain_version": "1.29.0"
+  },
+  "validation": {
+    "program_key": "radar-de-voz-v1",
+    "stage": "pilot",
+    "listed": false,
+    "validation_lab_visible": true,
+    "application_required": false,
+    "access_mode": "approved_participants",
+    "required_real_cycles": 3,
+    "required_distinct_member_brains": 2,
+    "requires_repeat_use": true,
+    "requires_eval_pass": true,
+    "requires_human_approval": true,
+    "verified_real_cycles": 0,
+    "verified_distinct_member_brains": 0
+  },
+  "publication": {
+    "status": "pilot",
+    "public_catalog": false,
+    "validation_lab": true
+  },
+  "result": "conversas reais viram um radar vivo de objeções, linguagem, claims e provas",
+  "setpoint": "evidência por pessoa e fonte, sem confundir volume de mensagens com demanda nem produzir copy automaticamente",
+  "first_value": "o dono recebe cards de decisão sustentados por evidências novas e aprova o que merece influenciar a operação",
+  "privacy": "local-first",
+  "permissions": {
+    "connects_sources_automatically": false,
+    "writes_external_systems_automatically": false,
+    "requires_source_by_source_consent": true
+  },
+  "requirements": {
+    "real_event": "uma janela real de conversas ou respostas de clientes",
+    "source_roles": [
+      {
+        "role": "voz-do-cliente",
+        "label": "Voz humana dos clientes",
+        "required": true,
+        "examples": ["WhatsApp", "calls", "formulários", "CRM"]
+      },
+      {
+        "role": "oferta-vigente",
+        "label": "Oferta vigente",
+        "required": true,
+        "examples": ["documento", "CRM", "arquivo aprovado"]
+      },
+      {
+        "role": "outcomes",
+        "label": "Compras, ativação ou uso",
+        "required": false,
+        "examples": ["Supabase", "CRM", "export"]
+      }
+    ],
+    "human_approval_before_external_write": true
+  }
+}

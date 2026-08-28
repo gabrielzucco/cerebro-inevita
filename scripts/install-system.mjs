@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { validateCapabilityContract, validateSystemContract } from './lib/system-protocol.mjs';
 import { validateExperienceManifest } from './lib/experience-manifest.mjs';
 import { validateReleaseManifest } from './lib/release-manifest.mjs';
+import { summarizeSystemSourceBindings } from './lib/system-source-binding.mjs';
 
 const SOURCE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET_ROOT = resolve(process.env.CEREBRO_INSTALL_ROOT || SOURCE_ROOT);
@@ -310,6 +311,15 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
     const errors = validateCapabilityContract(capability);
     if (errors.length) fail(`capability contract inválido: ${errors.join(' · ')}`);
   }
+  const sourceRequirements = Array.isArray(contract?.sources) ? contract.sources : [];
+  const sourceBindings = contract
+    ? summarizeSystemSourceBindings(TARGET_ROOT, contract)
+    : sameRelease && previous.source_bindings ? previous.source_bindings : {
+      total_roles: sourceRequirements.length,
+      required_roles: sourceRequirements.filter((source) => source.required === true).length,
+      ready_roles: 0,
+      status: sourceRequirements.length ? 'unbound' : 'not-required',
+    };
   writeFileSync(statePath, `${JSON.stringify({
     ...(sameRelease ? previous : {}),
     slug,
@@ -323,6 +333,7 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
       version: capability.version,
       origin: 'inevita',
     } : null,
+    source_bindings: sourceBindings,
     status: sameRelease ? (previous.status || 'package_added') : 'package_added',
     updated_at: new Date().toISOString(),
   }, null, 2)}\n`, { mode: 0o600 });
@@ -338,10 +349,11 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
     `- system-id: ${bundle.system_id}`,
     `- versão: ${bundle.version}`,
     '- estado: pacote adicionado; ainda não ativo',
-    '- fontes conectadas: nenhuma',
+    `- papéis de Fonte: ${sourceBindings.total_roles} (${sourceBindings.required_roles} obrigatórios)`,
+    `- bindings prontos: ${sourceBindings.ready_roles}`,
     '- contexto alterado: não',
     '- conteúdo enviado à INEVITA: não',
-    '- próximo passo: configuração com uma fonte real e julgamento humano',
+    `- próximo passo: mapear papéis com \`node scripts/system-source-binding.mjs plan ${bundle.system_id}\``,
     '',
   ].join('\n'));
 
@@ -432,7 +444,7 @@ async function main() {
   }
 
   console.log(`✓ ${state.system_id || slug}@${state.package_version || 'desconhecida'} adicionado; o Sistema ainda não está ativo`);
-  console.log(`Próximo passo: abra este Cérebro no agente e rode /${state.system_id === 'calls-decisoes' ? 'call' : slug} com uma fonte real.`);
+  console.log(`Próximo passo: mapeie as Fontes com node scripts/system-source-binding.mjs plan ${state.system_id || slug}; só depois rode o primeiro caso real.`);
 }
 
 await main();

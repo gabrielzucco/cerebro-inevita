@@ -307,8 +307,14 @@ try {
   assert.equal(skillsCatalog.value.privacy.skill_body_exposed, false);
   const societyCatalog = await request(base, '/api/society', { cookie });
   assert.equal(societyCatalog.status, 200);
-  assert.equal(societyCatalog.value.counts.validation, 1);
+  assert.equal(societyCatalog.value.counts.validation, 4);
   assert.equal(societyCatalog.value.counts.validated, 0);
+  assert.deepEqual(societyCatalog.value.systems.map((system) => system.system_id).sort(), [
+    'briefing-comercial-inteligente',
+    'calls-decisoes',
+    'leitura-diaria-funil',
+    'radar-de-voz',
+  ]);
   assert.equal(societyCatalog.value.privacy.source_content_exposed, false);
 
   assert.equal((await request(base, '/api/systems/funil-crescimento/interface-health')).status, 403);

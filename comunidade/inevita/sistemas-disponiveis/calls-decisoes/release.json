@@ -1,7 +1,7 @@
 {
   "protocol_version": 1,
-  "release_id": "briefing-comercial-inteligente-v0-1-1",
-  "system_ref": "briefing-comercial-inteligente",
+  "release_id": "calls-decisoes-v0-1-1",
+  "system_ref": "calls-decisoes",
   "version": "0.1.1",
   "channel": "pilot",
   "compatibility": {
@@ -18,7 +18,7 @@
     "application_required": false
   },
   "validation": {
-    "program_key": "briefing-comercial-v1",
+    "program_key": "calls-decisoes-v1",
     "required_real_cycles": 3,
     "verified_real_cycles": 0,
     "required_distinct_member_brains": 2,

@@ -1,5 +1,27 @@
 # Mudanças do cérebro INEVITA
 
+## Unreleased — 2026-08-27 · “instalar começa por compatibilidade, não por copiar pacote”
+
+- **Installation Compatibility V1:** a ficha da Society cruza os papéis do pacote com Source
+  Contracts e bindings deste Cérebro antes da instalação, inclusive para pacote ainda não instalado.
+- **Estados legíveis:** Fonte ausente, mapeamento necessário, aprovação pendente, vínculo degradado
+  e pronto aparecem separados; grant expirado ou revogado nunca continua verde.
+- **Agente local, martelo humano:** a página entrega ao Codex/Claude Code um comando reference-only.
+  Matching mecânico propõe; binding e grant aprovados continuam sendo a prova de compatibilidade.
+- **Privacidade por construção:** o diagnóstico não abre conteúdo, casa interna ou referência de
+  credencial e não envia o inventário local para a Society.
+
+- **System Source Binding V1:** a instalação agora pode ligar um papel exigido pelo Sistema a um
+  Source Contract existente sem duplicar conector, credencial, conteúdo ou contrato da Fonte.
+- **Compatibilidade antes de acesso:** `ready` exige versão, papel, modo, Source Contract ativo,
+  allowlist quando presente, grant vigente e aprovação humana; nome do conector não prova encaixe.
+- **Reuso sem acoplamento:** vários Sistemas podem apontar para a mesma Fonte com bindings e grants
+  próprios. Só dois bindings do mesmo Sistema para o mesmo papel geram ambiguidade.
+- **Comissionamento conservador:** `plan` lista metadata e candidatos mecânicos sem abrir conteúdo;
+  `bind` opera em preview e só grava no runtime privado com `--confirm`.
+- **Harness adversarial:** cobre reuso byte a byte, grant errado/expirado, papel e versão divergentes,
+  modo incompatível, privacidade e ambiguidade.
+
 ## v1.32.0 — 2026-08-24 · “correção humana virou replay comparável, não autoaprendizado”
 
 - **Loop supervisionado completo:** `changes-requested` habilita um único rerun por Judgment
