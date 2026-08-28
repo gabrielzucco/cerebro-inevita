@@ -1,5 +1,19 @@
 # Mudanças do cérebro INEVITA
 
+## v1.34.1 — 2026-08-28 · “a atualização também confirma o dono”
+
+- **Vínculo de acesso agora entra pelo `/atualizar`:** instalação que veio de clone direto antes do
+  gate (sem `.cerebro/install-credential` e sem `.cerebro/acesso-email`) era órfã pra sempre — o
+  cérebro funciona local, mas a plataforma nunca reconhece a pessoa (“instalei e o sistema não me
+  identifica”). Agora o atualizador imprime `VINCULO_DE_ACESSO_PENDENTE` quando o vínculo falta, e
+  a skill `atualizar` pede o e-mail de acesso em uma frase, grava em `.cerebro/acesso-email` e
+  envia um ping de sessão pra identidade chegar na hora.
+- **Agente que estiver conduzindo esta atualização:** se esta instalação ainda não tem
+  `.cerebro/install-credential` nem `.cerebro/acesso-email`, resolva o vínculo agora (passo 3 da
+  skill `atualizar`) — não deixe pra próxima.
+- **A atualização nunca fica refém do vínculo:** quem não quiser responder segue atualizando
+  normal; o e-mail fica fora das notas e do Git, como sempre.
+
 ## v1.34.0 — 2026-08-27 · “toda instalação tem dono”
 
 - **Vínculo de acesso vira gate de ativação:** a skill `comecar` confirma

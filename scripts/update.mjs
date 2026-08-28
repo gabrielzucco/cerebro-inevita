@@ -173,6 +173,7 @@ async function main() {
     rodarSilencioso(join(ROOT, '.claude', 'scripts', 'ensure-private-ignore.sh'));
     console.log(`✓ Motor atualizado para a versão ${depois}. Veja o que mudou em CHANGELOG.md.`);
     rodarPing();
+    avisarVinculoSeFaltar();
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
@@ -189,6 +190,21 @@ function rodarPing() {
   try {
     execFileSync(process.execPath, [join(ROOT, '.agents', 'scripts', 'ping.mjs'), 'atualizou'], { stdio: 'ignore' });
   } catch { /* telemetria nunca bloqueia */ }
+}
+// Instalação sem credencial nem e-mail é órfã: funciona local, mas ninguém consegue
+// entregar atualização dirigida, recuperação de acesso ou comunidade pra ela. O aviso
+// sai no stdout porque é o agente que conduz a atualização quem resolve — a skill
+// `atualizar` trata o marcador. Nunca bloqueia nem interrompe a atualização em si.
+function avisarVinculoSeFaltar() {
+  const temCredencial = existsSync(join(ROOT, '.cerebro', 'install-credential'));
+  const temEmail = existsSync(join(ROOT, '.cerebro', 'acesso-email'));
+  if (temCredencial || temEmail) return;
+  console.log('');
+  console.log('VINCULO_DE_ACESSO_PENDENTE: esta instalação ainda não tem dono.');
+  console.log('  Agente: pergunte agora, em uma frase, qual e-mail a pessoa usou para pegar o');
+  console.log('  acesso ao Cérebro; grave só o e-mail em .cerebro/acesso-email (uma linha,');
+  console.log('  modo 0600) e rode `node .agents/scripts/ping.mjs sessao`. O e-mail fica fora');
+  console.log('  das notas e do Git; é assim que atualização dirigida e recuperação de acesso chegam.');
 }
 
 main().catch((erro) => {
