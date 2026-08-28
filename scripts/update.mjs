@@ -173,7 +173,11 @@ async function main() {
     rodarSilencioso(join(ROOT, '.claude', 'scripts', 'ensure-private-ignore.sh'));
     console.log(`✓ Motor atualizado para a versão ${depois}. Veja o que mudou em CHANGELOG.md.`);
     rodarPing();
-    avisarVinculoSeFaltar();
+    // O updater que EXECUTA é sempre o da versão ANTIGA — foi assim que o aviso
+    // da v1.34.1 não apareceu para quem subiu 1.33.0 → 1.34.1 (o script rodando
+    // não o tinha). A partir daqui, o pós-update roda do PACOTE BAIXADO: uma
+    // versão nova pode entregar comportamento pós-update que vale já na subida.
+    if (!rodarPosUpdateDoPacote(origem)) avisarVinculoSeFaltar();
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
@@ -195,10 +199,24 @@ function rodarPing() {
 // entregar atualização dirigida, recuperação de acesso ou comunidade pra ela. O aviso
 // sai no stdout porque é o agente que conduz a atualização quem resolve — a skill
 // `atualizar` trata o marcador. Nunca bloqueia nem interrompe a atualização em si.
+// Executa o post-update.mjs do pacote recém-baixado, se existir. Falha nunca
+// interrompe: a atualização em si já terminou com sucesso.
+function rodarPosUpdateDoPacote(origem) {
+  const script = join(origem, 'scripts', 'post-update.mjs');
+  if (!existsSync(script)) return false;
+  try {
+    execFileSync(process.execPath, [script, '--root', ROOT], { stdio: 'inherit' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function avisarVinculoSeFaltar() {
   const temCredencial = existsSync(join(ROOT, '.cerebro', 'install-credential'));
   const temEmail = existsSync(join(ROOT, '.cerebro', 'acesso-email'));
-  if (temCredencial || temEmail) return;
+  const dispensado = existsSync(join(ROOT, '.cerebro', 'acesso-dispensado'));
+  if (temCredencial || temEmail || dispensado) return;
   console.log('');
   console.log('VINCULO_DE_ACESSO_PENDENTE: esta instalação ainda não tem dono.');
   console.log('  Agente: pergunte agora, em uma frase, qual e-mail a pessoa usou para pegar o');

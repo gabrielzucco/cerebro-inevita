@@ -1,5 +1,20 @@
 # Mudanças do cérebro INEVITA
 
+## v1.34.2 — 2026-08-28 · "o vínculo passa a valer na sessão, não só no update"
+
+- **Por que existiu:** na v1.34.1 o aviso do vínculo foi posto dentro do atualizador — mas o
+  atualizador que EXECUTA é sempre o da versão antiga. Quem subiu 1.33.0 → 1.34.1 não viu nada e
+  continuou órfão ("atualizei e no site nada mudou"). Erro nosso, corrigido aqui.
+- **O vínculo agora é regra de sessão:** `CLAUDE.md`, `AGENTS.md` e `GEMINI.md` mandam o agente
+  conferir, UMA vez e depois da primeira resposta útil, se existe `.cerebro/install-credential` ou
+  `.cerebro/acesso-email`. Não existindo, ele pede o e-mail do acesso em uma frase, grava e pinga.
+  Não depende mais de rodar `/atualizar`.
+- **Direito de recusar, respeitado pra sempre:** quem não quiser informar ganha
+  `.cerebro/acesso-dispensado` e **nunca mais é perguntado** — nem na sessão, nem no update.
+- **Pós-update passa a rodar do pacote baixado** (`scripts/post-update.mjs`): a partir daqui, uma
+  versão nova consegue entregar comportamento pós-atualização que vale já na própria subida.
+
+
 ## v1.34.1 — 2026-08-28 · “a atualização também confirma o dono”
 
 - **Vínculo de acesso agora entra pelo `/atualizar`:** instalação que veio de clone direto antes do

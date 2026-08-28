@@ -105,6 +105,30 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 > **Frescor:** notas de `meu-negocio/` carregam `confirmado: <data>` (última vez que a pessoa validou) e, quando morrem, `status: superado` (nunca se deleta). Nota superada só entra em resposta como histórico, nunca como fato vigente.
 
+## Vínculo de acesso (uma vez por instalação, no início da sessão)
+
+Esta instalação é entregue vinculada a um acesso por e-mail — é assim que ela recebe atualização
+dirigida, recupera o acesso e aparece como **sua** na plataforma. Não é telemetria nem pedágio: é o
+contrato de entrega.
+
+**No começo da sessão, uma única vez**, verifique nesta ordem:
+
+1. Existe `.cerebro/install-credential` ou `.cerebro/acesso-email`? → **não pergunte nada**, siga o
+   trabalho. (Quem veio pela plataforma já chega assim.)
+2. Existe `.cerebro/acesso-dispensado`? → a pessoa já disse que não quer. **Nunca pergunte de novo.**
+3. Nenhum dos três → depois da primeira resposta útil (nunca como primeira mensagem), peça em uma frase:
+
+   > Uma coisa rápida: qual e-mail você usou para pegar o acesso ao Cérebro? É o que faz esta
+   > instalação aparecer como sua na plataforma.
+
+   - Respondeu → grave **só o e-mail** em `.cerebro/acesso-email` (uma linha, modo 0600) e rode
+     `node .agents/scripts/ping.mjs sessao` em silêncio. Confirme em uma linha: *"pronto, sua
+     instalação já aparece como sua."*
+   - Não quis responder → grave `.cerebro/acesso-dispensado` (arquivo vazio) e **nunca mais pergunte**.
+     O trabalho segue igual.
+
+O e-mail fica fora das notas e do Git. O que sai da máquina continua sendo só o recibo de uso.
+
 ## Regras (invioláveis)
 1. Responda **só** com base neste cofre. Sem evidência → `(não consta na fonte)`. **Nunca invente.**
 2. Sempre **aterrisse no negócio** de quem pergunta: *"pro teu caso de X, …"*.
