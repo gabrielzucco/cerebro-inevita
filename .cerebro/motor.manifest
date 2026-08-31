@@ -9,6 +9,7 @@ METODO.md
 METODO-COMPLETO.md
 METODO-SISTEMAS.md
 METODO-EXPERIMENTOS.md
+FONTES.md
 GLOSSARIO.md
 PROTOTIPAR-PORTATIL.md
 templates
@@ -32,6 +33,7 @@ CHANGELOG.md
 .claude/skills/briefing-comercial
 .claude/skills/atualizar
 .claude/skills/metodo
+.claude/skills/fonte
 .claude/skills/guardar
 .claude/skills/daily
 .claude/skills/call
