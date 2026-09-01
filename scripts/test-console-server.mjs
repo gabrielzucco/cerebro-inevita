@@ -279,6 +279,17 @@ try {
   assert.equal(consoleView.value.counts.sources, 3);
   assert.equal(consoleView.value.counts.routines, 2);
   assert.equal(consoleView.value.counts.judgments, 0);
+  assert.equal(consoleView.value.counts.society_systems, 1);
+  assert.equal(consoleView.value.society.systems[0].system_id, 'funil-vivo');
+  assert.equal(consoleView.value.society.systems[0].stage, 'founding');
+  assert.equal(consoleView.value.society.systems[0].checkout.available, false);
+  assert.deepEqual(consoleView.value.society.systems[0].evidence, {
+    companies: 0,
+    runs: 0,
+    approved_runs: 0,
+    judged_outcomes: 0,
+    last_eval_at: null,
+  });
   assert.equal(consoleView.value.cache.kind, 'none');
   const mappedFunnel = consoleView.value.systems.find((system) => system.system_id === 'funil-crescimento');
   assert.equal(mappedFunnel.contract_id, 'analisar-funil');

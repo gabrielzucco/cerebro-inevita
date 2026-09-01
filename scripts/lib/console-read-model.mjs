@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadAccessGrant } from './access-runtime.mjs';
 import {
   correctionActions,
@@ -15,7 +16,6 @@ import {
   loadRoutineMigration,
   loadRoutineState,
   routineMigrationBlocker,
-  scheduledSlotsBetween,
 } from './routine-protocol.mjs';
 import {
   layout,
@@ -24,6 +24,35 @@ import {
   validateSourceContract,
   validateSystemContract,
 } from './system-protocol.mjs';
+
+const PRODUCT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const SOCIETY_CATALOG = join(PRODUCT_ROOT, 'society', 'catalog.v1.json');
+
+function loadSocietyCatalog(issues) {
+  try {
+    const catalog = JSON.parse(readFileSync(SOCIETY_CATALOG, 'utf8'));
+    const errors = [];
+    if (catalog.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
+    if (typeof catalog.catalog_id !== 'string' || !catalog.catalog_id) errors.push('catalog_id ausente');
+    if (!Array.isArray(catalog.systems)) errors.push('systems precisa ser array');
+    for (const [index, system] of (catalog.systems || []).entries()) {
+      for (const field of ['system_id', 'name', 'descriptor', 'tagline', 'stage', 'release_version', 'result']) {
+        if (typeof system[field] !== 'string' || !system[field]) errors.push(`systems[${index}].${field} ausente`);
+      }
+      if (!Array.isArray(system.required_source_roles)) errors.push(`systems[${index}].required_source_roles precisa ser array`);
+      if (!Array.isArray(system.known_gaps)) errors.push(`systems[${index}].known_gaps precisa ser array`);
+      for (const field of ['companies', 'runs', 'approved_runs', 'judged_outcomes']) {
+        if (!Number.isInteger(system.evidence?.[field]) || system.evidence[field] < 0) errors.push(`systems[${index}].evidence.${field} inválido`);
+      }
+      if (typeof system.checkout?.available !== 'boolean') errors.push(`systems[${index}].checkout.available inválido`);
+    }
+    if (errors.length) throw new Error(errors.join(' · '));
+    return catalog;
+  } catch {
+    issues.push({ reason_code: 'society-catalog-invalid', ref: 'society/catalog.v1.json' });
+    return { protocol_version: 1, catalog_id: 'unavailable', systems: [] };
+  }
+}
 
 function inside(root, configured, fallback) {
   const brain = resolve(root);
@@ -132,10 +161,58 @@ function scheduleSummary(contract) {
   return `${cadence} às ${schedule.time} · ${schedule.timezone}`;
 }
 
+function scheduleParts(instant, timezone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
+  }).formatToParts(instant);
+  const value = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  return {
+    date: `${value.year}-${value.month}-${value.day}`,
+    day: Number(value.day),
+    time: `${value.hour}:${value.minute}`,
+    weekday: { Mon: 'MO', Tue: 'TU', Wed: 'WE', Thu: 'TH', Fri: 'FR', Sat: 'SA', Sun: 'SU' }[value.weekday],
+  };
+}
+
+function addLocalDays(localDate, days) {
+  const [year, month, day] = localDate.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function localInstant(localDate, time, timezone) {
+  const [year, month, day] = localDate.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const target = Date.UTC(year, month - 1, day, hour, minute);
+  let candidate = target;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const parts = scheduleParts(new Date(candidate), timezone);
+    const [observedYear, observedMonth, observedDay] = parts.date.split('-').map(Number);
+    const [observedHour, observedMinute] = parts.time.split(':').map(Number);
+    const observed = Date.UTC(observedYear, observedMonth - 1, observedDay, observedHour, observedMinute);
+    const delta = target - observed;
+    candidate += delta;
+    if (delta === 0) break;
+  }
+  const parts = scheduleParts(new Date(candidate), timezone);
+  return parts.date === localDate && parts.time === time ? new Date(candidate) : null;
+}
+
 function nextScheduledAt(contract, state, now) {
   if (contract.trigger.type !== 'schedule' || state.status !== 'active') return null;
-  const horizon = new Date(now.getTime() + 62 * 24 * 60 * 60 * 1000);
-  return scheduledSlotsBetween(contract.trigger.schedule, now, horizon)[0] || null;
+  const schedule = contract.trigger.schedule;
+  const firstLocalDate = scheduleParts(now, schedule.timezone).date;
+  for (let offset = 0; offset <= 400; offset += 1) {
+    const date = addLocalDays(firstLocalDate, offset);
+    const candidate = localInstant(date, schedule.time, schedule.timezone);
+    if (!candidate || candidate <= now || candidate < new Date(schedule.not_before)) continue;
+    const parts = scheduleParts(candidate, schedule.timezone);
+    if (schedule.cadence === 'weekly' && !schedule.weekdays.includes(parts.weekday)) continue;
+    if (schedule.cadence === 'monthly' && !schedule.month_days.includes(parts.day)) continue;
+    return candidate.toISOString();
+  }
+  return null;
 }
 
 function bindingView(root, contract) {
@@ -383,6 +460,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
   const judgments = judgmentInbox(root, routines, issues, runRecordsById);
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
+  const society = loadSocietyCatalog(issues);
   let learningCandidates = 0;
   try {
     learningCandidates = listLearningCandidates(root).length;
@@ -407,12 +485,14 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       attention: attention.length,
       judgments: pendingJudgments.length,
       learning_candidates: learningCandidates,
+      society_systems: society.systems.length,
     },
     areas,
     systems,
     sources,
     routines,
     judgments,
+    society,
     today: {
       needs_attention: attention.map((routine) => routine.routine_id),
       ready_to_work: routines.filter((routine) => ['ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code)).map((routine) => routine.routine_id),

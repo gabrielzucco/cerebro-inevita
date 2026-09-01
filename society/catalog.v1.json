@@ -1,0 +1,45 @@
+{
+  "protocol_version": 1,
+  "catalog_id": "inevita-society-systems",
+  "systems": [
+    {
+      "system_id": "funil-vivo",
+      "name": "Funil Vivo",
+      "descriptor": "Operação e Aprendizado de Funis",
+      "tagline": "O ciclo termina. O aprendizado continua.",
+      "publisher": {
+        "display_name": "Criador convidado",
+        "status": "approval-pending"
+      },
+      "stage": "founding",
+      "release_version": "0.1.0-founding",
+      "result": "Cada ciclo de funil termina com números digeridos, aprendizado citável e próximo teste pronto para julgamento humano.",
+      "required_source_roles": [
+        "definição do funil",
+        "métricas de performance",
+        "decisões e experimentos"
+      ],
+      "evidence": {
+        "companies": 0,
+        "runs": 0,
+        "approved_runs": 0,
+        "judged_outcomes": 0,
+        "last_eval_at": null
+      },
+      "compatibility": {
+        "status": "commissioning-required",
+        "company_brain_protocol": "2.x"
+      },
+      "checkout": {
+        "available": false,
+        "reason": "creator-and-release-gates-pending"
+      },
+      "known_gaps": [
+        "aceite e régua do criador",
+        "golden pattern sanitizado",
+        "pacote instalável e rollback",
+        "primeiro Run julgado"
+      ]
+    }
+  ]
+}

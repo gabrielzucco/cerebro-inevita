@@ -104,6 +104,7 @@ const required = [
   'scripts/lib/correction-loop.mjs',
   'scripts/lib/console-read-model.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
   'console/index.html', 'console/app.js', 'console/canvas.js', 'console/canvas.bundle.js', 'console/styles.css',
+  'society/catalog.v1.json',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
   'scripts/test-routine-runtime.mjs',
@@ -130,6 +131,23 @@ const required = [
 
 for (const item of required) {
   if (!existsSync(join(ROOT, item))) errors.push(`faltando: ${item}`);
+}
+
+if (existsSync(join(ROOT, 'society', 'catalog.v1.json'))) {
+  const catalog = JSON.parse(readFileSync(join(ROOT, 'society', 'catalog.v1.json'), 'utf8'));
+  if (catalog.protocol_version !== 1 || catalog.catalog_id !== 'inevita-society-systems' || !Array.isArray(catalog.systems)) {
+    errors.push('catálogo Society inválido: envelope incompatível');
+  }
+  for (const [index, system] of (catalog.systems || []).entries()) {
+    if (!system.system_id || !system.stage || typeof system.checkout?.available !== 'boolean') {
+      errors.push(`catálogo Society inválido: sistema ${index} incompleto`);
+    }
+    for (const field of ['companies', 'runs', 'approved_runs', 'judged_outcomes']) {
+      if (!Number.isInteger(system.evidence?.[field]) || system.evidence[field] < 0) {
+        errors.push(`catálogo Society inválido: sistema ${index} com evidence.${field} inválido`);
+      }
+    }
+  }
 }
 
 for (const [label, path, validate] of [

@@ -51,6 +51,10 @@ const labels = {
   declared: 'Declarado', running: 'Em execução', gap: 'Lacuna',
   'evaluation-passed': 'Gates passaram', 'evaluation-gate-failed': 'Gate falhou',
   reconstructed: 'Reconstruído',
+  founding: 'Em fundação',
+  'approval-pending': 'Aceite pendente',
+  'commissioning-required': 'Precisa de comissionamento',
+  'creator-and-release-gates-pending': 'Aguardando criador e gates da release',
   source: 'Fonte', area: 'Área', system: 'Sistema', routine: 'Rotina',
   collector: 'Coleta', retrieval: 'Contexto', skill: 'Skill', capability: 'Capability',
   output: 'Output', gate: 'Gate', judgment: 'Julgamento',
@@ -254,7 +258,32 @@ function renderHealth() {
 }
 
 function renderSociety() {
-  return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
+  const systems = state.model.society?.systems || [];
+  const cards = systems.map((system) => {
+    const initials = system.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+    const evidence = system.evidence;
+    const sources = system.required_source_roles.map((source) => `<span>${escapeHtml(source)}</span>`).join('');
+    const gaps = system.known_gaps.slice(0, 2).join(' · ');
+    return `<article class="society-card">
+      <div class="society-visual" aria-hidden="true"><span>${escapeHtml(initials)}</span><div><i></i><b></b><i></i><b></b><i></i><b></b><i></i></div></div>
+      <div class="society-card-body">
+        <div class="society-card-status">${badge(system.stage, 'neutral')}${badge(system.compatibility.status, 'neutral')}</div>
+        <p class="micro">${escapeHtml(system.descriptor)} · v${escapeHtml(system.release_version)}</p>
+        <h3>${escapeHtml(system.name)}</h3>
+        <p class="society-tagline">${escapeHtml(system.tagline)}</p>
+        <p class="society-result">${escapeHtml(system.result)}</p>
+        <div class="society-publisher"><span class="publisher-avatar">◇</span><div><small>CRIADO POR</small><strong>${escapeHtml(system.publisher.display_name)}</strong></div>${badge(system.publisher.status, 'neutral')}</div>
+        <div class="society-sources"><small>FONTES EXIGIDAS</small><div>${sources}</div></div>
+        <div class="society-proof"><span><b>${evidence.companies}</b> empresas</span><span><b>${evidence.runs}</b> Runs</span><span><b>${evidence.judged_outcomes}</b> outcomes julgados</span></div>
+        <div class="society-gap"><b>Ainda falta</b>${escapeHtml(gaps)}</div>
+      </div>
+      <div class="society-card-footer"><span>Contrato visível · checkout bloqueado</span><button disabled title="${escapeHtml(label(system.checkout.reason))}">Aguardando release</button></div>
+    </article>`;
+  }).join('');
+  return `<div class="section-heading"><div><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2></div><p>Sistemas nascem, acumulam julgamento e conquistam validação. Ver o catálogo não instala nada.</p></div>
+    <div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · releases · evidência agregada</b><span>Permanece local</span><b>Fontes · contexto · outputs · decisões</b></div>
+    <div class="society-catalog-head"><div><strong>Sistemas da rede</strong><span>${systems.length} em catálogo</span></div><p>Estágio e prova vêm do Release Manifest; não são estrelas editoriais.</p></div>
+    <div class="society-grid">${cards || empty('Nenhum Sistema no catálogo', 'A Society só publica metadados depois do contrato mínimo.')}</div>`;
 }
 
 const renderers = { today: renderToday, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
