@@ -1,5 +1,56 @@
 # Mudanças do cérebro INEVITA
 
+## v1.34.2 — 2026-08-28 · "o vínculo passa a valer na sessão, não só no update"
+
+- **Por que existiu:** na v1.34.1 o aviso do vínculo foi posto dentro do atualizador — mas o
+  atualizador que EXECUTA é sempre o da versão antiga. Quem subiu 1.33.0 → 1.34.1 não viu nada e
+  continuou órfão ("atualizei e no site nada mudou"). Erro nosso, corrigido aqui.
+- **O vínculo agora é regra de sessão:** `CLAUDE.md`, `AGENTS.md` e `GEMINI.md` mandam o agente
+  conferir, UMA vez e depois da primeira resposta útil, se existe `.cerebro/install-credential` ou
+  `.cerebro/acesso-email`. Não existindo, ele pede o e-mail do acesso em uma frase, grava e pinga.
+  Não depende mais de rodar `/atualizar`.
+- **Direito de recusar, respeitado pra sempre:** quem não quiser informar ganha
+  `.cerebro/acesso-dispensado` e **nunca mais é perguntado** — nem na sessão, nem no update.
+- **Pós-update passa a rodar do pacote baixado** (`scripts/post-update.mjs`): a partir daqui, uma
+  versão nova consegue entregar comportamento pós-atualização que vale já na própria subida.
+
+
+## v1.34.1 — 2026-08-28 · “a atualização também confirma o dono”
+
+- **Vínculo de acesso agora entra pelo `/atualizar`:** instalação que veio de clone direto antes do
+  gate (sem `.cerebro/install-credential` e sem `.cerebro/acesso-email`) era órfã pra sempre — o
+  cérebro funciona local, mas a plataforma nunca reconhece a pessoa (“instalei e o sistema não me
+  identifica”). Agora o atualizador imprime `VINCULO_DE_ACESSO_PENDENTE` quando o vínculo falta, e
+  a skill `atualizar` pede o e-mail de acesso em uma frase, grava em `.cerebro/acesso-email` e
+  envia um ping de sessão pra identidade chegar na hora.
+- **Agente que estiver conduzindo esta atualização:** se esta instalação ainda não tem
+  `.cerebro/install-credential` nem `.cerebro/acesso-email`, resolva o vínculo agora (passo 3 da
+  skill `atualizar`) — não deixe pra próxima.
+- **A atualização nunca fica refém do vínculo:** quem não quiser responder segue atualizando
+  normal; o e-mail fica fora das notas e do Git, como sempre.
+
+## v1.34.0 — 2026-08-27 · “toda instalação tem dono”
+
+- **Vínculo de acesso vira gate de ativação:** a skill `comecar` confirma
+  `.cerebro/install-credential` ou `.cerebro/acesso-email` antes do sprint. Quem veio pela
+  plataforma não sente nada (a credencial já resolve); quem clonou direto informa o e-mail do
+  acesso — sem vínculo, a ativação não acontece.
+- **Fim do “opcional, não bloqueia nada”:** o passo de oferecer e-mail depois do output saiu; o
+  `company-brain-sprint` não re-pergunta o que o gate já resolveu.
+- **Nada além do vínculo muda:** conteúdo, fontes e outputs continuam locais; o que sai da máquina
+  segue sendo o recibo de uso que o ping já enviava.
+
+## v1.33.0 — 2026-08-24 · “instalação ganhou recibo próprio e identidade opaca”
+
+- **Ativação determinística:** `activate.mjs` cria ou reutiliza o `install_id`, registra o início
+  antes da validação e distingue conclusão de reconexão sem depender de instrução de ping no prompt.
+- **Identidade sem PII no instalador:** claim de uso único vira credencial privada da instalação;
+  e-mail e `member_id` não precisam atravessar o prompt nem ficar na pasta nova.
+- **Retry sem bloquear valor:** falha de rede fica numa outbox `0600`, fora do Git, e é retomada
+  pelo ativador ou pelo próximo ping. Conteúdo, fonte, output e erro cru continuam locais.
+- **Promessa do funil preservada:** instalação termina apresentando o acervo do Vale para consulta
+  ou aplicação ao negócio; nenhuma tarefa de negócio é escolhida automaticamente.
+
 ## v1.32.0 — 2026-08-24 · “correção humana virou replay comparável, não autoaprendizado”
 
 - **Loop supervisionado completo:** `changes-requested` habilita um único rerun por Judgment

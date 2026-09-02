@@ -17,6 +17,14 @@ de slash é um atalho, não um requisito.
 | Antigravity | `.agents/skills/` | “quero começar meu cérebro” |
 | outro agente local | `.agents/skills/` | ler `comecar/SKILL.md` |
 
+### O acesso é vinculado (e-mail ou credencial)
+
+O Cérebro é entregue ligado a um acesso por e-mail. Quem instala pela instrução da plataforma já
+chega vinculado (credencial em `.cerebro/`). Quem clonou esta pasta direto, sem instrução, informa
+o e-mail do acesso quando a skill `comecar` pedir — a ativação não acontece sem esse vínculo. Ainda
+sem acesso? Cadastre-se em https://lp.inevitasociety.com/cerebro. Seu conteúdo continua local; o
+vínculo só liga a instalação à pessoa.
+
 O agente precisa abrir esta pasta, ler e editar arquivos. Scripts validam o protocolo quando o
 ambiente permite, mas não são requisito para a primeira ativação. Se ele só recebe arquivos como
 base de conhecimento e não consegue gravar, consulta o acervo, mas não mantém o cérebro acumulando

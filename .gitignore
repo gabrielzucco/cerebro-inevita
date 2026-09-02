@@ -27,6 +27,8 @@ node_modules/
 .cerebro/acesso-email
 .cerebro/member-id
 .cerebro/runtime
+.cerebro/install-credential
+.cerebro/install-activation-outbox.json
 .cerebro/concierge-runs/
 .cerebro/sistemas/
 .cerebro/contracts/

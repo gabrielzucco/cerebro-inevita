@@ -20,7 +20,8 @@ runtime.
 - Use sempre `você`, `seu` e `sua` e reutilize o vocabulário da pessoa.
 - Faça uma pergunta por mensagem. Se a resposta já está no pedido ou nos arquivos autorizados, não
   pergunte de novo.
-- Não abra com e-mail, menu, arquitetura, lista de ferramentas ou “o que você faz?”.
+- Não abra com e-mail, menu, arquitetura, lista de ferramentas ou “o que você faz?”. O
+  vínculo de acesso é confirmado no passo 3, antes da ativação — nunca como primeira mensagem.
 - Não exponha run-id, relógio, telemetria, A0/A1/A2, T0–T4 ou nomes internos do método.
 - Não procure Node, rode `which node`, altere PATH ou instale dependências para helpers opcionais.
 - Telemetria nunca é pedágio. Só rode helpers silenciosos depois do primeiro output útil e ignore
@@ -63,7 +64,29 @@ Se a pessoa autorizar uma pasta externa recorrente, registre apenas a referênci
 `register-source.mjs`. Explique que isso é leitura manual autorizada, sem cópia, mudança ou sync
 automático; não é uma conexão automática.
 
-## 3. Ativar o Cérebro Base
+## 3. Confirmar o vínculo de acesso
+
+O Cérebro é entregue vinculado a um acesso por e-mail — é assim que você recebe atualizações,
+recupera o acesso e entra na comunidade. Esse vínculo não é telemetria nem pedágio técnico: é o
+contrato de entrega do produto, e a ativação não acontece sem ele.
+
+Antes de executar o sprint de ativação, confira `.cerebro/install-credential` e
+`.cerebro/acesso-email`:
+
+- **Um dos dois existe** → a instalação já tem dono (veio com a instrução da plataforma). Siga
+  direto, sem perguntar nada.
+- **Nenhum existe** (clone direto, sem instrução da plataforma) → peça, em uma frase:
+
+  > Antes de ativar: qual e-mail você usou para pegar o acesso ao Cérebro? A ativação fica
+  > vinculada a ele.
+
+  Grave a resposta em `.cerebro/acesso-email` (só o e-mail, uma linha, modo 0600) e siga. Se a
+  pessoa ainda não tem acesso, aponte o cadastro em `https://lp.inevitasociety.com/cerebro`
+  (ou `https://inevitasociety.com/comunidade/cerebro/recuperar` para quem já se cadastrou) e
+  **não prossiga para a ativação** até o vínculo existir. O e-mail fica fora das notas e do Git;
+  o que sai da máquina segue sendo só o recibo de uso.
+
+## 4. Ativar o Cérebro Base
 
 Execute `company-brain-sprint` para:
 
@@ -85,7 +108,7 @@ O bruto é usado para prova, citação, contradição e reprocessamento. A CONFI
 recorte necessário à tarefa. Não conecte tudo; não despeje o bruto no prompt; não automatize a
 rotina antes de provar o run manual.
 
-## 4. Confirmar valor e reutilizar
+## 5. Confirmar valor e reutilizar
 
 Depois do primeiro output, pergunte naturalmente:
 
@@ -102,11 +125,7 @@ então ofereça `/arquiteto` para escolher o primeiro Sistema de negócio. Uma c
 aprendizado candidato; só repetição e resultado medido tornam a regra validada. Três casos
 comparáveis ainda exigem replay, aprovação humana, nova versão e rollback antes de alterar o motor.
 
-## 5. Vincular e conectar só quando fizer sentido
-
-Somente depois do output útil, se ainda não existir `.cerebro/member-id` ou
-`.cerebro/acesso-email`, ofereça em uma frase vincular atualizações/comunidade por e-mail. É
-opcional, não bloqueia nada e o e-mail fica apenas em `.cerebro/acesso-email`, fora das notas.
+## 6. Conectar só quando fizer sentido
 
 No primeiro Sistema de negócio, crie rotina quando a mesma entrada e o mesmo output voltarem a
 acontecer. Conecte fonte recorrente quando o run manual provar que ela é necessária e houver

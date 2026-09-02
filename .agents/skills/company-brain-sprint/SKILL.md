@@ -136,8 +136,9 @@ themselves remain canonical.
 End with exactly one next action: add the highest-leverage missing role or reuse the approved
 context on the next real task. Do not connect a recurring source before reuse proves it matters.
 
-Only after the useful output is saved may you offer to link access/updates by email. It is optional,
-non-blocking and must stay in `.cerebro/acesso-email`, never in business notes.
+The access link is settled before this sprint runs (the `comecar` gate): the install carries
+`.cerebro/install-credential` or `.cerebro/acesso-email`. Never re-ask here; the e-mail stays in
+`.cerebro/acesso-email`, never in business notes.
 
 On the next real task, read the persisted map, Activation Brief and CONFIGURATION first. Reuse
 approved context without reopening raw evidence unless the new case or a contradiction requires it.
