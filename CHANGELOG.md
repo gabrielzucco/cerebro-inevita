@@ -1,5 +1,25 @@
 # Mudanças do cérebro INEVITA
 
+## v1.35.0 — 2026-09-02 · "o cérebro ganhou um cockpit e chegou ao Telegram"
+
+- **Cockpit INEVITA:** o Console local virou uma superfície completa de ativação e operação. A
+  primeira tela mostra o próximo passo, o relógio de valor em linguagem humana, decisões, rotinas e
+  o estado do Hermes sem criar um banco paralelo.
+- **Hermes guiado, não escondido:** instalação oficial, escolha de provider, vínculo do diretório,
+  confiança explícita nas skills, Telegram, serviço 24/7 e `doctor` formam um único fluxo. Provider
+  continua sendo escolhido no assistente oficial do Hermes.
+- **Token protegido:** a credencial do BotFather vai direto ao `.env` oficial do Hermes, fora de
+  argumentos, Git, respostas e logs. Allowlist é obrigatória, `ALLOW_ALL` fica desligado e a troca
+  ou remoção do token é explícita.
+- **Demo honesta:** `node scripts/cockpit.mjs --demo` usa dados sintéticos em memória, mostra uma
+  marca visível e bloqueia toda mutação ou comando.
+- **Valor visível:** T0–T4 aparece como `Começou → Fonte pronta → Primeira entrega → Aprovado →
+  Reutilizado`; o código fica secundário e T4 prova que o contexto voltou numa tarefa nova.
+- **Comunidade no lugar certo:** o catálogo local da INEVITA aparece no Cockpit com o convite para
+  `https://inevitasociety.com`; fonte, contexto, output e decisão continuam locais.
+- **Portabilidade preservada:** zero dependências, Node 20+, browser aberto automaticamente,
+  fallback de portas 4782–4791 e suporte a macOS, Linux e Windows.
+
 ## v1.34.2 — 2026-08-28 · "o vínculo passa a valer na sessão, não só no update"
 
 - **Por que existiu:** na v1.34.1 o aviso do vínculo foi posto dentro do atualizador — mas o

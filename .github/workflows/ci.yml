@@ -1,6 +1,6 @@
 name: motor
 
-# O motor tem 18 testes e nenhum deles pode ficar fora do push/PR: um commit ruim chegaria
+# O motor tem 20 testes e nenhum deles pode ficar fora do push/PR: um commit ruim chegaria
 # ao main sem verificação — e o updater distribui a partir de release, que sai
 # do main. Este workflow é o portão que faltava.
 on:
@@ -52,3 +52,15 @@ jobs:
         run: |
           Get-ChildItem -Recurse -Filter *.mjs -Path scripts, .agents/scripts |
             ForEach-Object { node --check $_.FullName }
+      - name: Cockpit e bridge Hermes em Windows
+        run: node scripts/test-cockpit.mjs
+
+  cockpit-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cockpit e bridge Hermes em macOS
+        run: node scripts/test-cockpit.mjs

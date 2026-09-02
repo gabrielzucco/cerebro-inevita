@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { buildCockpitReadModel, demoCockpitReadModel } from './cockpit-read-model.mjs';
 import { loadAccessGrant } from './access-runtime.mjs';
 import {
   correctionActions,
@@ -354,6 +355,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   } catch {
     issues.push({ reason_code: 'learning-candidate-invalid', ref: '.cerebro/runtime/learning-candidates' });
   }
+  const cockpit = buildCockpitReadModel(root);
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
@@ -372,6 +374,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       attention: attention.length,
       judgments: pendingJudgments.length,
       learning_candidates: learningCandidates,
+      ...cockpit.counts,
     },
     areas,
     systems,
@@ -385,6 +388,65 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       pending_judgments: pendingJudgments.map((item) => item.receipt_id),
     },
     issues,
+    activation: cockpit.activation,
+    decisions: cockpit.decisions,
+    experiments: cockpit.experiments,
+    connections: cockpit.connections,
+    community: cockpit.community,
+  };
+}
+
+export function buildConsoleDemoModel({ now = new Date() } = {}) {
+  const cockpit = demoCockpitReadModel();
+  const receipt = {
+    receipt_id: 'demo-run-001', receipt_ref: 'routine-receipt:demo-run-001', trigger: 'manual',
+    status: 'completed', reason_code: 'completed', scheduled_for: null,
+    started_at: '2026-08-28T13:20:00.000Z', completed_at: '2026-08-28T13:22:00.000Z',
+    requested_model: 'provider-model', model_observation: 'requested-not-verified',
+    input_refs: ['source:call-demo'], output_ref: 'private-output:demo-run-001',
+    access_receipt_refs: [], content_shared_with_provider: true,
+  };
+  const routine = {
+    routine_id: 'calls-em-decisoes', name: 'Calls em Decisões', version: '0.1.0', lifecycle: 'approved',
+    system_ref: 'calls', trigger: 'manual', schedule: 'Manual', next_scheduled_at: null,
+    permission_mode: 'human-confirmed', destination: { kind: 'local', ref: 'operacao/execucoes' },
+    prompt_ref: 'skill:call', privacy: {}, operations: [],
+    state: { status: 'disabled' },
+    binding: { adapter: 'hermes', auth_status: 'ready', permission_profile: 'approval-required', requested_model: 'provider-model', model_observation: 'requested-not-verified', observed_at: now.toISOString() },
+    preparation: null, migration: null, access: [], health_reason_code: 'ready-to-activate',
+    actions: { can_run: false, can_activate: false, can_pause: false, can_resume: false, can_confirm_legacy_pause: false, activation_evidence_ref: receipt.receipt_ref },
+    receipts: [receipt],
+  };
+  const judgment = {
+    receipt_id: receipt.receipt_id, receipt_ref: receipt.receipt_ref, routine_id: routine.routine_id,
+    routine_name: routine.name, system_ref: routine.system_ref, run_id: 'demo-run', trigger: 'manual',
+    completed_at: receipt.completed_at, requested_model: receipt.requested_model, output_ref: receipt.output_ref,
+    judgment: { status: 'pending', verdict: null, action_intent: 'none', actor_ref: null, decided_at: null, history_count: 0 },
+    correction: null,
+    actions: { can_rerun_with_correction: false, can_compare: false, can_create_learning_candidate: false },
+  };
+  return {
+    protocol_version: 1,
+    generated_at: new Date(now).toISOString(),
+    demo: true,
+    cache: { kind: 'none', rebuildable_from: ['demo-memory'] },
+    privacy: { content_shared_with_inevita: false, raw_output_exposed: false, prompt_exposed: false, explicit_local_output_read: true },
+    counts: { areas: 1, systems: 2, sources: 1, routines: 1, attention: 0, judgments: 1, learning_candidates: 0, ...cockpit.counts },
+    areas: [{ area_ref: 'vendas', name: 'Vendas', system_refs: ['calls', 'briefing-comercial'], routine_refs: [routine.routine_id] }],
+    systems: [
+      { system_id: 'calls', name: 'Calls em Decisões', version: '0.1.0', status: 'active', area_ref: 'vendas', result: 'Transformar conversa em decisões e próximos passos.', human_gate: true, retrieval_status: 'declared', source_refs: [{ role: 'input', source_id: 'call-demo', required: true, access: 'read', freshness: 'current' }] },
+      { system_id: 'briefing-comercial', name: 'Briefing Comercial Inteligente', version: '0.1.0', status: 'available', area_ref: 'vendas', result: 'Preparar uma conversa comercial com contexto.', human_gate: true, retrieval_status: 'declared', source_refs: [] },
+    ],
+    sources: [{ source_id: 'call-demo', name: 'Pasta de calls', type: 'local-folder', status: 'active', assurance: 'runtime-enforced', custody: 'local', pii: 'private', modes: ['read'], freshness: 'current', revocation: 'future-only' }],
+    routines: [routine],
+    judgments: [judgment],
+    today: { needs_attention: [], ready_to_work: [routine.routine_id], active: [], pending_judgments: [receipt.receipt_id] },
+    issues: [],
+    activation: cockpit.activation,
+    decisions: cockpit.decisions,
+    experiments: cockpit.experiments,
+    connections: cockpit.connections,
+    community: cockpit.community,
   };
 }
 

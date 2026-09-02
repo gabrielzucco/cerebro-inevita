@@ -13,5 +13,5 @@ Nunca envie o conteúdo privado para a INEVITA e nunca grave sem confirmação d
 
 Vínculo de acesso: se não existir `.cerebro/install-credential`, `.cerebro/acesso-email` nem
 `.cerebro/acesso-dispensado`, peça UMA vez (depois da primeira resposta útil) o e-mail que a pessoa
-usou para pegar o acesso, grave em `.cerebro/acesso-email` e rode `node .agents/scripts/ping.mjs sessao`.
+usou para pegar o acesso, grave em `.cerebro/acesso-email` e rode o ping de sessão descrito no `CLAUDE.md`.
 Se ela não quiser, grave `.cerebro/acesso-dispensado` e nunca mais pergunte. Detalhes em `CLAUDE.md`.

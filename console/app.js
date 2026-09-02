@@ -1,7 +1,7 @@
 const state = {
   model: null,
   csrf: '',
-  view: 'routines',
+  view: 'today',
   selectedRoutine: null,
   selectedJudgment: null,
   busy: false,
@@ -41,6 +41,8 @@ const labels = {
   'propose-action': 'Intenção de ação', none: 'Sem ação', unavailable: 'Indisponível',
   candidate: 'Candidato', baseline: 'Baseline',
   'not-eligible': 'Ainda não elegível',
+  available: 'Disponível', beta: 'Beta', locked: 'Exclusivo', future: 'Em construção', configured: 'Configurada',
+  draft: 'Rascunho', 'pre-registered': 'Pré-registrado', passed: 'Aprovado', attention: 'Pede atenção',
 };
 
 function label(value) {
@@ -48,8 +50,8 @@ function label(value) {
 }
 
 function tone(reason) {
-  if (['active', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided'].includes(reason)) return 'good';
-  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested'].includes(reason)) return 'warn';
+  if (['active', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided', 'available', 'beta', 'configured', 'passed'].includes(reason)) return 'good';
+  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested', 'future', 'pre-registered', 'attention'].includes(reason)) return 'warn';
   return 'bad';
 }
 
@@ -85,14 +87,12 @@ async function mutate(path, payload) {
 
 function summaryCards() {
   const model = state.model;
-  const active = model.today.active.length;
-  const ready = model.today.ready_to_work.length;
-  const judgments = model.counts.judgments;
+  const hermesReady = model.hermes?.installed && model.hermes?.provider_configured && model.hermes?.gateway?.running;
   return [
-    ['Rotinas ativas', active, 'Rodam apenas quando o estado canônico está ativo', 'signal'],
-    ['Aguardam julgamento', judgments, 'Outputs privados que ainda precisam do seu martelo', 'decision'],
-    ['Prontas para trabalhar', ready, 'Replay manual não liga o agendamento', 'play'],
-    ['Recibos privados', model.routines.reduce((total, routine) => total + routine.receipts.length, 0), 'Prompt e output não aparecem no ledger', 'receipt'],
+    ['Ativação do cérebro', `${model.activation.percent}%`, `${model.activation.completed}/${model.activation.total} marcos de valor`, 'signal'],
+    ['Pedem seu martelo', model.counts.judgments + model.counts.decisions, 'Entregas e decisões aguardando você', 'decision'],
+    ['Hermes', hermesReady ? 'ON' : 'OFF', hermesReady ? 'Disponível no Telegram' : 'Continue a configuração guiada', 'play'],
+    ['Rotinas em operação', model.today.active.length, `${model.today.ready_to_work.length} pronta(s) para trabalhar`, 'receipt'],
   ].map(([title, value, description, icon]) => `<article class="summary-card"><span class="summary-icon ${icon}"></span><div><small>${title}</small><strong>${value}</strong><p>${description}</p></div></article>`).join('');
 }
 
@@ -110,6 +110,22 @@ function routineCard(routine) {
 
 function empty(title, body) {
   return `<div class="empty"><div class="empty-mark">◇</div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p></div>`;
+}
+
+function activationCompact() {
+  const activation = state.model.activation;
+  return `<article class="rail-card"><div class="rail-head"><div><p class="micro">ATIVAÇÃO</p><h3>Do início ao contexto que volta</h3></div><strong>${activation.percent}%</strong></div>
+    <div class="progress-track"><i style="width:${activation.percent}%"></i></div>
+    <ol class="mini-stages">${activation.stages.map((stage) => `<li class="${stage.completed ? 'done' : stage.current ? 'current' : ''}"><i>${stage.completed ? '✓' : stage.key}</i><span>${escapeHtml(stage.label)}</span></li>`).join('')}</ol>
+    <button class="text-action" data-go-view="activation">Entender os marcos →</button></article>`;
+}
+
+function hermesCompact() {
+  const hermes = state.model.hermes;
+  const ready = hermes.installed && hermes.provider_configured && hermes.project_bound && hermes.skills_trusted && hermes.telegram.token_configured && hermes.gateway.running;
+  return `<article class="rail-card hermes-compact"><div class="rail-head"><div><p class="micro">HERMES</p><h3>Colega no Telegram</h3></div>${badge(ready ? 'active' : 'attention')}</div>
+    <div class="mini-checks"><span class="${hermes.installed ? 'done' : ''}">Instalado</span><span class="${hermes.provider_configured ? 'done' : ''}">Provedor</span><span class="${hermes.project_bound && hermes.skills_trusted ? 'done' : ''}">Cérebro</span><span class="${hermes.telegram.token_configured ? 'done' : ''}">Telegram</span><span class="${hermes.gateway.running ? 'done' : ''}">24/7</span></div>
+    <button class="text-action" data-go-view="hermes">${ready ? 'Ver operação' : 'Continuar configuração'} →</button></article>`;
 }
 
 function judgmentCard(item) {
@@ -141,9 +157,19 @@ function renderToday() {
   const ids = [...state.model.today.needs_attention, ...state.model.today.ready_to_work, ...state.model.today.active];
   const routines = ids.map((id) => state.model.routines.find((routine) => routine.routine_id === id)).filter(Boolean);
   const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
-  return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div>
-    ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
-    <div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Tudo quieto', 'Nenhuma rotina pede sua atenção agora.')}</div>`;
+  const nextStage = state.model.activation.stages.find((stage) => !stage.completed);
+  const hermes = state.model.hermes;
+  const setupNeeded = !hermes.installed || !hermes.provider_configured || !hermes.project_bound || !hermes.skills_trusted || !hermes.telegram.token_configured || !hermes.gateway.running;
+  return `<div class="now-grid">
+    <section class="now-primary">
+      <div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>${pending.length ? 'Tem uma entrega esperando você' : setupNeeded ? 'Coloque seu cérebro no Telegram' : nextStage ? `Próximo marco: ${escapeHtml(nextStage.label)}` : 'Seu cérebro está em operação'}</h2></div><p>O Cockpit mostra o que já existe no seu cérebro. Você continua dando o martelo.</p></div>
+      ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
+      ${!pending.length && setupNeeded ? `<article class="next-action"><span>01</span><div><p class="micro">PRÓXIMA AÇÃO</p><h3>Concluir a conexão com o Hermes</h3><p>Provedor, cérebro, Telegram e serviço persistente em um fluxo guiado.</p></div><button class="action primary" data-go-view="hermes">Configurar Hermes →</button></article>` : ''}
+      ${!pending.length && !setupNeeded && nextStage ? `<article class="next-action"><span>${escapeHtml(nextStage.key)}</span><div><p class="micro">ATIVAÇÃO</p><h3>${escapeHtml(nextStage.label)}</h3><p>${escapeHtml(nextStage.description)}</p></div><button class="action primary" data-go-view="activation">Ver progresso →</button></article>` : ''}
+      <div class="today-block"><div class="subheading"><h3>Operação local</h3><span>${routines.length}</span></div><div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Mesa limpa', 'Nenhuma rotina pede atenção. Você pode começar pela ativação do cérebro.')}</div></div>
+    </section>
+    <aside class="now-rail">${activationCompact()}${hermesCompact()}</aside>
+  </div>`;
 }
 
 function renderJudgments() {
@@ -180,27 +206,92 @@ function renderGovernance() {
   return `<div class="section-heading"><div><p class="eyebrow">AUTORIDADE</p><h2>Governança de acesso</h2></div><p>Revogação vale para o futuro; uma cópia já exportada nunca é apagada retroativamente.</p></div><div class="object-grid">${grants.map(({ routine, ...access }) => `<article class="object-card"><div class="object-card-top">${badge(access.grant_status, access.grant_status === 'granted' ? 'good' : 'bad')}${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(routine.name)}</p><h3>${escapeHtml(access.source_ref)}</h3><p>${escapeHtml(access.action)} · ${escapeHtml(access.requested_mode)}</p><div class="boundary-note"><b>Revogação</b>${escapeHtml(label(access.revocation_effect))}</div></article>`).join('') || empty('Nenhuma concessão declarada', 'A rotina pode existir sem grant quando trabalha apenas com instrução local.')}</div>`;
 }
 
+function renderActivation() {
+  const activation = state.model.activation;
+  return `<div class="section-heading"><div><p class="eyebrow">CÉREBRO BASE</p><h2>Ativação até o valor real</h2></div><p>Instalar é o começo. O valor aparece quando um contexto aprovado volta sem você explicar tudo de novo.</p></div>
+    <section class="activation-panel"><div class="activation-score"><span>${activation.percent}%</span><div><p class="micro">PROGRESSO</p><h3>${activation.complete ? 'Loop completo' : `${activation.completed} de ${activation.total} marcos`}</h3><p>${activation.run_id ? `Execução ${escapeHtml(activation.run_id)}` : 'Ainda não existe uma primeira execução registrada.'}</p></div></div>
+      <div class="progress-track large"><i style="width:${activation.percent}%"></i></div>
+      <ol class="activation-stages">${activation.stages.map((stage) => `<li class="${stage.completed ? 'done' : stage.current ? 'current' : ''}"><span>${stage.completed ? '✓' : stage.key}</span><div><p class="micro">${stage.key}</p><h3>${escapeHtml(stage.label)}</h3><p>${escapeHtml(stage.description)}</p>${stage.completed_at ? `<small>${fmtDate(stage.completed_at)}</small>` : ''}</div></li>`).join('')}</ol>
+      <div class="activation-aha"><strong>T4 é o “aha moment”</strong><p>É quando a pessoa percebe que não está apenas conversando com uma IA: está construindo um cérebro que acumula contexto.</p></div>
+    </section>`;
+}
+
+function renderConnections() {
+  return `<div class="section-heading"><div><p class="eyebrow">FONTES REAIS</p><h2>Conexões</h2></div><p>Registrar onde uma fonte vive não abre seu conteúdo. Conectar acontece só quando um trabalho real exige.</p></div>
+    <div class="object-grid">${state.model.connections.map((item) => `<article class="object-card"><div class="object-card-top">${badge(item.status, item.status === 'configured' ? 'good' : 'neutral')}</div><p class="micro">CONEXÃO</p><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></article>`).join('') || empty('Nenhuma conexão mapeada', 'O cérebro funciona primeiro com arquivos locais; novas fontes entram por necessidade real.')}</div>`;
+}
+
+function renderDecisions() {
+  const pendingOutputs = state.model.judgments.filter((item) => item.judgment.status === 'pending');
+  return `<div class="section-heading"><div><p class="eyebrow">MARTELO HUMANO</p><h2>Decisões</h2></div><p>O agente apresenta evidência e proposta. A consequência só existe depois da sua decisão.</p></div>
+    ${state.model.decisions.length ? `<div class="object-grid">${state.model.decisions.map((item) => `<article class="object-card"><div class="object-card-top">${badge(item.status)}</div><p class="micro">DECISÃO PENDENTE</p><h3>${escapeHtml(item.title)}</h3><p>Referência local: ${escapeHtml(item.ref)}</p></article>`).join('')}</div>` : ''}
+    <div class="judgment-section"><div class="subheading"><h3>Entregas para julgar</h3><span>${pendingOutputs.length}</span></div>${pendingOutputs.length ? judgmentList(pendingOutputs) : empty('Nenhuma decisão pendente', 'Quando uma entrega exigir seu martelo, ela aparecerá aqui.')}</div>`;
+}
+
+function renderExperiments() {
+  return `<div class="section-heading"><div><p class="eyebrow">DECISÃO ANTES DO DADO</p><h2>Experimentos</h2></div><p>Hipótese, régua e data de leitura vêm antes do resultado. A IA não escolhe o vencedor.</p></div>
+    <div class="object-grid">${state.model.experiments.map((item) => `<article class="object-card"><div class="object-card-top">${badge(item.status)}</div><p class="micro">${escapeHtml(item.system_ref || 'SISTEMA A DEFINIR')}</p><h3>${escapeHtml(item.title)}</h3><p>${item.decision_due_at ? `Leitura em ${fmtDate(item.decision_due_at)}` : 'Aguardando janela de leitura.'}</p><div class="ref-list"><code>${escapeHtml(item.experiment_id)}</code></div></article>`).join('') || empty('Nenhum experimento ativo', 'Experimento nasce dentro de um Sistema, depois que um gargalo real foi comprovado.')}</div>`;
+}
+
+function setupStep(index, title, description, complete, body) {
+  return `<article class="setup-step ${complete ? 'complete' : ''}"><div class="step-number">${complete ? '✓' : String(index).padStart(2, '0')}</div><div class="step-content"><div class="step-heading"><div><p class="micro">PASSO ${String(index).padStart(2, '0')}</p><h3>${escapeHtml(title)}</h3></div>${badge(complete ? 'completed' : 'pending', complete ? 'good' : 'neutral')}</div><p>${escapeHtml(description)}</p>${body}</div></article>`;
+}
+
+function commandBox(command, labelText = 'Copiar comando') {
+  return `<div class="command-box"><code>${escapeHtml(command)}</code><button type="button" data-copy-command="${escapeHtml(command)}">${escapeHtml(labelText)}</button></div>`;
+}
+
+function renderHermes() {
+  const hermes = state.model.hermes;
+  const locked = state.model.demo ? 'disabled' : '';
+  const brainReady = hermes.project_bound && hermes.skills_trusted;
+  const telegramReady = hermes.telegram.token_configured && hermes.telegram.allowlist_configured && hermes.telegram.allow_all_disabled;
+  const installBody = `<div class="install-grid"><div><strong>macOS / Linux · CLI</strong>${commandBox('curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash')}</div><div><strong>Windows · PowerShell</strong>${commandBox('iex (irm https://hermes-agent.nousresearch.com/install.ps1)')}</div></div><p class="fine-print">Instalação guiada: o Cockpit mostra o comando oficial e detecta o resultado; ele não baixa nem executa instaladores sozinho.</p>`;
+  const providerBody = `<div class="provider-grid"><article><span>01</span><h4>Nous Portal</h4><p>Assinatura própria da Nous. OAuth, sem API key.</p>${commandBox('hermes setup --portal')}</article><article><span>02</span><h4>OpenAI Codex</h4><p>Usa sua assinatura ChatGPT/Codex via device login.</p>${commandBox('hermes model')}</article><article><span>03</span><h4>Outro provider</h4><p>API key ou endpoint compatível, cobrado pelo provedor escolhido.</p>${commandBox('hermes model')}</article></div><p class="fine-print">A autenticação acontece no assistente oficial do Hermes, no terminal. O Cockpit nunca recebe nem guarda credenciais do provider.</p>`;
+  const brainBody = `${!hermes.skills_trust_supported ? `<div class="boundary-note"><b>Atualização necessária</b>Sua versão do Hermes ainda não oferece confiança explícita para skills do projeto. Atualize antes de conectar o cérebro.</div>${commandBox('hermes update', 'Copiar atualização')}` : `<div class="boundary-note"><b>O que será autorizado</b>Hermes inicia dentro deste cérebro, lê AGENTS.md e carrega as skills locais. Escritas continuam exigindo confirmação humana; modo autônomo não é habilitado.</div><button class="action primary" data-hermes-action="bind" ${locked || !hermes.installed ? 'disabled' : ''}>Conectar este cérebro e confiar nas skills</button>`}`;
+  const telegramBody = `<form id="telegram-form" class="telegram-form" autocomplete="off"><label>Token do BotFather<input id="telegram-token" name="telegram-token" type="password" autocomplete="off" data-1p-ignore="true" spellcheck="false" maxlength="256" placeholder="123456789:••••••••••" required></label><label>Seu ID numérico do Telegram<input id="telegram-users" name="telegram-users" inputmode="numeric" autocomplete="off" maxlength="220" placeholder="123456789" required><small>Mais de uma pessoa: separe os IDs por vírgula. Use @userinfobot para descobrir o número.</small></label><div class="form-actions"><button class="action primary" type="submit" ${locked || !hermes.installed ? 'disabled' : ''}>${telegramReady ? 'Trocar token / allowlist' : 'Salvar com acesso restrito'}</button>${telegramReady ? `<button class="action" type="button" data-hermes-action="disconnect" ${locked}>Desconectar Telegram</button>` : ''}</div></form><p class="fine-print">O token vai direto para o arquivo secreto oficial do Hermes, com permissão local restrita. Não passa por argumentos de comando, Git, logs ou navegador.</p>`;
+  const gatewayBody = `<div class="gateway-actions"><button class="action primary" data-hermes-action="gateway-install" ${locked || !telegramReady ? 'disabled' : ''}>Instalar serviço 24/7</button><button class="action" data-hermes-action="gateway-start" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Iniciar</button><button class="action" data-hermes-action="gateway-stop" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Parar</button><button class="action" data-hermes-action="gateway-restart" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Reiniciar</button></div>`;
+  const doctorReady = hermes.last_doctor?.status === 'passed';
+  const doctorBody = `<div class="doctor-row"><button class="action primary" data-hermes-action="doctor" ${locked || !hermes.installed ? 'disabled' : ''}>Rodar diagnóstico</button>${hermes.last_doctor ? `<span>${badge(hermes.last_doctor.status)} · ${fmtDate(hermes.last_doctor.checked_at)}</span>` : '<span class="muted">Ainda não executado nesta sessão.</span>'}</div><div class="boundary-note"><b>Conversa continua no Telegram</b>O Cockpit configura e mostra o estado. Ele não cria um segundo chat nem copia a memória do Hermes.</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">COLEGA NO BOLSO</p><h2>Hermes + Telegram</h2></div><p>Um setup guiado, local e reversível. Provedor e Telegram são escolhas suas; o cérebro continua sendo a fonte.</p></div>
+    <div class="hermes-status"><div><span class="status-orb ${hermes.gateway.running ? 'online' : ''}"></span><div><p class="micro">ESTADO ATUAL</p><h3>${hermes.gateway.running ? 'Hermes disponível' : hermes.installed ? 'Hermes instalado, setup incompleto' : 'Hermes ainda não instalado'}</h3><p>${escapeHtml(hermes.provider_label || hermes.version || 'Aguardando detecção local')}</p></div></div>${badge(hermes.gateway.running ? 'active' : 'attention')}</div>
+    <div class="setup-list">
+      ${setupStep(1, 'Instalar o Hermes', 'Use o instalador oficial adequado à sua máquina.', hermes.installed, installBody)}
+      ${setupStep(2, 'Escolher um provedor', 'Conecte o modelo no assistente oficial e volte para atualizar o estado.', hermes.provider_configured, providerBody)}
+      ${setupStep(3, 'Conectar o cérebro', 'Defina este repositório como contexto e autorize suas skills locais.', brainReady, brainBody)}
+      ${setupStep(4, 'Conectar o Telegram', 'Guarde o token do BotFather e restrinja o bot aos IDs autorizados.', telegramReady, telegramBody)}
+      ${setupStep(5, 'Manter o gateway ligado', 'Instale o serviço local para o bot voltar após login ou reinício.', hermes.gateway.running, gatewayBody)}
+      ${setupStep(6, 'Validar e conversar', 'Rode o doctor; depois abra seu bot no Telegram e diga “quero começar”.', doctorReady, doctorBody)}
+    </div>`;
+}
+
 function renderHealth() {
   const rows = state.model.routines.map((routine) => ({ name: routine.name, reason: routine.health_reason_code, binding: routine.binding.auth_status }));
   return `<div class="section-heading"><div><p class="eyebrow">READBACK</p><h2>Saúde operacional</h2></div><p>Estado derivado de arquivos canônicos, nunca de um painel editorial paralelo.</p></div><div class="health-list">${rows.map((row) => `<article><span class="health-dot ${tone(row.reason)}"></span><div><h3>${escapeHtml(row.name)}</h3><p>${escapeHtml(label(row.reason))}</p></div><code>${escapeHtml(row.binding)}</code></article>`).join('')}${state.model.issues.map((issue) => `<article><span class="health-dot bad"></span><div><h3>${escapeHtml(label(issue.reason_code))}</h3><p>${escapeHtml(issue.ref)}</p></div></article>`).join('')}</div><div class="cache-note"><strong>Índice reconstruível</strong><p>Este V0 não mantém banco nem cache persistente. Cada atualização recompila contratos, bindings, estado e recibos locais.</p></div>`;
 }
 
 function renderSociety() {
-  return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">REDE DE CAPACIDADE</p><h2>Society</h2><p>Sistemas validados podem descer para o seu Cérebro. Seu contexto, seus outputs e suas decisões continuam locais.</p><div class="society-boundary"><span>Circula</span><b>Protocolo · Capability · atualizações</b><span>Não circula</span><b>Fontes · contexto · outputs · decisões</b></div></div>`;
+  const community = state.model.community;
+  return `<div class="society-panel"><span class="society-star">✦</span><p class="eyebrow">CÉREBRO DA COMUNIDADE</p><h2>O ambiente que acelera o seu</h2><p>O cérebro gratuito organiza o seu contexto. Na INEVITA, ele cruza com sistemas, referências e ciclos testados por outros founders — sem fazer seu contexto privado circular.</p><div class="society-catalog">${community.items.map((item) => `<article><div>${badge(item.status)}</div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p></article>`).join('')}</div><div class="society-boundary"><span>Circula</span><b>Protocolo · sistemas · atualizações</b><span>Fica local</span><b>Fontes · contexto · outputs · decisões</b></div><a class="society-cta" href="${escapeHtml(community.cta_url)}" target="_blank" rel="noreferrer">Conhecer a comunidade INEVITA →</a></div>`;
 }
 
-const renderers = { today: renderToday, areas: renderAreas, systems: renderSystems, sources: renderSources, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { today: renderToday, areas: renderAreas, systems: renderSystems, sources: renderSources, connections: renderConnections, routines: renderRoutines, judgments: renderJudgments, runs: renderRuns, decisions: renderDecisions, experiments: renderExperiments, activation: renderActivation, hermes: renderHermes, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
-  today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
+  today: ['Agora', 'O próximo passo do seu cérebro, sem perder a fronteira humana.'],
   areas: ['Mapa / Áreas', 'A empresa plural, sem transformar navegação em casa da verdade.'],
   systems: ['Sistemas', 'Resultados executáveis ligados ao contexto real do negócio.'],
   sources: ['Fontes', 'Casas de verdade, autoridade, frescor e garantia de acesso.'],
+  connections: ['Conexões', 'Onde as fontes vivem e quais já podem ser usadas.'],
   routines: ['Rotinas', 'Quando o cérebro trabalha, com qual contexto e quem precisa decidir.'],
   judgments: ['Julgamento', 'Outputs privados esperando decisão humana rastreável.'],
   runs: ['Execuções', 'O rastro reference-only de cada tentativa.'],
+  decisions: ['Decisões', 'Evidência e consequência separadas pelo martelo humano.'],
+  experiments: ['Experimentos', 'Critério antes do dado; aprendizado depois da decisão.'],
+  activation: ['Ativação', 'Do primeiro contato ao contexto que volta sozinho.'],
+  hermes: ['Hermes', 'Conecte seu cérebro ao Telegram com acesso restrito.'],
   governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
   health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
-  society: ['Society', 'A rede distribui capacidade; o contexto da empresa não circula.'],
+  society: ['INEVITA', 'A comunidade distribui capacidade; o contexto do founder continua local.'],
 };
 
 function render() {
@@ -210,12 +301,14 @@ function render() {
   $('#page-subtitle').textContent = subtitle;
   $('#summary').innerHTML = summaryCards();
   $('#content').innerHTML = renderers[state.view]();
+  $('#demo-banner').hidden = !state.model.demo;
   $('#updated-at').textContent = `Estado local · ${fmtDate(state.model.generated_at)}`;
   document.querySelectorAll('[data-count]').forEach((element) => { element.textContent = state.model.counts[element.dataset.count] ?? 0; });
   document.querySelectorAll('[data-view]').forEach((element) => element.classList.toggle('active', element.dataset.view === state.view));
 }
 
 function drawerActions(routine) {
+  if (state.model.demo) return '<span class="muted">Demonstração: ações desabilitadas.</span>';
   const buttons = [];
   if (routine.actions.can_confirm_legacy_pause) buttons.push('<button class="action warn" data-routine-action="confirm-legacy-pause">Registrar pausa antiga</button>');
   if (routine.actions.can_run) buttons.push('<button class="action primary" data-routine-action="run">Rodar agora</button>');
@@ -287,6 +380,7 @@ async function openJudgment(receiptId) {
   try {
     const detail = await getJson(`/api/runs/${receiptId}/output`);
     const current = detail.judgment.summary;
+    const locked = state.model.demo ? 'disabled' : '';
     $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">OUTPUT PRIVADO</p><h2>${escapeHtml(detail.receipt.routine_id)}</h2>${badge(current.status === 'pending' ? 'pending' : current.verdict)}</div>
       <div class="boundary-note"><b>Leitura local explícita</b>Este conteúdo não entrou no recibo, no read model ou na INEVITA. Abrir não executou modelo.</div>
       <section class="drawer-section"><div class="output-heading"><h3>Resultado</h3><span>${detail.output.bytes} bytes</span></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
@@ -294,7 +388,7 @@ async function openJudgment(receiptId) {
       <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p><textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
       <section class="drawer-section"><h3>Histórico imutável</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section>
       <div class="boundary-note action-boundary"><b>Propor não é executar</b>“Propor ação” registra intenção local. Não cria task, não envia mensagem, não publica e não altera Fonte.</div>
-      <div class="drawer-actions judgment-actions">${correctionButtons(detail)}<button class="action primary" data-judgment-action="approve">Aprovar</button><button class="action warn" data-judgment-action="changes">Pedir ajuste</button><button class="action" data-judgment-action="reject">Rejeitar</button><button class="action" data-judgment-action="propose-action">Propor ação</button></div>`;
+      <div class="drawer-actions judgment-actions">${correctionButtons(detail)}<button class="action primary" data-judgment-action="approve" ${locked}>Aprovar</button><button class="action warn" data-judgment-action="changes" ${locked}>Pedir ajuste</button><button class="action" data-judgment-action="reject" ${locked}>Rejeitar</button><button class="action" data-judgment-action="propose-action" ${locked}>Propor ação</button></div>`;
   } catch (error) {
     $('#drawer-content').innerHTML = empty('Output indisponível', label(error.message));
     toast(label(error.message), 'bad');
@@ -302,7 +396,7 @@ async function openJudgment(receiptId) {
 }
 
 async function performJudgment(action) {
-  if (state.busy || !state.selectedJudgment) return;
+  if (state.busy || state.model.demo || !state.selectedJudgment) return;
   const note = $('#judgment-note')?.value.trim() || '';
   const payload = action === 'approve' ? { verdict: 'approved', action_intent: 'none' }
     : action === 'changes' ? { verdict: 'changes-requested', action_intent: 'none' }
@@ -338,7 +432,7 @@ async function performJudgment(action) {
 }
 
 async function performCorrectionAction(action) {
-  if (state.busy || !state.selectedJudgment) return;
+  if (state.busy || state.model.demo || !state.selectedJudgment) return;
   if (action === 'compare') {
     try {
       const comparison = await getJson(`/api/runs/${state.selectedJudgment}/comparison`);
@@ -380,7 +474,7 @@ async function performCorrectionAction(action) {
 }
 
 async function performAction(action) {
-  if (state.busy || !state.selectedRoutine) return;
+  if (state.busy || state.model.demo || !state.selectedRoutine) return;
   const routine = state.model.routines.find((item) => item.routine_id === state.selectedRoutine);
   let approvedBy = '';
   let evidenceRef = '';
@@ -413,6 +507,64 @@ async function performAction(action) {
   }
 }
 
+async function performHermesAction(action) {
+  if (state.busy || state.model.demo) return;
+  const routes = {
+    bind: '/api/integrations/hermes/project/bind',
+    disconnect: '/api/integrations/hermes/telegram/disconnect',
+    doctor: '/api/integrations/hermes/doctor',
+    'gateway-install': '/api/integrations/hermes/gateway/install',
+    'gateway-start': '/api/integrations/hermes/gateway/start',
+    'gateway-stop': '/api/integrations/hermes/gateway/stop',
+    'gateway-restart': '/api/integrations/hermes/gateway/restart',
+  };
+  if (!routes[action]) return;
+  const messages = {
+    bind: 'Confiar neste repositório e torná-lo o diretório de trabalho do Hermes? As skills locais poderão ser usadas; qualquer escrita continua pedindo sua aprovação.',
+    disconnect: 'Remover o token e a allowlist do Telegram? Reinicie o gateway depois para aplicar.',
+    doctor: 'Rodar o diagnóstico local do Hermes agora?',
+    'gateway-install': 'Instalar o gateway como serviço do seu usuário e iniciá-lo agora?',
+    'gateway-start': 'Iniciar o gateway do Hermes?',
+    'gateway-stop': 'Parar o gateway do Hermes?',
+    'gateway-restart': 'Reiniciar o gateway para aplicar a configuração atual?',
+  };
+  if (!window.confirm(messages[action])) return;
+  state.busy = true;
+  document.querySelectorAll('[data-hermes-action], #telegram-form button').forEach((button) => { button.disabled = true; });
+  try {
+    const result = await mutate(routes[action], {});
+    toast(action === 'doctor' ? `Diagnóstico: ${label(result.status)}.` : 'Configuração do Hermes atualizada.');
+    await loadModel();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function configureTelegram(form) {
+  if (state.busy || state.model.demo) return;
+  const token = form.querySelector('#telegram-token')?.value.trim() || '';
+  const allowedUsers = form.querySelector('#telegram-users')?.value.split(',').map((item) => item.trim()).filter(Boolean) || [];
+  if (!token || !allowedUsers.length) {
+    toast('Informe o token e pelo menos um ID autorizado.', 'bad');
+    return;
+  }
+  if (!window.confirm(`Autorizar ${allowedUsers.length} usuário(s) no Telegram e manter todo o resto bloqueado? O token ficará apenas no arquivo secreto local do Hermes.`)) return;
+  state.busy = true;
+  form.querySelectorAll('button, input').forEach((element) => { element.disabled = true; });
+  try {
+    const result = await mutate('/api/integrations/hermes/telegram', { token, allowed_users: allowedUsers });
+    form.reset();
+    toast(`Telegram configurado para ${result.allowed_user_count} usuário(s). Reinicie o gateway.`);
+    await loadModel();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
+}
+
 async function loadModel() {
   state.model = await getJson('/api/console');
   render();
@@ -421,6 +573,17 @@ async function loadModel() {
 document.addEventListener('click', (event) => {
   const nav = event.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
+  const go = event.target.closest('[data-go-view]');
+  if (go) { state.view = go.dataset.goView; closeDrawer(); render(); return; }
+  const copy = event.target.closest('[data-copy-command]');
+  if (copy) {
+    navigator.clipboard.writeText(copy.dataset.copyCommand)
+      .then(() => toast('Comando copiado. Cole no terminal.'))
+      .catch(() => toast('Não foi possível copiar; selecione o comando manualmente.', 'bad'));
+    return;
+  }
+  const hermesAction = event.target.closest('[data-hermes-action]');
+  if (hermesAction) { performHermesAction(hermesAction.dataset.hermesAction); return; }
   const open = event.target.closest('[data-open-routine]');
   if (open) { openDrawer(open.dataset.openRoutine); return; }
   const judgment = event.target.closest('[data-open-judgment]');
@@ -431,6 +594,12 @@ document.addEventListener('click', (event) => {
   if (correctionAction) { performCorrectionAction(correctionAction.dataset.correctionAction); return; }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
+});
+document.addEventListener('submit', (event) => {
+  if (event.target.matches('#telegram-form')) {
+    event.preventDefault();
+    configureTelegram(event.target);
+  }
 });
 $('#close-drawer').addEventListener('click', closeDrawer);
 $('#drawer-backdrop').addEventListener('click', closeDrawer);

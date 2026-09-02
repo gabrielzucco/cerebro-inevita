@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Company Brain Console</title>
+  <title>Cockpit INEVITA · Company Brain</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -11,26 +11,37 @@
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div><strong>Company Brain</strong><small>Console local</small></div>
+        <div><strong>Cockpit INEVITA</strong><small>Seu cérebro em operação</small></div>
       </div>
       <nav id="navigation" aria-label="Navegação principal">
-        <button data-view="today"><span class="nav-glyph">◫</span>Hoje <b data-count="attention">0</b></button>
+        <p class="nav-section">AGORA</p>
+        <button class="active" data-view="today"><span class="nav-glyph">◫</span>Visão geral <b data-count="attention">0</b></button>
+        <p class="nav-section">CÉREBRO</p>
         <button data-view="areas"><span class="nav-glyph">⌘</span>Mapa / Áreas <b data-count="areas">0</b></button>
         <button data-view="systems"><span class="nav-glyph">◇</span>Sistemas <b data-count="systems">0</b></button>
         <button data-view="sources"><span class="nav-glyph">⌁</span>Fontes <b data-count="sources">0</b></button>
-        <button class="active" data-view="routines"><span class="nav-glyph">↻</span>Rotinas <b data-count="routines">0</b></button>
+        <button data-view="connections"><span class="nav-glyph">⌇</span>Conexões <b data-count="connections">0</b></button>
+        <p class="nav-section">OPERAR</p>
+        <button data-view="routines"><span class="nav-glyph">↻</span>Rotinas <b data-count="routines">0</b></button>
         <button data-view="judgments"><span class="nav-glyph">✓</span>Julgamento <b data-count="judgments">0</b></button>
         <button data-view="runs"><span class="nav-glyph">≡</span>Execuções</button>
+        <button data-view="decisions"><span class="nav-glyph">◆</span>Decisões <b data-count="decisions">0</b></button>
+        <button data-view="experiments"><span class="nav-glyph">△</span>Experimentos <b data-count="experiments">0</b></button>
+        <p class="nav-section">CONFIGURAR</p>
+        <button data-view="activation"><span class="nav-glyph">◉</span>Ativação</button>
+        <button data-view="hermes"><span class="nav-glyph">H</span>Hermes</button>
         <button data-view="governance"><span class="nav-glyph">⊙</span>Governança</button>
         <button data-view="health"><span class="nav-glyph">＋</span>Saúde</button>
-        <button data-view="society"><span class="nav-glyph">✦</span>Society</button>
+        <p class="nav-section">COMUNIDADE</p>
+        <button data-view="society"><span class="nav-glyph">✦</span>INEVITA <b data-count="community">0</b></button>
       </nav>
       <div class="local-boundary"><i></i><div><strong>Somente nesta máquina</strong><span>Nenhum contexto vai à INEVITA</span></div></div>
     </aside>
 
     <main>
+      <div id="demo-banner" class="demo-banner" hidden>DEMONSTRAÇÃO · dados sintéticos · ações desabilitadas</div>
       <header class="topbar">
-        <div><p class="eyebrow" id="eyebrow">OPERAÇÃO</p><h1 id="page-title">Rotinas</h1><p id="page-subtitle">Quando o cérebro trabalha, com qual contexto e quem precisa decidir.</p></div>
+        <div><p class="eyebrow" id="eyebrow">COCKPIT LOCAL</p><h1 id="page-title">Agora</h1><p id="page-subtitle">O próximo passo do seu cérebro, sem perder a fronteira humana.</p></div>
         <div class="top-actions"><span id="updated-at" class="updated-at">Lendo estado local…</span><button id="refresh" class="icon-button" aria-label="Atualizar">↻</button></div>
       </header>
       <section id="summary" class="summary-grid" aria-label="Resumo operacional"></section>

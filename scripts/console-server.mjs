@@ -14,8 +14,16 @@ import {
   resumeRoutine,
   runRoutine,
 } from './lib/routine-runtime.mjs';
-import { buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
+import { buildConsoleDemoModel, buildConsoleReadModel, recognizeConsoleBrain } from './lib/console-read-model.mjs';
 import { readPrivateRoutineOutput, writeJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import {
+  bindHermesProject,
+  configureHermesTelegram,
+  controlHermesGateway,
+  disconnectHermesTelegram,
+  readHermesStatus,
+  runHermesDoctor,
+} from './lib/hermes-runtime.mjs';
 import {
   correctionActions,
   correctionView,
@@ -129,6 +137,15 @@ function comparisonReceiptFrom(pathname) {
   return match?.[1] || null;
 }
 
+function hermesActionFrom(pathname) {
+  if (pathname === '/api/integrations/hermes/project/bind') return { kind: 'project-bind' };
+  if (pathname === '/api/integrations/hermes/telegram') return { kind: 'telegram-configure' };
+  if (pathname === '/api/integrations/hermes/telegram/disconnect') return { kind: 'telegram-disconnect' };
+  if (pathname === '/api/integrations/hermes/doctor') return { kind: 'doctor' };
+  const gateway = pathname.match(/^\/api\/integrations\/hermes\/gateway\/(install|start|stop|restart)$/);
+  return gateway ? { kind: 'gateway', action: gateway[1] } : null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
@@ -139,12 +156,18 @@ export function createConsoleServer({
   root,
   spawn,
   spawnCollector,
+  hermesRunner,
+  hermesEnv = process.env,
+  demo = false,
   clock = () => new Date(),
   sessionToken = opaqueToken(),
   csrfToken = opaqueToken(),
 } = {}) {
   const brainRoot = resolve(root || process.cwd());
   recognizeConsoleBrain(brainRoot);
+  let lastDoctor = null;
+  let hermesCache = null;
+  let hermesCacheAt = 0;
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || '/', 'http://127.0.0.1');
     const sessionCookie = `${COOKIE_NAME}=${sessionToken}; HttpOnly; SameSite=Strict; Path=/`;
@@ -153,6 +176,7 @@ export function createConsoleServer({
         send(response, 421, { reason_code: 'host-not-allowed' });
         return;
       }
+      if (demo && request.method !== 'GET') throw new Error('demo-read-only');
       if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/rotinas')) {
         sendStatic(response, 'index.html', 'text/html; charset=utf-8', { 'Set-Cookie': sessionCookie });
         return;
@@ -177,12 +201,66 @@ export function createConsoleServer({
       }
       if (request.method === 'GET' && url.pathname === '/api/console') {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
-        send(response, 200, buildConsoleReadModel(brainRoot, { now: clock() }));
+        const model = demo
+          ? buildConsoleDemoModel({ now: clock() })
+          : buildConsoleReadModel(brainRoot, { now: clock() });
+        const hermes = demo ? {
+          installed: true,
+          version: 'Hermes Agent · demonstração',
+          provider_configured: true,
+          provider_label: 'OpenAI Codex',
+          project_bound: true,
+          skills_trusted: true,
+          skills_trust_supported: true,
+          telegram: { token_configured: true, allowlist_configured: true, allowed_user_count: 1, home_channel_configured: true, allow_all_disabled: true },
+          gateway: { installed: true, running: true },
+          last_doctor: { status: 'passed', checked_at: clock().toISOString() },
+        } : (() => {
+          if (hermesCache && Date.now() - hermesCacheAt < 3_000) return hermesCache;
+          hermesCache = readHermesStatus(brainRoot, { runner: hermesRunner, env: hermesEnv, lastDoctor });
+          hermesCacheAt = Date.now();
+          return hermesCache;
+        })();
+        send(response, 200, { ...model, hermes });
+        return;
+      }
+      const hermesAction = request.method === 'POST' ? hermesActionFrom(url.pathname) : null;
+      if (hermesAction) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const options = { runner: hermesRunner, env: hermesEnv };
+        let result;
+        if (hermesAction.kind === 'project-bind') {
+          result = bindHermesProject(brainRoot, options);
+        } else if (hermesAction.kind === 'telegram-configure') {
+          result = configureHermesTelegram(brainRoot, payload, options);
+        } else if (hermesAction.kind === 'telegram-disconnect') {
+          result = disconnectHermesTelegram(brainRoot, options);
+        } else if (hermesAction.kind === 'doctor') {
+          lastDoctor = runHermesDoctor(brainRoot, options);
+          result = lastDoctor;
+        } else {
+          result = controlHermesGateway(brainRoot, hermesAction.action, options);
+        }
+        hermesCache = null;
+        send(response, 200, result);
         return;
       }
       const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;
       if (outputReceiptId) {
         if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        if (demo && outputReceiptId === 'demo-run-001') {
+          const content = '# Decisões da call\n\n- Priorizar a primeira entrega antes de ampliar o escopo.\n- Reutilizar o contexto aprovado no próximo briefing.\n\n> Demonstração sintética — nenhuma fonte real foi aberta.';
+          send(response, 200, {
+            receipt: { receipt_id: outputReceiptId, receipt_ref: `routine-receipt:${outputReceiptId}`, run_id: 'demo-run', routine_id: 'calls-em-decisoes', system_ref: 'calls', trigger: 'manual', completed_at: '2026-08-28T13:22:00.000Z', output_ref: 'private-output:demo-run-001' },
+            output: { content, bytes: Buffer.byteLength(content), media_type: 'text/markdown; charset=utf-8' },
+            judgment: { current: null, summary: { status: 'pending', verdict: null, action_intent: 'none', history_count: 0 }, history: [] },
+            correction: null,
+            correction_actions: { can_rerun_with_correction: false, can_compare: false, can_create_learning_candidate: false },
+            privacy: { content_shared_with_inevita: false, output_in_console_read_model: false, explicit_local_read: true },
+          });
+          return;
+        }
         send(response, 200, {
           ...readPrivateRoutineOutput(brainRoot, outputReceiptId),
           correction: correctionView(brainRoot, outputReceiptId),
@@ -292,7 +370,8 @@ export function createConsoleServer({
     } catch (error) {
       const reasonCode = safeReason(error);
       const status = reasonCode === 'session-required' || reasonCode === 'csrf-invalid' ? 403
-        : reasonCode === 'not-found' ? 404 : 400;
+        : reasonCode === 'not-found' ? 404
+          : reasonCode === 'demo-read-only' ? 409 : 400;
       send(response, status, { reason_code: reasonCode });
     }
   });
@@ -311,7 +390,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(1);
   }
   try {
-    const instance = createConsoleServer({ root: option('root') || process.env.CEREBRO_INSTALL_ROOT || process.cwd() });
+    const instance = createConsoleServer({
+      root: option('root') || process.env.CEREBRO_INSTALL_ROOT || process.cwd(),
+      demo: process.argv.includes('--demo'),
+    });
     instance.server.listen(port, '127.0.0.1', () => {
       const address = instance.server.address();
       console.log(`Company Brain Console · http://127.0.0.1:${address.port}`);

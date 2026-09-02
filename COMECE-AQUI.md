@@ -15,6 +15,7 @@ de slash é um atalho, não um requisito.
 | Codex | `.agents/skills/` | `$comecar` ou “quero começar” |
 | Gemini CLI | `.agents/skills/` | “quero começar” |
 | Antigravity | `.agents/skills/` | “quero começar meu cérebro” |
+| Hermes | `.agents/skills/` | “quero começar” no CLI ou Telegram |
 | outro agente local | `.agents/skills/` | ler `comecar/SKILL.md` |
 
 ### O acesso é vinculado (e-mail ou credencial)
@@ -59,6 +60,12 @@ conector real e consentimento específico.
 
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não
 exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
+
+## Quer ver e conectar pelo Telegram?
+
+Abra o Cockpit local com `node scripts/cockpit.mjs`. A tela mostra o progresso em linguagem humana,
+organiza o que pede decisão e conduz a instalação do Hermes, a escolha do provider, a confiança das
+skills e a allowlist do Telegram. O guia completo está em [`COCKPIT.md`](COCKPIT.md).
 
 ## A primeira experiência
 

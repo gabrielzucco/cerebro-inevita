@@ -25,7 +25,7 @@ import {
 const ROOT = resolve(process.cwd());
 const errors = [];
 const required = [
-  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md',
+  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md', 'COCKPIT.md',
   'templates/experimento.md',
   'templates/sistema/manifest.md', 'templates/sistema/configuracao.md',
   'templates/sistema/pipeline.md', 'templates/sistema/rotinas.md',
@@ -96,14 +96,16 @@ const required = [
   'scripts/lib/routine-runtime.mjs', 'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
   'scripts/lib/correction-loop.mjs',
-  'scripts/lib/console-read-model.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
+  'scripts/lib/console-read-model.mjs', 'scripts/lib/cockpit-read-model.mjs',
+  'scripts/lib/hermes-runtime.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
+  'scripts/cockpit.mjs',
   'console/index.html', 'console/app.js', 'console/styles.css',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
   'scripts/test-routine-runtime.mjs',
   'scripts/test-judgment-protocol.mjs',
   'scripts/test-correction-loop.mjs',
-  'scripts/test-console-server.mjs',
+  'scripts/test-console-server.mjs', 'scripts/test-cockpit.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
