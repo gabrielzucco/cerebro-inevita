@@ -224,10 +224,10 @@ function avisarVinculoSeFaltar() {
   if (temCredencial || temEmail || dispensado) return;
   console.log('');
   console.log('VINCULO_DE_ACESSO_PENDENTE: esta instalação ainda não tem dono.');
-  console.log('  Agente: pergunte agora, em uma frase, qual e-mail a pessoa usou para pegar o');
-  console.log('  acesso ao Cérebro; grave só o e-mail em .cerebro/acesso-email (uma linha,');
+  console.log('  Agente: entregue primeiro um output útil e então ofereça, uma única vez, o');
+  console.log('  vínculo pelo e-mail de acesso; grave só o e-mail em .cerebro/acesso-email (uma linha,');
   console.log('  modo 0600) e rode `node .agents/scripts/ping.mjs sessao`. O e-mail fica fora');
-  console.log('  das notas e do Git; é assim que atualização dirigida e recuperação de acesso chegam.');
+  console.log('  das notas e do Git. Se ela recusar, registre acesso-dispensado e continue.');
 }
 
 main().catch((erro) => {

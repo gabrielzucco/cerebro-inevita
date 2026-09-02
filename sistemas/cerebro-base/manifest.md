@@ -3,8 +3,10 @@
 ```yaml
 system_id: cerebro-base
 name: Cérebro Base
-version: 0.2.0
+version: 0.3.0
 status: beta
+product_kind: brain-native
+surface: brain
 owner: dono-do-cerebro
 result: uma fonte real vira um artefato aprovado e volta a trabalhar numa segunda tarefa
 input: resultado conhecido ou rastro recente + menor fonte real autorizada
@@ -28,6 +30,10 @@ Instalar, abrir a pasta, consultar o acervo ou receber um resumo não fecham o c
 T4 ativa o **Cérebro Base**. O primeiro Sistema de negócio é escolhido depois: ele recebe resultado,
 fontes, CONFIGURAÇÃO, pipeline, eval, gate, feedback e versão próprios. O recorte usado para ativar
 o cérebro pode virar candidato, mas não é promovido automaticamente.
+
+O Cérebro Base conserva identidade e contrato de metassistema para que ativação, recuperação e
+aprendizado deixem recibos. No produto ele aparece na superfície **Cérebro**, nunca no catálogo de
+Sistemas de negócio.
 
 ## Marcos do produto
 

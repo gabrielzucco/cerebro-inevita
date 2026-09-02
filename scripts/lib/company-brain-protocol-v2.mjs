@@ -130,6 +130,20 @@ function validateSystemShape(errors, value, version) {
     && !ID_RE.test(value.extensions.interface_role || '')) {
     errors.push('extensions.interface_role inválido');
   }
+  if (object(value.extensions) && value.extensions.product_kind !== undefined
+    && !['business-system', 'brain-native'].includes(value.extensions.product_kind)) {
+    errors.push('extensions.product_kind inválido');
+  }
+  if (object(value.extensions) && value.extensions.surface !== undefined
+    && !['systems', 'brain'].includes(value.extensions.surface)) {
+    errors.push('extensions.surface inválido');
+  }
+  if (value.extensions?.product_kind === 'brain-native' && value.extensions.surface !== 'brain') {
+    errors.push('extensions.surface precisa ser brain para capacidade brain-native');
+  }
+  if (value.extensions?.product_kind === 'business-system' && value.extensions.surface !== 'systems') {
+    errors.push('extensions.surface precisa ser systems para business-system');
+  }
 }
 
 function validateRetrieval(errors, retrieval, sources) {

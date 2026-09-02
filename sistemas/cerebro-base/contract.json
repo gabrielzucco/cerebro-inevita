@@ -55,5 +55,11 @@
     "promotion_threshold": 3,
     "requires_replay": true,
     "requires_human_approval": true
+  },
+  "extensions": {
+    "product_kind": "brain-native",
+    "surface": "brain",
+    "operating_area": "operations-technology",
+    "business_function": "data-technology"
   }
 }

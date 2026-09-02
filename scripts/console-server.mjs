@@ -1122,6 +1122,7 @@ function anatomyModel(root) {
 
   return {
     generated_at: new Date().toISOString(),
+    activation: model.activation,
     company_map: companyMap,
     retrieval_health: retrievalHealth,
     control_center: controlCenter,

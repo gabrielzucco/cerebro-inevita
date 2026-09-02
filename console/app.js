@@ -14,6 +14,7 @@ const state = {
   model: null,
   csrf: '',
   view: 'today',
+  initialRouteResolved: false,
   selectedRoutine: null,
   selectedJudgment: null,
   selectedExperiment: null,
@@ -254,8 +255,9 @@ function routineCard(routine) {
   const next = routine.next_scheduled_at
     ? `${fmtRelative(routine.next_scheduled_at)} · ${fmtDate(routine.next_scheduled_at)}`
     : routine.state.status === 'disabled' ? 'Relógio desligado' : 'Sem próxima ocorrência';
-  return `<article class="routine-card" data-open-routine="${escapeHtml(routine.routine_id)}" role="button" tabindex="0">
-    <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(routine.system_ref)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
+  const origin = routine.product_kind === 'brain-native' ? 'Rotina do Cérebro' : 'Rotina de Sistema';
+  return `<article class="routine-card" data-routine-kind="${escapeHtml(routine.product_kind)}" data-open-routine="${escapeHtml(routine.routine_id)}" role="button" tabindex="0">
+    <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(origin)} · ${escapeHtml(routine.system_ref)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
     <div class="run-chips">${routineTodayChip(routine)}${last ? `<span class="run-chip ${tone(last.status)}">Último: ${escapeHtml(label(last.status))} ${escapeHtml(fmtRelative(last.completed_at || last.started_at))}</span>` : '<span class="run-chip neutral">Nunca executou</span>'}</div>
     <div class="routine-meta"><span><b>Cadência</b>${escapeHtml(routine.schedule)}</span><span><b>Próxima</b>${escapeHtml(next)}</span></div>
     <div class="routine-meta"><span><b>Executor</b>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</span></div>
@@ -266,6 +268,48 @@ function routineCard(routine) {
 
 function empty(title, body) {
   return `<div class="empty"><div class="empty-mark">◇</div><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p></div>`;
+}
+
+function renderActivation() {
+  const activation = state.model.activation;
+  const current = activation.steps.find((step) => step.id === activation.current_step) || activation.steps[0];
+  const started = activation.status === 'in-progress';
+  const progress = Math.round((activation.completed_steps / activation.total_steps) * 100);
+  return `<div class="first-mission">
+    <section class="first-mission-hero">
+      <div class="first-mission-copy">
+        <p class="micro">PRIMEIRA MISSÃO · ${started ? 'EM ANDAMENTO' : 'COMECE POR AQUI'}</p>
+        <h2>${started ? escapeHtml(current.name) : 'Ative seu Cérebro com um trabalho que já precisa acontecer.'}</h2>
+        <p>${started ? escapeHtml(current.description) : 'Você não precisa organizar a empresa inteira nem conectar ferramentas. Traga um trabalho real e uma pequena amostra da realidade; o resto nasce do uso.'}</p>
+        <div class="first-mission-actions">
+          <button type="button" class="first-mission-primary" data-copy-ref="${escapeHtml(activation.command)}">Copiar ${escapeHtml(activation.command)}</button>
+          <button type="button" class="first-mission-secondary" data-view="anatomy">Conhecer o Cérebro</button>
+        </div>
+        <small>Cole o comando na conversa com seu agente. Abrir este cockpit não chama modelo, conecta Fonte nem envia conteúdo.</small>
+      </div>
+      <div class="first-mission-promise" aria-label="O que esta missão prova">
+        <span class="first-mission-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <p class="micro">O QUE VAI FICAR PRONTO</p>
+        <strong>Um resultado que você usaria.</strong>
+        <p>Depois, o mesmo contexto volta para uma segunda tarefa sem você precisar explicar tudo outra vez.</p>
+        <div><span>Cérebro</span><i>prepara contexto</i><span>Sistema</span><i>produz resultado</i></div>
+      </div>
+    </section>
+
+    <section class="first-mission-source">
+      <div><p class="micro">E SE EU NÃO TIVER FONTE CONECTADA?</p><h3>Nenhuma integração é necessária para começar.</h3><p>A fonte-semente é só o menor pedaço de realidade capaz de sustentar o primeiro trabalho.</p></div>
+      <ul>${activation.seed_options.map((option) => `<li><i></i>${escapeHtml(option)}</li>`).join('')}</ul>
+    </section>
+
+    <section class="first-mission-progress">
+      <header><div><p class="micro">ATIVAÇÃO POR USO</p><h3>${activation.completed_steps} de ${activation.total_steps} passos observados</h3></div><span>${progress}%</span></header>
+      <progress max="100" value="${progress}">${progress}%</progress>
+      <ol>${activation.steps.map((step, index) => {
+        const stepState = step.completed_at ? 'complete' : step.id === activation.current_step ? 'current' : 'pending';
+        return `<li class="${stepState}"><span>${step.completed_at ? '✓' : String(index + 1).padStart(2, '0')}</span><div><strong>${escapeHtml(step.name)}</strong><p>${escapeHtml(step.description)}</p>${step.completed_at ? `<small>observado em ${fmtDate(step.completed_at)}</small>` : ''}</div></li>`;
+      }).join('')}</ol>
+    </section>
+  </div>`;
 }
 
 const compatibilityReasons = {
@@ -368,8 +412,12 @@ function judgmentList(items) {
 }
 
 function renderRoutines() {
+  const routines = visibleRoutines();
+  const native = routines.filter((routine) => routine.product_kind === 'brain-native');
+  const system = routines.filter((routine) => routine.product_kind !== 'brain-native');
+  const group = (title, description, items) => items.length ? `<section class="routine-origin-group"><div class="routine-origin-head"><div><p class="micro">${escapeHtml(title)}</p><p>${escapeHtml(description)}</p></div><b>${items.length}</b></div><div class="routine-list">${items.map(routineCard).join('')}</div></section>` : '';
   return `<div class="section-heading"><div><p class="eyebrow">CONTROL PLANE</p><h2>Todas as rotinas</h2></div><p>Abrir e inspecionar nunca executa modelos. O relógio só liga após replay e aprovação.</p></div>
-    <div class="routine-list">${visibleRoutines().length ? visibleRoutines().map(routineCard).join('') : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}</div>`;
+    ${routines.length ? `${group('Nativas do Cérebro', 'Mantêm contexto, saúde, recuperação e aprendizado.', native)}${group('Dos Sistemas', 'Transformam contexto em resultados de negócio.', system)}` : empty('Nenhuma rotina nesta área', 'Crie um Routine Contract para o primeiro trabalho recorrente.')}`;
 }
 
 /* Workspace do Sistema — trabalho fora; confiança e operação dentro do Cockpit. */
@@ -1094,6 +1142,8 @@ function renderBrainOverview(anatomy) {
       ${renderOverviewRecoveryAsset(anatomy.retrieval_health)}
     </section>
 
+    ${anatomy.activation.complete ? `<section class="brain-activation-receipt"><div><p class="micro">CÉREBRO BASE ATIVADO</p><h2>O contexto já provou que consegue voltar ao trabalho.</h2><p>A primeira missão fechou quando uma segunda tarefa reutilizou contexto aprovado sem releitura do bruto.</p></div><dl><div><dt>Concluído</dt><dd>${fmtDate(anatomy.activation.completed_at)}</dd></div><div><dt>Versão</dt><dd>${escapeHtml(anatomy.activation.product_version || 'não registrada')}</dd></div><div><dt>Recibo local</dt><dd><button type="button" data-copy-ref="${escapeHtml(anatomy.activation.receipt_ref)}">${escapeHtml(anatomy.activation.run_id || 'copiar referência')} ⧉</button></dd></div></dl></section>` : `<section class="brain-activation-receipt is-pending"><div><p class="micro">ATIVAÇÃO EM ABERTO</p><h2>A primeira missão ainda precisa provar reutilização.</h2><p>${anatomy.activation.completed_steps} de ${anatomy.activation.total_steps} passos foram observados.</p></div><button type="button" data-view="activation">Voltar à Primeira Missão →</button></section>`}
+
     <section class="brain-supported">
       <header><div><p class="micro">O QUE ELE JÁ SUSTENTA</p><h2>Capacidades que já deixaram prova neste Cérebro</h2><p>Disponibilidade técnica não basta: cada linha mostra o efeito e a evidência observada nesta empresa.</p></div></header>
       ${renderOverviewCapabilities(center.capabilities)}
@@ -1179,6 +1229,12 @@ function renderBrainArchitecture(anatomy) {
     <section class="brain-architecture-contracts">
       <header><div><p class="micro">CONTRATOS</p><h2>A camada constitucional</h2></div></header>
       <dl><div><dt>System Contracts</dt><dd>${brainCount(architecture.protocol.system_contracts)}</dd><span>declaram fontes, recuperação, evidência e condições de parada</span></div><div><dt>Source Contracts</dt><dd>${brainCount(architecture.protocol.source_contracts)}</dd><span>declaram casa de verdade, binding e política de frescor</span></div><div><dt>Retrieval Contract</dt><dd>${architecture.protocol.retrieval_versions.length ? architecture.protocol.retrieval_versions.map((version) => `v${escapeHtml(version)}`).join(' · ') : 'não observado'}</dd><span>lido pela experiência e pelo runtime</span></div><div><dt>Índice atual</dt><dd>${architecture.index.documents == null ? 'não observado' : `${brainCount(architecture.index.documents)} docs`}</dd><span>${architecture.index.updated_at ? `geração ${fmtDate(architecture.index.updated_at, false)}` : 'sem geração auditada'}</span></div></dl>
+    </section>
+
+    <section class="brain-context-agreement">
+      <header><div><p class="micro">ACORDO DE CONTEXTO</p><h2>O Sistema pede contexto; o Cérebro decide como recuperá-lo.</h2><p>A fonte continua sendo a casa da verdade. O contrato do Sistema registra o que precisa, a janela, o frescor, a evidência mínima e quando parar.</p></div></header>
+      <ol><li><span>01</span><div><strong>Fonte</strong><p>Guarda o dado bruto e sua autoridade.</p></div></li><li><span>02</span><div><strong>Cérebro</strong><p>Coleta, prepara, destila, recupera e registra o contexto usado.</p></div></li><li><span>03</span><div><strong>Sistema</strong><p>Consome o contexto necessário e produz o resultado contratado.</p></div></li><li><span>04</span><div><strong>Run Record</strong><p>Prova se houve recuperação pelo Cérebro ou leitura direta autorizada da Fonte.</p></div></li></ol>
+      <p class="brain-context-rule"><b>Leitura direta é exceção explícita.</b> Ela só acontece quando o contrato e a permissão do Sistema exigem dado fresco ou estruturado na Fonte; nunca por atalho invisível.</p>
     </section>
 
     ${renderBrainGraphPreview(state.brainGraph)}
@@ -2669,8 +2725,9 @@ async function rollbackCase() {
   }
 }
 
-const renderers = { compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, skills: renderSkills, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { activation: renderActivation, compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, skills: renderSkills, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
 const titles = {
+  activation: ['Primeira Missão', 'Ative o Cérebro pelo uso, começando com um trabalho real.'],
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
   today: ['Hoje', 'O que pede julgamento e o que já está pronto para trabalhar.'],
   anatomy: ['Cérebro', 'O que a empresa sabe, de onde vem e como continua vivo.'],
@@ -2692,6 +2749,7 @@ const titles = {
 
 // A que pergunta do operador cada view responde — vira o eyebrow da topbar.
 const viewGroups = {
+  activation: 'Ativação',
   today: 'Operação', judgments: 'Operação', cases: 'Operação', routines: 'Operação', runs: 'Operação',
   anatomy: 'Cérebro', skills: 'Cérebro',
   system: 'Sistemas', systems: 'Sistemas',
@@ -2770,7 +2828,7 @@ function render() {
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   renderAreaSwitcher();
-  const hidesSummary = ['canvas', 'system', 'systems', 'skills', 'society'].includes(state.view) || state.view === 'anatomy';
+  const hidesSummary = ['activation', 'canvas', 'system', 'systems', 'skills', 'society'].includes(state.view) || state.view === 'anatomy';
   $('#summary').innerHTML = hidesSummary ? '' : summaryCards();
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
@@ -3590,6 +3648,10 @@ async function loadModel() {
     loadCases(),
   ]);
   state.model = model;
+  if (!state.initialRouteResolved || (state.view === 'activation' && model.activation.complete)) {
+    state.view = model.activation.complete ? 'today' : 'activation';
+    state.initialRouteResolved = true;
+  }
   state.decisions = decisions;
   state.anatomy = null;
   state.brainGraph = null;

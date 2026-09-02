@@ -272,7 +272,10 @@ try {
     spawn: (command, args, options) => {
       calls.push({ command, args, options });
       assert.equal(command, 'codex');
-      if (calls.length === 1) assert.equal(options.input, 'PROMPT_ONLY_ON_STDIN\n');
+      if (calls.length === 1) {
+        assert(options.input.includes('# Fronteira de execução do Runtime'));
+        assert(options.input.endsWith('PROMPT_ONLY_ON_STDIN\n'));
+      }
       else assert(options.input.includes('Separar melhor a inferência da recomendação.'));
       assert.equal(args.includes('PROMPT_ONLY_ON_STDIN'), false);
       const outputIndex = args.indexOf('-o');
@@ -403,7 +406,7 @@ try {
     method: 'POST', cookie, csrf: 'fixed-csrf-token', body: { confirm: true },
   });
   assert.equal(run.status, 200);
-  assert.equal(run.value.status, 'completed');
+  assert.equal(run.value.status, 'completed', JSON.stringify(run.value));
   assert.equal(calls.length, 1);
   assert.equal(collectorCalls.length, 1);
   assert.equal(JSON.stringify(run.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);

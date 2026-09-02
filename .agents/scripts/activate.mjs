@@ -220,7 +220,7 @@ export async function activate({
   if (!RUNTIMES.has(String(runtime ?? ''))) throw new Error('runtime_invalid');
 
   const installId = getOrCreateInstallId(safeRoot);
-  writePrivate(safeRoot, '.cerebro/runtime', `${runtime}\n`);
+  writePrivate(safeRoot, '.cerebro/operator-runtime', `${runtime}\n`);
   if (telemetryDisabled(safeRoot)) {
     return { ok: true, pending: false, event: 'activation_local_only', reason: null };
   }

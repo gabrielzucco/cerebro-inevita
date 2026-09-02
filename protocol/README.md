@@ -12,6 +12,8 @@ conteúdo bruto.
 - `system-contract.schema.json` / `system-contract-v2.schema.json`: a Capability ligada ao
   resultado, fontes, entidades, permissões, pipeline, eval e política de aprendizado da empresa;
   V2 acrescenta o Retrieval Contract.
+- `system-surface.schema.json`: classifica `extensions` como capacidade `brain-native` na
+  superfície `brain` ou `business-system` na superfície `systems`, sem alterar o envelope V1.
 - `run-record.schema.json` / `run-record-v2.schema.json`: o recibo estruturado da execução; V2
   acrescenta o Context Snapshot exato do que foi selecionado por referência.
 - `access-grant.schema.json`: a concessão local que autoriza sujeito, Fontes, Sistemas, ações,
@@ -98,6 +100,11 @@ Todo Sistema pode ter implementação própria. Para entrar no control plane, pr
 `system_id`, versão, resultado, entidades, fontes, Capability, permissões, eval e aprendizado. Um
 Sistema V2 também declara prioridade, seleção, frescor, conflito, fallback, parada, orçamento e
 proveniência da recuperação. Toda execução V2 deixa o Context Snapshot correspondente.
+
+`extensions.product_kind` separa `business-system` de `brain-native`; `extensions.surface` separa
+`systems` de `brain`. Ausência dos campos mantém compatibilidade e assume um Sistema de negócio.
+`Cérebro Base` é a única identidade legada inferida como nativa. Uma capacidade nativa conserva
+contrato e recibos, mas não entra em catálogo, contagem ou filtro de Sistemas de negócio.
 
 ## Release Manifest V1
 

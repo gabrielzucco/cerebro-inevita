@@ -22,6 +22,7 @@ try {
     'skills/company-brain-sprint/references/output-contract.md', 'raw/.gitkeep',
     'systems/first-system/contract.template.json', 'systems/first-system/capability.template.json',
     'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
+    'protocol/system-surface.schema.json',
     'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
     'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
     'protocol/access-receipt.schema.json', 'protocol/examples/access-receipt.v1.json',
@@ -46,7 +47,7 @@ try {
   }
 
   const start = readFileSync(join(output, 'START-HERE.md'), 'utf8');
-  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'Activation Contract', 'Run Record']) {
+  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'Activation Contract', 'Run Record', 'First Mission', 'brain-native capability']) {
     if (!start.includes(contract)) errors.push(`START-HERE missing contract: ${contract}`);
   }
   const skill = readFileSync(join(output, 'skills', 'company-brain-sprint', 'SKILL.md'), 'utf8');

@@ -166,6 +166,10 @@
     "requires_human_approval": true
   },
   "extensions": {
+    "product_kind": "business-system",
+    "surface": "systems",
+    "operating_area": "commercial",
+    "business_function": "sales",
     "portfolio_name": "GTM",
     "migration_stage": "configured",
     "human_maturity": "operacional · integração constitucional pendente",

@@ -30,33 +30,96 @@ Sistemas instalados transformam esse contexto em resultados de negócio.
 
 ## Acceptance criteria
 
-- [ ] O cockpit rico está integrado ao produto atual sem perder Context Snapshot, contratos,
+- [x] O cockpit rico está integrado ao produto atual sem perder Context Snapshot, contratos,
       atualização segura ou o handshake de instalação do release mais recente.
-- [ ] Uma instalação sem T4 abre em `Primeira Missão`, com linguagem humana para trabalho,
+- [x] Uma instalação sem T4 abre em `Primeira Missão`, com linguagem humana para trabalho,
       fonte-semente, primeiro resultado, julgamento e reutilização.
-- [ ] Uma instalação com T4 abre em `Hoje`; o recibo da ativação aparece na área `Cérebro`.
-- [ ] `Cérebro Base` é classificado como `brain-native` e não aparece em `Sistemas`, contagens,
+- [x] Uma instalação com T4 abre em `Hoje`; o recibo da ativação aparece na área `Cérebro`.
+- [x] `Cérebro Base` é classificado como `brain-native` e não aparece em `Sistemas`, contagens,
       filtros de área ou catálogo de Sistemas de negócio.
-- [ ] Calls em Decisões e outros Sistemas de negócio continuam aparecendo e abrindo normalmente.
-- [ ] A área `Cérebro` apresenta capacidades nativas, memória, recuperação, aprendizado,
+- [x] Calls em Decisões e outros Sistemas de negócio continuam aparecendo e abrindo normalmente.
+- [x] A área `Cérebro` apresenta capacidades nativas, memória, recuperação, aprendizado,
       arquitetura, saúde e atualizações sem fingir instrumentação inexistente.
-- [ ] Rotinas nativas do Cérebro e rotinas de Sistemas permanecem distinguíveis por classificação.
-- [ ] O produto continua operável sem Console e a abertura do cockpit não executa modelo, conecta
+- [x] Rotinas nativas do Cérebro e rotinas de Sistemas permanecem distinguíveis por classificação.
+- [x] O produto continua operável sem Console e a abertura do cockpit não executa modelo, conecta
       fonte nem envia conteúdo à INEVITA.
-- [ ] Release/starter, schemas, documentação e testes refletem a nova taxonomia.
-- [ ] Validação de produto, testes unitários relevantes e replay visual desktop/mobile passam.
+- [x] Release/starter, schemas, documentação e testes refletem a nova taxonomia.
+- [x] Validação de produto, testes unitários relevantes e replay visual desktop/mobile passam.
 
 ## Tasks
 
-- [ ] Reconciliar `origin/main`, Context Snapshot e a branch do cockpit rico.
-- [ ] Introduzir classificação canônica de superfície para Sistemas.
-- [ ] Projetar o estado de ativação T0→T4 no read model do Console.
-- [ ] Implementar a tela transitória de Primeira Missão e o recibo pós-T4 no Cérebro.
-- [ ] Atualizar catálogo, contratos, starters e documentação.
-- [ ] Cobrir fresh install, ativação parcial, T4 e regressão de Sistemas de negócio.
-- [ ] Rodar testes, build e QA visual.
+- [x] Reconciliar `origin/main`, Context Snapshot e a branch do cockpit rico.
+- [x] Introduzir classificação canônica de superfície para Sistemas.
+- [x] Projetar o estado de ativação T0→T4 no read model do Console.
+- [x] Implementar a tela transitória de Primeira Missão e o recibo pós-T4 no Cérebro.
+- [x] Atualizar catálogo, contratos, starters e documentação.
+- [x] Cobrir fresh install, ativação parcial, T4 e regressão de Sistemas de negócio.
+- [x] Rodar testes, build e QA visual.
+
+## Evidência de validação
+
+- `npm test`
+- `npm run build:console`
+- `node scripts/test-cockpit-first-mission.mjs`
+- `node scripts/test-runtime-storage-migration.mjs`
+- `node scripts/test-install-activation.mjs`
+- `node scripts/test-update-safety.mjs`
+- `node scripts/test-console-server.mjs`
+- `node scripts/test-graph-read-model.mjs`
+- `node scripts/test-company-brain-protocol-v2.mjs`
+- `node scripts/test-context-snapshot-runtime.mjs`
+- `node scripts/test-company-brain-taxonomy-v1.mjs`
+- `node scripts/test-company-brain-starter.mjs`
+- Replay visual: fresh desktop; fresh mobile em `390×844` sem overflow horizontal; T4 abrindo em
+  `Hoje`; recibo da ativação em `Cérebro`; Arquitetura com grafo e Console sem erros.
+- O pacote não declara scripts `lint` ou `typecheck`; a validação executável disponível é a lista
+  acima, somada ao bundle de produção.
 
 ## File List
 
 - `docs/stories/2026-09-02-cockpit-primeira-missao-e-fronteira-cerebro-sistemas.md`
-
+- `VERSION`
+- `CHANGELOG.md`
+- `.gitignore`
+- `.cerebro/private-ignore.manifest`
+- `.agents/scripts/activate.mjs`
+- `.agents/scripts/ping.mjs`
+- `.claude/scripts/ping.sh`
+- `.claude/scripts/update.sh`
+- `.agents/skills/comecar/SKILL.md`
+- `.claude/skills/comecar/SKILL.md`
+- `.agents/skills/atualizar/SKILL.md`
+- `.claude/skills/atualizar/SKILL.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `GEMINI.md`
+- `console/app.js`
+- `console/styles.css`
+- `scripts/console-server.mjs`
+- `scripts/lib/console-read-model.mjs`
+- `scripts/lib/system-taxonomy.mjs`
+- `scripts/lib/company-brain-protocol-v2.mjs`
+- `scripts/lib/canvas-layout-runtime.mjs`
+- `scripts/lib/runtime-storage.mjs`
+- `scripts/test-cockpit-first-mission.mjs`
+- `scripts/test-runtime-storage-migration.mjs`
+- `scripts/test-install-activation.mjs`
+- `scripts/test-update-safety.mjs`
+- `scripts/test-console-server.mjs`
+- `scripts/test-company-brain-taxonomy-v1.mjs`
+- `scripts/test-company-brain-starter.mjs`
+- `scripts/validate-product.mjs`
+- `scripts/post-update.mjs`
+- `scripts/update.mjs`
+- `sistemas/cerebro-base/contract.json`
+- `sistemas/cerebro-base/manifest.md`
+- `sistemas/calls/contract.json`
+- `sistemas/next-best-gtm/contract.json`
+- `sistemas/_CATALOGO.md`
+- `templates/sistema/contract.json`
+- `protocol/system-surface.schema.json`
+- `protocol/README.md`
+- `README.md`
+- `COMECE-AQUI.md`
+- `GLOSSARIO.md`
+- `profiles/company-brain-starter-en/START-HERE.md`

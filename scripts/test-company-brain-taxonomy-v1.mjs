@@ -19,7 +19,13 @@ assert.deepEqual(taxonomy.business_functions.map((item) => item.label), [
   'Vendas', 'Marketing', 'Produto', 'Operações', 'Comunidade', 'Dados & Tecnologia',
 ]);
 assert.deepEqual(systemClassification({ area_ref: 'crescimento' }), {
-  operating_area: 'commercial', business_function: 'unclassified',
+  operating_area: 'commercial', business_function: 'unclassified', product_kind: 'business-system', surface: 'systems',
+});
+assert.deepEqual(systemClassification({}, 'cerebro-base'), {
+  operating_area: 'general', business_function: 'unclassified', product_kind: 'brain-native', surface: 'brain',
+});
+assert.deepEqual(systemClassification({ product_kind: 'brain-native', surface: 'brain' }, 'outro'), {
+  operating_area: 'general', business_function: 'unclassified', product_kind: 'brain-native', surface: 'brain',
 });
 
 assert.match(app, /system\.business_function/, 'Launcher deve ler função empresarial declarada');
@@ -27,7 +33,7 @@ assert.match(app, /system\.operating_area/, 'escopo deve ler área responsável 
 assert.match(app, /Área responsável/, 'sidebar deve nomear o eixo de responsabilidade');
 assert.doesNotMatch(app, /function systemBusinessCategory/, 'classificação por nome não pode sobreviver');
 assert.doesNotMatch(app, /crescimento|fundacao|produto-comunidade/, 'taxonomia legada não pode aparecer no cliente');
-assert.match(readModel, /systemClassification\(contract\.extensions\)/, 'read model deve classificar pelo contrato');
+assert.match(readModel, /systemClassification\(contract\.extensions, contract\.system_id\)/, 'read model deve classificar pelo contrato e identidade');
 
 const expectedAreas = new Map([
   ['commercial', 7],

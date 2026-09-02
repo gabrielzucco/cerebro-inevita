@@ -3,8 +3,11 @@
 .cerebro/id
 .cerebro/sem-telemetria
 .cerebro/acesso-email
+.cerebro/acesso-dispensado
 .cerebro/member-id
 .cerebro/runtime
+.cerebro/operator-runtime
+.cerebro/operator-runtime.legacy-*
 .cerebro/install-credential
 .cerebro/install-activation-outbox.json
 .cerebro/concierge-runs/

@@ -57,8 +57,11 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 
 ## Console local (opcional)
 
-Depois que existirem contratos reais, a primeira superfície visual mostra Sistemas, Fontes,
-Rotinas, garantias e recibos sem criar outro banco nem enviar teu contexto para a INEVITA:
+Na primeira abertura, o cockpit mostra a **Primeira Missão** até o Cérebro provar reutilização do
+contexto. Depois de T4, a home vira `Hoje`: `Cérebro` mostra memória, recuperação, aprendizado,
+saúde e o recibo de ativação; `Sistemas` mostra apenas resultados de negócio plugados nessa base.
+Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu contexto para a
+INEVITA:
 
 ```bash
 node scripts/console-server.mjs

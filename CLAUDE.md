@@ -105,7 +105,7 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 > **Frescor:** notas de `meu-negocio/` carregam `confirmado: <data>` (última vez que a pessoa validou) e, quando morrem, `status: superado` (nunca se deleta). Nota superada só entra em resposta como histórico, nunca como fato vigente.
 
-## Vínculo de acesso (uma vez por instalação, no início da sessão)
+## Vínculo de acesso (uma vez por instalação, depois do primeiro output útil)
 
 Esta instalação é entregue vinculada a um acesso por e-mail — é assim que ela recebe atualização
 dirigida, recupera o acesso e aparece como **sua** na plataforma. Não é telemetria nem pedágio: é o

@@ -45,6 +45,7 @@ const required = [
   'templates/sistema/contract.json', 'templates/sistema/capability.json',
   'protocol/README.md', 'protocol/brain-manifest.schema.json', 'protocol/capability-contract.schema.json',
   'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
+  'protocol/system-surface.schema.json',
   'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
   'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
   'protocol/access-receipt.schema.json',
@@ -144,6 +145,7 @@ const required = [
   'scripts/lib/json-schema-runtime.mjs', 'scripts/lib/replay-runtime.mjs',
   'scripts/compatibility-diagnostic.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
+  'scripts/lib/runtime-storage.mjs', 'scripts/test-runtime-storage-migration.mjs',
   'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
   'scripts/lib/decision-case.mjs', 'scripts/test-decision-case.mjs',
@@ -594,11 +596,12 @@ if (!ignore.includes('.cerebro/concierge-runs/')) {
 if (!ignore.includes('.cerebro/sistemas/')) {
   errors.push('estado privado dos sistemas não está protegido pelo .gitignore');
 }
-for (const privatePath of ['.cerebro/runtime', '.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
+for (const privatePath of ['.cerebro/runtime', '.cerebro/operator-runtime', '.cerebro/acesso-dispensado', '.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
   if (!ignore.includes(privatePath)) errors.push(`estado privado sem ignore: ${privatePath}`);
 }
 const privateIgnore = readFileSync(join(ROOT, '.cerebro', 'private-ignore.manifest'), 'utf8');
 if (!privateIgnore.includes('.cerebro/runtime')) errors.push('manifesto privado não protege runtime');
+if (!privateIgnore.includes('.cerebro/operator-runtime')) errors.push('manifesto privado não protege marcador do operador');
 if (!ignore.includes('operacao/arquitetura/*')) {
   errors.push('mapas privados do Architect não estão protegidos pelo .gitignore');
 }

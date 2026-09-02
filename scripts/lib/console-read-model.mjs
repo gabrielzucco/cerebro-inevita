@@ -77,6 +77,58 @@ function jsonFiles(directory) {
   return readdirSync(directory).filter((name) => name.endsWith('.json')).sort().map((name) => join(directory, name));
 }
 
+const ACTIVATION_STEPS = [
+  { milestone: 'T0', id: 'work', name: 'Escolha um trabalho real', description: 'Comece pelo que precisa sair pronto agora; não pelo mapa inteiro da empresa.' },
+  { milestone: 'T1', id: 'source', name: 'Traga uma fonte-semente', description: 'Pode ser texto, fala, arquivo ou uma Fonte já conectada e autorizada.' },
+  { milestone: 'T2', id: 'result', name: 'Receba o primeiro resultado', description: 'O Cérebro usa o recorte observado para produzir algo útil e rastreável.' },
+  { milestone: 'T3', id: 'judgment', name: 'Julgue e corrija', description: 'Você confirma o que serve; correção não vira regra automaticamente.' },
+  { milestone: 'T4', id: 'reuse', name: 'Reutilize sem reexplicar', description: 'Uma segunda tarefa prova que o contexto aprovado voltou a trabalhar.' },
+];
+
+export function activationState(root, { issues = [] } = {}) {
+  const directory = join(root, '.cerebro', 'concierge-runs');
+  const runs = jsonFiles(directory).flatMap((path) => {
+    try {
+      const run = readJson(path, 'recibo da primeira missão');
+      if (!run || typeof run !== 'object' || !run.milestones || typeof run.milestones !== 'object') throw new Error('milestones ausentes');
+      return [{ ...run, run_ref: relative(root, path).replaceAll('\\', '/') }];
+    } catch {
+      issues.push({ reason_code: 'activation-receipt-invalid', ref: relative(root, path).replaceAll('\\', '/') });
+      return [];
+    }
+  });
+  const completedRuns = runs.filter((run) => Boolean(run.milestones.T4));
+  const candidates = completedRuns.length ? completedRuns : runs;
+  const activeRun = [...candidates].sort((left, right) => {
+    const leftAt = left.milestones.T4 || left.milestones.T3 || left.milestones.T2 || left.milestones.T1 || left.milestones.T0 || '';
+    const rightAt = right.milestones.T4 || right.milestones.T3 || right.milestones.T2 || right.milestones.T1 || right.milestones.T0 || '';
+    return String(rightAt).localeCompare(String(leftAt));
+  })[0] || null;
+  const milestones = Object.fromEntries(ACTIVATION_STEPS.map((step) => [step.milestone, activeRun?.milestones?.[step.milestone] || null]));
+  const steps = ACTIVATION_STEPS.map((step) => ({ ...step, completed_at: milestones[step.milestone] }));
+  const completedSteps = steps.filter((step) => step.completed_at).length;
+  const complete = Boolean(milestones.T4);
+  const currentStep = complete ? null : steps.find((step) => !step.completed_at) || steps.at(-1);
+  return {
+    status: complete ? 'complete' : activeRun ? 'in-progress' : 'not-started',
+    complete,
+    command: '/comecar',
+    run_id: activeRun?.runId || null,
+    system_id: activeRun?.systemId || 'cerebro-base',
+    product_version: activeRun?.productVersion || null,
+    run_ref: activeRun?.run_ref || null,
+    receipt_ref: complete ? activeRun.run_ref : null,
+    started_at: milestones.T0,
+    completed_at: milestones.T4,
+    completed_steps: completedSteps,
+    total_steps: steps.length,
+    current_step: currentStep?.id || null,
+    interventions: Array.isArray(activeRun?.interventions) ? activeRun.interventions.length : 0,
+    steps,
+    seed_options: ['Texto ou briefing', 'Fala ou reunião', 'Arquivo autorizado', 'Fonte conectada'],
+  };
+}
+
 function listSourceContracts(root, issues) {
   const directory = inside(root, layout(root).sourceContracts, join('.cerebro', 'contracts', 'sources'));
   return jsonFiles(directory).flatMap((path) => {
@@ -133,7 +185,7 @@ function listSystemContracts(root, issues) {
         const portfolioSystemRef = contract.extensions?.portfolio_system_ref || contract.system_id;
         const migrationStage = contract.extensions?.migration_stage
           || (contract.status === 'active' ? 'active' : contract.status === 'proposed' ? 'mapped' : 'configured');
-        const classification = systemClassification(contract.extensions);
+        const classification = systemClassification(contract.extensions, contract.system_id);
         const runtimeEntry = runtimeBindings.get(portfolioSystemRef) || runtimeBindings.get(contract.system_id) || null;
         const runtimeBinding = runtimeEntry?.binding || null;
         const runtimeAmbiguous = runtimeEntry?.ambiguous === true;
@@ -180,6 +232,8 @@ function listSystemContracts(root, issues) {
           next_gate: contract.extensions?.next_gate || null,
           operating_area: classification.operating_area,
           business_function: classification.business_function,
+          product_kind: classification.product_kind,
+          surface: classification.surface,
           result: contract.result.statement,
           operational_owner: contract.result.owner,
           human_gate: contract.result.human_gate,
@@ -485,7 +539,10 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const issues = [];
   const compatibility = buildCompatibilityDiagnostic(root, { now: observedAt });
   const sources = listSourceContracts(root, issues);
-  const systems = listSystemContracts(root, issues);
+  const allSystems = listSystemContracts(root, issues);
+  const systems = allSystems.filter((system) => system.product_kind === 'business-system' && system.surface === 'systems');
+  const nativeSystems = allSystems.filter((system) => system.product_kind === 'brain-native' || system.surface === 'brain');
+  const activation = activationState(root, { issues });
   let runRecords = [];
   try {
     runRecords = latestRunRecords(root);
@@ -502,15 +559,27 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   } catch {
     issues.push({ reason_code: 'routine-contract-invalid', ref: '.cerebro/contracts/routines' });
   }
-  const systemById = new Map(systems.flatMap((system) => [
+  const systemById = new Map(allSystems.flatMap((system) => [
     [system.system_id, system],
     [system.contract_id, system],
   ]));
+  const businessSystemById = new Map(systems.flatMap((system) => [
+    [system.system_id, system],
+    [system.contract_id, system],
+  ]));
+  routines = routines.map((routine) => {
+    const system = systemById.get(routine.system_ref);
+    return {
+      ...routine,
+      product_kind: system?.product_kind || 'business-system',
+      surface: system?.surface || 'systems',
+    };
+  });
   const areas = [...new Set(systems.map((system) => system.operating_area))].sort().map((operatingArea) => ({
     operating_area: operatingArea,
     name: operatingAreaLabel(operatingArea),
     system_refs: systems.filter((system) => system.operating_area === operatingArea).map((system) => system.system_id),
-    routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.operating_area === operatingArea).map((routine) => routine.routine_id),
+    routine_refs: routines.filter((routine) => businessSystemById.get(routine.system_ref)?.operating_area === operatingArea).map((routine) => routine.routine_id),
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
   const judgments = judgmentInbox(root, routines, issues, runRecordsById);
@@ -561,8 +630,10 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       compatibility_gaps: compatibility.checks.filter((item) => item.status !== 'met').length,
     },
     system_taxonomy: systemTaxonomy(),
+    activation,
     areas,
     systems,
+    native_systems: nativeSystems,
     sources,
     experiments: experimentModel.experiments,
     routines,

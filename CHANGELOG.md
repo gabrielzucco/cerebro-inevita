@@ -1,13 +1,23 @@
 # Mudanças do cérebro INEVITA
 
-## Unreleased — cockpit rico, Primeira Missão e fronteira Cérebro × Sistemas
+## v1.35.0 — 2026-09-02 · “o Cérebro deixa de parecer um Sistema”
 
-- O cockpit rico passa a ser a casca canônica do produto, sem perder Context Snapshot, compatibilidade,
-  atualização segura ou o handshake de instalação.
+- **Cockpit rico como casca canônica:** `Hoje`, `Cérebro`, `Sistemas`, `Skills`, `Canvas`,
+  `Julgamento`, `Estrutura`, `Confiança` e `Society` passam a conviver na experiência publicada,
+  sem perder Context Snapshot, compatibilidade, atualização segura ou o handshake de instalação.
 - A primeira abertura passa a projetar a ativação T0→T4 como **Primeira Missão**; depois de T4 a
   home volta a ser `Hoje` e a ativação permanece como recibo no Cérebro.
 - `Cérebro Base` continua existindo como metassistema interno, mas deixa de aparecer como Sistema
-  de negócio no catálogo e no launcher.
+  de negócio no catálogo, nas contagens, filtros de área e launcher. Rotinas nativas e rotinas de
+  Sistemas também passam a carregar classificação explícita.
+- **Acordo de Contexto visível:** Fonte continua sendo casa da verdade; o Cérebro coleta, prepara,
+  destila e recupera; o Sistema consome o recorte e produz o resultado; o Run Record prova qual
+  caminho foi usado. Leitura direta da Fonte fica como exceção declarada para dado fresco ou
+  estruturado, nunca como atalho invisível.
+- **Migração sem perda para instalações antigas:** o nome do operador sai do arquivo legado
+  `.cerebro/runtime` e vai para `.cerebro/operator-runtime`; `runtime/` fica reservado ao estado
+  privado dos protocolos. Abrir o cockpit continua read-only e os dois atualizadores migram o
+  marcador de forma idempotente.
 - **Installation Compatibility V1:** a ficha da Society cruza papéis do pacote com Source Contracts
   e bindings deste Cérebro antes da instalação; matching propõe, binding e grant aprovados provam.
 - **System Source Binding V1:** um papel exigido pode reutilizar uma Fonte existente sem duplicar
