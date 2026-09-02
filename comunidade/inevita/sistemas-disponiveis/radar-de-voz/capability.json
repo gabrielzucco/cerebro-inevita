@@ -1,0 +1,26 @@
+{
+  "protocol_version": 1,
+  "capability_id": "atualizar-radar-de-voz",
+  "name": "Atualizar o Radar de Voz",
+  "version": "0.1.0",
+  "task": "Extrair evidências atômicas de fontes humanas novas e atualizar cards de objeções, linguagem, claims e provas",
+  "when_to_use": ["quando existem conversas ou respostas novas sobre uma oferta"],
+  "when_not_to_use": ["para gerar copy, inventar persona ou explicar causalidade sem evidência"],
+  "input_roles": [
+    { "role": "voz-do-cliente", "required": true, "purpose": "fornecer evidências humanas verificáveis" },
+    { "role": "oferta-vigente", "required": true, "purpose": "separar a jornada e os claims em análise" },
+    { "role": "outcomes", "required": false, "purpose": "observar compras, ativação e uso sem atribuição causal automática" }
+  ],
+  "output": {
+    "type": "radar-de-voz",
+    "definition_of_done": "cards alterados mostram evidência, contradição e próximo julgamento"
+  },
+  "permissions": {
+    "read": ["fontes autorizadas"],
+    "write": ["evidências, cards e recibos locais"],
+    "external_actions": false
+  },
+  "human_authority": ["aprovar códigos novos", "decidir o que influencia oferta, produto ou pesquisa"],
+  "evals": ["PII ausente", "proveniência presente", "copy não gerada", "contradições preservadas"],
+  "extensions": {}
+}

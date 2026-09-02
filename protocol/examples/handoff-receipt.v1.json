@@ -1,0 +1,34 @@
+{
+  "protocol_version": 1,
+  "receipt_id": "handoff-tarja-replay-001",
+  "handoff_ref": "briefing-criativo-para-medicao",
+  "chain_id": "chain-tarja-replay-001",
+  "mode": "replay",
+  "experiment_ref": "EXP-DEMO-001",
+  "producer_run_ref": "run-record:run-briefing-demo",
+  "artifact": {
+    "artifact_ref": "operacao/execucoes/briefing-tarja-replay.json",
+    "artifact_type": "creative-brief",
+    "schema_ref": "protocol/artifacts/creative-brief.schema.json",
+    "schema_version": "1.0.0",
+    "sha256": "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2",
+    "schema_validated": true
+  },
+  "gate": {
+    "result": "passed",
+    "checks": [
+      { "check": "artefato valida contra o schema declarado na versão aceita", "passed": true },
+      { "check": "sha256 do artefato confere com o registrado no recibo", "passed": true },
+      { "check": "experiment_ref presente quando a chain pertence a um experimento", "passed": true }
+    ],
+    "human_decision": "approved"
+  },
+  "consumer_run_ref": "run-record:run-medicao-demo",
+  "status": "accepted",
+  "produced_at": "2026-08-24T12:00:00.000Z",
+  "gated_at": "2026-08-24T12:10:00.000Z",
+  "consumed_at": "2026-08-24T12:20:00.000Z",
+  "privacy": {
+    "content_shared_with_inevita": false
+  }
+}

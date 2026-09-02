@@ -26,11 +26,16 @@ import {
   siSupabase,
   siWhatsapp,
 } from 'simple-icons';
+import {
+  operationalPositions,
+  readableViewportPlan,
+} from './canvas-layout-policy.js';
 
 const KIND_ACCENT = {
   source: '#4fd1c5', area: '#67a7ff', system: '#9b8cff', routine: '#5e7ce2',
   collector: '#5eead4', retrieval: '#4da3ff', skill: '#d98cff', capability: '#9b8cff',
-  output: '#e2e8f0', gate: '#f6bd4a', judgment: '#f6bd4a',
+  stage: '#78a9ff', artifact: '#e2e8f0', output: '#e2e8f0', gate: '#f6bd4a', judgment: '#f6bd4a',
+  run: '#42d392', handoff: '#59d6ff', model: '#d98cff', connector: '#5eead4',
 };
 
 const KIND_LABEL = {
@@ -42,9 +47,15 @@ const KIND_LABEL = {
   retrieval: 'Contexto',
   skill: 'Skill',
   capability: 'Capability',
+  stage: 'Etapa',
+  artifact: 'Artefato',
   output: 'Output',
   gate: 'Gate',
   judgment: 'Julgamento',
+  run: 'Execução',
+  handoff: 'Handoff',
+  model: 'Modelo',
+  connector: 'Conector',
 };
 
 const STATE_LABEL = {
@@ -67,9 +78,15 @@ const KIND_ICON = {
   retrieval: Search,
   skill: Sparkles,
   capability: BrainCircuit,
+  stage: RefreshCw,
+  artifact: FileOutput,
   output: FileOutput,
   gate: ShieldCheck,
   judgment: Gavel,
+  run: RefreshCw,
+  handoff: Share2,
+  model: BrainCircuit,
+  connector: Webhook,
 };
 
 function escapeHtml(value) {
@@ -113,26 +130,24 @@ function nodeType() {
   return 'html';
 }
 
+// Nós compactos: círculo-ícone + label mono embaixo (linguagem de constelação,
+// não de formulário). Hubs um pouco maiores que satélites.
 function nodeSize(datum) {
   const kind = datum.data.kind;
-  if (kind === 'source') return [194, 76];
-  if (kind === 'area') return [190, 72];
-  if (kind === 'system') return [224, 78];
-  if (kind === 'routine') return [212, 74];
-  if (kind === 'capability') return [216, 78];
-  if (kind === 'judgment') return [204, 78];
-  return [204, 74];
+  if (kind === 'area') return [150, 108];
+  if (kind === 'system' || kind === 'run') return [150, 104];
+  if (kind === 'routine' || kind === 'capability') return [140, 100];
+  return [132, 96];
 }
 
 function nodeMarkup(datum) {
   const node = datum.data;
   const kind = KIND_LABEL[node.kind] || node.kind;
   const state = STATE_LABEL[node.state] || node.state;
-  const trace = node.actual ? '<span class="brain-node-trace">RUN</span>' : '';
-  return `<div class="brain-node brain-node--${escapeHtml(node.kind)} brain-node--state-${escapeHtml(node.state)}${node.actual ? ' is-actual' : ''}" data-node-id="${escapeHtml(node.id)}" title="${escapeHtml(node.label)}">
-    <span class="brain-node-icon"><img src="${nodeIcon(node)}" alt="" /></span>
-    <span class="brain-node-copy"><small>${escapeHtml(kind)} <i></i> ${escapeHtml(state)}</small><strong>${escapeHtml(node.label)}</strong></span>
-    ${trace}
+  const trace = node.actual ? '<span class="brain-node-trace">REAL</span>' : '';
+  return `<div class="brain-node brain-node--${escapeHtml(node.kind)} brain-node--state-${escapeHtml(node.state)}${node.actual ? ' is-actual' : ''}" data-node-id="${escapeHtml(node.id)}" title="${escapeHtml(node.label)} — ${escapeHtml(kind)} · ${escapeHtml(state)}">
+    <span class="brain-node-ring"><span class="brain-node-icon"><img src="${nodeIcon(node)}" alt="" /></span>${trace}<i class="brain-node-state"></i></span>
+    <span class="brain-node-copy"><strong>${escapeHtml(node.label)}</strong></span>
   </div>`;
 }
 
@@ -145,93 +160,63 @@ function distribute(nodes, { x, centerY, gap = 126 }) {
 }
 
 function brainPositions(model) {
+  // Mandala radial: fontes (casas de verdade) no coração, sistemas no anel
+  // médio agrupados por área, áreas como hubs externos, rotinas penduradas.
+  // As arestas sistema→fonte convergem para o centro — o desenho é o leque.
   const positions = {};
   const areas = model.nodes.filter((node) => node.kind === 'area');
   const systems = model.nodes.filter((node) => node.kind === 'system');
   const sources = model.nodes.filter((node) => node.kind === 'source');
   const routines = model.nodes.filter((node) => node.kind === 'routine');
+  const handoffs = model.nodes.filter((node) => node.kind === 'handoff');
   const areaBySystem = new Map(model.edges
     .filter((edge) => edge.relation === 'contains')
     .map((edge) => [edge.target, edge.source]));
   const systemByRoutine = new Map(model.edges
     .filter((edge) => edge.relation === 'operates')
     .map((edge) => [edge.target, edge.source]));
-  const systemsBySource = new Map();
-  for (const edge of model.edges.filter((item) => item.source.startsWith('source:'))) {
-    systemsBySource.set(edge.source, [...(systemsBySource.get(edge.source) || []), edge.target]);
-  }
 
-  const clusterWidth = 570;
-  const clusterGap = 90;
-  for (const [areaIndex, area] of areas.entries()) {
-    const left = 70 + areaIndex * (clusterWidth + clusterGap);
-    const center = left + clusterWidth / 2;
-    positions[area.id] = { x: center, y: 70 };
-    const areaSystems = systems.filter((system) => areaBySystem.get(system.id) === area.id);
-    areaSystems.forEach((system, index) => {
-      positions[system.id] = {
-        x: left + 145 + ((index % 2) * 280),
-        y: 210 + (Math.floor(index / 2) * 124),
-      };
-    });
-    const systemRows = Math.max(1, Math.ceil(areaSystems.length / 2));
-    const areaSources = sources.filter((source) => {
-      const linked = systemsBySource.get(source.id) || [];
-      return linked.length && areaBySystem.get(linked[0]) === area.id;
-    });
-    const sourceStart = 210 + (systemRows * 124) + 70;
-    areaSources.forEach((source, index) => {
-      positions[source.id] = {
-        x: left + 90 + ((index % 3) * 195),
-        y: sourceStart + (Math.floor(index / 3) * 118),
-      };
-    });
-    const sourceRows = Math.max(1, Math.ceil(areaSources.length / 3));
-    const areaRoutines = routines.filter((routine) => {
-      const system = systemByRoutine.get(routine.id);
-      return system && areaBySystem.get(system) === area.id;
-    });
-    areaRoutines.forEach((routine, index) => {
-      positions[routine.id] = {
-        x: left + 170 + ((index % 2) * 230),
-        y: sourceStart + (sourceRows * 118) + 70,
-      };
-    });
-  }
-  return positions;
-}
+  const TAU = Math.PI * 2;
+  const SQUASH = 0.8;
+  const at = (radius, angle) => ({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * SQUASH });
 
-function operationalPositions(model) {
-  const positions = {};
-  const sources = model.nodes.filter((node) => node.kind === 'source');
-  const collectors = model.nodes.filter((node) => node.kind === 'collector');
-  const retrievals = model.nodes.filter((node) => node.kind === 'retrieval');
-  const skills = model.nodes.filter((node) => node.kind === 'skill');
-  const capabilities = model.nodes.filter((node) => node.kind === 'capability');
-  const outputs = model.nodes.filter((node) => node.kind === 'output');
-  const gates = model.nodes.filter((node) => node.kind === 'gate');
-  const judgments = model.nodes.filter((node) => node.kind === 'judgment');
-  const centerY = 330;
-  let x = 90;
-  Object.assign(positions, distribute(sources, { x, centerY, gap: 116 }));
-  x += 225;
-  if (collectors.length) {
-    Object.assign(positions, distribute(collectors, { x, centerY }));
-    x += 225;
-  }
-  Object.assign(positions, distribute(retrievals, { x, centerY }));
-  x += 225;
-  if (skills.length) {
-    Object.assign(positions, distribute(skills, { x, centerY }));
-    x += 225;
-  }
-  Object.assign(positions, distribute(capabilities, { x, centerY }));
-  x += 225;
-  Object.assign(positions, distribute(outputs, { x, centerY }));
-  x += 225;
-  Object.assign(positions, distribute(gates, { x, centerY, gap: 120 }));
-  x += 240;
-  Object.assign(positions, distribute(judgments, { x, centerY }));
+  sources.forEach((source, index) => {
+    positions[source.id] = at(320, -Math.PI / 2 + (index / Math.max(1, sources.length)) * TAU);
+  });
+
+  const areaOrder = [...areas.map((area) => area.id), null];
+  const grouped = areaOrder.flatMap((areaId) => systems.filter((system) => (areaBySystem.get(system.id) || null) === areaId));
+  const systemAngle = new Map();
+  grouped.forEach((system, index) => {
+    const angle = -Math.PI / 2 + (index / Math.max(1, grouped.length)) * TAU;
+    systemAngle.set(system.id, angle);
+    positions[system.id] = at(560, angle);
+  });
+
+  areas.forEach((area, index) => {
+    const owned = grouped.filter((system) => areaBySystem.get(system.id) === area.id);
+    const angle = owned.length
+      ? owned.reduce((sum, system) => sum + systemAngle.get(system.id), 0) / owned.length
+      : -Math.PI / 2 + (index / Math.max(1, areas.length)) * TAU;
+    positions[area.id] = at(800, angle);
+  });
+
+  routines.forEach((routine, index) => {
+    const angle = systemAngle.get(systemByRoutine.get(routine.id));
+    positions[routine.id] = angle === undefined
+      ? at(960, -Math.PI / 2 + (index / Math.max(1, routines.length)) * TAU)
+      : at(710, angle + 0.11);
+  });
+
+  handoffs.forEach((handoff, index) => {
+    const inbound = model.edges.find((edge) => edge.target === handoff.id && edge.source.startsWith('system:'));
+    const outbound = model.edges.find((edge) => edge.source === handoff.id && edge.target.startsWith('system:'));
+    const left = positions[inbound?.source];
+    const right = positions[outbound?.target];
+    positions[handoff.id] = left && right
+      ? { x: ((left.x + right.x) / 2) * 0.72, y: (((left.y + right.y) / 2) * 0.72) + ((index % 3) * 30) }
+      : at(1020, (index / Math.max(1, handoffs.length)) * TAU);
+  });
   return positions;
 }
 
@@ -277,6 +262,7 @@ export async function mountOperationalCanvas({
   container,
   model,
   editable = false,
+  focusNodeId = null,
   onInspect = () => {},
   onLayoutChange = () => {},
 }) {
@@ -286,10 +272,10 @@ export async function mountOperationalCanvas({
   const graph = new Graph({
     container,
     data,
-    background: 'transparent',
-    padding: 72,
-    autoFit: 'view',
-    animation: { duration: 440, easing: 'ease-out' },
+    background: '#070708',
+    padding: model.graph_type === 'brain' ? [72, 340, 72, 48] : [32, 340, 32, 32],
+    autoFit: false,
+    animation: { duration: 220, easing: 'ease-out' },
     layout: layoutFor(model),
     behaviors: [
       'drag-canvas',
@@ -303,33 +289,36 @@ export async function mountOperationalCanvas({
         dx: (datum) => -(nodeSize(datum)[0] / 2),
         dy: (datum) => -(nodeSize(datum)[1] / 2),
         innerHTML: nodeMarkup,
+        fill: 'rgba(0,0,0,0)',
+        lineWidth: 0,
+        opacity: 1,
         cursor: 'pointer',
       },
       state: {
-        selected: { opacity: 1, halo: true, haloStroke: '#f3f7fb', haloStrokeOpacity: 0.2, haloLineWidth: 7 },
+        selected: { opacity: 1 },
         neighbor: { opacity: 1 },
         inactive: { opacity: 0.18 },
         actual: { opacity: 1 },
       },
-      animation: { enter: 'fade', update: 'translate' },
+      animation: { enter: false, update: 'translate' },
     },
     edge: {
       type: model.graph_type === 'brain' ? 'line' : 'cubic-horizontal',
       style: {
-        stroke: (datum) => datum.data.actual ? '#4da3ff' : '#334057',
-        lineWidth: (datum) => datum.data.actual ? 2.1 : 1,
-        opacity: (datum) => datum.data.actual ? 0.92 : model.graph_type === 'brain' ? 0.16 : 0.3,
-        lineDash: (datum) => datum.data.actual ? [8, 4] : [3, 7],
+        stroke: (datum) => datum.data.actual ? '#4e9cf5' : '#9fb3cf',
+        lineWidth: (datum) => datum.data.actual ? 1.8 : 1,
+        opacity: (datum) => datum.data.actual ? 0.9 : model.graph_type === 'brain' ? 0.3 : 0.38,
+        lineDash: (datum) => datum.data.actual ? [7, 4] : model.graph_type === 'brain' ? [1, 0] : [2, 6],
         endArrow: (datum) => datum.data.actual || model.graph_type !== 'brain',
         cursor: 'pointer',
       },
       state: {
-        actual: { stroke: '#4da3ff', lineWidth: 2.1, opacity: 0.9 },
-        selected: { stroke: '#f3f7fb', lineWidth: 2.4, opacity: 0.94 },
-        neighbor: { stroke: '#6db6ff', lineWidth: 1.8, opacity: 0.78 },
-        inactive: { opacity: 0.035 },
+        actual: { stroke: '#4e9cf5', lineWidth: 1.8, opacity: 0.85 },
+        selected: { stroke: '#f4f4f5', lineWidth: 2, opacity: 0.9 },
+        neighbor: { stroke: '#7ab5f8', lineWidth: 1.5, opacity: 0.66 },
+        inactive: { opacity: 0.05 },
       },
-      animation: { enter: 'path-in', update: 'fade' },
+      animation: { enter: false, update: 'fade' },
     },
   });
   const baselineStates = () => Object.fromEntries([
@@ -340,6 +329,29 @@ export async function mountOperationalCanvas({
     for (const element of container.querySelectorAll('.brain-node')) {
       element.classList.remove('is-focused', 'is-neighbor', 'is-dimmed');
     }
+  };
+  // Zoom semântico: o label contra-escala para continuar legível de longe;
+  // muito longe, satélites recolhem o texto e sobram os hubs.
+  const applyZoomBand = () => {
+    let zoom = 1;
+    try { zoom = graph.getZoom() || 1; } catch { return; /* runtime ainda não inicializou */ }
+    container.style.setProperty('--inv-zoom', String(Math.min(2.1, Math.max(1, 1 / zoom))));
+    container.dataset.zoomBand = zoom < 0.52 ? 'far' : 'near';
+  };
+  for (const eventName of ['viewportchange', 'aftertransform']) {
+    try { graph.on(eventName, applyZoomBand); } catch { /* nome varia entre versões */ }
+  }
+  container.addEventListener('wheel', () => requestAnimationFrame(applyZoomBand), { passive: true });
+  const fitReadable = async (duration) => {
+    await graph.fitView({ when: 'always', direction: 'both' }, { duration });
+    const plan = readableViewportPlan(model, graph.getZoom());
+    if (plan.clamped) {
+      await graph.zoomTo(plan.zoom, { duration, easing: 'ease-out' });
+      if (plan.focus_ids.length) {
+        await graph.focusElement(plan.focus_ids, { duration, easing: 'ease-out' });
+      }
+    }
+    applyZoomBand();
   };
   const focusNode = async (id) => {
     const relatedEdges = graph.getRelatedEdgesData(id);
@@ -382,9 +394,19 @@ export async function mountOperationalCanvas({
     graph.on(NodeEvent.DRAG_END, () => onLayoutChange(allPositions(graph)));
   }
   await graph.render();
-  const readableZoom = model.graph_type === 'brain' ? 0.82 : 0.78;
-  if (graph.getZoom() < readableZoom) {
-    await graph.zoomTo(readableZoom, { duration: 360, easing: 'ease-out' });
+  if (focusNodeId && model.nodes.some((node) => node.id === focusNodeId)) {
+    applyZoomBand();
+    // foco pedido de fora (ex.: "Ver no mandala"); timeout garante que o mount
+    // resolve mesmo com animações estranguladas em aba de fundo
+    await Promise.race([
+      (async () => {
+        await focusNode(focusNodeId);
+        await graph.focusElement(focusNodeId, { duration: 280, easing: 'ease-out' });
+      })(),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+  } else {
+    await fitReadable(360);
   }
   for (const node of model.nodes) {
     if (node.actual) await graph.setElementState(node.id, ['actual'], false);
@@ -393,7 +415,11 @@ export async function mountOperationalCanvas({
     fit: async () => {
       clearDomFocus();
       await graph.setElementState(baselineStates(), false);
-      await graph.fitView({ when: 'always', direction: 'both' }, { duration: 420 });
+      await fitReadable(420);
+    },
+    focus: async (id) => {
+      await focusNode(id);
+      try { await graph.focusElement(id, { duration: 320, easing: 'ease-out' }); } catch { /* nó fora do grafo atual */ }
     },
     positions: () => allPositions(graph),
     destroy: () => graph.destroy(),

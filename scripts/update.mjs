@@ -85,7 +85,9 @@ async function baixar(url) {
   return Buffer.from(await resposta.arrayBuffer());
 }
 
-// A última release publicada; sem release (ou sem rede), cai no branch.
+// A última release publicada. A CLI histórica ainda pode cair no branch, mas o
+// Console gerenciado exige uma release imutável para nunca transformar `main`
+// num update silencioso de produção.
 async function resolverOrigem(repo, branch) {
   try {
     const resposta = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
@@ -96,7 +98,10 @@ async function resolverOrigem(repo, branch) {
       const tag = (await resposta.json())?.tag_name;
       if (tag) return { url: `https://github.com/${repo}/archive/refs/tags/${tag}.tar.gz`, rotulo: tag };
     }
-  } catch { /* offline ou repo sem release: usa o branch */ }
+  } catch { /* tratado abaixo conforme o canal solicitado */ }
+  if (process.env.CEREBRO_UPDATE_REQUIRE_RELEASE === '1') {
+    throw new Error('release publicada indisponível; atualização gerenciada cancelada');
+  }
   return { url: `https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz`, rotulo: branch };
 }
 

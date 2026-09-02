@@ -1,0 +1,78 @@
+{
+  "protocol_version": 1,
+  "system_id": "radar-de-voz",
+  "name": "Radar de Voz, Objeções e Prova",
+  "version": "0.1.0",
+  "status": "confirmed",
+  "result": {
+    "statement": "conversas reais viram um radar vivo de objeções, linguagem, claims e provas",
+    "non_success": "gerar relatório longo, copy automática, persona inventada ou causalidade sem evidência",
+    "output_type": "radar-de-voz",
+    "definition_of_done": "cards de decisão mostram o que mudou, a evidência e as contradições para julgamento do dono",
+    "owner": "dono-da-oferta",
+    "human_gate": "aprovar códigos novos e decidir o que pode influenciar oferta, produto ou pesquisa"
+  },
+  "trigger": {
+    "type": "schedule",
+    "description": "uma janela recorrente encontra novas fontes humanas autorizadas depois do primeiro run manual"
+  },
+  "capability": {
+    "capability_id": "atualizar-radar-de-voz",
+    "version": "0.1.0",
+    "origin": "inevita"
+  },
+  "entities": [
+    { "type": "evidence", "role": "evidencia", "required": true }
+  ],
+  "sources": [
+    {
+      "role": "voz-do-cliente",
+      "source_id": null,
+      "required": true,
+      "access": "read-only",
+      "freshness": "fontes humanas novas desde o último run",
+      "purpose": "sustentar objeções, linguagem, claims e provas com trechos verificáveis"
+    },
+    {
+      "role": "oferta-vigente",
+      "source_id": null,
+      "required": true,
+      "access": "read-only",
+      "freshness": "versão aprovada da oferta no momento do run",
+      "purpose": "separar evidências por oferta e impedir mistura de jornadas"
+    },
+    {
+      "role": "outcomes",
+      "source_id": null,
+      "required": false,
+      "access": "read-only",
+      "freshness": "estado observado de compra, ativação ou uso",
+      "purpose": "comparar fala e resultado sem transformar sequência em causalidade"
+    }
+  ],
+  "pipeline": [
+    { "state": "fontes-selecionadas", "input": "janela de fontes autorizadas", "output": "lote sem PII e com proveniência", "gate": "cada trecho aponta fonte, pessoa opaca e momento" },
+    { "state": "evidencias-validadas", "input": "lote candidato", "output": "evidências aceitas e propostas", "gate": "duplicatas, contradições e códigos novos permanecem explícitos" },
+    { "state": "radar-atualizado", "input": "evidências aceitas", "output": "cards de decisão", "gate": "nenhuma copy, oferta ou persona é alterada automaticamente" },
+    { "state": "julgado", "input": "cards alterados", "output": "aprovação, correção ou rejeição", "gate": "decisão humana registrada" }
+  ],
+  "permissions": {
+    "read": ["fontes humanas e outcomes explicitamente autorizados"],
+    "write": ["evidências, cards e recibos locais"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.0",
+    "deterministic_gates": ["PII não entra no radar", "cada evidência possui proveniência", "recorrência conta pessoas e não mensagens", "copy não é gerada"],
+    "human_questions": ["Este card representa um sinal real que merece influenciar uma decisão?", "A leitura preserva contradições e limites?"],
+    "outcome_measure": "card-julgado-com-evidencia",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  },
+  "extensions": {}
+}

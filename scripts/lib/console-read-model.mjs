@@ -8,6 +8,8 @@ import {
   listLearningCandidates,
 } from './correction-loop.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
+import { buildExperimentReadModel } from './experiment-protocol.mjs';
+import { buildCompatibilityDiagnostic, readBrainManifest } from './compatibility-diagnostic.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -24,6 +26,14 @@ import {
   validateSourceContract,
   validateSystemContract,
 } from './system-protocol.mjs';
+import {
+  operatingAreaLabel,
+  systemClassification,
+  systemTaxonomy,
+} from './system-taxonomy.mjs';
+import { indexSystemRuntimeBindings } from './system-runtime-binding.mjs';
+import { experienceManifestView, indexExperienceManifests } from './experience-manifest.mjs';
+import { countInstalledSkills } from './skill-read-model.mjs';
 
 const PRODUCT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const SOCIETY_CATALOG = join(PRODUCT_ROOT, 'society', 'catalog.v1.json');
@@ -111,6 +121,8 @@ function collectSystemPaths(root) {
 
 function listSystemContracts(root, issues) {
   const systems = new Map();
+  const runtimeBindings = indexSystemRuntimeBindings(root, issues);
+  const experiences = indexExperienceManifests(root, issues);
   for (const path of collectSystemPaths(root)) {
     try {
       const contract = readJson(path, 'System Contract');
@@ -121,8 +133,28 @@ function listSystemContracts(root, issues) {
         const portfolioSystemRef = contract.extensions?.portfolio_system_ref || contract.system_id;
         const migrationStage = contract.extensions?.migration_stage
           || (contract.status === 'active' ? 'active' : contract.status === 'proposed' ? 'mapped' : 'configured');
+        const classification = systemClassification(contract.extensions);
+        const runtimeEntry = runtimeBindings.get(portfolioSystemRef) || runtimeBindings.get(contract.system_id) || null;
+        const runtimeBinding = runtimeEntry?.binding || null;
+        const runtimeAmbiguous = runtimeEntry?.ambiguous === true;
+        const runtimeWorkspaceObserved = runtimeBinding
+          ? existsSync(resolve(root, runtimeBinding.workspace_path))
+          : false;
+        const runtimeBindingStatus = runtimeAmbiguous ? 'degraded'
+          : runtimeBinding?.status === 'installed' && !runtimeWorkspaceObserved ? 'degraded'
+            : runtimeBinding?.status || null;
+        if (runtimeBinding?.status === 'installed' && !runtimeWorkspaceObserved) {
+          issues.push({ reason_code: 'system-runtime-workspace-missing', ref: runtimeBinding.binding_id });
+        }
+        const legacyInterfaceRef = runtimeAmbiguous ? null : contract.extensions?.interface_ref || null;
+        const interfaceRole = runtimeBinding?.interface.role || contract.extensions?.interface_role || null;
+        const experience = experienceManifestView(
+          experiences.get(portfolioSystemRef) || experiences.get(contract.system_id) || null,
+          interfaceRole,
+        );
         systems.set(contract.system_id, {
           contract_id: contract.system_id,
+          contract_ref: relative(root, path).replaceAll('\\', '/'),
           system_id: portfolioSystemRef,
           name: contract.extensions?.portfolio_name || contract.name,
           version: contract.version,
@@ -130,10 +162,26 @@ function listSystemContracts(root, issues) {
           migration_stage: migrationStage,
           human_maturity: contract.extensions?.human_maturity || null,
           source_manifest_ref: contract.extensions?.source_manifest_ref || null,
+          interface_expected: Boolean(contract.extensions?.interface_role || runtimeBinding || legacyInterfaceRef),
+          interface_role: interfaceRole,
+          interface_ref: runtimeBinding?.interface.url || legacyInterfaceRef,
+          interface_ref_source: runtimeBinding ? 'runtime-binding' : legacyInterfaceRef ? 'legacy-system-contract' : null,
+          interface_health_timeout_ms: runtimeBinding?.interface.healthcheck.timeout_ms || 800,
+          runtime_binding: runtimeBinding ? {
+            binding_id: runtimeBinding.binding_id,
+            status: runtimeBindingStatus,
+            host_ref: runtimeBinding.host_ref,
+            workspace_ref: runtimeBinding.workspace_ref,
+            observed_at: runtimeBinding.observed_at,
+          } : null,
+          runtime_binding_status: runtimeBindingStatus || (legacyInterfaceRef ? 'legacy' : 'unbound'),
+          experience,
           component_statuses: contract.extensions?.component_statuses || null,
           next_gate: contract.extensions?.next_gate || null,
-          area_ref: contract.extensions?.area_ref || 'geral',
+          operating_area: classification.operating_area,
+          business_function: classification.business_function,
           result: contract.result.statement,
+          operational_owner: contract.result.owner,
           human_gate: contract.result.human_gate,
           retrieval_status: contract.protocol_version === 2 ? 'declared' : 'retrieval-not-declared',
           source_refs: contract.sources.map((source) => ({
@@ -150,6 +198,10 @@ function listSystemContracts(root, issues) {
     }
   }
   return [...systems.values()].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+}
+
+export function listConsoleSystems(root, { issues = [] } = {}) {
+  return listSystemContracts(root, issues);
 }
 
 function scheduleSummary(contract) {
@@ -431,6 +483,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const observedAt = new Date(now);
   if (!Number.isFinite(observedAt.getTime())) throw new Error('relógio inválido');
   const issues = [];
+  const compatibility = buildCompatibilityDiagnostic(root, { now: observedAt });
   const sources = listSourceContracts(root, issues);
   const systems = listSystemContracts(root, issues);
   let runRecords = [];
@@ -440,6 +493,8 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     issues.push({ reason_code: 'run-ledger-invalid', ref: '.cerebro/runtime/ledger/runs.jsonl' });
   }
   const runRecordsById = new Map(runRecords.map((record) => [record.run_id, record]));
+  const experimentModel = buildExperimentReadModel(root, { runRecords });
+  issues.push(...experimentModel.issues);
   let routines = [];
   try {
     routines = listRoutineContracts(root)
@@ -451,14 +506,28 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     [system.system_id, system],
     [system.contract_id, system],
   ]));
-  const areas = [...new Set(systems.map((system) => system.area_ref))].sort().map((areaRef) => ({
-    area_ref: areaRef,
-    name: areaRef === 'geral' ? 'Geral' : areaRef.replaceAll('-', ' ').replace(/^./, (letter) => letter.toUpperCase()),
-    system_refs: systems.filter((system) => system.area_ref === areaRef).map((system) => system.system_id),
-    routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.area_ref === areaRef).map((routine) => routine.routine_id),
+  const areas = [...new Set(systems.map((system) => system.operating_area))].sort().map((operatingArea) => ({
+    operating_area: operatingArea,
+    name: operatingAreaLabel(operatingArea),
+    system_refs: systems.filter((system) => system.operating_area === operatingArea).map((system) => system.system_id),
+    routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.operating_area === operatingArea).map((routine) => routine.routine_id),
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
   const judgments = judgmentInbox(root, routines, issues, runRecordsById);
+  const routineRunIds = new Set(routines.flatMap((routine) => routine.receipts.map((receipt) => receipt.run_id)));
+  const runRecordViews = runRecords.map((record) => ({
+    run_id: record.run_id,
+    run_record_ref: `run-record:${record.run_id}`,
+    system_ref: record.system_id,
+    status: record.status,
+    started_at: record.started_at,
+    completed_at: record.completed_at,
+    chain_id: record.chain_id ?? null,
+    mode: record.mode ?? null,
+    experiment_ref: record.experiment_ref ?? null,
+    handoff_count: record.handoff_refs?.length || 0,
+    has_routine_receipt: routineRunIds.has(record.run_id),
+  }));
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
   const society = loadSocietyCatalog(issues);
   let learningCandidates = 0;
@@ -470,7 +539,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['manifest', 'contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -480,19 +549,27 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     counts: {
       areas: areas.length,
       systems: systems.length,
+      skills: countInstalledSkills(root),
       sources: sources.length,
+      experiments: experimentModel.experiments.length,
       routines: routines.length,
       attention: attention.length,
       judgments: pendingJudgments.length,
+      executions: runRecordViews.length,
       learning_candidates: learningCandidates,
       society_systems: society.systems.length,
+      compatibility_gaps: compatibility.checks.filter((item) => item.status !== 'met').length,
     },
+    system_taxonomy: systemTaxonomy(),
     areas,
     systems,
     sources,
+    experiments: experimentModel.experiments,
     routines,
+    run_records: runRecordViews,
     judgments,
     society,
+    compatibility,
     today: {
       needs_attention: attention.map((routine) => routine.routine_id),
       ready_to_work: routines.filter((routine) => ['ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code)).map((routine) => routine.routine_id),
@@ -504,9 +581,19 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
 }
 
 export function recognizeConsoleBrain(root) {
+  const manifest = readBrainManifest(root);
+  if (manifest.status === 'valid') {
+    const entrypoint = manifest.value.entrypoints.some((ref) => {
+      try { return statSync(join(root, ref)).isFile(); } catch { return false; }
+    });
+    if (!entrypoint || !existsSync(join(root, manifest.value.layout_ref))) {
+      throw new Error('Brain Manifest válido, mas referências essenciais estão ausentes');
+    }
+    return { kind: 'inevita-installation', profile: manifest.value.profile, manifest_version: 1 };
+  }
   const standard = existsSync(join(root, '.cerebro')) && existsSync(join(root, 'VERSION'))
     && (existsSync(join(root, 'COMECE-AQUI.md')) || existsSync(join(root, 'START-HERE.md')));
-  if (standard) return { kind: 'inevita-installation' };
+  if (standard) return { kind: 'inevita-installation-unmanifested' };
   const markerPath = join(root, '.cerebro', 'legacy-brain.json');
   if (!existsSync(markerPath) || !existsSync(join(root, '.cerebro', 'layout.json'))) {
     throw new Error('a pasta não é um Cérebro reconhecido pelo Console');

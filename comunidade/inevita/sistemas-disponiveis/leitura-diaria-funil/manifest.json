@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "system_id": "leitura-diaria-funil",
+  "name": "Leitura Diária do Funil",
+  "release": {
+    "version": "0.1.0",
+    "channel": "pilot",
+    "minimum_brain_version": "1.29.0"
+  },
+  "validation": {
+    "program_key": "leitura-diaria-funil-v1",
+    "stage": "pilot",
+    "listed": false,
+    "validation_lab_visible": true,
+    "application_required": false,
+    "access_mode": "approved_participants",
+    "required_real_cycles": 7,
+    "required_distinct_member_brains": 2,
+    "requires_repeat_use": true,
+    "requires_eval_pass": true,
+    "requires_human_approval": true,
+    "verified_real_cycles": 0,
+    "verified_distinct_member_brains": 0
+  },
+  "publication": {
+    "status": "pilot",
+    "public_catalog": false,
+    "validation_lab": true
+  },
+  "result": "o founder recebe uma leitura diária do funil com um gargalo prioritário e evidência dos números",
+  "setpoint": "coleta determinística e interpretação comparável, sem reescrever consultas nem otimizar dado inconsistente",
+  "first_value": "a primeira leitura identifica um gargalo que o founder reconhece e consegue julgar",
+  "privacy": "local-first",
+  "permissions": {
+    "connects_sources_automatically": false,
+    "writes_external_systems_automatically": false,
+    "requires_source_by_source_consent": true
+  },
+  "requirements": {
+    "real_event": "um dia real de aquisição e conversão",
+    "source_roles": [
+      {
+        "role": "eventos-funil",
+        "label": "Eventos do funil",
+        "required": true,
+        "examples": ["Supabase", "analytics", "CRM", "export"]
+      },
+      {
+        "role": "vendas",
+        "label": "Vendas confirmadas",
+        "required": true,
+        "examples": ["checkout", "CRM", "planilha"]
+      },
+      {
+        "role": "investimento-midia",
+        "label": "Investimento em mídia",
+        "required": false,
+        "examples": ["Meta Ads", "Google Ads", "planilha"]
+      },
+      {
+        "role": "retencao",
+        "label": "Retenção de vídeo ou página",
+        "required": false,
+        "examples": ["VTurb", "analytics", "export"]
+      },
+      {
+        "role": "experimentos",
+        "label": "Experimentos ativos",
+        "required": false,
+        "examples": ["ledger", "ClickUp", "documento"]
+      }
+    ],
+    "human_approval_before_external_write": true
+  }
+}

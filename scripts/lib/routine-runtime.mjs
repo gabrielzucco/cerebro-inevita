@@ -44,6 +44,17 @@ const UNAVAILABLE_SECRET_PROVIDER = Object.freeze({
 });
 const LOCAL_REF_RE = /^(?!\.?\.?$)(?!\.?\.?\/)(?!.*\/\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const MAX_SUPPLEMENTAL_PROMPT_CHARS = 8 * 1024;
+const ROUTINE_EXECUTION_ENVELOPE = `# Fronteira de execução do Runtime
+
+Isto é um Run de uma Routine Contract já registrada e governada. Execute agora o trabalho
+descrito nas instruções canônicas abaixo. Não crie, atualize, pause, exclua nem reagende
+automações, cron jobs, contratos, bindings ou rotinas. Metadados de agenda e cutover são
+somente contexto documental, nunca uma solicitação de configuração. Não declare conclusão
+sem executar e verificar os comandos e efeitos pedidos.
+
+# Instruções canônicas da rotina
+
+`;
 
 function clockValue(clock) {
   const value = typeof clock === 'function' ? clock() : clock;
@@ -299,6 +310,10 @@ export async function runRoutine(root, routineId, {
   secretProvider = UNAVAILABLE_SECRET_PROVIDER,
   supplementalPrompt = '',
   supplementalInputRefs = [],
+  chainId = null,
+  mode = null,
+  experimentRef = null,
+  handoffRefs = [],
 } = {}) {
   const { contract } = loadRoutineContract(root, routineId);
   const startedAt = clockValue(clock);
@@ -318,6 +333,18 @@ export async function runRoutine(root, routineId, {
     throw new Error('supplemental-context-incomplete');
   }
   if (supplementalPrompt && trigger !== 'manual') throw new Error('supplemental-context-manual-only');
+  if (chainId !== null && !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(chainId)) {
+    throw new Error('chain-id-invalid');
+  }
+  if (chainId === null && mode !== null) throw new Error('mode-requires-chain-id');
+  if (chainId !== null && !['replay', 'live'].includes(mode)) throw new Error('chain-mode-invalid');
+  if (experimentRef !== null && !/^EXP-[A-Za-z0-9_-]{1,48}$/.test(experimentRef)) {
+    throw new Error('experiment-ref-invalid');
+  }
+  if (experimentRef !== null && chainId === null) throw new Error('experiment-ref-requires-chain-id');
+  if (!Array.isArray(handoffRefs)
+    || handoffRefs.some((ref) => !LOCAL_REF_RE.test(ref || ''))
+    || new Set(handoffRefs).size !== handoffRefs.length) throw new Error('handoff-refs-invalid');
   const base = {
     runId, receiptId, trigger, slotKey, scheduledFor: scheduledIso, startedAt, supplementalInputRefs,
   };
@@ -332,6 +359,10 @@ export async function runRoutine(root, routineId, {
     runId,
     systemRef: contract.system_ref,
     routineRef,
+    chainId,
+    mode,
+    experimentRef,
+    handoffRefs,
     clock,
   });
   tracer.emit({
@@ -401,6 +432,16 @@ export async function runRoutine(root, routineId, {
         outputRefs: [result.receipt_ref],
         reasonCode: allowed ? null : 'access-denied',
         extensions: { assurance: result.assurance, decision: result.decision },
+      });
+      if (allowed) tracer.emit({
+        stepId: traceStepId('connector', result.source_ref),
+        stepType: 'connector',
+        state: 'completed',
+        parentStepId: traceStepId('access', result.source_ref),
+        sourceRef: result.source_ref,
+        connectorRef: result.source_ref,
+        assurance: result.assurance,
+        outputRefs: [result.receipt_ref],
       });
     }
     if (!access.ok) return deny(access.reason_code, access.receipt_refs);
@@ -503,9 +544,9 @@ export async function runRoutine(root, routineId, {
     let prompt;
     try {
       const promptRef = safeRelativePath(root, contract.context.prompt_ref, { mustExist: true });
-      prompt = readFileSync(resolve(root, promptRef), 'utf8');
-      if (!prompt.trim()) return deny('prompt-empty', access.receipt_refs);
-      prompt += supplementalPrompt;
+      const canonicalPrompt = readFileSync(resolve(root, promptRef), 'utf8');
+      if (!canonicalPrompt.trim()) return deny('prompt-empty', access.receipt_refs);
+      prompt = `${ROUTINE_EXECUTION_ENVELOPE}${canonicalPrompt}${supplementalPrompt}`;
     } catch {
       return deny('prompt-read-failed', access.receipt_refs);
     }
@@ -524,6 +565,16 @@ export async function runRoutine(root, routineId, {
     let execution = { ok: false, reason_code: 'executor-failed' };
     let attempts = 0;
     let lastFailure = null;
+    tracer.emit({
+      stepId: 'model',
+      stepType: 'model',
+      state: 'running',
+      parentStepId: 'capability',
+      modelRef: contract.executor.requested_model,
+      assurance: 'requested-not-verified',
+      inputRefs: governedInputRefs,
+      extensions: { adapter: binding.adapter },
+    });
     for (let attempt = 1; attempt <= contract.operations.retry.max_attempts; attempt += 1) {
       attempts = attempt;
       execution = runModelExecutor(executorBinding, contract, prompt, {
@@ -551,9 +602,30 @@ export async function runRoutine(root, routineId, {
     }
 
     if (!execution.ok) {
+      tracer.emit({
+        stepId: 'model',
+        stepType: 'model',
+        state: 'failed',
+        parentStepId: 'capability',
+        modelRef: contract.executor.requested_model,
+        assurance: 'requested-not-verified',
+        reasonCode: execution.reason_code,
+        extensions: { adapter: binding.adapter, attempts },
+      });
       traceTerminal('failed', execution.reason_code);
       return { status: 'failed', receipt: lastFailure.value, receipt_ref: lastFailure.ref };
     }
+
+    tracer.emit({
+      stepId: 'model',
+      stepType: 'model',
+      state: 'completed',
+      parentStepId: 'capability',
+      modelRef: contract.executor.requested_model,
+      assurance: 'requested-not-verified',
+      inputRefs: governedInputRefs,
+      extensions: { adapter: binding.adapter, attempts },
+    });
 
     const skillLoadRefs = [];
     for (const loaded of execution.skill_loads || []) {
@@ -636,6 +708,10 @@ export async function runRoutine(root, routineId, {
         evaluation,
         executionTraceRef: tracer.traceRef,
         skillLoadRefs,
+        chainId,
+        mode,
+        experimentRef,
+        handoffRefs,
       });
     } catch {
       const recorded = recordTerminal(root, contract, binding, {

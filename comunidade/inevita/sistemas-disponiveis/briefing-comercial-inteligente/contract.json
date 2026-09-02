@@ -1,0 +1,95 @@
+{
+  "protocol_version": 1,
+  "system_id": "briefing-comercial-inteligente",
+  "name": "Briefing Comercial Inteligente",
+  "version": "0.1.1",
+  "status": "confirmed",
+  "result": {
+    "statement": "reunião começa com contexto citável e termina com próximo passo e diff de CRM aprovados",
+    "non_success": "resumo genérico, fonte sem autorização ou atualização silenciosa do CRM",
+    "output_type": "briefing-comercial",
+    "definition_of_done": "o operador confirma que usaria o briefing em uma reunião real",
+    "owner": "responsavel-comercial",
+    "human_gate": "aprovar o briefing e qualquer diff antes de escrever em sistema externo"
+  },
+  "trigger": {
+    "type": "manual",
+    "description": "uma reunião comercial real identificada"
+  },
+  "capability": {
+    "capability_id": "preparar-briefing-comercial",
+    "version": "0.1.0",
+    "origin": "inevita"
+  },
+  "entities": [
+    {
+      "type": "lead",
+      "role": "oportunidade",
+      "required": true
+    }
+  ],
+  "sources": [
+    {
+      "role": "historico-conversas",
+      "source_id": null,
+      "required": true,
+      "access": "manual",
+      "freshness": "confirmada antes da reunião",
+      "purpose": "sustentar fatos, hipóteses e perguntas com evidência da oportunidade"
+    },
+    {
+      "role": "oferta-aprovada",
+      "source_id": null,
+      "required": true,
+      "access": "read-only",
+      "freshness": "versão vigente da oferta",
+      "purpose": "manter o briefing aderente ao que a empresa realmente vende"
+    }
+  ],
+  "pipeline": [
+    {
+      "state": "contexto-reunido",
+      "input": "reunião identificada e fontes autorizadas",
+      "output": "fatos citáveis e lacunas explícitas",
+      "gate": "cada fato aponta para uma fonte autorizada"
+    },
+    {
+      "state": "briefing-revisado",
+      "input": "contexto citável",
+      "output": "briefing pré-call",
+      "gate": "a pessoa confirma que usaria na reunião"
+    },
+    {
+      "state": "diff-aprovado",
+      "input": "estado anterior e mudança observada na call",
+      "output": "próximo passo e atualização proposta",
+      "gate": "nenhuma escrita externa acontece sem aprovação humana"
+    }
+  ],
+  "permissions": {
+    "read": ["fontes autorizadas da oportunidade", "oferta aprovada"],
+    "write": ["output local e recibo"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.1",
+    "deterministic_gates": [
+      "afirmações críticas apontam evidência",
+      "lacunas permanecem explícitas",
+      "nenhuma escrita externa acontece silenciosamente"
+    ],
+    "human_questions": [
+      "Você usaria isso nesta reunião ou mudaria alguma coisa antes?",
+      "O fechamento representa o que aconteceu e o próximo passo tem dono e data?"
+    ],
+    "outcome_measure": "primeiro-valor-confirmado",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  },
+  "extensions": {}
+}

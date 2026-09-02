@@ -13,6 +13,10 @@ import {
   validateSourceContract,
   validateSystemContract,
 } from './system-protocol.mjs';
+import {
+  normalizeBusinessFunction,
+  normalizeOperatingArea,
+} from './system-taxonomy.mjs';
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const STAGES = new Set(['mapped', 'configured', 'active']);
@@ -110,7 +114,12 @@ function readConfig(root, configPath) {
     if (ids.has(system.system_id)) fail(`system_id repetido: ${system.system_id}`);
     ids.add(system.system_id);
     if (typeof system.manifest_ref !== 'string' || !system.manifest_ref.trim()) fail(`${system.system_id} sem manifest_ref`);
-    if (!ID_RE.test(system.area_ref || '')) fail(`${system.system_id} sem area_ref válida`);
+    const operatingArea = normalizeOperatingArea(system.operating_area || system.area_ref);
+    if (!ID_RE.test(operatingArea)) fail(`${system.system_id} sem operating_area válida`);
+    const businessFunction = normalizeBusinessFunction(system.business_function);
+    if (system.business_function !== undefined && businessFunction === 'unclassified') {
+      fail(`${system.system_id} possui business_function inválida`);
+    }
     if (system.contract_alias !== undefined && !ID_RE.test(system.contract_alias || '')) fail(`${system.system_id} possui contract_alias inválido`);
     if (system.stage !== undefined && !STAGES.has(system.stage)) fail(`${system.system_id} possui stage inválido`);
     if (!Array.isArray(system.source_refs)) fail(`${system.system_id} precisa declarar source_refs`);
@@ -228,7 +237,8 @@ function generatedSystem(manifest, item) {
 function migrationExtensions(manifest, item, stage) {
   const meta = manifest.frontmatter;
   return {
-    area_ref: item.area_ref,
+    operating_area: normalizeOperatingArea(item.operating_area || item.area_ref),
+    business_function: normalizeBusinessFunction(item.business_function),
     portfolio_system_ref: item.system_id,
     portfolio_name: meta.nome,
     migration_stage: stage,

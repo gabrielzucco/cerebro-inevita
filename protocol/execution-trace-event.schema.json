@@ -18,7 +18,7 @@
     "sequence": { "type": "integer", "minimum": 1 },
     "step_id": { "$ref": "#/$defs/id" },
     "step_type": {
-      "enum": ["run", "access", "collector", "retrieval", "skill", "capability", "output", "eval", "judgment"]
+      "enum": ["run", "access", "collector", "retrieval", "skill", "model", "connector", "capability", "output", "eval", "judgment"]
     },
     "state": {
       "enum": ["declared", "running", "completed", "failed", "denied", "skipped", "gap", "pending"]
@@ -30,6 +30,15 @@
     "source_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
     "capability_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
     "skill_ref": { "type": ["string", "null"], "pattern": "^(?!.*\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "model_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "connector_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "assurance": {
+      "enum": ["requested-not-verified", "provider-reported", "verified", "exported", "receipt-audited", "runtime-enforced", null]
+    },
+    "chain_id": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+    "mode": { "enum": ["replay", "live", null] },
+    "experiment_ref": { "type": ["string", "null"], "pattern": "^EXP-[A-Za-z0-9_-]{1,48}$" },
+    "handoff_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" }, "uniqueItems": true },
     "input_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" } },
     "output_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" } },
     "reason_code": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },

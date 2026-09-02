@@ -1,0 +1,36 @@
+{
+  "protocol": "company-brain",
+  "manifest_version": 1,
+  "profile": "full",
+  "distribution": "inevita",
+  "version_ref": "VERSION",
+  "identity_ref": ".cerebro/id",
+  "layout_ref": ".cerebro/layout.json",
+  "entrypoints": [
+    "COMECE-AQUI.md",
+    "AGENTS.md"
+  ],
+  "runtime": {
+    "mode": "local-optional",
+    "provider_control": "owner-controlled"
+  },
+  "privacy": {
+    "data_plane": "local",
+    "network_content_sync": false,
+    "reference_only_receipts": true
+  },
+  "compatibility": {
+    "contracts": {
+      "source": [1],
+      "system": [1, 2],
+      "run": [1, 2],
+      "access": [1],
+      "routine": [1],
+      "trace": [1],
+      "experiment": [1],
+      "handoff": [1]
+    },
+    "migration_mode": "preview-diff-confirm",
+    "unknown_fields": "reject"
+  }
+}

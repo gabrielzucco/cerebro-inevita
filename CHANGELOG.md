@@ -1,5 +1,18 @@
 # Mudanças do cérebro INEVITA
 
+## Unreleased — cockpit rico, Primeira Missão e fronteira Cérebro × Sistemas
+
+- O cockpit rico passa a ser a casca canônica do produto, sem perder Context Snapshot, compatibilidade,
+  atualização segura ou o handshake de instalação.
+- A primeira abertura passa a projetar a ativação T0→T4 como **Primeira Missão**; depois de T4 a
+  home volta a ser `Hoje` e a ativação permanece como recibo no Cérebro.
+- `Cérebro Base` continua existindo como metassistema interno, mas deixa de aparecer como Sistema
+  de negócio no catálogo e no launcher.
+- **Installation Compatibility V1:** a ficha da Society cruza papéis do pacote com Source Contracts
+  e bindings deste Cérebro antes da instalação; matching propõe, binding e grant aprovados provam.
+- **System Source Binding V1:** um papel exigido pode reutilizar uma Fonte existente sem duplicar
+  conector, credencial, conteúdo ou contrato da Fonte.
+
 ## v1.34.2 — 2026-08-28 · "o vínculo passa a valer na sessão, não só no update"
 
 - **Por que existiu:** na v1.34.1 o aviso do vínculo foi posto dentro do atualizador — mas o

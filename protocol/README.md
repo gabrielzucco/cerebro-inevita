@@ -4,7 +4,7 @@ O protocolo permite que Sistemas diferentes convivam sem perder observabilidade,
 autoridade humana. Ele padroniza as bordas; não substitui o julgamento da empresa e não carrega
 conteúdo bruto.
 
-## Os quinze envelopes
+## Os envelopes do protocolo
 
 - `capability-contract.schema.json`: o know-how portátil que pode circular pela Society.
 - `source-contract.schema.json`: a casa da verdade, escopo, autoridade, modos e garantia de uma
@@ -24,6 +24,15 @@ conteúdo bruto.
   (`codex` ou `claude`) já autenticado pelo dono; nunca contém OAuth ou API key.
 - `collector-binding.schema.json`: binding privado para uma preparação determinística confiável
   (`python3` ou `node` por argv fechado) produzir um snapshot antes da interpretação do modelo.
+- `system-runtime-binding.schema.json`: binding privado entre um Sistema instalado e sua superfície
+  web local. O System Contract declara o papel da interface; este binding resolve host, workspace,
+  URL e healthcheck da instalação sem publicar credencial, conteúdo ou topologia privada.
+- `system-source-binding.schema.json`: binding privado entre um papel de Fonte exigido pelo Sistema
+  e um Source Contract já existente na instalação. Ele materializa `papel → Fonte` sem duplicar
+  conector, credencial, conteúdo ou casa da verdade; o Access Grant continua autorizando o acesso.
+- `experience-manifest.schema.json`: personalidade publicada que o Cockpit pode projetar sem
+  incorporar o front-end do Sistema. Declara publisher, assinatura, marca mínima e superfícies;
+  nunca host, URL, workspace, dado da empresa, resultado, permissão ou julgamento.
 - `routine-run-receipt.schema.json`: recibo privado de cada tentativa, com status, reason code e
   referências de entrada/saída, mas sem prompt, output ou erro cru. Se o binding nem existe, o
   adapter fica honestamente `unresolved` e a execução é negada antes de ler o prompt.
@@ -31,13 +40,44 @@ conteúdo bruto.
   da evidência humana de pausa antes do cutover; nunca carrega o payload da agenda antiga.
 - `judgment-receipt.schema.json`: evento privado e imutável que liga o julgamento humano ao run,
   sem copiar output ou executar a intenção de ação.
+- `decision-case-receipt.schema.json`: evento privado e imutável do martelo humano que escreveu
+  — ou reverteu — uma decisão na fonte canônica. Carrega autoria humana, evidência com
+  proveniência (`observed` · `declared` · `inferred`), o digest do plano que a pessoa confirmou
+  no diff e a impressão do arquivo escrito. Nunca carrega o texto da decisão: ele vive só na nota
+  canônica.
 - `correction-run-receipt.schema.json`: liga baseline, julgamento e novo Run por referência; a
   correção atravessa o provider somente em memória e não entra no envelope.
 - `learning-candidate.schema.json`: registra que um Run corrigido e aprovado virou candidato
   `1/3`, sem copiar conteúdo nem alterar automaticamente o motor.
 - `execution-trace-event.schema.json`: evento privado, ordenado e append-only do caminho real do
   Run. Registra estados e referências, nunca prompt, output, payload ou erro cru. Skill concluída
-  exige evidência de leitura bem-sucedida e hash.
+  exige evidência de leitura bem-sucedida e hash. `chain_id` costura execuções; eventos de Modelo
+  e Conector só existem quando observados e carregam o nível de assurance disponível.
+- `experiment-contract.schema.json`: pré-registro congelado de uma mudança controlada, ligado ao
+  Sistema palco, Sistemas de leitura, braços, métrica, guardrails, janela e regra de decisão.
+- `experiment-state.schema.json`: estado privado pós-congelamento, com emendas, Runs ligados,
+  chains de handoff atravessadas, medição, martelo e referência da mudança que voltou para o
+  Sistema.
+- `handoff-contract.schema.json`: declara que um Sistema produtor entrega um artefato versionado
+  a um Sistema consumidor, com schema, versões aceitas, trigger e gate de aceitação. A aresta
+  entre Sistemas só existe quando este contrato existe; Fonte compartilhada não é conexão.
+- `handoff-receipt.schema.json`: prova de um handoff real — `chain_id` genérico de runtime, Run
+  produtor, artefato com hash e schema validado, resultado do gate, Run consumidor e modo
+`replay` ou `live` (replay nunca se apresenta como execução original). Reference-only.
+- `retrieval-provider-contract.schema.json`: separa a interface estável de recuperação do driver
+  substituível. Declara operações, transporte, corpus allowlist, privacidade, assurance e licença;
+  Systems e Rotinas dependem do `provider_id`, nunca da implementação open source atual.
+
+Run Record V2 pode declarar `chain_id`, `mode`, `experiment_ref` e `handoff_refs`. A chain é
+genérica: existe para qualquer pipeline entre Sistemas; Experimento apenas aponta para ela quando
+há uma mudança controlada. Handoff Contract acende no Canvas somente quando o runtime encontra um
+Handoff Receipt aceito e compatível com os dois Runs, os dois Traces, o schema, a versão e o hash
+do artefato.
+
+Os artefatos que atravessam handoffs têm schema próprio em `protocol/artifacts/` (por exemplo
+`creative-brief.schema.json` e `funnel-reading.schema.json`); o System Contract V2 declara em
+`artifacts.produces/consumes` a interface de máquina, enquanto `result.output_type` segue como
+descrição humana.
 
 O conteúdo privado continua na casa de verdade do dono. Os envelopes usam IDs, referências locais
 e marcadores de versão/frescor. Um Run Record pode apontar para um output, fragmento ou correção,
@@ -59,6 +99,79 @@ Todo Sistema pode ter implementação própria. Para entrar no control plane, pr
 Sistema V2 também declara prioridade, seleção, frescor, conflito, fallback, parada, orçamento e
 proveniência da recuperação. Toda execução V2 deixa o Context Snapshot correspondente.
 
+## Release Manifest V1
+
+`release-manifest.schema.json` descreve a unidade distribuível sem repetir o Sistema. Ele declara
+versão, canal, compatibilidade mínima do Cérebro, referências para System Contract, Capability
+Contract e Experience Manifest opcional, além do estado de publicação, acesso, prova acumulada e
+fronteira de telemetria.
+
+O Release Manifest não pode conter resultado, Fonte, pipeline, permissão operacional, host, URL,
+workspace, credencial, marca ou design system. Essas verdades permanecem, respectivamente, no
+System Contract, Runtime Binding privado e Experience Manifest. `validated` exige publicação,
+acesso público e os gates quantitativos cumpridos; um release piloto nunca entra silenciosamente
+na prateleira validada.
+
+## System Source Binding V1
+
+`system-source-binding.schema.json` descreve a aresta local entre um papel do System Contract e um
+Source Contract. O pacote publica o papel abstrato; a instalação escolhe qual Fonte local cumpre
+esse papel. O binding trava versão do Sistema, acesso solicitado, estado de compatibilidade, grant
+e aprovação humana, sempre reference-only.
+
+O mesmo Source Contract pode atender qualquer quantidade de Sistemas. Cada relação recebe binding
+e grant próprios; reutilizar a Fonte nunca reescreve seu contrato nem o Connector Binding. Mais de
+um binding para `system_ref + role` é ambíguo e degrada a instalação. `ready` exige Fonte ativa,
+modo compatível, allowlist estrutural quando presente, Access Grant vigente e mesmo aprovador.
+
+O plano é deliberadamente conservador: valida modo, estado e `source_id` explícito, mas chama o
+resultado de candidato até o humano confirmar que a semântica da Fonte realmente cumpre o papel.
+Nome de fornecedor, conector disponível ou credencial presente nunca provam compatibilidade.
+
+## Installation Compatibility V1
+
+O diagnóstico pré-instalação recompila `System Contract → papéis → Source Contracts → System
+Source Bindings → Access Grants` sem abrir o conteúdo das Fontes. Ele funciona sobre um pacote
+publicado ainda não instalado e devolve estados distintos: `missing-source`, `needs-mapping`,
+`awaiting-approval`, `degraded`, `incompatible` ou `ready`.
+
+```bash
+node scripts/installation-compatibility.mjs plan briefing-comercial-inteligente
+```
+
+`needs-mapping` só diz que existem candidatas que passaram por status e modo; a semântica continua
+pendente. `ready` exige bindings aprovados e grants ativos no instante do diagnóstico. O inventário
+permanece local e a saída omite conteúdo, `home_ref`, `credential_ref` e detalhes do conector.
+Instalar o pacote e ativar o Sistema são etapas diferentes: o primeiro run só abre depois de
+compatibilidade e julgamento humano.
+
+## Brain Manifest V1 + diagnóstico de compatibilidade
+
+`.cerebro/manifest.json` identifica uma instalação compatível sem virar inventário paralelo. Ele
+declara versão do Manifest, perfil, referências para versão/identidade/layout, entrypoints,
+fronteira de runtime e privacidade e versões de envelopes aceitas. Fontes, Sistemas, Runs,
+bindings e estados continuam nas suas casas canônicas.
+
+Compatibilidade exige integridade referencial: versão, layout e entrypoints precisam existir como
+arquivos locais reais, sem symlink. Perfis `full` e `legacy-compatible` também precisam possuir a
+identidade privada apontada por `identity_ref`; o starter pode permanecer `unassigned` até a
+ativação criar `.cerebro/id` fora do Git.
+
+O diagnóstico é local e somente leitura:
+
+```bash
+node scripts/compatibility-diagnostic.mjs --root=/caminho/do/cerebro
+```
+
+Ele classifica `new`, `organized-context`, `partial-brain` ou `inevita-compatible` e separa isso
+do estágio `foundation`, `contracted` ou `operational`. Uma instalação starter pode ser compatível
+e ainda não possuir uma Fonte ou um Run; um vault legado pode operar Sistemas reais e ainda dever
+formalizar seu Manifest. O scanner lê apenas marcadores técnicos, contratos e recibos: não abre
+conteúdo humano, não conecta Fonte e não migra o alvo.
+
+O plano sempre preserva o que já é canônico e mantém migração em
+`preview → diff → confirmação`.
+
 ## Compatibilidade sem mentira
 
 | Envelope | V1 | V2 |
@@ -70,9 +183,12 @@ proveniência da recuperação. Toda execução V2 deixa o Context Snapshot corr
 | Routine Contract | V1 | — |
 | Executor Binding | V1 privado | — |
 | Collector Binding | V1 privado | — |
+| System Source Binding | V1 privado | — |
+| Experience Manifest | V1 publicado | — |
 | Routine Run Receipt | V1 privado | — |
 | Routine Migration Readback | V1 privado | — |
 | Judgment Receipt | V1 privado | — |
+| Decision Case Receipt | V1 privado | — |
 | Correction Run Receipt | V1 privado | — |
 | Learning Candidate | V1 privado | — |
 | Execution Trace Event | V1 privado | — |
@@ -114,14 +230,30 @@ node scripts/protocol-validate.mjs receipt protocol/examples/access-receipt.v1.j
 node scripts/protocol-validate.mjs routine protocol/examples/routine-contract.v1.json
 node scripts/protocol-validate.mjs executor protocol/examples/executor-binding.v1.json
 node scripts/protocol-validate.mjs collector protocol/examples/collector-binding.v1.json
+node scripts/protocol-validate.mjs system-runtime protocol/examples/system-runtime-binding.v1.json
+node scripts/protocol-validate.mjs system-source protocol/examples/system-source-binding.v1.json
+node scripts/protocol-validate.mjs experience protocol/examples/experience-manifest.v1.json
 node scripts/protocol-validate.mjs routine-receipt protocol/examples/routine-run-receipt.v1.json
 node scripts/protocol-validate.mjs routine-migration protocol/examples/routine-migration.v1.json
 node scripts/protocol-validate.mjs judgment protocol/examples/judgment-receipt.v1.json
 node scripts/protocol-validate.mjs correction protocol/examples/correction-run-receipt.v1.json
 node scripts/protocol-validate.mjs learning protocol/examples/learning-candidate.v1.json
 node scripts/protocol-validate.mjs trace protocol/examples/execution-trace-event.v1.json
+node scripts/protocol-validate.mjs retrieval-provider protocol/examples/retrieval-provider-contract.v1.json
 node scripts/system-contract.mjs register caminho/contract.json --confirm
 ```
+
+O comissionamento de Fontes é sempre preview → aprovação → escrita privada:
+
+```bash
+node scripts/system-source-binding.mjs plan analisar-funil
+node scripts/system-source-binding.mjs bind caminho/binding.json
+node scripts/system-source-binding.mjs bind caminho/binding.json --confirm
+```
+
+`plan` lê somente metadata contratual e não abre a Fonte nem consulta credencial. `bind` sem
+`--confirm` apenas valida e mostra o readback; com confirmação, grava o binding em
+`.cerebro/runtime/system-source-bindings/`, já protegido pela fronteira privada do Cérebro.
 
 O registro simples atual migra de forma aditiva. Sem `--confirm`, o comando mostra o contrato
 anterior, o posterior, o caminho de saída e a estratégia de rollback; ele não abre a Fonte:
@@ -237,6 +369,76 @@ final e guardam somente IDs, booleanos, contagem de problemas e hash de evidênc
 A tela de Execuções abre o Context Snapshot reference-only sem abrir o artefato privado nem chamar
 modelo. A tela de Governança revoga Access Grants com confirmação explícita e CSRF; o efeito é
 somente futuro, preserva o rastro passado e bloqueia o provider antes do próximo Run.
+
+### Decision Case — o martelo humano na fonte canônica
+
+O Console nunca decide sozinho: ele **prepara o caso**. `GET /api/decision-cases` lista os itens
+que esperam julgamento e o estado de cada caso; `GET /api/decision-cases/:case-id` reúne o item,
+os candidatos a evidência com proveniência carimbada e a casa canônica onde a decisão moraria. O
+rascunho que o Console entrega é estrutura, nunca prosa — o veredito é texto humano, verbatim.
+
+O caminho de escrita é `preview → diff → confirmação → recibo`, o mesmo da migração:
+
+1. `POST /api/decision-cases/:case-id/preview` resolve a evidência (referência que não abre
+   derruba o caso), monta a nota inteira e devolve o diff unificado e o `plan_digest`. Nada é
+   escrito.
+2. `POST /api/decision-cases/:case-id/apply` exige sessão, CSRF, confirmação, autoria humana e o
+   mesmo `plan_digest` — o que se escreve é byte a byte o diff que a pessoa leu. Preview de outra
+   janela responde `preview-stale`; preview velho responde `preview-expired`.
+3. Aplicar duas vezes é idempotente: o segundo pedido devolve `already-applied` e o recibo
+   existente, sem tocar em disco.
+4. `POST /api/decision-cases/:case-id/rollback` reverte o registro, guarda uma cópia privada da
+   nota e deixa recibo. Se o arquivo mudou depois do martelo, a reversão para em
+   `rollback-conflict` — reverter nunca destrói edição humana posterior.
+
+A ordem dos eventos de um caso é a `sequence` declarada no recibo (1, 2, 3…) — nunca o
+timestamp, que empata com relógio congelado, nem o UUID, que não ordena nada. O nome do arquivo do
+recibo é a própria sequência e a gravação usa `link(2)` exclusivo: dois processos em corrida nunca
+conseguem dois recibos com a mesma sequência — o perdedor recebe `sequence-conflict` e compensa.
+A reversão é **compensada, não atômica**: o recibo é validado antes da remoção e, se a gravação
+falhar depois, a nota volta dos bytes em memória. Queda do processo entre a remoção e o recibo não
+é coberta pela compensação — para esse caso, o snapshot gravado ANTES da remoção é a recuperação:
+os bytes da nota nunca se perdem, e o estado do caso permanece `applied` até um rollback completo.
+
+Sobre autoria: o Console local roda numa sessão de máquina única, sem sistema de identidade — ele
+**não consegue provar** que um humano específico digitou o texto. O que o protocolo garante é o
+gesto: a declaração de autoria é um checkbox explícito que a pessoa marca (nunca pré-marcado, nunca
+enviado automaticamente), a referência de quem aprova entra no mesmo dialog de confirmação, e refs
+com cara de máquina (`agent-`, `bot-`, `console-`, `model-`…) são recusadas. É a mesma garantia
+dos Judgment Receipts: asserção humana auditável, não autenticação.
+
+O caso escreve exatamente um arquivo, sempre na casa canônica das decisões, criado com abertura
+exclusiva. O recibo guarda referência, proveniência e impressão; o texto da decisão existe só na
+nota. Reverter o registro não desfaz o que a decisão causou fora do cérebro — o recibo diz isso
+com todas as letras.
+
+### Experimentos como objeto transversal
+
+Experimento não é uma Fonte nem um Run. O contrato define a pergunta e a régua antes do dado; o
+estado operacional registra o que aconteceu depois. Um Experimento pode atravessar vários Sistemas
+e ligar vários Runs por `entity_refs[{ "role": "experiment", "id": "EXP-..." }]`.
+
+O Console mantém hipótese, mudança, regra e veredito fora do read model resumido. A lista recebe
+somente referências, contagens e estados; `/api/experiments/:id` faz a leitura privada explícita.
+Se o martelo existe mas nenhuma `learning.ref` aponta para uma mudança versionada, a última etapa
+permanece como lacuna. O painel não transforma uma frase de veredito em configuração por inferência.
+
+Ledgers legados podem ganhar projeção privada sem trocar de casa da verdade:
+
+```bash
+node scripts/import-legacy-experiments.mjs \
+  --root=/caminho/do/cerebro \
+  --registry=.automacao/experimentos_funil.json
+
+# depois do readback do preview
+node scripts/import-legacy-experiments.mjs \
+  --root=/caminho/do/cerebro \
+  --registry=.automacao/experimentos_funil.json \
+  --confirm
+```
+
+O importador não edita nem remove o ledger humano e marca congelamentos antigos como
+`legacy-attested`; somente um freeze novo pode afirmar hash temporal verificável.
 
 A Caixa de Julgamento grava eventos imutáveis em `.cerebro/runtime/judgments/`. Aprovar, pedir
 ajuste ou rejeitar não altera a Fonte nem o output. `propose-action` registra apenas intenção local:

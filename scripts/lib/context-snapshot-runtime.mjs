@@ -23,7 +23,60 @@ import {
 } from './system-protocol.mjs';
 
 const MAX_CONTEXT_ARTIFACT_BYTES = 4 * 1024 * 1024;
+const MAX_RETRIEVAL_RECEIPT_BYTES = 256 * 1024;
+const MAX_INDEX_RECEIPT_BYTES = 512 * 1024;
 const POINTER_RE = /^\/(?:[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*)?$/;
+const RETRIEVAL_RECEIPT_REF_RE = /^retrieval-receipt:(retrieval-receipt-[A-Za-z0-9-]{8,128})$/;
+const INDEX_RECEIPT_REF_RE = /^source-index-receipt:(source-index-receipt-[a-f0-9-]{36})$/;
+const DOCUMENT_REF_RE = /^document:[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+const PROVIDER_REF_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const SHA256_RE = /^[a-f0-9]{64}$/;
+const FORBIDDEN_RECEIPT_KEYS = new Set(['query', 'snippet', 'content', 'raw_error', 'prompt', 'output']);
+const RETRIEVAL_RECEIPT_KEYS = new Set([
+  'protocol_version',
+  'receipt_id',
+  'kind',
+  'status',
+  'decision',
+  'reason_code',
+  'query_sha256',
+  'profile_sha256',
+  'started_at',
+  'completed_at',
+  'latency_ms',
+  'adapter_invoked',
+  'provider_ref',
+  'transport',
+  'index_receipt_ref',
+  'corpus_sha256',
+  'selected_refs',
+  'evidence',
+  'privacy',
+]);
+const PROVIDER_V1_RETRIEVAL_RECEIPT_KEYS = new Set(
+  [...RETRIEVAL_RECEIPT_KEYS].filter((key) => !['index_receipt_ref', 'corpus_sha256'].includes(key)),
+);
+const LEGACY_RETRIEVAL_RECEIPT_KEYS = new Set(
+  [...PROVIDER_V1_RETRIEVAL_RECEIPT_KEYS].filter((key) => key !== 'provider_ref'),
+);
+const RETRIEVAL_EVIDENCE_KEYS = new Set(['candidate_similarity', 'domain_coverage', 'agreement']);
+const RETRIEVAL_PRIVACY_KEYS = new Set([
+  'query_recorded',
+  'snippet_recorded',
+  'content_recorded',
+  'raw_error_recorded',
+  'content_shared_with_inevita',
+]);
+const INDEX_RECEIPT_KEYS = new Set([
+  'protocol_version', 'receipt_id', 'kind', 'provider_ref', 'provider_version', 'driver',
+  'status', 'reason_code', 'plan_sha256', 'corpus_sha256', 'previous_receipt_ref',
+  'started_at', 'completed_at', 'document_count', 'updated_refs', 'orphan_refs', 'documents',
+  'benchmark', 'daemon_restarted', 'privacy',
+]);
+const INDEX_DRIVER_KEYS = new Set(['implementation', 'implementation_version']);
+const INDEX_DOCUMENT_KEYS = new Set(['document_ref', 'source_sha256']);
+const INDEX_BENCHMARK_KEYS = new Set(['cases', 'hit_at_3', 'false_positive_rate', 'latency_ms', 'gate_passed']);
+const INDEX_PRIVACY_KEYS = new Set(['content_recorded', 'query_recorded', 'third_party_zone_indexed']);
 const ASSURANCE_RANK = new Map([
   ['exported', 0],
   ['receipt-audited', 1],
@@ -48,6 +101,24 @@ function contextArtifactDirectory(root) {
     root,
     layout(root).contextArtifacts,
     join('.cerebro', 'runtime', 'context-artifacts'),
+    join('.cerebro', 'runtime'),
+  );
+}
+
+function retrievalReceiptDirectory(root) {
+  return inside(
+    root,
+    layout(root).retrievalReceipts,
+    join('.cerebro', 'runtime', 'receipts', 'retrieval'),
+    join('.cerebro', 'runtime'),
+  );
+}
+
+function indexReceiptDirectory(root) {
+  return inside(
+    root,
+    layout(root).indexingReceipts,
+    join('.cerebro', 'runtime', 'receipts', 'indexing'),
     join('.cerebro', 'runtime'),
   );
 }
@@ -89,6 +160,239 @@ function jsonPointer(value, pointer) {
     current = current[segment];
   }
   return { found: true, value: current };
+}
+
+function hasForbiddenReceiptKey(value) {
+  if (Array.isArray(value)) return value.some(hasForbiddenReceiptKey);
+  if (value === null || typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, child]) => (
+    FORBIDDEN_RECEIPT_KEYS.has(key) || hasForbiddenReceiptKey(child)
+  ));
+}
+
+function hasExactKeys(value, keys) {
+  if (!value || Array.isArray(value) || typeof value !== 'object') return false;
+  const current = Object.keys(value);
+  return current.length === keys.size && current.every((key) => keys.has(key));
+}
+
+function validNullableNumber(value) {
+  return value === null || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function safeIndexReceipt(root, indexReceiptRef, expectedProviderRef, expectedCorpusSha) {
+  const match = INDEX_RECEIPT_REF_RE.exec(indexReceiptRef || '');
+  if (!match) throw new Error('context-index-receipt-ref-invalid');
+  const receiptId = match[1];
+  const directory = indexReceiptDirectory(root);
+  if (!existsSync(directory)) throw new Error('context-index-receipt-root-missing');
+  if (lstatSync(directory).isSymbolicLink()) throw new Error('context-index-receipt-root-symlink-blocked');
+  const path = join(directory, `${receiptId}.json`);
+  if (!existsSync(path)) throw new Error('context-index-receipt-missing');
+  if (lstatSync(path).isSymbolicLink()) throw new Error('context-index-receipt-symlink-blocked');
+  const stat = statSync(path);
+  if (!stat.isFile() || stat.size < 2 || stat.size > MAX_INDEX_RECEIPT_BYTES) {
+    throw new Error('context-index-receipt-size-invalid');
+  }
+  if (process.platform !== 'win32' && (stat.mode & 0o077) !== 0) {
+    throw new Error('context-index-receipt-permission-invalid');
+  }
+  const realDirectory = realpathSync(directory);
+  const realPath = realpathSync(path);
+  const rel = relative(realDirectory, realPath);
+  if (!rel || rel.startsWith('..') || rel.startsWith(sep)) {
+    throw new Error('context-index-receipt-outside-runtime');
+  }
+  let receipt;
+  try {
+    const bytes = readFileSync(realPath);
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    receipt = JSON.parse(text);
+  } catch {
+    throw new Error('context-index-receipt-json-invalid');
+  }
+  if (hasForbiddenReceiptKey(receipt)
+    || !hasExactKeys(receipt, INDEX_RECEIPT_KEYS)
+    || !hasExactKeys(receipt.driver, INDEX_DRIVER_KEYS)
+    || !hasExactKeys(receipt.benchmark, INDEX_BENCHMARK_KEYS)
+    || !hasExactKeys(receipt.privacy, INDEX_PRIVACY_KEYS)) {
+    throw new Error('context-index-receipt-shape-invalid');
+  }
+  if (receipt.protocol_version !== 1 || receipt.receipt_id !== receiptId
+    || receipt.kind !== 'source-index-receipt' || receipt.provider_ref !== expectedProviderRef
+    || receipt.status !== 'completed' || receipt.reason_code !== 'benchmark-gate-passed'
+    || receipt.corpus_sha256 !== expectedCorpusSha
+    || !SHA256_RE.test(receipt.plan_sha256 || '') || !SHA256_RE.test(receipt.corpus_sha256 || '')
+    || !PROVIDER_REF_RE.test(receipt.driver.implementation || '')
+    || typeof receipt.driver.implementation_version !== 'string'
+    || !receipt.driver.implementation_version) {
+    throw new Error('context-index-receipt-identity-invalid');
+  }
+  if ((receipt.previous_receipt_ref !== null
+      && !INDEX_RECEIPT_REF_RE.test(receipt.previous_receipt_ref || ''))
+    || !Number.isFinite(Date.parse(receipt.started_at || ''))
+    || !Number.isFinite(Date.parse(receipt.completed_at || ''))
+    || Date.parse(receipt.completed_at) < Date.parse(receipt.started_at)
+    || receipt.daemon_restarted !== true) {
+    throw new Error('context-index-receipt-state-invalid');
+  }
+  if (!Array.isArray(receipt.documents) || !Array.isArray(receipt.updated_refs)
+    || !Array.isArray(receipt.orphan_refs) || !Number.isInteger(receipt.document_count)
+    || receipt.document_count !== receipt.documents.length || receipt.document_count < 1) {
+    throw new Error('context-index-receipt-documents-invalid');
+  }
+  const documentRefs = new Set();
+  for (const item of receipt.documents) {
+    if (!hasExactKeys(item, INDEX_DOCUMENT_KEYS) || !DOCUMENT_REF_RE.test(item.document_ref || '')
+      || !SHA256_RE.test(item.source_sha256 || '') || documentRefs.has(item.document_ref)) {
+      throw new Error('context-index-receipt-documents-invalid');
+    }
+    documentRefs.add(item.document_ref);
+  }
+  for (const refs of [receipt.updated_refs, receipt.orphan_refs]) {
+    if (new Set(refs).size !== refs.length || refs.some((ref) => !DOCUMENT_REF_RE.test(ref || ''))) {
+      throw new Error('context-index-receipt-documents-invalid');
+    }
+  }
+  const benchmark = receipt.benchmark;
+  if (!Number.isInteger(benchmark.cases) || benchmark.cases < 1
+    || !Number.isFinite(benchmark.hit_at_3) || benchmark.hit_at_3 < 0 || benchmark.hit_at_3 > 1
+    || !Number.isFinite(benchmark.false_positive_rate) || benchmark.false_positive_rate < 0
+    || benchmark.false_positive_rate > 1 || !Number.isFinite(benchmark.latency_ms)
+    || benchmark.latency_ms < 0 || benchmark.gate_passed !== true) {
+    throw new Error('context-index-receipt-benchmark-invalid');
+  }
+  if (receipt.privacy.content_recorded !== false || receipt.privacy.query_recorded !== false
+    || receipt.privacy.third_party_zone_indexed !== false) {
+    throw new Error('context-index-receipt-privacy-invalid');
+  }
+  return indexReceiptRef;
+}
+
+function safeRetrievalReceipt(root, artifactValue, selection, expectedProviderRef) {
+  const resolved = jsonPointer(artifactValue, selection.retrieval_receipt_pointer);
+  if (!resolved.found || typeof resolved.value !== 'string') {
+    throw new Error('context-retrieval-receipt-ref-missing');
+  }
+  const match = RETRIEVAL_RECEIPT_REF_RE.exec(resolved.value);
+  if (!match) throw new Error('context-retrieval-receipt-ref-invalid');
+  const receiptRef = resolved.value;
+  const receiptId = match[1];
+  const directory = retrievalReceiptDirectory(root);
+  if (!existsSync(directory)) throw new Error('context-retrieval-receipt-root-missing');
+  if (lstatSync(directory).isSymbolicLink()) throw new Error('context-retrieval-receipt-root-symlink-blocked');
+  const path = join(directory, `${receiptId}.json`);
+  if (!existsSync(path)) throw new Error('context-retrieval-receipt-missing');
+  if (lstatSync(path).isSymbolicLink()) throw new Error('context-retrieval-receipt-symlink-blocked');
+  const stat = statSync(path);
+  if (!stat.isFile() || stat.size < 2 || stat.size > MAX_RETRIEVAL_RECEIPT_BYTES) {
+    throw new Error('context-retrieval-receipt-size-invalid');
+  }
+  if (process.platform !== 'win32' && (stat.mode & 0o077) !== 0) {
+    throw new Error('context-retrieval-receipt-permission-invalid');
+  }
+  const realDirectory = realpathSync(directory);
+  const realPath = realpathSync(path);
+  const rel = relative(realDirectory, realPath);
+  if (!rel || rel.startsWith('..') || rel.startsWith(sep)) {
+    throw new Error('context-retrieval-receipt-outside-runtime');
+  }
+  let receipt;
+  try {
+    const bytes = readFileSync(realPath);
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    receipt = JSON.parse(text);
+  } catch {
+    throw new Error('context-retrieval-receipt-json-invalid');
+  }
+  if (hasForbiddenReceiptKey(receipt)) throw new Error('context-retrieval-receipt-payload-forbidden');
+  const currentReceipt = hasExactKeys(receipt, RETRIEVAL_RECEIPT_KEYS);
+  const providerV1Receipt = hasExactKeys(receipt, PROVIDER_V1_RETRIEVAL_RECEIPT_KEYS);
+  const legacyReceipt = hasExactKeys(receipt, LEGACY_RETRIEVAL_RECEIPT_KEYS)
+    && receipt.transport === 'gbrain-vector-daemon';
+  if ((!currentReceipt && !providerV1Receipt && !legacyReceipt)
+    || !hasExactKeys(receipt.evidence, RETRIEVAL_EVIDENCE_KEYS)
+    || !hasExactKeys(receipt.privacy, RETRIEVAL_PRIVACY_KEYS)) {
+    throw new Error('context-retrieval-receipt-shape-invalid');
+  }
+  const observedProviderRef = legacyReceipt ? 'local-semantic-retrieval' : receipt.provider_ref;
+  if (receipt.protocol_version !== 1 || receipt.kind !== 'retrieval-receipt'
+    || receipt.receipt_id !== receiptId
+    || !PROVIDER_REF_RE.test(observedProviderRef || '')
+    || observedProviderRef !== expectedProviderRef
+    || !PROVIDER_REF_RE.test(receipt.transport || '')) {
+    throw new Error('context-retrieval-receipt-identity-invalid');
+  }
+  let indexReceiptRef = null;
+  if (currentReceipt) {
+    const hasIndexState = typeof receipt.index_receipt_ref === 'string'
+      && typeof receipt.corpus_sha256 === 'string';
+    const lacksIndexState = receipt.index_receipt_ref === null && receipt.corpus_sha256 === null;
+    if (!hasIndexState && !lacksIndexState) {
+      throw new Error('context-retrieval-index-state-invalid');
+    }
+    if (hasIndexState) {
+      if (!SHA256_RE.test(receipt.corpus_sha256)) {
+        throw new Error('context-retrieval-index-state-invalid');
+      }
+      indexReceiptRef = safeIndexReceipt(
+        root,
+        receipt.index_receipt_ref,
+        observedProviderRef,
+        receipt.corpus_sha256,
+      );
+    } else if (receipt.decision !== 'retrieval_unavailable' || receipt.reason_code !== 'index_not_ready') {
+      throw new Error('context-retrieval-index-state-invalid');
+    }
+  }
+  if (!SHA256_RE.test(receipt.query_sha256 || '') || !SHA256_RE.test(receipt.profile_sha256 || '')
+    || receipt.profile_sha256 !== selection.expected_profile_sha256) {
+    throw new Error('context-retrieval-receipt-profile-invalid');
+  }
+  if (!Number.isFinite(Date.parse(receipt.started_at || ''))
+    || !Number.isFinite(Date.parse(receipt.completed_at || ''))
+    || Date.parse(receipt.completed_at) < Date.parse(receipt.started_at)
+    || typeof receipt.latency_ms !== 'number' || !Number.isFinite(receipt.latency_ms)
+    || receipt.latency_ms < 0 || typeof receipt.adapter_invoked !== 'boolean') {
+    throw new Error('context-retrieval-receipt-time-invalid');
+  }
+  if (typeof receipt.reason_code !== 'string' || !receipt.reason_code
+    || receipt.reason_code.length > 128 || /[\u0000\r\n]/.test(receipt.reason_code)
+    || !validNullableNumber(receipt.evidence.candidate_similarity)
+    || !validNullableNumber(receipt.evidence.domain_coverage)
+    || !validNullableNumber(receipt.evidence.agreement)) {
+    throw new Error('context-retrieval-receipt-evidence-invalid');
+  }
+  const privacy = receipt.privacy;
+  if (!privacy || privacy.query_recorded !== false || privacy.snippet_recorded !== false
+    || privacy.content_recorded !== false || privacy.raw_error_recorded !== false
+    || privacy.content_shared_with_inevita !== false) {
+    throw new Error('context-retrieval-receipt-privacy-invalid');
+  }
+  if (!Array.isArray(receipt.selected_refs)) throw new Error('context-retrieval-receipt-refs-invalid');
+  const rankedRefs = [];
+  const ranks = new Set();
+  for (const item of receipt.selected_refs) {
+    if (!hasExactKeys(item, new Set(['rank', 'document_ref']))
+      || !Number.isInteger(item.rank) || item.rank < 1 || ranks.has(item.rank)
+      || !DOCUMENT_REF_RE.test(item.document_ref || '')) {
+      throw new Error('context-retrieval-receipt-refs-invalid');
+    }
+    ranks.add(item.rank);
+    rankedRefs.push(item);
+  }
+  rankedRefs.sort((left, right) => left.rank - right.rank);
+  if (rankedRefs.some((item, index) => item.rank !== index + 1)) {
+    throw new Error('context-retrieval-receipt-refs-invalid');
+  }
+  const selectedRefs = rankedRefs.map((item) => item.document_ref);
+  const validState = (
+    (receipt.status === 'completed' && receipt.decision === 'accepted' && selectedRefs.length > 0)
+    || (receipt.status === 'abstained' && receipt.decision === 'insufficient_evidence' && selectedRefs.length === 0)
+    || (receipt.status === 'failed' && receipt.decision === 'retrieval_unavailable' && selectedRefs.length === 0)
+  );
+  if (!validState) throw new Error('context-retrieval-receipt-state-invalid');
+  return { receipt, receiptRef, indexReceiptRef, selectedRefs };
 }
 
 function contractFile(root, configured, fallback, id, label) {
@@ -205,6 +509,7 @@ export function prepareContextSnapshot(root, routineContract, accessResults) {
   const retrievalByRole = new Map(system.retrieval.source_roles.map((item) => [item.role, item]));
   const accesses = [];
   const gaps = [];
+  const retrievalReceiptRefs = [];
 
   for (const source of system.sources) {
     const selection = selectionBySource.get(source.source_id);
@@ -221,6 +526,43 @@ export function prepareContextSnapshot(root, routineContract, accessResults) {
       gaps.push({ source_role: source.role, reason_code: 'selection-missing', detail_ref: null });
       continue;
     }
+    const sourceValue = sourceContract(root, source.source_id);
+    if (selection.retrieval_receipt_pointer) {
+      const providerRef = sourceValue.connector?.binding_ref;
+      if (!PROVIDER_REF_RE.test(providerRef || '')) {
+        throw new Error('context-retrieval-provider-binding-missing');
+      }
+      const retrievalReceipt = safeRetrievalReceipt(root, artifact.value, selection, providerRef);
+      retrievalReceiptRefs.push(retrievalReceipt.receiptRef);
+      if (retrievalReceipt.indexReceiptRef) {
+        retrievalReceiptRefs.push(retrievalReceipt.indexReceiptRef);
+      }
+      if (retrievalReceipt.receipt.decision !== 'accepted') {
+        const reasonCode = retrievalReceipt.receipt.decision === 'insufficient_evidence'
+          ? 'insufficient-evidence'
+          : 'retrieval-unavailable';
+        if (source.required) throw new Error(`context-required-${reasonCode}`);
+        gaps.push({
+          source_role: source.role,
+          reason_code: reasonCode,
+          detail_ref: retrievalReceipt.receiptRef,
+        });
+        continue;
+      }
+      accesses.push({
+        source_ref: { role: source.role, id: source.source_id },
+        selected_refs: retrievalReceipt.selectedRefs,
+        query: `${retrievalReceipt.receiptRef}:query-sha256:${retrievalReceipt.receipt.query_sha256}`,
+        filters: retrieval.filters,
+        window: retrieval.window,
+        freshness_marker: `observed:${retrievalReceipt.receipt.completed_at}`,
+        assurance: weakerAssurance(
+          weakerAssurance(sourceValue.assurance, access.assurance),
+          'receipt-audited',
+        ),
+      });
+      continue;
+    }
     const selectedRefs = [];
     for (const pointer of selection.selected_pointers) {
       if (!jsonPointer(artifact.value, pointer).found) {
@@ -234,7 +576,6 @@ export function prepareContextSnapshot(root, routineContract, accessResults) {
       gaps.push({ source_role: source.role, reason_code: 'selection-empty', detail_ref: null });
       continue;
     }
-    const sourceValue = sourceContract(root, source.source_id);
     accesses.push({
       source_ref: { role: source.role, id: source.source_id },
       selected_refs: selectedRefs,
@@ -265,7 +606,7 @@ export function prepareContextSnapshot(root, routineContract, accessResults) {
     },
     artifact_ref: stored.artifact_ref,
     artifact_path_ref: stored.artifact_path_ref,
-    input_refs: [stored.artifact_ref],
+    input_refs: [stored.artifact_ref, ...new Set(retrievalReceiptRefs)],
   };
 }
 
@@ -280,12 +621,20 @@ export function appendCompletedRunRecord(root, routineContract, context, {
   evaluation = null,
   executionTraceRef = null,
   skillLoadRefs = [],
+  chainId = null,
+  mode = null,
+  experimentRef = null,
+  handoffRefs = [],
 }) {
   if (context.status !== 'recorded') return null;
   const system = context.system;
   const record = {
     protocol_version: 2,
     run_id: runId,
+    chain_id: chainId,
+    mode,
+    experiment_ref: experimentRef,
+    handoff_refs: handoffRefs,
     system_id: system.system_id,
     system_version: system.version,
     capability: {

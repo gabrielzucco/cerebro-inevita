@@ -1,0 +1,22 @@
+{
+  "protocol_version": 1,
+  "binding_id": "binding-funnel-paid-media",
+  "system_ref": "analisar-funil",
+  "system_version": "0.2.0",
+  "role": "midia-paga",
+  "source_ref": "paid-media",
+  "requested_access": "read-only",
+  "status": "ready",
+  "grant_ref": "grant-funnel-read-001",
+  "checked_at": "2026-08-23T17:55:00.000Z",
+  "reason_codes": ["role-source-compatible", "grant-active"],
+  "approval": {
+    "approved_by": "role-marketing-owner",
+    "approved_at": "2026-08-23T17:55:00.000Z"
+  },
+  "privacy": {
+    "content_copied": false,
+    "credential_stored": false,
+    "shared_with_inevita": false
+  }
+}

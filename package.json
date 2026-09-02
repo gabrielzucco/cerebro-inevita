@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build:console": "esbuild console/canvas.js --bundle --minify --format=esm --target=es2022 --outfile=console/canvas.bundle.js",
+    "diagnose": "node scripts/compatibility-diagnostic.mjs --root=.",
     "test": "node scripts/validate-product.mjs"
   },
   "dependencies": {

@@ -1,0 +1,34 @@
+{
+  "protocol_version": 1,
+  "experiment_id": "EXP-DEMO-001",
+  "status": "decided",
+  "phase": "learning",
+  "started_on": "2026-08-03",
+  "read_on": "2026-08-10",
+  "closed_on": "2026-08-10",
+  "amendment_count": 1,
+  "amendments": [
+    { "amendment_id": "EXP-DEMO-001-A1", "on": "2026-08-05", "reason": "Janela estendida por indisponibilidade da fonte.", "change_count": 1 }
+  ],
+  "run_refs": ["run-record:routine-run-demo"],
+  "chain_refs": ["handoff-chain:chain-tarja-replay-001"],
+  "measurement": {
+    "status": "complete",
+    "primary_metric_ref": "cpl-qualificado",
+    "diagnostic_refs": ["spend-share", "ctr-link"]
+  },
+  "verdict": {
+    "status": "recorded",
+    "decided_on": "2026-08-10",
+    "summary": "Variação adotada com ressalva de baixa força causal."
+  },
+  "learning": {
+    "status": "linked",
+    "ref": "sistemas/funil/policies/call-out-v1.json"
+  },
+  "observed_at": "2026-08-10T15:00:00.000Z",
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "verdict_in_summary": false
+  }
+}

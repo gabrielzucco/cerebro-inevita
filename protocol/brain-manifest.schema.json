@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/protocol/brain-manifest.v1.schema.json",
+  "title": "Company Brain Manifest V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "manifest_version",
+    "profile",
+    "distribution",
+    "version_ref",
+    "identity_ref",
+    "layout_ref",
+    "entrypoints",
+    "runtime",
+    "privacy",
+    "compatibility"
+  ],
+  "properties": {
+    "protocol": { "const": "company-brain" },
+    "manifest_version": { "const": 1 },
+    "profile": { "enum": ["full", "starter", "legacy-compatible"] },
+    "distribution": { "enum": ["inevita", "private"] },
+    "version_ref": { "$ref": "#/$defs/relativeRef" },
+    "identity_ref": { "$ref": "#/$defs/relativeRef" },
+    "layout_ref": { "$ref": "#/$defs/relativeRef" },
+    "entrypoints": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/relativeRef" }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "provider_control"],
+      "properties": {
+        "mode": { "enum": ["file-only", "local-optional", "local-required"] },
+        "provider_control": { "const": "owner-controlled" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data_plane", "network_content_sync", "reference_only_receipts"],
+      "properties": {
+        "data_plane": { "const": "local" },
+        "network_content_sync": { "const": false },
+        "reference_only_receipts": { "const": true }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contracts", "migration_mode", "unknown_fields"],
+      "properties": {
+        "contracts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "system", "run"],
+          "properties": {
+            "source": { "$ref": "#/$defs/versions" },
+            "system": { "$ref": "#/$defs/versions" },
+            "run": { "$ref": "#/$defs/versions" },
+            "access": { "$ref": "#/$defs/versions" },
+            "routine": { "$ref": "#/$defs/versions" },
+            "trace": { "$ref": "#/$defs/versions" },
+            "experiment": { "$ref": "#/$defs/versions" },
+            "handoff": { "$ref": "#/$defs/versions" }
+          }
+        },
+        "migration_mode": { "const": "preview-diff-confirm" },
+        "unknown_fields": { "const": "reject" }
+      }
+    }
+  },
+  "$defs": {
+    "relativeRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "versions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1 }
+    }
+  }
+}
