@@ -5,6 +5,7 @@ const LOCAL_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./-]{0,127}$/;
 function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
+
 function closed(errors, value, path, allowed) {
   if (!object(value)) {
     errors.push(`${path} precisa ser objeto`);
@@ -116,3 +117,4 @@ export function releaseManifestView(manifest, manifestRef = null) {
     privacy: { ...manifest.privacy },
   };
 }
+

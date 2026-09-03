@@ -2,7 +2,7 @@
 // O contrato de atualização é cobrado dos DOIS atualizadores — o bash legado
 // (que segue instalado em cérebros antigos) e o update.mjs multiplataforma.
 // Um passar e o outro não é regressão silenciosa em quem já tem o produto.
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -54,6 +54,7 @@ try {
     mkdirSync(join(old, '.cerebro'), { recursive: true });
     runner.instalar(old);
     writeFileSync(join(old, '.cerebro', 'source'), 'REPO=teste/teste\nBRANCH=main\n');
+    writeFileSync(join(old, '.cerebro', 'runtime'), 'codex\n', { mode: 0o600 });
     writeFileSync(join(old, 'VERSION'), '1.8.0\n');
     writeFileSync(join(old, '.gitignore'), '# regra do dono\n*.local-only\n');
     for (const file of protectedFiles) {
@@ -62,6 +63,13 @@ try {
     }
 
     runner.rodar(old);
+
+    if (!statSync(join(old, '.cerebro', 'runtime')).isDirectory()) {
+      throw new Error(`[${runner.nome}] runtime privado não virou diretório`);
+    }
+    if (readFileSync(join(old, '.cerebro', 'operator-runtime'), 'utf8').trim() !== 'codex') {
+      throw new Error(`[${runner.nome}] perdeu o marcador de runtime legado`);
+    }
 
     for (const file of protectedFiles) {
       if (readFileSync(join(old, file), 'utf8') !== sentinel) {
@@ -98,6 +106,7 @@ try {
       '# regra do dono',
       '*.local-only',
       '.cerebro/sistemas/',
+      '.cerebro/operator-runtime',
       'sistemas/outros-instalados/*/configuracao.md',
       'sistemas/outros-instalados/*/feedback.md',
       'operacao/arquitetura/*',
@@ -117,14 +126,22 @@ try {
     join(SOURCE, '.cerebro', 'private-ignore.manifest'),
     join(legacy, '.cerebro', 'private-ignore.manifest'),
   );
+  mkdirSync(join(legacy, 'scripts', 'lib'), { recursive: true });
+  cpSync(join(SOURCE, 'scripts', 'post-update.mjs'), join(legacy, 'scripts', 'post-update.mjs'));
+  cpSync(join(SOURCE, 'scripts', 'lib', 'runtime-storage.mjs'), join(legacy, 'scripts', 'lib', 'runtime-storage.mjs'));
+  writeFileSync(join(legacy, '.cerebro', 'runtime'), 'claude-code\n', { mode: 0o600 });
   writeFileSync(join(legacy, '.gitignore'), '# regra legada do dono\n*.nao-enviar');
   execFileSync('bash', [join(legacy, '.claude', 'scripts', 'ping.sh'), 'atualizou'], {
     env: { ...process.env, CEREBRO_TELEMETRY: 'off' },
     stdio: 'pipe',
   });
   const legacyIgnore = readFileSync(join(legacy, '.gitignore'), 'utf8');
-  for (const rule of ['# regra legada do dono', '*.nao-enviar', '.cerebro/sistemas/']) {
+  for (const rule of ['# regra legada do dono', '*.nao-enviar', '.cerebro/sistemas/', '.cerebro/operator-runtime']) {
     if (!legacyIgnore.includes(rule)) throw new Error(`migração na primeira passagem ausente: ${rule}`);
+  }
+  if (!statSync(join(legacy, '.cerebro', 'runtime')).isDirectory()
+      || readFileSync(join(legacy, '.cerebro', 'operator-runtime'), 'utf8').trim() !== 'claude-code') {
+    throw new Error('migração de runtime ausente na primeira passagem');
   }
   execFileSync('bash', [join(legacy, '.claude', 'scripts', 'ping.sh'), 'atualizou'], {
     env: { ...process.env, CEREBRO_TELEMETRY: 'off' },

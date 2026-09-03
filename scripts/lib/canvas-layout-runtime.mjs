@@ -1,28 +1,45 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { layout, writeJsonAtomic } from './system-protocol.mjs';
 
 const KEY_RE = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const NODE_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
 
-function directory(root) {
+function directory(root, { create = false } = {}) {
   const runtime = resolve(root, '.cerebro', 'runtime');
   const target = resolve(root, layout(root).canvasLayouts || join('.cerebro', 'runtime', 'canvas-layouts'));
   const rel = relative(runtime, target);
   if (!rel || rel.startsWith('..') || rel.startsWith(sep)) throw new Error('canvas-layout-not-private');
-  mkdirSync(target, { recursive: true, mode: 0o700 });
+
+  if (!existsSync(runtime)) {
+    if (!create) return null;
+    mkdirSync(runtime, { recursive: true, mode: 0o700 });
+  } else {
+    const stat = lstatSync(runtime);
+    if (stat.isSymbolicLink()) throw new Error('canvas-runtime-storage-symlink');
+    // Instalações antigas usavam este caminho como marcador do agente. Abrir o
+    // cockpit continua read-only; o post-update faz a migração sem perder valor.
+    if (stat.isFile() && !create) return null;
+    if (!stat.isDirectory()) throw new Error('canvas-runtime-storage-conflict');
+  }
+
+  if (!existsSync(target)) {
+    if (!create) return target;
+    mkdirSync(target, { recursive: true, mode: 0o700 });
+  }
   const realRel = relative(realpathSync(runtime), realpathSync(target));
   if (!realRel || realRel.startsWith('..') || realRel.startsWith(sep)) throw new Error('canvas-layout-outside-runtime');
   return target;
 }
-function file(root, key) {
+function file(root, key, options) {
   if (!KEY_RE.test(key || '')) throw new Error('canvas-layout-key-invalid');
-  return join(directory(root), `${key}.json`);
+  const target = directory(root, options);
+  return target ? join(target, `${key}.json`) : null;
 }
 
 export function readCanvasLayout(root, key) {
-  const path = file(root, key);
-  if (!existsSync(path)) return { protocol_version: 1, layout_key: key, positions: {}, updated_at: null, updated_by: null };
+  const path = file(root, key, { create: false });
+  if (!path || !existsSync(path)) return { protocol_version: 1, layout_key: key, positions: {}, updated_at: null, updated_by: null };
   let value;
   try { value = JSON.parse(readFileSync(path, 'utf8')); } catch { throw new Error('canvas-layout-json-invalid'); }
   if (value.protocol_version !== 1 || value.layout_key !== key || typeof value.positions !== 'object') {
@@ -58,6 +75,6 @@ export function saveCanvasLayout(root, key, positions, updatedBy, { clock = () =
     updated_at: updatedAt.toISOString(),
     updated_by: updatedBy,
   };
-  writeJsonAtomic(file(root, key), value);
+  writeJsonAtomic(file(root, key, { create: true }), value);
   return value;
 }

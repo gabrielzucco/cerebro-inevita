@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -13,6 +14,7 @@ import {
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { registerAccessGrant } from './lib/access-runtime.mjs';
+import { readExecutionTrace } from './lib/execution-trace-runtime.mjs';
 import { observeExecutor, runModelExecutor } from './lib/model-executors.mjs';
 import {
   confirmLegacySchedulePaused,
@@ -86,7 +88,9 @@ function fakeCodex({ sequence = ['success'], calls }) {
     calls.push({ command, args, options });
     assert.equal(command, 'codex');
     assert(options.input.includes(`${promptMarker}\n`));
-    assert(options.input.includes('Isto é um Run de uma Routine Contract já registrada e governada.'));
+    assert(options.input.startsWith('# Fronteira de execução do Runtime'));
+    assert(options.input.includes('Não crie, atualize, pause, exclua nem reagende'));
+    assert(options.input.includes('# Instruções canônicas da rotina'));
     assert.equal(args.includes(promptMarker), false);
     assert.equal(args.some((arg) => arg.includes(promptMarker)), false);
     const outcome = sequence[Math.min(calls.length - 1, sequence.length - 1)];
@@ -140,6 +144,45 @@ try {
   assert.deepEqual(validateRoutineRunReceipt(receiptExample), []);
   assert.deepEqual(validateRoutineMigration(migrationExample), []);
   assert.deepEqual(validateCollectorBinding(collectorExample), []);
+  const retrievalPreparation = {
+    kind: 'trusted-local-command',
+    binding_ref: 'collector-funnel-local',
+    output_ref: '.automacao/context-fixture.json',
+    source_selections: [{
+      source_ref: 'paid-media',
+      retrieval_receipt_pointer: '/retrieval/receipt_ref',
+      expected_profile_sha256: 'a'.repeat(64),
+    }],
+  };
+  assert.deepEqual(validateRoutineContract({
+    ...routineExample,
+    extensions: { preparation: retrievalPreparation },
+  }), []);
+  assert(validateRoutineContract({
+    ...routineExample,
+    extensions: {
+      preparation: {
+        ...retrievalPreparation,
+        source_selections: [{
+          ...retrievalPreparation.source_selections[0],
+          selected_pointers: ['/paid'],
+          freshness_pointer: '/observed',
+        }],
+      },
+    },
+  }).some((error) => error.includes('exatamente um modo')));
+  assert(validateRoutineContract({
+    ...routineExample,
+    extensions: {
+      preparation: {
+        ...retrievalPreparation,
+        source_selections: [{
+          ...retrievalPreparation.source_selections[0],
+          expected_profile_sha256: 'not-a-sha',
+        }],
+      },
+    },
+  }).some((error) => error.includes('expected_profile_sha256')));
   assert(validateCollectorBinding({ ...collectorExample, args: ['-c', 'unsafe'] }).some((error) => error.includes('inseguro')));
   assert(validateRoutineMigration({
     ...migrationExample,
@@ -207,6 +250,31 @@ try {
     credential_ref: null,
     receipts: { use_refs: [], revocation_ref: null },
   });
+  registerAccessGrant(root, {
+    protocol_version: 1,
+    grant_id: 'grant-funnel-local-policy',
+    subject: { type: 'system', ref: 'analisar-funil' },
+    scope: {
+      company_ref: 'company-local', unit_ref: 'marketing',
+      system_refs: ['analisar-funil'], source_refs: ['paid-media'], actions: ['read-policy'],
+    },
+    mode: 'read',
+    assurance: 'receipt-audited',
+    custody: 'agent-direct',
+    reason: 'provar que múltiplos grants da mesma Fonte não duplicam input_refs',
+    issued_at: '2026-08-23T00:00:00.000Z',
+    expires_at: null,
+    revoked_at: null,
+    approved_by: 'role-marketing-owner',
+    credential_ref: null,
+    receipts: { use_refs: [], revocation_ref: null },
+  });
+  routineExample.context.access_requests.push({
+    grant_ref: 'grant-funnel-local-policy',
+    source_ref: 'paid-media',
+    action: 'read-policy',
+    mode: 'read',
+  });
   registerRoutineContract(root, routineExample);
   registerRoutineMigration(root, migrationExample);
   saveExecutorBinding(root, bindingExample);
@@ -217,12 +285,22 @@ try {
     spawn: fakeCodex({ calls: manualCalls }),
     clock: fixed('2026-08-24T11:29:00.000Z'),
     wait: async () => assert.fail('successful run must not retry'),
+    chainId: 'chain-routine-test-001',
+    mode: 'replay',
+    handoffRefs: ['handoff-contract:briefing-para-funil'],
   });
   assert.equal(manual.status, 'completed');
   assert.equal(manualCalls.length, 1);
   assert.equal(readFileSync(join(root, 'operacao', 'execucoes', 'rotinas', 'funil-diario.md'), 'utf8'), `${outputMarker}\n`);
-  assert.equal(manual.receipt.access_receipt_refs.length, 1);
+  assert.equal(manual.receipt.access_receipt_refs.length, 2);
+  assert.equal(manual.receipt.input_refs.filter((ref) => ref === 'source:paid-media').length, 1);
   assertReferenceOnly(manual.receipt);
+  const manualTrace = readExecutionTrace(root, manual.receipt.run_id);
+  assert(manualTrace.every((event) => event.chain_id === 'chain-routine-test-001' && event.mode === 'replay'));
+  assert.equal(manualTrace.find((event) => event.step_type === 'model')?.assurance, 'requested-not-verified');
+  assert.deepEqual(manualTrace.filter((event) => event.step_type === 'model').map((event) => event.state),
+    ['running', 'completed']);
+  assert.equal(manualTrace.find((event) => event.step_type === 'connector')?.connector_ref, 'paid-media');
 
   assert.throws(() => activateRoutine(root, 'funil-diario-cerebro', manual.receipt_ref, 'role-marketing-owner', {
     clock: fixed('2026-08-24T11:29:00.000Z'),
@@ -486,8 +564,9 @@ try {
     spawn: (command, args, options) => {
       claudeCalls.push({ command, args, options });
       assert.equal(command, 'claude');
+      assert(options.input.startsWith('# Fronteira de execução do Runtime'));
       assert(options.input.includes(`${promptMarker}\n`));
-      assert(options.input.includes('Isto é um Run de uma Routine Contract já registrada e governada.'));
+      assert(options.input.includes('Não crie, atualize, pause, exclua nem reagende'));
       assert.equal(args.some((arg) => arg.includes(promptMarker)), false);
       return { status: 0, stdout: JSON.stringify({ result: outputMarker }), stderr: '' };
     },
@@ -508,6 +587,65 @@ try {
     },
   });
   assert.equal(directClaude.ok, true);
+
+  const declaredSkillRef = '.claude/skills/calls/SKILL.md';
+  write(join(root, declaredSkillRef), '# Calls\n');
+  const skillRoutine = contract({
+    routine_id: 'funil-skill-observada',
+    trigger: { type: 'manual', schedule: null },
+    context: { access_requests: [], skill_refs: [declaredSkillRef] },
+    destination: { kind: 'runtime-output', ref: 'routine-output' },
+  });
+  const skillOutputTemp = join(root, '.cerebro', 'runtime', 'outputs', 'routines', '.skill-observation.tmp');
+  const observedSkill = runModelExecutor({ ...bindingExample, workspace_path: root }, skillRoutine, `${promptMarker}\n`, {
+    outputTempPath: skillOutputTemp,
+    spawn: (_command, args) => {
+      write(args[args.indexOf('-o') + 1], `${outputMarker}\n`);
+      return {
+        status: 0,
+        stdout: `${JSON.stringify({
+          type: 'item.completed',
+          item: { type: 'command_execution', command: `sed -n '1,220p' ${declaredSkillRef}`, status: 'completed', exit_code: 0 },
+        })}\n`,
+        stderr: '',
+      };
+    },
+  });
+  assert.equal(observedSkill.ok, true);
+  assert.equal(observedSkill.skill_loads.length, 1);
+  assert.equal(observedSkill.skill_loads[0].ref, declaredSkillRef);
+  assert.equal(observedSkill.skill_loads[0].evidence_ref,
+    `sha256:${createHash('sha256').update('# Calls\n').digest('hex')}`);
+
+  const merelyDeclaredOutputTemp = join(root, '.cerebro', 'runtime', 'outputs', 'routines', '.skill-not-observed.tmp');
+  const merelyDeclaredSkill = runModelExecutor({ ...bindingExample, workspace_path: root }, skillRoutine, `${promptMarker}\n`, {
+    outputTempPath: merelyDeclaredOutputTemp,
+    spawn: (_command, args) => {
+      write(args[args.indexOf('-o') + 1], `${outputMarker}\n`);
+      return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
+    },
+  });
+  assert.equal(merelyDeclaredSkill.ok, true);
+  assert.deepEqual(merelyDeclaredSkill.skill_loads, []);
+
+  const writableOutputTemp = join(root, '.cerebro', 'runtime', 'outputs', 'routines', '.workspace-write.tmp');
+  const writableExecutor = runModelExecutor({
+    ...bindingExample,
+    workspace_path: root,
+    permission_profile: 'workspace-write',
+  }, {
+    ...skillRoutine,
+    permission_mode: 'workspace-write',
+  }, `${promptMarker}\n`, {
+    outputTempPath: writableOutputTemp,
+    spawn: (_command, args) => {
+      assert.equal(args.includes('--approve-for-me'), true);
+      assert.equal(args.includes('-s'), false);
+      write(args[args.indexOf('-o') + 1], `${outputMarker}\n`);
+      return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
+    },
+  });
+  assert.equal(writableExecutor.ok, true);
 
   const receiptFiles = readdirSync(join(root, '.cerebro', 'runtime', 'receipts', 'routines'));
   assert(receiptFiles.length >= 10);

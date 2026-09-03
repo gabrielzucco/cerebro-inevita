@@ -1,0 +1,34 @@
+{
+  "protocol_version": 1,
+  "release_id": "radar-de-voz-v0-1-0",
+  "system_ref": "radar-de-voz",
+  "version": "0.1.0",
+  "channel": "pilot",
+  "compatibility": {
+    "minimum_brain_version": "1.29.0"
+  },
+  "contracts": {
+    "system_contract_ref": "contract.json",
+    "capability_contract_ref": "capability.json"
+  },
+  "publication": {
+    "status": "pilot",
+    "catalog_visibility": "validation-lab",
+    "access_mode": "approved-participants",
+    "application_required": false
+  },
+  "validation": {
+    "program_key": "radar-de-voz-v1",
+    "required_real_cycles": 3,
+    "verified_real_cycles": 0,
+    "required_distinct_member_brains": 2,
+    "verified_distinct_member_brains": 0,
+    "requires_repeat_use": true,
+    "requires_eval_pass": true,
+    "requires_human_approval": true
+  },
+  "privacy": {
+    "mode": "local-first",
+    "telemetry_content": false
+  }
+}

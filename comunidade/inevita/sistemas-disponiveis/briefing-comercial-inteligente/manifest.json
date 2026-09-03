@@ -12,7 +12,7 @@
     "stage": "pilot",
     "listed": false,
     "validation_lab_visible": true,
-    "application_required": true,
+    "application_required": false,
     "access_mode": "approved_participants",
     "required_real_cycles": 3,
     "required_distinct_member_brains": 2,
@@ -35,6 +35,18 @@
     "connects_sources_automatically": false,
     "writes_external_systems_automatically": false,
     "requires_source_by_source_consent": true
+  },
+  "requirements": {
+    "real_event": "uma reunião real",
+    "source_roles": [
+      {
+        "role": "commercial-source",
+        "label": "Fonte comercial autorizada",
+        "required": true,
+        "examples": ["arquivo", "export manual"]
+      }
+    ],
+    "human_approval_before_external_write": true
   },
   "telemetry": {
     "content": false,

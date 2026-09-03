@@ -17,6 +17,7 @@ import {
   validateRoutineRunReceipt,
 } from './lib/routine-protocol.mjs';
 import { validateJudgmentReceipt } from './lib/judgment-protocol.mjs';
+import { validateDecisionCaseReceipt } from './lib/decision-case.mjs';
 import {
   validateCorrectionRunReceipt,
   validateLearningCandidate,
@@ -25,6 +26,13 @@ import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
 import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
 import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
+import { validateRetrievalProviderContract } from './lib/retrieval-provider-protocol.mjs';
+import { validateSystemRuntimeBinding } from './lib/system-runtime-binding.mjs';
+import { validateSystemSourceBinding } from './lib/system-source-binding.mjs';
+import { validateExperienceManifest } from './lib/experience-manifest.mjs';
+import { validateSocietyPackageManifest } from './lib/society-catalog-read-model.mjs';
+import { validateReleaseManifest } from './lib/release-manifest.mjs';
+import { validateCommunicationFeed } from './lib/communication-feed.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -38,6 +46,7 @@ const required = [
   'templates/sistema/contract.json', 'templates/sistema/capability.json',
   'protocol/README.md', 'protocol/brain-manifest.schema.json', 'protocol/capability-contract.schema.json',
   'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
+  'protocol/system-surface.schema.json',
   'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
   'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
   'protocol/access-receipt.schema.json',
@@ -46,11 +55,17 @@ const required = [
   'protocol/routine-migration.schema.json',
   'protocol/collector-binding.schema.json',
   'protocol/judgment-receipt.schema.json',
+  'protocol/decision-case-receipt.schema.json',
   'protocol/correction-run-receipt.schema.json',
   'protocol/learning-candidate.schema.json',
   'protocol/execution-trace-event.schema.json',
   'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
   'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
+  'protocol/retrieval-provider-contract.schema.json',
+  'protocol/system-runtime-binding.schema.json',
+  'protocol/system-source-binding.schema.json',
+  'protocol/experience-manifest.schema.json',
+  'protocol/release-manifest.schema.json',
   'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
   'protocol/examples/brain-manifest.v1.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
@@ -61,14 +76,20 @@ const required = [
   'protocol/examples/routine-migration.v1.json',
   'protocol/examples/collector-binding.v1.json',
   'protocol/examples/judgment-receipt.v1.json',
+  'protocol/examples/decision-case-receipt.v1.json',
   'protocol/examples/correction-run-receipt.v1.json',
   'protocol/examples/learning-candidate.v1.json',
   'protocol/examples/execution-trace-event.v1.json',
   'protocol/examples/experiment-contract.v1.json', 'protocol/examples/experiment-state.v1.json',
   'protocol/examples/handoff-contract.v1.json', 'protocol/examples/handoff-receipt.v1.json',
+  'protocol/examples/retrieval-provider-contract.v1.json',
+  'protocol/examples/system-runtime-binding.v1.json',
+  'protocol/examples/system-source-binding.v1.json',
+  'protocol/examples/experience-manifest.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
+  '.cerebro/manifest.json',
   'sistemas/calls/manifest.md', 'sistemas/calls/pipeline.md', 'sistemas/calls/rotinas.md',
   'sistemas/calls/evals.md', 'sistemas/calls/feedback.md', 'sistemas/calls/changelog.md',
   'sistemas/calls/capability.json', 'sistemas/calls/contract.json',
@@ -76,6 +97,10 @@ const required = [
   'sistemas/cerebro-base/rotinas.md', 'sistemas/cerebro-base/evals.md',
   'sistemas/cerebro-base/feedback.md', 'sistemas/cerebro-base/changelog.md',
   'sistemas/cerebro-base/capability.json', 'sistemas/cerebro-base/contract.json',
+  'sistemas/next-best-gtm/manifest.md', 'sistemas/next-best-gtm/pipeline.md',
+  'sistemas/next-best-gtm/evals.md', 'sistemas/next-best-gtm/changelog.md',
+  'sistemas/next-best-gtm/capability.json', 'sistemas/next-best-gtm/contract.json',
+  'sistemas/next-best-gtm/experience.json',
   '.claude/skills/operar/SKILL.md',
   '.claude/skills/fonte/SKILL.md',
   '.claude/skills/arquiteto/SKILL.md',
@@ -92,6 +117,8 @@ const required = [
   'operacao/arquitetura/_LEIA.md',
   'scripts/test-architect.mjs',
   'scripts/commission-system.mjs', 'scripts/test-commission-system.mjs',
+  'scripts/system-source-binding.mjs', 'scripts/test-system-source-binding-v1.mjs',
+  'scripts/installation-compatibility.mjs', 'scripts/test-installation-compatibility-v1.mjs',
   'scripts/discover-context.mjs', 'scripts/register-source.mjs',
   'scripts/concierge-run.mjs', 'scripts/test-concierge-run.mjs',
   'scripts/test-context-discovery.mjs',
@@ -109,36 +136,62 @@ const required = [
   'scripts/lib/execution-trace-runtime.mjs', 'scripts/lib/evaluation-runtime.mjs',
   'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
   'scripts/lib/handoff-protocol.mjs', 'scripts/lib/compatibility-diagnostic.mjs',
+  'scripts/lib/retrieval-provider-protocol.mjs',
+  'scripts/lib/system-runtime-binding.mjs',
+  'scripts/lib/installation-compatibility.mjs',
+  'scripts/lib/experience-manifest.mjs',
+  'scripts/lib/society-catalog-read-model.mjs',
+  'scripts/lib/release-manifest.mjs',
+  'scripts/lib/skill-read-model.mjs',
   'scripts/lib/json-schema-runtime.mjs', 'scripts/lib/replay-runtime.mjs',
   'scripts/compatibility-diagnostic.mjs',
   'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
+  'scripts/lib/runtime-storage.mjs', 'scripts/test-runtime-storage-migration.mjs',
   'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
+  'scripts/lib/decision-case.mjs', 'scripts/test-decision-case.mjs',
   'scripts/lib/correction-loop.mjs',
-  'scripts/lib/console-read-model.mjs', 'scripts/lib/cockpit-read-model.mjs',
-  'scripts/lib/hermes-runtime.mjs', 'scripts/lib/hermes-activation.mjs',
-  'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
-  'scripts/cockpit.mjs',
+  'scripts/lib/console-read-model.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
   'console/index.html', 'console/app.js', 'console/canvas.js', 'console/canvas-layout-policy.js',
   'console/canvas.bundle.js', 'console/styles.css',
+  'society/catalog.v1.json',
+  'comunidade/inevita/atualizacoes/feed.v1.json',
+  'scripts/lib/communication-feed.mjs', 'scripts/test-communication-feed-v1.mjs',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
   'scripts/test-routine-runtime.mjs',
   'scripts/test-context-snapshot-runtime.mjs',
   'scripts/test-execution-trace.mjs', 'scripts/test-evaluation-runtime.mjs',
+  'scripts/migrate-execution-traces.mjs', 'scripts/test-migrate-execution-traces.mjs',
   'scripts/test-graph-read-model.mjs',
   'scripts/test-canvas-layout-readability.mjs',
   'scripts/test-judgment-protocol.mjs',
   'scripts/test-correction-loop.mjs',
-  'scripts/test-console-server.mjs', 'scripts/test-cockpit.mjs', 'scripts/test-hermes-activation.mjs',
+  'scripts/test-console-server.mjs',
+  'scripts/test-system-launcher-workspace.mjs',
+  'scripts/test-system-workspace-dedup-v1.mjs',
+  'scripts/test-company-brain-skills-v1.mjs',
+  'scripts/test-company-brain-product-cut-v1.mjs',
+  'scripts/test-company-brain-launcher-hierarchy-v1.mjs',
+  'scripts/test-company-brain-orientation-v1.mjs',
+  'scripts/test-company-brain-native-capabilities-v0.mjs',
+  'scripts/test-company-brain-product-polish-v1.mjs',
+  'scripts/test-company-brain-lived-overview-v2.mjs',
+  'scripts/test-experience-manifest-v1.mjs',
+  'scripts/test-society-catalog-v0.mjs',
+  'scripts/test-release-manifest-v1.mjs',
+  'scripts/test-gtm-console-integration.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   'scripts/test-experiment-protocol.mjs',
   'scripts/test-handoff-protocol.mjs', 'scripts/test-compatibility-diagnostic.mjs',
+  'scripts/test-retrieval-provider-protocol.mjs',
   'scripts/test-replay-runtime.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/release.json',
+  'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/contract.json',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/pipeline.md',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/rotinas.md',
@@ -153,8 +206,26 @@ for (const item of required) {
   if (!existsSync(join(ROOT, item))) errors.push(`faltando: ${item}`);
 }
 
+if (existsSync(join(ROOT, 'society', 'catalog.v1.json'))) {
+  const catalog = JSON.parse(readFileSync(join(ROOT, 'society', 'catalog.v1.json'), 'utf8'));
+  if (catalog.protocol_version !== 1 || catalog.catalog_id !== 'inevita-society-systems' || !Array.isArray(catalog.systems)) {
+    errors.push('catálogo Society inválido: envelope incompatível');
+  }
+  for (const [index, system] of (catalog.systems || []).entries()) {
+    if (!system.system_id || !system.stage || typeof system.checkout?.available !== 'boolean') {
+      errors.push(`catálogo Society inválido: sistema ${index} incompleto`);
+    }
+    for (const field of ['companies', 'runs', 'approved_runs', 'judged_outcomes']) {
+      if (!Number.isInteger(system.evidence?.[field]) || system.evidence[field] < 0) {
+        errors.push(`catálogo Society inválido: sistema ${index} com evidence.${field} inválido`);
+      }
+    }
+  }
+}
+
 for (const [label, path, validate] of [
   ['example Brain Manifest v1', 'protocol/examples/brain-manifest.v1.json', validateBrainManifest],
+  ['Brain Manifest do produto', '.cerebro/manifest.json', validateBrainManifest],
   ['Brain Manifest do starter', 'profiles/company-brain-starter-en/.cerebro/manifest.json', validateBrainManifest],
   ['template capability', 'templates/sistema/capability.json', validateCapabilityContract],
   ['template system contract', 'templates/sistema/contract.json', validateSystemContract],
@@ -174,6 +245,7 @@ for (const [label, path, validate] of [
   ['example routine migration v1', 'protocol/examples/routine-migration.v1.json', validateRoutineMigration],
   ['example collector binding v1', 'protocol/examples/collector-binding.v1.json', validateCollectorBinding],
   ['example judgment receipt v1', 'protocol/examples/judgment-receipt.v1.json', validateJudgmentReceipt],
+  ['example decision case receipt v1', 'protocol/examples/decision-case-receipt.v1.json', validateDecisionCaseReceipt],
   ['example correction receipt v1', 'protocol/examples/correction-run-receipt.v1.json', validateCorrectionRunReceipt],
   ['example learning candidate v1', 'protocol/examples/learning-candidate.v1.json', validateLearningCandidate],
   ['example execution trace event v1', 'protocol/examples/execution-trace-event.v1.json', validateExecutionTraceEvent],
@@ -181,6 +253,15 @@ for (const [label, path, validate] of [
   ['example experiment state v1', 'protocol/examples/experiment-state.v1.json', validateExperimentState],
   ['example handoff contract v1', 'protocol/examples/handoff-contract.v1.json', validateHandoffContract],
   ['example handoff receipt v1', 'protocol/examples/handoff-receipt.v1.json', validateHandoffReceipt],
+  ['example retrieval provider v1', 'protocol/examples/retrieval-provider-contract.v1.json', validateRetrievalProviderContract],
+  ['example system runtime binding v1', 'protocol/examples/system-runtime-binding.v1.json', validateSystemRuntimeBinding],
+  ['example system source binding v1', 'protocol/examples/system-source-binding.v1.json', validateSystemSourceBinding],
+  ['example experience manifest v1', 'protocol/examples/experience-manifest.v1.json', validateExperienceManifest],
+  ['GTM experience manifest', 'sistemas/next-best-gtm/experience.json', validateExperienceManifest],
+  ['Society briefing package manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json', validateSocietyPackageManifest],
+  ['Society briefing Release Manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/release.json', validateReleaseManifest],
+  ['Society briefing System Contract', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/contract.json', validateSystemContract],
+  ['Feed público de atualizações', 'comunidade/inevita/atualizacoes/feed.v1.json', validateCommunicationFeed],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -449,6 +530,7 @@ for (const contract of [
   'METODO-SISTEMAS.md',
   'METODO-EXPERIMENTOS.md',
   'templates',
+  'comunidade/inevita/atualizacoes/feed.v1.json',
 ]) {
   if (!motorManifest.includes(contract)) errors.push(`manifesto do motor sem upgrade: ${contract}`);
 }
@@ -519,11 +601,12 @@ if (!ignore.includes('.cerebro/concierge-runs/')) {
 if (!ignore.includes('.cerebro/sistemas/')) {
   errors.push('estado privado dos sistemas não está protegido pelo .gitignore');
 }
-for (const privatePath of ['.cerebro/runtime', '.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
+for (const privatePath of ['.cerebro/runtime', '.cerebro/operator-runtime', '.cerebro/acesso-dispensado', '.cerebro/contracts/', '.cerebro/ledger/', '.cerebro/learning/']) {
   if (!ignore.includes(privatePath)) errors.push(`estado privado sem ignore: ${privatePath}`);
 }
 const privateIgnore = readFileSync(join(ROOT, '.cerebro', 'private-ignore.manifest'), 'utf8');
 if (!privateIgnore.includes('.cerebro/runtime')) errors.push('manifesto privado não protege runtime');
+if (!privateIgnore.includes('.cerebro/operator-runtime')) errors.push('manifesto privado não protege marcador do operador');
 if (!ignore.includes('operacao/arquitetura/*')) {
   errors.push('mapas privados do Architect não estão protegidos pelo .gitignore');
 }
@@ -567,10 +650,13 @@ const layout = JSON.parse(readFileSync(join(ROOT, '.cerebro', 'layout.json'), 'u
 if (layout.version !== 3) errors.push('layout precisa estar no protocolo v3');
 for (const key of [
   'activationBrief', 'configuration', 'activationContract', 'systemContract', 'sourceContracts',
+  'experienceManifests',
   'accessGrants', 'accessReceipts', 'runLedger', 'learningRegister',
   'routineContracts', 'executorBindings', 'routineReceipts', 'routineState', 'routineOutputs',
   'routineJudgments',
   'routineCorrections', 'learningCandidates',
+  'executionTraces', 'canvasLayouts',
+  'experimentContracts', 'experimentStates',
 ]) {
   if (!layout[key] || layout[key].startsWith('/') || layout[key].includes('..')) {
     errors.push(`layout sem caminho seguro: ${key}`);
@@ -646,4 +732,4 @@ if (errors.length) {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 }
-console.log(`✓ protocolo válido · 14 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);
+console.log(`✓ protocolo válido · 22 envelopes · 3 sistemas · ${claudeFiles.length} arquivos de skills sincronizados`);

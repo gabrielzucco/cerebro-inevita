@@ -1,0 +1,28 @@
+{
+  "protocol_version": 1,
+  "capability_id": "interpretar-funil-diario",
+  "name": "Interpretar o funil diariamente",
+  "version": "0.1.0",
+  "task": "Transformar um snapshot determinístico do funil em um gargalo prioritário explicável e julgável",
+  "when_to_use": ["depois do fechamento de uma janela real e comparável"],
+  "when_not_to_use": ["quando eventos, denominadores ou vendas não possuem definição confiável"],
+  "input_roles": [
+    { "role": "eventos-funil", "required": true, "purpose": "medir passagem entre etapas" },
+    { "role": "vendas", "required": true, "purpose": "observar o outcome comercial" },
+    { "role": "investimento-midia", "required": false, "purpose": "calcular eficiência de aquisição paga" },
+    { "role": "retencao", "required": false, "purpose": "localizar queda de atenção" },
+    { "role": "experimentos", "required": false, "purpose": "interpretar mudanças dentro da regra pré-registrada" }
+  ],
+  "output": {
+    "type": "leitura-de-funil",
+    "definition_of_done": "o founder reconhece o gargalo e julga a próxima ação"
+  },
+  "permissions": {
+    "read": ["métricas autorizadas"],
+    "write": ["leitura e recibo locais"],
+    "external_actions": false
+  },
+  "human_authority": ["confirmar o gargalo", "autorizar mudanças externas"],
+  "evals": ["frescor passou", "denominadores são declarados", "lacunas aparecem", "nenhuma ação externa foi executada"],
+  "extensions": {}
+}

@@ -141,33 +141,6 @@ function sourceRole(sourceId, index) {
   };
 }
 
-function reconstructedSource(sourceId) {
-  return {
-    protocol_version: 1,
-    source_id: sourceId,
-    name: sourceId.replaceAll('-', ' ').replace(/(^|\s)\S/g, (value) => value.toUpperCase()),
-    type: 'legacy-reference',
-    status: 'mapped',
-    truth: { home_ref: `legacy-map:${sourceId}`, source_of_truth: false },
-    authority: { owner_ref: 'role-founders', status: 'unconfirmed' },
-    scope: {
-      purpose: 'Preservar o papel de fonte declarado no mapa versionado até o conector vivo fornecer o readback.',
-      entity_types: ['evidence'],
-      boundaries: ['Não representa conexão ativa', 'Conteúdo bruto não é copiado para o runtime'],
-    },
-    sensitivity: 'private',
-    pii: { classification: 'unknown', handling: 'reference-only' },
-    modes: ['read'],
-    freshness: { policy: 'aguarda readback do control plane', observed_at: null },
-    retention: { policy: 'somente contrato reconstruível', until: null },
-    revocation: { method: 'remover o vínculo do mapa versionado', effect: 'receipt-only', revocable: true },
-    connector: { kind: 'unbound', binding_ref: null, credential_ref: null, custody: 'none' },
-    authorized_consumers: [],
-    assurance: 'receipt-audited',
-    extensions: { migration: { kind: 'manifest-map-reconstruction', protocol_version: 1 } },
-  };
-}
-
 function outputType(systemId) {
   const direct = `${systemId}-result`;
   if (ID_RE.test(direct)) return direct;
@@ -306,26 +279,17 @@ function atomicWrite(path, value) {
   renameSync(temporary, path);
 }
 
-export function previewLegacySystemImport(root, {
-  configPath = '.cerebro/migration/system-map.v1.json',
-  reconstruct = false,
-} = {}) {
+export function previewLegacySystemImport(root, { configPath = '.cerebro/migration/system-map.v1.json' } = {}) {
   const brain = resolve(root);
   const { value: config } = readConfig(brain, configPath);
   const configuredLayout = layout(brain);
   const systemDirectory = within(brain, configuredLayout.systemContracts || '.cerebro/contracts/systems', 'systemContracts');
   const sourceDirectory = within(brain, configuredLayout.sourceContracts || '.cerebro/contracts/sources', 'sourceContracts');
-  const configuredSourceIds = new Set(config.sources.map((source) => source.source_id));
-  if (configuredSourceIds.size !== config.sources.length) fail('source_id repetido na configuração');
-  const missingSourceIds = [...new Set(config.systems.flatMap((system) => system.source_refs))]
-    .filter((sourceId) => !configuredSourceIds.has(sourceId));
-  const sources = reconstruct
-    ? [...config.sources, ...missingSourceIds.map(reconstructedSource)]
-    : config.sources;
-  const sourceIds = new Set(sources.map((source) => source.source_id));
+  const sourceIds = new Set(config.sources.map((source) => source.source_id));
+  if (sourceIds.size !== config.sources.length) fail('source_id repetido na configuração');
   const operations = [];
 
-  for (const source of sources) {
+  for (const source of config.sources) {
     const errors = validateSourceContract(source);
     if (errors.length) fail(`Source Contract ${source.source_id} inválido: ${errors.join(' · ')}`);
     const target = join(sourceDirectory, `${source.source_id}.json`);
@@ -348,26 +312,22 @@ export function previewLegacySystemImport(root, {
     let contract;
     let managed = false;
     if (item.contract_alias) {
-      if (!existsSync(target)) {
-        if (!reconstruct) fail(`${item.system_id} aponta para alias ausente: ${item.contract_alias}`);
-        contract = { ...generatedSystem(manifest, item), system_id: item.contract_alias };
-      } else {
-        const existing = readJson(target, 'System Contract existente');
-        const currentErrors = validateSystemContract(existing);
-        if (currentErrors.length) fail(`alias ${item.contract_alias} inválido: ${currentErrors.join(' · ')}`);
-        const declaredSourceRefs = existing.sources.map((source) => source.source_id).filter(Boolean).sort();
-        const mappedSourceRefs = [...item.source_refs].sort();
-        if (mappedSourceRefs.length < 1 || JSON.stringify(mappedSourceRefs) !== JSON.stringify(declaredSourceRefs)) {
-          fail(`${item.system_id} precisa repetir exatamente as Fontes declaradas pelo alias ${item.contract_alias}`);
-        }
-        const mapped = HUMAN_STATUS.get(manifest.frontmatter.estado);
-        const stage = item.stage || (existing.status === 'active' ? 'active' : mapped.stage);
-        contract = {
-          ...existing,
-          extensions: { ...existing.extensions, ...migrationExtensions(manifest, item, stage) },
-        };
-        managed = true;
+      if (!existsSync(target)) fail(`${item.system_id} aponta para alias ausente: ${item.contract_alias}`);
+      const existing = readJson(target, 'System Contract existente');
+      const currentErrors = validateSystemContract(existing);
+      if (currentErrors.length) fail(`alias ${item.contract_alias} inválido: ${currentErrors.join(' · ')}`);
+      const declaredSourceRefs = existing.sources.map((source) => source.source_id).filter(Boolean).sort();
+      const mappedSourceRefs = [...item.source_refs].sort();
+      if (mappedSourceRefs.length < 1 || JSON.stringify(mappedSourceRefs) !== JSON.stringify(declaredSourceRefs)) {
+        fail(`${item.system_id} precisa repetir exatamente as Fontes declaradas pelo alias ${item.contract_alias}`);
       }
+      const mapped = HUMAN_STATUS.get(manifest.frontmatter.estado);
+      const stage = item.stage || (existing.status === 'active' ? 'active' : mapped.stage);
+      contract = {
+        ...existing,
+        extensions: { ...existing.extensions, ...migrationExtensions(manifest, item, stage) },
+      };
+      managed = true;
     } else {
       contract = generatedSystem(manifest, item);
       managed = existsSync(target)
@@ -383,7 +343,7 @@ export function previewLegacySystemImport(root, {
     status: count('create') + count('update') > 0 ? 'ready' : 'no-change',
     company_ref: config.company_ref,
     systems: config.systems.length,
-    sources: sources.length,
+    sources: config.sources.length,
     operations: operations.map((item) => ({
       action: item.action,
       kind: item.kind,

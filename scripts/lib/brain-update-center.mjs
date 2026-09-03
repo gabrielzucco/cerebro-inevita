@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildCommunicationReadModel } from './communication-feed.mjs';
 
 const PRODUCT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const REPO_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -65,6 +66,7 @@ export function buildBrainUpdateCenter(brainRoot, {
   engineRoot = PRODUCT_ROOT,
   compatibilityPercent = null,
   societyCounts = {},
+  societySystems = [],
 } = {}) {
   const root = resolve(brainRoot);
   const engine = resolve(engineRoot);
@@ -79,6 +81,17 @@ export function buildBrainUpdateCenter(brainRoot, {
     && Boolean(targetSource.repo)
     && !targetIsCheckout;
   const checkSource = targetSource.repo ? targetSource : motorSource;
+  const systemReleases = societySystems
+    .filter((system) => system && typeof system.system_id === 'string'
+      && typeof system.name === 'string' && typeof system.release?.version === 'string')
+    .map((system) => ({
+      system_id: system.system_id,
+      name: system.name,
+      version: system.release.version,
+      channel: typeof system.release.channel === 'string' ? system.release.channel : null,
+      availability: typeof system.availability === 'string' ? system.availability : null,
+      installation_status: typeof system.installation_status === 'string' ? system.installation_status : null,
+    }));
 
   return {
     generated_at: new Date().toISOString(),
@@ -106,7 +119,9 @@ export function buildBrainUpdateCenter(brainRoot, {
       validation: Number(societyCounts.validation) || 0,
       installed: Number(societyCounts.installed) || 0,
       update_mode: 'bundled-with-motor',
+      releases: systemReleases,
     },
+    communication: buildCommunicationReadModel(engine),
     protection: {
       context_uploaded: false,
       automatic_check: false,

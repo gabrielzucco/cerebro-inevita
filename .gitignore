@@ -19,13 +19,17 @@ capturas/*
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/cache
+node_modules/
 
 # telemetria anônima — o id desta instalação e o opt-out ficam SÓ na tua máquina
 .cerebro/id
 .cerebro/sem-telemetria
 .cerebro/acesso-email
+.cerebro/acesso-dispensado
 .cerebro/member-id
 .cerebro/runtime
+.cerebro/operator-runtime
+.cerebro/operator-runtime.legacy-*
 .cerebro/install-credential
 .cerebro/install-activation-outbox.json
 .cerebro/concierge-runs/

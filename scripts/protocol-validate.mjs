@@ -25,6 +25,10 @@ import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
 import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
 import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
 import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
+import { validateRetrievalProviderContract } from './lib/retrieval-provider-protocol.mjs';
+import { validateSystemRuntimeBinding } from './lib/system-runtime-binding.mjs';
+import { validateSystemSourceBinding } from './lib/system-source-binding.mjs';
+import { validateExperienceManifest } from './lib/experience-manifest.mjs';
 
 const [kind = '', path = ''] = process.argv.slice(2);
 const validators = {
@@ -46,6 +50,10 @@ const validators = {
   'experiment-state': validateExperimentState,
   handoff: validateHandoffContract,
   'handoff-receipt': validateHandoffReceipt,
+  'retrieval-provider': validateRetrievalProviderContract,
+  'system-runtime': validateSystemRuntimeBinding,
+  'system-source': validateSystemSourceBinding,
+  experience: validateExperienceManifest,
   'brain-manifest': validateBrainManifest,
 };
 
@@ -54,7 +62,7 @@ function fail(message) {
   process.exit(1);
 }
 
-if (!validators[kind]) fail('tipo válido: brain-manifest, source, system, run, grant, receipt, routine, executor, collector, routine-receipt, routine-migration, judgment, correction, learning, trace, experiment, experiment-state, handoff ou handoff-receipt');
+if (!validators[kind]) fail('tipo válido: brain-manifest, source, system, run, grant, receipt, routine, executor, collector, system-runtime, system-source, experience, routine-receipt, routine-migration, judgment, correction, learning, trace, experiment, experiment-state, handoff, handoff-receipt ou retrieval-provider');
 if (!path) fail('informe o caminho do JSON');
 
 try {

@@ -21,6 +21,8 @@ const LEGACY_OPERATING_AREAS = new Map([
 
 const OPERATING_AREA_LABELS = new Map(OPERATING_AREA_DEFINITIONS.map((item) => [item.id, item.label]));
 const BUSINESS_FUNCTION_LABELS = new Map(BUSINESS_FUNCTION_DEFINITIONS.map((item) => [item.id, item.label]));
+const PRODUCT_KINDS = new Set(['business-system', 'brain-native']);
+const PRODUCT_SURFACES = new Set(['systems', 'brain']);
 
 function readable(value) {
   return String(value || 'geral').replaceAll('-', ' ').replace(/^./, (letter) => letter.toUpperCase());
@@ -46,10 +48,17 @@ export function businessFunctionLabel(value) {
   return BUSINESS_FUNCTION_LABELS.get(ref) || 'Não classificada';
 }
 
-export function systemClassification(extensions = {}) {
+export function systemClassification(extensions = {}, systemId = null) {
+  const inferredNative = systemId === 'cerebro-base';
+  const productKind = PRODUCT_KINDS.has(extensions.product_kind)
+    ? extensions.product_kind
+    : inferredNative ? 'brain-native' : 'business-system';
+  const defaultSurface = productKind === 'brain-native' ? 'brain' : 'systems';
   return {
     operating_area: normalizeOperatingArea(extensions.operating_area || extensions.area_ref),
     business_function: normalizeBusinessFunction(extensions.business_function),
+    product_kind: productKind,
+    surface: PRODUCT_SURFACES.has(extensions.surface) ? extensions.surface : defaultSurface,
   };
 }
 

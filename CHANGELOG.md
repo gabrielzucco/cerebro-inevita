@@ -1,48 +1,40 @@
 # Mudanças do cérebro INEVITA
 
-## v1.36.0 — 2026-09-02 · "três gestos e o cérebro chega ao Telegram"
+## v1.36.0 — 2026-09-03 · “a INEVITA ganha uma voz dentro do Cérebro”
 
-- **Paridade com o Console oficial:** o Cockpit passa a usar o mesmo núcleo portátil publicado no
-  `cerebro-ops`: anatomia do cérebro, workspaces de Sistemas, Skills, Canvas, Decision Cases,
-  Experimentos, Execution Traces, compatibilidade, governança e saúde.
-- **Fronteira de produto preservada:** sessão KOSMOS, Supabase, proxy, tokens e control plane
-  hospedado não entram no Cérebro do membro. A distribuição continua local e reference-only.
-- **Protocolo ampliado:** manifests, bindings de fonte/runtime, contratos de Experimento e Handoff,
-  recibos de Decision Case e eventos de Execution Trace agora têm schemas, exemplos e validação.
-- **Ativação em três marcos:** o Cockpit prepara o Hermes, conduz o OAuth do Codex, recebe o token
-  do BotFather e transforma um `/start` privado em confirmação humana — sem terminal, escolha de
-  provider, modelo, ID numérico, gateway ou `doctor` no caminho principal.
-- **Instalador verificável:** quando necessário, o Cockpit baixa somente o instalador oficial
-  fixado no commit testado, valida SHA-256, executa sem shell e preserva versões mais novas.
-- **OAuth sem custódia paralela:** a autorização pertence ao Hermes; o Cockpit mostra apenas URL,
-  código temporário e estado. Tokens e arquivos de autenticação nunca entram na API ou no repo.
-- **Telegram default deny:** o gateway para durante a identificação, grupos e mensagens antigas são
-  ignorados, a conta candidata exige “Sou eu” e o ID fica somente na allowlist secreta. Falhas
-  restauram a configuração anterior.
-- **Compatibilidade honesta:** versões com `skills trust` usam confiança explícita; as demais ligam
-  apenas `.agents/skills` por `skills.external_dirs`, sem bloquear o cérebro nem abrir outras pastas.
-- **Aula sem risco:** `--demo` mostra o Console e o fluxo prontos em estado controlado, sem
-  credenciais, escrita ou comando real; a ativação do participante acontece depois da aula.
+- **Central permanente em `Cérebro → Atualizações`:** versão instalada, verificação do motor,
+  novidades da INEVITA e releases passam a ter casas visíveis e diferentes no mesmo cockpit.
+- **Primeira Missão continua sendo missão:** ela recebe somente o comunicado público mais recente
+  em um cartão compacto, com passagem para a central completa.
+- **Cérebro não é Sistema:** o histórico do motor vem do changelog local; releases de Sistemas
+  vêm da Society e atualizar o motor não instala nem ativa nenhum deles.
+- **Canal público, local e somente de entrada:** o feed empacotado é validado por allowlist,
+  funciona offline e não envia Fonte, memória, query, output ou telemetria para a INEVITA.
+- A busca por release remota continua manual. Aplicar uma versão continua exigindo confirmação,
+  release publicada e instalação gerenciada; checkout Git e caminhos do dono permanecem protegidos.
 
-## v1.35.0 — 2026-09-02 · "o cérebro ganhou um cockpit e chegou ao Telegram"
+## v1.35.0 — 2026-09-02 · “o Cérebro deixa de parecer um Sistema”
 
-- **Cockpit INEVITA:** o Console local virou uma superfície completa de ativação e operação. A
-  primeira tela mostra o próximo passo, o relógio de valor em linguagem humana, decisões, rotinas e
-  o estado do Hermes sem criar um banco paralelo.
-- **Hermes guiado, não escondido:** instalação oficial, escolha de provider, vínculo do diretório,
-  confiança explícita nas skills, Telegram, serviço 24/7 e `doctor` formam um único fluxo. Provider
-  continua sendo escolhido no assistente oficial do Hermes.
-- **Token protegido:** a credencial do BotFather vai direto ao `.env` oficial do Hermes, fora de
-  argumentos, Git, respostas e logs. Allowlist é obrigatória, `ALLOW_ALL` fica desligado e a troca
-  ou remoção do token é explícita.
-- **Demo honesta:** `node scripts/cockpit.mjs --demo` usa dados sintéticos em memória, mostra uma
-  marca visível e bloqueia toda mutação ou comando.
-- **Valor visível:** T0–T4 aparece como `Começou → Fonte pronta → Primeira entrega → Aprovado →
-  Reutilizado`; o código fica secundário e T4 prova que o contexto voltou numa tarefa nova.
-- **Comunidade no lugar certo:** o catálogo local da INEVITA aparece no Cockpit com o convite para
-  `https://inevitasociety.com`; fonte, contexto, output e decisão continuam locais.
-- **Portabilidade preservada:** zero dependências, Node 20+, browser aberto automaticamente,
-  fallback de portas 4782–4791 e suporte a macOS, Linux e Windows.
+- **Cockpit rico como casca canônica:** `Hoje`, `Cérebro`, `Sistemas`, `Skills`, `Canvas`,
+  `Julgamento`, `Estrutura`, `Confiança` e `Society` passam a conviver na experiência publicada,
+  sem perder Context Snapshot, compatibilidade, atualização segura ou o handshake de instalação.
+- A primeira abertura passa a projetar a ativação T0→T4 como **Primeira Missão**; depois de T4 a
+  home volta a ser `Hoje` e a ativação permanece como recibo no Cérebro.
+- `Cérebro Base` continua existindo como metassistema interno, mas deixa de aparecer como Sistema
+  de negócio no catálogo, nas contagens, filtros de área e launcher. Rotinas nativas e rotinas de
+  Sistemas também passam a carregar classificação explícita.
+- **Acordo de Contexto visível:** Fonte continua sendo casa da verdade; o Cérebro coleta, prepara,
+  destila e recupera; o Sistema consome o recorte e produz o resultado; o Run Record prova qual
+  caminho foi usado. Leitura direta da Fonte fica como exceção declarada para dado fresco ou
+  estruturado, nunca como atalho invisível.
+- **Migração sem perda para instalações antigas:** o nome do operador sai do arquivo legado
+  `.cerebro/runtime` e vai para `.cerebro/operator-runtime`; `runtime/` fica reservado ao estado
+  privado dos protocolos. Abrir o cockpit continua read-only e os dois atualizadores migram o
+  marcador de forma idempotente.
+- **Installation Compatibility V1:** a ficha da Society cruza papéis do pacote com Source Contracts
+  e bindings deste Cérebro antes da instalação; matching propõe, binding e grant aprovados provam.
+- **System Source Binding V1:** um papel exigido pode reutilizar uma Fonte existente sem duplicar
+  conector, credencial, conteúdo ou contrato da Fonte.
 
 ## v1.34.2 — 2026-08-28 · "o vínculo passa a valer na sessão, não só no update"
 

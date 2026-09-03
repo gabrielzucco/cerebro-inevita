@@ -1,6 +1,6 @@
 name: motor
 
-# Todos os testes do motor precisam entrar no push/PR: um commit ruim chegaria
+# O motor tem 20 testes e nenhum deles pode ficar fora do push/PR: um commit ruim chegaria
 # ao main sem verificação — e o updater distribui a partir de release, que sai
 # do main. Este workflow é o portão que faltava.
 on:

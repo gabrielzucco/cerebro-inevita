@@ -5,7 +5,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createExecutionTracer } from './lib/execution-trace-runtime.mjs';
-import { buildBrainGraph, buildRunGraph, buildSystemGraph, graphForLayout } from './lib/graph-read-model.mjs';
+import {
+  buildBrainGraph,
+  buildRunGraph,
+  buildSystemGraph,
+  deriveTraceTiming,
+  graphForLayout,
+} from './lib/graph-read-model.mjs';
 import { registerHandoffContract } from './lib/handoff-protocol.mjs';
 import { registerRoutineContract, writeRoutineRunReceipt } from './lib/routine-protocol.mjs';
 import { appendRunRecord } from './lib/system-protocol.mjs';
@@ -54,7 +60,17 @@ try {
   write(join(root, '.cerebro', 'contracts', 'systems', 'conteudo.json'), contentSystem);
   const handoff = example('handoff-contract.v1.json');
   registerHandoffContract(root, handoff);
-  registerRoutineContract(root, example('routine-contract.v1.json'));
+  const routine = example('routine-contract.v1.json');
+  registerRoutineContract(root, {
+    ...routine,
+    extensions: {
+      preparation: {
+        kind: 'trusted-local-command',
+        binding_ref: 'collector-funil-local',
+        output_ref: '.automacao/_FUNIL-ULTIMO.json',
+      },
+    },
+  });
 
   const receipt = example('routine-run-receipt.v1.json');
   writeRoutineRunReceipt(root, receipt);
@@ -113,6 +129,10 @@ try {
     stepId: 'run', stepType: 'run', state: 'running', parentStepId: null,
     inputRefs: ['operacao/rotinas/funil-diario.prompt.md'],
   });
+  tracer.emit({
+    stepId: 'collector', stepType: 'collector', state: 'running',
+    inputRefs: ['collector-funil-local'],
+  });
   tracer.emit({ stepId: 'collector', stepType: 'collector', state: 'completed', outputRefs: [collectorRef] });
   tracer.emit({ stepId: 'retrieval', stepType: 'retrieval', state: 'completed', outputRefs: [contextRef] });
   tracer.emit({
@@ -132,7 +152,11 @@ try {
 
   const recorded = buildRunGraph(root, receipt.receipt_id);
   assert.equal(recorded.trace_origin, 'recorded');
-  assert.equal(recorded.trace_events, 8);
+  assert.equal(recorded.trace_events, 9);
+  assert.equal(recorded.trace_timing.assurance, 'event-derived');
+  assert.equal(recorded.trace_timeline.every((event) => Number.isInteger(event.elapsed_ms)), true);
+  assert.equal(recorded.nodes.find((node) => node.id === 'collector').details.duration_ms, 0);
+  assert.equal(recorded.nodes.find((node) => node.id === 'collector').state, 'completed');
   assert.equal(recorded.nodes.find((node) => node.id === 'gate:1').state, 'completed');
   assert.equal(recorded.nodes.find((node) => node.id === 'gate:2').state, 'failed');
   assert(recorded.nodes.some((node) => node.kind === 'artifact' && node.details.artifact_type === 'instruction' && node.actual));
@@ -159,6 +183,52 @@ try {
   assert.equal(graphForLayout(root, `run-${producerRun.run_id}`).graph_ref, producerRun.run_id);
   assert.equal(graphForLayout(root, `run-${receipt.run_id}`).graph_ref, receipt.run_id);
   assert.equal(JSON.stringify(recorded).includes('PRIVATE'), false);
+
+  const at = (sequence, stepId, stepType, state, elapsedMs, parentStepId = 'run') => ({
+    sequence, step_id: stepId, step_type: stepType, state,
+    occurred_at: new Date(Date.parse('2026-08-24T10:00:00.000Z') + elapsedMs).toISOString(),
+    parent_step_id: stepId === 'run' ? null : parentStepId,
+    source_ref: null, skill_ref: null, model_ref: stepType === 'model' ? 'gpt-5.6-sol' : null,
+    connector_ref: null,
+  });
+  const callsTiming = deriveTraceTiming([
+    at(1, 'run', 'run', 'running', 0, null),
+    at(2, 'collector', 'collector', 'running', 7),
+    at(3, 'collector', 'collector', 'completed', 2767),
+    at(4, 'retrieval', 'retrieval', 'running', 2767),
+    at(5, 'retrieval', 'retrieval', 'completed', 2773),
+    at(6, 'capability', 'capability', 'running', 2774),
+    at(7, 'model', 'model', 'completed', 321275, 'capability'),
+    at(8, 'capability', 'capability', 'completed', 321276),
+    at(9, 'output', 'output', 'running', 321276),
+    at(10, 'output', 'output', 'completed', 321277),
+    at(11, 'eval', 'eval', 'running', 321277),
+    at(12, 'eval', 'eval', 'completed', 321284),
+    at(13, 'judgment', 'judgment', 'pending', 321286),
+    at(14, 'run', 'run', 'completed', 321287, null),
+  ], { origin: 'recorded' });
+  assert.equal(callsTiming.total_duration_ms, 321287);
+  assert.equal(callsTiming.critical_path.find((stage) => stage.step_id === 'collector').duration_ms, 2760);
+  assert.equal(callsTiming.critical_path.find((stage) => stage.step_id === 'retrieval').duration_ms, 6);
+  assert.equal(callsTiming.critical_path.find((stage) => stage.step_id === 'capability').duration_ms, 318502);
+  assert.equal(callsTiming.dominant_step_id, 'capability');
+  assert.equal(callsTiming.nested_stages.find((stage) => stage.step_type === 'model').measurement, 'completion-only');
+  assert.equal(callsTiming.critical_path.at(-1).state, 'pending');
+  const retryTiming = deriveTraceTiming([
+    at(1, 'run', 'run', 'running', 0, null),
+    at(2, 'capability', 'capability', 'running', 10),
+    at(3, 'capability', 'capability', 'failed', 110),
+    at(4, 'capability', 'capability', 'completed', 510),
+    at(5, 'run', 'run', 'completed', 520, null),
+  ], { origin: 'recorded' });
+  assert.equal(retryTiming.critical_path[0].duration_ms, 500);
+  assert.equal(retryTiming.critical_path[0].state, 'completed');
+  const totalOnly = deriveTraceTiming([], {
+    startedAt: '2026-08-24T10:00:00.000Z', completedAt: '2026-08-24T10:01:00.000Z', origin: 'reconstructed',
+  });
+  assert.equal(totalOnly.assurance, 'total-only');
+  assert.equal(totalOnly.total_duration_ms, 60_000);
+  assert.equal(totalOnly.critical_path.length, 0);
   console.log('✓ Canvas read model separa contrato, trace reconstruído e caminho realmente registrado');
 } finally {
   rmSync(root, { recursive: true, force: true });

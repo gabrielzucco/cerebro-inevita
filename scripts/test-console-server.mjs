@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { request as httpRequest } from 'node:http';
@@ -12,14 +12,17 @@ import {
   saveCollectorBinding,
   saveExecutorBinding,
 } from './lib/routine-protocol.mjs';
+import { decisionCaseIdFor } from './lib/decision-case.mjs';
 import { createConsoleServer } from './console-server.mjs';
 import { bootstrapLegacyConsole, previewLegacyConsoleBootstrap } from './console-bootstrap.mjs';
+import { saveSystemRuntimeBinding } from './lib/system-runtime-binding.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'company-brain-console-'));
 const legacyRoot = mkdtempSync(join(tmpdir(), 'company-brain-legacy-console-'));
 const externalRuntimeRoot = mkdtempSync(join(tmpdir(), 'company-brain-external-runtime-'));
 const calls = [];
 const collectorCalls = [];
+const interfaceCalls = [];
 
 function write(path, value) {
   mkdirSync(dirname(path), { recursive: true });
@@ -117,11 +120,14 @@ try {
     version: 3,
     systemContracts: '.cerebro/contracts/systems',
     sourceContracts: '.cerebro/contracts/sources',
+    experimentContracts: '.cerebro/contracts/experiments',
+    experimentStates: '.cerebro/runtime/experiments',
     accessGrants: '.cerebro/contracts/access-grants',
     accessReceipts: '.cerebro/runtime/receipts/access',
     routineContracts: '.cerebro/contracts/routines',
     executorBindings: '.cerebro/runtime/executors',
     collectorBindings: '.cerebro/runtime/collectors',
+    systemRuntimeBindings: '.cerebro/runtime/system-bindings',
     routineReceipts: '.cerebro/runtime/receipts/routines',
     routineState: '.cerebro/runtime/routines',
     routineOutputs: '.cerebro/runtime/outputs/routines',
@@ -129,6 +135,10 @@ try {
     routineCorrections: '.cerebro/runtime/corrections',
     learningCandidates: '.cerebro/runtime/learning-candidates',
     routineMigrations: '.cerebro/runtime/migrations/routines',
+    runLedger: '.cerebro/runtime/ledger/runs.jsonl',
+    contextArtifacts: '.cerebro/runtime/context-artifacts',
+    executionTraces: '.cerebro/runtime/traces',
+    canvasLayouts: '.cerebro/runtime/canvas-layouts',
   });
   write(join(root, '.cerebro', 'private-ignore.manifest'), '.cerebro/runtime\n.cerebro/contracts/\noperacao/execucoes/*\n');
   write(join(root, 'operacao', 'rotinas', 'funil-diario.prompt.md'), 'PROMPT_ONLY_ON_STDIN\n');
@@ -152,16 +162,46 @@ try {
   ];
   for (const item of sources) write(join(root, '.cerebro', 'contracts', 'sources', `${item.source_id}.json`), item);
 
+  const experimentContract = {
+    ...example('experiment-contract.v1.json'),
+    system_ref: 'funil-crescimento',
+    measurement_system_refs: ['funil-crescimento'],
+  };
+  const experimentState = {
+    ...example('experiment-state.v1.json'),
+    run_refs: [],
+    verdict: { status: 'recorded', decided_on: '2026-08-10', summary: 'PRIVATE_EXPERIMENT_VERDICT_NOT_IN_SUMMARY' },
+    learning: { status: 'unlinked', ref: null },
+  };
+  write(join(root, '.cerebro', 'contracts', 'experiments', 'exp-demo-001.json'), experimentContract);
+  write(join(root, '.cerebro', 'runtime', 'experiments', 'exp-demo-001.json'), experimentState);
+
   const systemExample = example('system-contract.v2.json');
   write(join(root, '.cerebro', 'contracts', 'systems', 'analisar-funil.json'), {
     ...systemExample,
-    extensions: { area_ref: 'marketing' },
+    extensions: {
+      area_ref: 'marketing',
+      portfolio_system_ref: 'funil-crescimento',
+      portfolio_name: 'Funil e Crescimento',
+      migration_stage: 'active',
+      human_maturity: 'instrumentado',
+      interface_role: 'primary-web-ui',
+      source_manifest_ref: 'sistemas/funil.md',
+      component_statuses: { pipeline: 'ativo', routines: 'ativo', evals: 'ativo' },
+      next_gate: 'julgar o próximo run',
+    },
   });
   write(join(root, '.cerebro', 'contracts', 'systems', 'projetar-vendas.json'), {
     ...systemExample,
     system_id: 'projetar-vendas',
     name: 'Projetar próxima ação comercial',
     extensions: { area_ref: 'vendas' },
+  });
+  saveSystemRuntimeBinding(root, {
+    ...example('system-runtime-binding.v1.json'),
+    binding_id: 'system-runtime-funil-local',
+    system_ref: 'funil-crescimento',
+    workspace_path: '.',
   });
 
   for (const [grantId, sourceRef] of [
@@ -179,6 +219,11 @@ try {
         kind: 'trusted-local-command',
         binding_ref: 'collector-funnel-local',
         output_ref: '.automacao/_FUNIL-ULTIMO.json',
+        source_selections: [
+          { source_ref: 'paid-media', selected_pointers: ['/paid'], freshness_pointer: '/observed' },
+          { source_ref: 'sales-ledger', selected_pointers: ['/sales'], freshness_pointer: '/observed' },
+          { source_ref: 'experiment-ledger', selected_pointers: ['/experiments'], freshness_pointer: '/observed' },
+        ],
       },
     },
     context: {
@@ -208,9 +253,18 @@ try {
     sessionToken: 'fixed-session-token',
     csrfToken: 'fixed-csrf-token',
     clock: () => new Date('2026-08-24T11:29:00.000Z'),
+    interfaceFetch: async (url, options) => {
+      interfaceCalls.push({ url, options });
+      return { status: 204 };
+    },
     spawnCollector: (command, args) => {
       collectorCalls.push({ command, args });
-      write(join(root, '.automacao', '_FUNIL-ULTIMO.json'), '{"sanitized":true}\n');
+      write(join(root, '.automacao', '_FUNIL-ULTIMO.json'), {
+        observed: '2026-08-24T11:29:00.000Z',
+        paid: { spend_index: 17 },
+        sales: { confirmed_index: 9 },
+        experiments: { previous_ref: 'experiment-sanitized' },
+      });
       const future = new Date('2026-08-24T11:29:00.000Z');
       const path = join(root, '.automacao', '_FUNIL-ULTIMO.json');
       utimesSync(path, future, future);
@@ -220,8 +274,8 @@ try {
       calls.push({ command, args, options });
       assert.equal(command, 'codex');
       if (calls.length === 1) {
-        assert(options.input.includes('PROMPT_ONLY_ON_STDIN\n'));
-        assert(options.input.includes('Isto é um Run de uma Routine Contract já registrada e governada.'));
+        assert(options.input.includes('# Fronteira de execução do Runtime'));
+        assert(options.input.endsWith('PROMPT_ONLY_ON_STDIN\n'));
       }
       else assert(options.input.includes('Separar melhor a inferência da recomendação.'));
       assert.equal(args.includes('PROMPT_ONLY_ON_STDIN'), false);
@@ -241,27 +295,105 @@ try {
   const page = await request(base, '/');
   assert.equal(page.status, 200);
   assert(page.value.includes('Company Brain'));
+  assert(page.value.includes('data-view="compatibility"'));
+  const appBundle = await request(base, '/app.js');
+  assert.equal(appBundle.status, 200);
+  assert(appBundle.value.includes('TEMPO DO RUN'));
   assert.equal(calls.length, 0, 'abrir a UI não pode executar modelo');
   assert.equal(await requestWithHost(base, 'attacker.example'), 421, 'DNS rebinding host precisa ser negado');
   const cookie = page.cookie.split(';', 1)[0];
   assert.equal((await request(base, '/api/console')).status, 403);
+  assert.equal((await request(base, '/api/skills')).status, 403);
+  assert.equal((await request(base, '/api/society')).status, 403);
   const session = await request(base, '/api/session', { cookie });
   assert.equal(session.value.csrf_token, 'fixed-csrf-token');
+  const skillsCatalog = await request(base, '/api/skills', { cookie });
+  assert.equal(skillsCatalog.status, 200);
+  assert.equal(skillsCatalog.value.counts.company, 0);
+  assert.equal(skillsCatalog.value.counts.engine, 18);
+  assert.equal(skillsCatalog.value.privacy.skill_body_exposed, false);
+  const societyCatalog = await request(base, '/api/society', { cookie });
+  assert.equal(societyCatalog.status, 200);
+  assert.equal(societyCatalog.value.counts.validation, 4);
+  assert.equal(societyCatalog.value.counts.validated, 0);
+  assert.deepEqual(societyCatalog.value.systems.map((system) => system.system_id).sort(), [
+    'briefing-comercial-inteligente',
+    'calls-decisoes',
+    'leitura-diaria-funil',
+    'radar-de-voz',
+  ]);
+  assert.equal(societyCatalog.value.privacy.source_content_exposed, false);
+
+  assert.equal((await request(base, '/api/systems/funil-crescimento/interface-health')).status, 403);
+  const interfaceHealth = await request(base, '/api/systems/funil-crescimento/interface-health', { cookie });
+  assert.equal(interfaceHealth.status, 200);
+  assert.equal(interfaceHealth.value.status, 'available');
+  assert.equal(interfaceHealth.value.http_status, 204);
+  assert.equal(interfaceCalls.length, 1);
+  assert.equal(interfaceCalls[0].options.method, 'HEAD');
+  const missingInterface = await request(base, '/api/systems/projetar-vendas/interface-health', { cookie });
+  assert.equal(missingInterface.value.status, 'not-declared');
+  assert.equal(interfaceCalls.length, 1, 'interface ausente não pode produzir chamada de rede');
+
+  assert.equal((await request(base, '/api/graphs/brain')).status, 403);
+  const brainGraph = await request(base, '/api/graphs/brain', { cookie });
+  assert.equal(brainGraph.status, 200);
+  assert.equal(brainGraph.value.graph_type, 'brain');
+  assert(Array.isArray(brainGraph.value.nodes));
+  assert(Array.isArray(brainGraph.value.edges));
+  assert.equal(brainGraph.value.privacy.payload_exposed, false);
 
   let consoleView = await request(base, '/api/console', { cookie });
   assert.equal(consoleView.status, 200);
   assert.equal(consoleView.value.counts.areas, 2);
   assert.equal(consoleView.value.counts.systems, 2);
   assert.equal(consoleView.value.counts.sources, 3);
+  assert.equal(consoleView.value.counts.experiments, 1);
   assert.equal(consoleView.value.counts.routines, 2);
+  assert.equal(consoleView.value.counts.skills, 0);
+  assert.equal('skills' in consoleView.value, false, 'metadata de Skills deve carregar só na view dedicada');
   assert.equal(consoleView.value.counts.judgments, 0);
+  assert.equal(consoleView.value.counts.society_systems, 1);
+  assert.equal(consoleView.value.society.systems[0].system_id, 'funil-vivo');
+  assert.equal(consoleView.value.society.systems[0].stage, 'founding');
+  assert.equal(consoleView.value.society.systems[0].checkout.available, false);
+  assert.deepEqual(consoleView.value.society.systems[0].evidence, {
+    companies: 0,
+    runs: 0,
+    approved_runs: 0,
+    judged_outcomes: 0,
+    last_eval_at: null,
+  });
+  assert.equal(consoleView.value.compatibility.target.classification, 'partial-brain');
+  assert.equal(consoleView.value.compatibility.target.activation_stage, 'contracted');
+  assert.equal(consoleView.value.compatibility.inventory.sources.valid, 3);
+  assert.equal(consoleView.value.compatibility.guarantees.content_files_opened, false);
+  assert(consoleView.value.counts.compatibility_gaps > 0);
   assert.equal(consoleView.value.cache.kind, 'none');
+  const mappedFunnel = consoleView.value.systems.find((system) => system.system_id === 'funil-crescimento');
+  assert.equal(mappedFunnel.contract_id, 'analisar-funil');
+  assert.equal(mappedFunnel.migration_stage, 'active');
+  assert.equal(mappedFunnel.source_manifest_ref, 'sistemas/funil.md');
+  assert.equal(mappedFunnel.interface_ref_source, 'runtime-binding');
+  assert.equal(mappedFunnel.runtime_binding_status, 'installed');
+  assert.equal(mappedFunnel.runtime_binding.binding_id, 'system-runtime-funil-local');
   const funnel = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(funnel.health_reason_code, 'legacy-schedule-not-paused');
   assert.equal(funnel.preparation.status, 'ready');
   assert.equal(funnel.access.find((item) => item.source_ref === 'sales-ledger').assurance, 'receipt-audited');
   assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  assert.equal(JSON.stringify(consoleView.value).includes(experimentContract.hypothesis), false);
+  assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_EXPERIMENT_VERDICT_NOT_IN_SUMMARY'), false);
   assert.equal(calls.length, 0);
+
+  assert.equal((await request(base, '/api/experiments/EXP-DEMO-001')).status, 403);
+  const experimentDetail = await request(base, '/api/experiments/EXP-DEMO-001', { cookie });
+  assert.equal(experimentDetail.status, 200);
+  assert.equal(experimentDetail.value.contract.hypothesis, experimentContract.hypothesis);
+  assert.equal(experimentDetail.value.state.verdict.summary, 'PRIVATE_EXPERIMENT_VERDICT_NOT_IN_SUMMARY');
+  assert.equal(experimentDetail.value.pipeline.at(-1).state, 'gap');
+  assert.equal(experimentDetail.value.privacy.explicit_local_detail_read, true);
+  assert.equal(calls.length, 0, 'abrir Experimento não pode executar modelo');
 
   const missingCsrf = await request(base, '/api/routines/funil-diario-cerebro/run', {
     method: 'POST', cookie, body: { confirm: true },
@@ -284,12 +416,61 @@ try {
     method: 'POST', cookie, csrf: 'fixed-csrf-token', body: { confirm: true },
   });
   assert.equal(run.status, 200);
-  assert.equal(run.value.status, 'completed');
+  assert.equal(run.value.status, 'completed', JSON.stringify(run.value));
   assert.equal(calls.length, 1);
   assert.equal(collectorCalls.length, 1);
   assert.equal(JSON.stringify(run.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
 
   const receiptId = run.value.receipt_ref.replace('routine-receipt:', '');
+  const systemGraph = await request(base, '/api/graphs/systems/analisar-funil', { cookie });
+  assert.equal(systemGraph.status, 200);
+  assert.equal(systemGraph.value.graph_type, 'system');
+  assert(systemGraph.value.nodes.some((node) => node.kind === 'stage'));
+  const runGraph = await request(base, `/api/graphs/runs/${receiptId}`, { cookie });
+  assert.equal(runGraph.status, 200);
+  assert.equal(runGraph.value.graph_type, 'run');
+  assert.equal(runGraph.value.trace_origin, 'recorded');
+  assert(runGraph.value.trace_events > 0);
+  assert.equal(runGraph.value.trace_timing.assurance, 'event-derived');
+  assert.equal(runGraph.value.trace_timing.critical_path.some((stage) => stage.step_type === 'capability'), true);
+  assert.equal(runGraph.value.trace_timing.nested_stages.some((stage) => stage.step_type === 'model'), true);
+  assert.equal(runGraph.value.nodes.find((node) => node.id === 'capability').state, 'completed');
+  assert.equal(runGraph.value.nodes.some((node) => node.kind === 'stage'), false);
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact' && node.actual));
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact'
+    && node.details.artifact_type === 'instruction'));
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact'
+    && node.details.artifact_type === 'context-snapshot'));
+  assert(runGraph.value.nodes.some((node) => node.kind === 'artifact'
+    && node.details.artifact_type === 'deliverable'));
+  assert(runGraph.value.edges.some((edge) => edge.actual && edge.relation === 'produces'));
+  assert.equal(runGraph.value.nodes.some((node) => node.details?.external_url), false);
+  assert.equal(JSON.stringify(runGraph.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  const directRunRecordGraph = await request(base,
+    `/api/graphs/run-records/${runGraph.value.run.run_id}`, { cookie });
+  assert.equal(directRunRecordGraph.status, 200);
+  assert.equal(directRunRecordGraph.value.run.canonical_ref, `run-record:${runGraph.value.run.run_id}`);
+  assert.equal(directRunRecordGraph.value.run.routine_receipt_ref, null);
+
+  const graphNodeId = brainGraph.value.nodes[0].id;
+  const layoutMissingCsrf = await request(base, '/api/graphs/layouts/brain', {
+    method: 'PUT', cookie,
+    body: { confirm: true, approved_by: 'role-founder', positions: { [graphNodeId]: { x: 100, y: 80 } } },
+  });
+  assert.equal(layoutMissingCsrf.status, 403);
+  const layoutUnknownNode = await request(base, '/api/graphs/layouts/brain', {
+    method: 'PUT', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-founder', positions: { unknown: { x: 100, y: 80 } } },
+  });
+  assert.equal(layoutUnknownNode.status, 400);
+  assert.equal(layoutUnknownNode.value.reason_code, 'canvas-layout-node-unknown');
+  const layoutSaved = await request(base, '/api/graphs/layouts/brain', {
+    method: 'PUT', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-founder', positions: { [graphNodeId]: { x: 100.125, y: 80.456 } } },
+  });
+  assert.equal(layoutSaved.status, 200);
+  assert.equal(layoutSaved.value.topology_changed, false);
+  assert.equal(layoutSaved.value.node_count, 1);
   const receiptPath = join(root, '.cerebro', 'runtime', 'receipts', 'routines', `${receiptId}.json`);
   const receiptFixture = JSON.parse(readFileSync(receiptPath, 'utf8'));
   assert.equal((await request(base, `/api/runs/${receiptId}/output`)).status, 403);
@@ -297,12 +478,24 @@ try {
   assert.equal(output.status, 200, JSON.stringify({ response: output.value, output_ref: receiptFixture.output_ref, root }));
   assert.equal(output.value.output.content, 'PRIVATE_OUTPUT_NOT_IN_API\n');
   assert.equal(output.value.judgment.summary.status, 'pending');
+  assert.equal(output.value.context_available, true);
   assert.equal(calls.length, 1, 'abrir output não pode executar modelo');
+
+  assert.equal((await request(base, `/api/runs/${receiptId}/context`)).status, 403);
+  const context = await request(base, `/api/runs/${receiptId}/context`, { cookie });
+  assert.equal(context.status, 200);
+  assert.equal(context.value.context_snapshot.accesses.length, 3);
+  assert.equal(context.value.privacy.artifact_content_exposed, false);
+  assert.equal(context.value.privacy.model_executed, false);
+  assert.equal(JSON.stringify(context.value).includes('spend_index'), false);
+  assert.equal(JSON.stringify(context.value).includes('confirmed_index'), false);
+  assert.equal(calls.length, 1, 'abrir Context Snapshot não pode executar modelo');
 
   consoleView = await request(base, '/api/console', { cookie });
   const afterRun = consoleView.value.routines.find((routine) => routine.routine_id === 'funil-diario-cerebro');
   assert.equal(afterRun.actions.can_activate, false, 'migração ainda bloqueia o segundo relógio');
   assert.equal(consoleView.value.counts.judgments, 1);
+  assert(consoleView.value.run_records.some((record) => record.run_id === runGraph.value.run.run_id));
   assert.equal(consoleView.value.judgments[0].judgment.status, 'pending');
   assert.equal(JSON.stringify(consoleView.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
   assert.equal(calls.length, 1, 'recompilar read model não executa modelo');
@@ -448,6 +641,12 @@ try {
   assert.equal(correctionRerun.value.external_action_executed, false);
   assert.equal(calls.length, 2);
   const correctedReceiptId = correctionRerun.value.resulting_receipt_ref.replace('routine-receipt:', '');
+  const correctedContext = await request(base, `/api/runs/${correctedReceiptId}/context`, { cookie });
+  assert.equal(correctedContext.status, 200);
+  assert.equal(correctedContext.value.context_snapshot.accesses.length, 3);
+  const runLedger = readFileSync(join(root, '.cerebro', 'runtime', 'ledger', 'runs.jsonl'), 'utf8');
+  assert.equal(runLedger.includes('spend_index'), false);
+  assert(runLedger.includes('judgment-receipt:'), 'o segundo Run Record precisa apontar para a correção humana');
   const duplicateCorrection = await request(base, `/api/runs/${receiptId}/rerun-with-correction`, {
     method: 'POST', cookie, csrf: 'fixed-csrf-token',
     body: { confirm: true, approved_by: 'role-owner' },
@@ -544,6 +743,51 @@ try {
   assert.equal(failedOutput.status, 400);
   assert.equal(failedOutput.value.reason_code, 'output-not-available');
 
+  assert.equal((await request(base, '/api/runs')).status, 403);
+  const runsExplorer = await request(base, '/api/runs', { cookie });
+  assert.equal(runsExplorer.status, 200);
+  assert(Array.isArray(runsExplorer.value.runs));
+  const receiptEntry = runsExplorer.value.runs.find((entry) => entry.receipt_id === receiptId);
+  assert.equal(receiptEntry.origin, 'routine-receipt');
+  assert.equal(receiptEntry.selector_ref, receiptId);
+  assert.equal(receiptEntry.system_ref, 'analisar-funil');
+  assert.equal(receiptEntry.trace.status, 'recorded');
+  assert(receiptEntry.trace.events > 0);
+  assert.equal(receiptEntry.context.sources, 3);
+  assert.equal(receiptEntry.run_record_ref, `run-record:${receiptEntry.run_id}`);
+  assert(receiptEntry.record, 'a comparação A×B precisa do Run Record integral');
+  const failedEntry = runsExplorer.value.runs.find((entry) => entry.receipt_id === failedId);
+  assert.equal(failedEntry.status, 'failed');
+  assert.equal(failedEntry.context, null, 'recibo sem Run Record não inventa snapshot');
+  assert.equal(failedEntry.trace.status, 'none');
+  assert.equal(JSON.stringify(runsExplorer.value).includes('PRIVATE_OUTPUT_NOT_IN_API'), false);
+  assert.equal(JSON.stringify(runsExplorer.value).includes('CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL'), false);
+
+  const standaloneRecord = {
+    ...example('run-record.v2.json'),
+    run_id: 'run-standalone-replay-001',
+    system_id: 'projetar-vendas',
+    system_version: '0.9.0',
+    mode: 'replay',
+    chain_id: 'chain-standalone-001',
+    experiment_ref: 'EXP-DEMO-001',
+  };
+  appendFileSync(join(root, '.cerebro', 'runtime', 'ledger', 'runs.jsonl'), `${JSON.stringify(standaloneRecord)}\n`);
+  const runsWithStandalone = await request(base, '/api/runs', { cookie });
+  const standaloneEntry = runsWithStandalone.value.runs.find((entry) => entry.run_id === 'run-standalone-replay-001');
+  assert.equal(standaloneEntry.origin, 'run-record');
+  assert.equal(standaloneEntry.selector_ref, 'run-record:run-standalone-replay-001');
+  assert.equal(standaloneEntry.receipt_id, null);
+  assert.equal(standaloneEntry.mode, 'replay');
+  assert.equal(standaloneEntry.chain_id, 'chain-standalone-001');
+  assert.equal(standaloneEntry.experiment_ref, 'EXP-DEMO-001');
+  assert.equal(standaloneEntry.handoff_count, 1);
+  assert.equal(standaloneEntry.system_version, '0.9.0');
+  assert.equal(standaloneEntry.eval_passed, true);
+  assert.equal(standaloneEntry.human_decision, 'approved');
+  assert.equal(standaloneEntry.trace.status, 'none', 'sem arquivo de trace, a distinção honesta é "sem trace"');
+  assert.equal(standaloneEntry.context.sources, 3);
+
   if (process.platform !== 'win32') {
     const layoutPath = join(root, '.cerebro', 'layout.json');
     const originalLayout = JSON.parse(readFileSync(layoutPath, 'utf8'));
@@ -591,8 +835,158 @@ try {
   assert.equal(active.migration.status, 'cutover-completed');
   assert.equal(calls.length, 2);
 
+  const revokeWithoutCsrf = await request(base, '/api/grants/grant-funnel-media/revoke', {
+    method: 'POST', cookie, body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(revokeWithoutCsrf.status, 403);
+  const revocation = await request(base, '/api/grants/grant-funnel-media/revoke', {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner' },
+  });
+  assert.equal(revocation.status, 200);
+  assert.equal(revocation.value.effect, 'future-only');
+  assert.equal(revocation.value.past_artifacts_deleted, false);
+  assert.equal(revocation.value.external_action_executed, false);
+  const blockedFutureRun = await request(base, '/api/routines/funil-diario-cerebro/run', {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: { confirm: true },
+  });
+  assert.equal(blockedFutureRun.status, 200);
+  assert.equal(blockedFutureRun.value.status, 'denied');
+  assert.equal(blockedFutureRun.value.reason_code, 'grant-revoked');
+  assert.equal(calls.length, 2, 'grant revogado deve bloquear o modelo antes da execução');
+
+  // ---------------------------------------------------------- Decision Case
+  // O Console prepara o caso; o martelo é humano e vai para a fonte canônica.
+  const queueKey = 'martelo:corte-sanitizado-que-espera-decisao';
+  const caseId = decisionCaseIdFor(queueKey);
+  const decisionText = 'Aprovo o corte sanitizado. O Console prepara o caso e eu registro o martelo, com evidencia aberta.';
+  mkdirSync(join(root, '01-nucleo-privado', 'decisoes'), { recursive: true });
+  write(join(root, '01-nucleo-privado', '_PAINEL.md'), '# Painel sanitizado\n');
+  write(join(root, '.automacao', '_FILA-DECISAO.json'), {
+    abertos: {
+      [queueKey]: {
+        titulo: 'Corte sanitizado que espera decisao',
+        categoria: 'martelo',
+        first_seen: '2026-08-20',
+        last_seen: '2026-08-24',
+      },
+    },
+    historico: [],
+  });
+
+  assert.equal((await request(base, '/api/decision-cases')).status, 403);
+  const caseList = await request(base, '/api/decision-cases', { cookie });
+  assert.equal(caseList.status, 200);
+  assert.equal(caseList.value.available, true);
+  assert.equal(caseList.value.house_ready, true);
+  assert.equal(caseList.value.open_count, 1);
+  assert.equal(caseList.value.cases[0].case_id, caseId);
+  assert.equal(caseList.value.cases[0].state.status, 'pending');
+
+  const caseDetail = await request(base, `/api/decision-cases/${caseId}`, { cookie });
+  assert.equal(caseDetail.status, 200);
+  assert.equal(caseDetail.value.authorship.required, 'human');
+  assert.equal(caseDetail.value.draft.decision_text, '', 'o Console entrega estrutura, nunca o veredito escrito');
+  const candidateRefs = caseDetail.value.evidence_candidates.map((entry) => entry.ref);
+  assert(candidateRefs.includes(`decision-queue:${queueKey}`));
+  assert(candidateRefs.includes('note:01-nucleo-privado/_PAINEL.md'));
+
+  const caseBody = (overrides = {}) => ({
+    confirm: true,
+    approved_by: 'role-owner',
+    verdict: 'decided',
+    theme: 'metodo',
+    title: 'Corte sanitizado aprovado com martelo humano',
+    decision_text: decisionText,
+    evidence_refs: [`decision-queue:${queueKey}`, 'note:01-nucleo-privado/_PAINEL.md'],
+    authored_by_human: true,
+    ...overrides,
+  });
+
+  assert.equal((await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, body: caseBody(),
+  })).status, 403, 'preview sem CSRF não passa');
+  const withoutEvidence = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody({ evidence_refs: [`decision-queue:${queueKey}`] }),
+  });
+  assert.equal(withoutEvidence.status, 400);
+  assert.equal(withoutEvidence.value.reason_code, 'evidence-beyond-queue-required');
+  const machineAuthored = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody({ authored_by_human: false }),
+  });
+  assert.equal(machineAuthored.value.reason_code, 'human-authorship-required');
+
+  const casePreview = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody(),
+  });
+  assert.equal(casePreview.status, 200);
+  assert.equal(casePreview.value.applied, false);
+  assert.equal(casePreview.value.external_action_executed, false);
+  assert(casePreview.value.diff.startsWith('--- /dev/null'));
+  assert(casePreview.value.diff.includes(`+${decisionText}`));
+  const notePath = join(root, casePreview.value.canonical_write.path);
+  assert.equal(existsSync(notePath), false, 'preview não escreve no vault');
+
+  const staleApply = await request(base, `/api/decision-cases/${caseId}/apply`, {
+    method: 'POST',
+    cookie,
+    csrf: 'fixed-csrf-token',
+    body: caseBody({ plan_digest: `sha256:${'0'.repeat(64)}`, decided_at: casePreview.value.decided_at }),
+  });
+  assert.equal(staleApply.status, 400);
+  assert.equal(staleApply.value.reason_code, 'preview-stale');
+  assert.equal(existsSync(notePath), false);
+
+  const applyBody = caseBody({
+    plan_digest: casePreview.value.plan_digest, decided_at: casePreview.value.decided_at,
+  });
+  const applied = await request(base, `/api/decision-cases/${caseId}/apply`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: applyBody,
+  });
+  assert.equal(applied.status, 200);
+  assert.equal(applied.value.status, 'applied');
+  assert.equal(applied.value.canonical_write_performed, true);
+  assert.equal(applied.value.external_action_executed, false);
+  assert.equal(existsSync(notePath), true);
+  assert.equal(readFileSync(notePath, 'utf8'), casePreview.value.content);
+  assert(readFileSync(notePath, 'utf8').includes('tipo: decisao'));
+  assert.equal(JSON.stringify(applied.value).includes(decisionText), false, 'a resposta do apply não devolve o texto');
+
+  const appliedAgain = await request(base, `/api/decision-cases/${caseId}/apply`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: applyBody,
+  });
+  assert.equal(appliedAgain.value.status, 'already-applied');
+  assert.equal(appliedAgain.value.canonical_write_performed, false);
+  assert.equal(appliedAgain.value.receipt_ref, applied.value.receipt_ref);
+  assert.equal(readdirSync(join(root, '01-nucleo-privado', 'decisoes')).length, 1);
+
+  const previewAfterApply = await request(base, `/api/decision-cases/${caseId}/preview`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', body: caseBody(),
+  });
+  assert.equal(previewAfterApply.value.reason_code, 'decision-case-already-applied');
+
+  const rolledBack = await request(base, `/api/decision-cases/${caseId}/rollback`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', reason_code: 'wrong-evidence' },
+  });
+  assert.equal(rolledBack.status, 200);
+  assert.equal(rolledBack.value.status, 'rolled-back');
+  assert.equal(existsSync(notePath), false);
+  assert.equal(rolledBack.value.state.status, 'rolled-back');
+  const rolledBackAgain = await request(base, `/api/decision-cases/${caseId}/rollback`, {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token',
+    body: { confirm: true, approved_by: 'role-owner', reason_code: 'mistake' },
+  });
+  assert.equal(rolledBackAgain.value.status, 'already-rolled-back');
+  assert.equal(rolledBackAgain.value.canonical_write_performed, false);
+
+  const finalList = await request(base, '/api/decision-cases', { cookie });
+  assert.equal(finalList.value.cases[0].state.status, 'rolled-back');
+  assert.equal(JSON.stringify(finalList.value).includes(decisionText), false, 'o read model nunca carrega o texto do martelo');
+
   await new Promise((resolveClose) => instance.server.close(resolveClose));
-  console.log('✓ Console local fecha julgamento → correção → comparação → candidato sem ação externa');
+  console.log('✓ Console local fecha contexto → julgamento → correção → revogação sem ação externa');
+  console.log('✓ Decision Case: caso preparado, diff confirmado, martelo na fonte canônica e reversão');
 } finally {
   rmSync(root, { recursive: true, force: true });
   rmSync(legacyRoot, { recursive: true, force: true });

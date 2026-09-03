@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "system_id": "calls-decisoes",
+  "name": "Calls em Decisões",
+  "release": {
+    "version": "0.1.1",
+    "channel": "pilot",
+    "minimum_brain_version": "1.11.0"
+  },
+  "validation": {
+    "program_key": "calls-decisoes-v1",
+    "stage": "pilot",
+    "listed": false,
+    "validation_lab_visible": true,
+    "application_required": false,
+    "access_mode": "approved_participants",
+    "required_real_cycles": 3,
+    "required_distinct_member_brains": 2,
+    "requires_repeat_use": true,
+    "requires_eval_pass": true,
+    "requires_human_approval": true,
+    "verified_real_cycles": 0,
+    "verified_distinct_member_brains": 0
+  },
+  "publication": {
+    "status": "pilot",
+    "public_catalog": false,
+    "validation_lab": true
+  },
+  "result": "reunião deixa decisões, ações, evidências e pendências aprovadas",
+  "setpoint": "transformar uma call real em trabalho acionável sem resumir genericamente nem perder proveniência",
+  "first_value": "o dono confirma que consegue decidir ou agir usando o artefato sem reler a call inteira",
+  "privacy": "local-first",
+  "permissions": {
+    "connects_sources_automatically": false,
+    "writes_external_systems_automatically": false,
+    "requires_source_by_source_consent": true
+  },
+  "requirements": {
+    "real_event": "uma reunião real com transcrição legível",
+    "source_roles": [
+      {
+        "role": "transcricao",
+        "label": "Transcrição autorizada",
+        "required": true,
+        "examples": ["Fathom", "arquivo", "texto colado"]
+      }
+    ],
+    "human_approval_before_external_write": true
+  }
+}

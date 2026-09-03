@@ -6,8 +6,13 @@ Escolha pelo que precisa sair pronto — não pela ferramenta.
 
 | Sistema | Estado | Resultado | Como operar |
 |---|---|---|---|
-| [Cérebro Base](cerebro-base/manifest.md) | beta instalado | fonte real vira artefato aprovado e volta a trabalhar | `/comecar` |
 | [Calls em Decisões](calls/manifest.md) | beta instalado | reunião vira decisões, ações e memória citável | `operar calls` ou `/call` |
+
+## Capacidade nativa do Cérebro
+
+O [Cérebro Base](cerebro-base/manifest.md) é a capacidade de ativação, memória, recuperação e
+aprendizado do próprio Cérebro. Ele mantém contrato e versão internos, mas **não é um Sistema de
+negócio** e por isso não aparece no launcher `Sistemas`. A primeira ativação começa com `/comecar`.
 
 ## Estados
 

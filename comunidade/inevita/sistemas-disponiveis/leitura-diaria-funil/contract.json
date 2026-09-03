@@ -1,0 +1,93 @@
+{
+  "protocol_version": 1,
+  "system_id": "leitura-diaria-funil",
+  "name": "Leitura Diária do Funil",
+  "version": "0.1.0",
+  "status": "confirmed",
+  "result": {
+    "statement": "o founder recebe uma leitura diária do funil com um gargalo prioritário e evidência dos números",
+    "non_success": "despejar métricas, escrever consultas novas a cada run ou otimizar eventos inconsistentes",
+    "output_type": "leitura-de-funil",
+    "definition_of_done": "o founder reconhece o gargalo, entende a evidência e julga a próxima ação",
+    "owner": "dono-do-funil",
+    "human_gate": "confirmar o gargalo e autorizar qualquer mudança em campanha, página ou produto"
+  },
+  "trigger": {
+    "type": "schedule",
+    "description": "depois que um dia real fecha e as fontes autorizadas possuem frescor suficiente"
+  },
+  "capability": {
+    "capability_id": "interpretar-funil-diario",
+    "version": "0.1.0",
+    "origin": "inevita"
+  },
+  "entities": [
+    { "type": "funnel", "role": "funil", "required": true }
+  ],
+  "sources": [
+    {
+      "role": "eventos-funil",
+      "source_id": null,
+      "required": true,
+      "access": "read-only",
+      "freshness": "dia fechado e janela comparável",
+      "purpose": "medir passagem entre etapas usando identidade e definição estáveis"
+    },
+    {
+      "role": "vendas",
+      "source_id": null,
+      "required": true,
+      "access": "read-only",
+      "freshness": "vendas confirmadas até o fechamento da janela",
+      "purpose": "ligar aquisição ao outcome comercial observado"
+    },
+    {
+      "role": "investimento-midia",
+      "source_id": null,
+      "required": false,
+      "access": "read-only",
+      "freshness": "gasto e entrega do mesmo período",
+      "purpose": "calcular eficiência quando existe mídia paga"
+    },
+    {
+      "role": "retencao",
+      "source_id": null,
+      "required": false,
+      "access": "read-only",
+      "freshness": "mesma janela da jornada",
+      "purpose": "localizar queda de atenção antes da conversão"
+    },
+    {
+      "role": "experimentos",
+      "source_id": null,
+      "required": false,
+      "access": "read-only",
+      "freshness": "estado vigente e regra pré-registrada",
+      "purpose": "não confundir movimento esperado de experimento com anomalia"
+    }
+  ],
+  "pipeline": [
+    { "state": "coletado", "input": "fontes autorizadas", "output": "snapshot determinístico", "gate": "frescor e definições comparáveis passaram" },
+    { "state": "diagnosticado", "input": "snapshot e histórico", "output": "um gargalo prioritário com evidência", "gate": "lacunas e contradições permanecem explícitas" },
+    { "state": "julgado", "input": "leitura do dia", "output": "confirmação, correção ou rejeição", "gate": "nenhuma mudança externa acontece automaticamente" }
+  ],
+  "permissions": {
+    "read": ["métricas e contratos explicitamente autorizados"],
+    "write": ["leitura e recibos locais"],
+    "external_actions": false
+  },
+  "eval": {
+    "version": "0.1.0",
+    "deterministic_gates": ["fontes possuem frescor", "taxas usam denominadores declarados", "um único gargalo prioritário é emitido", "nenhuma campanha é alterada"],
+    "human_questions": ["Este é o gargalo que mais limita o funil agora?", "A evidência é suficiente para decidir a próxima ação?"],
+    "outcome_measure": "gargalo-julgado",
+    "baseline": null
+  },
+  "learning": {
+    "correction_policy": "candidate-first",
+    "promotion_threshold": 3,
+    "requires_replay": true,
+    "requires_human_approval": true
+  },
+  "extensions": {}
+}

@@ -51,15 +51,6 @@ import {
   buildBrainUpdateCenter,
   checkLatestBrainRelease,
 } from './lib/brain-update-center.mjs';
-import {
-  bindHermesProject,
-  configureHermesTelegram,
-  controlHermesGateway,
-  disconnectHermesTelegram,
-  readHermesStatus,
-  runHermesDoctor,
-} from './lib/hermes-runtime.mjs';
-import { createHermesActivationController } from './lib/hermes-activation.mjs';
 
 // Índice derivado do conhecimento: varre SOMENTE 01-nucleo-privado (fosso, baixo
 // risco), nunca 02-dados-terceiros. Reconstruível a cada chamada; não cria verdade.
@@ -1131,6 +1122,7 @@ function anatomyModel(root) {
 
   return {
     generated_at: new Date().toISOString(),
+    activation: model.activation,
     company_map: companyMap,
     retrieval_health: retrievalHealth,
     control_center: controlCenter,
@@ -1138,6 +1130,7 @@ function anatomyModel(root) {
       engineRoot: ENGINE_ROOT,
       compatibilityPercent: model.compatibility?.score?.percent ?? null,
       societyCounts: societyCatalog.counts,
+      societySystems: societyCatalog.systems,
     }),
     identity: {
       canonical: '01-nucleo-privado/_SISTEMAS.md',
@@ -1268,14 +1261,13 @@ function safeReason(error) {
   return /^[a-z0-9-]+$/.test(message) ? message : 'request-failed';
 }
 
-async function assertAuthenticatedPost(request, authenticate, csrfToken) {
-  await authenticate(request);
+function assertAuthenticatedPost(request, sessionToken, csrfToken) {
+  if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
   if (!exactEqual(String(request.headers['x-cerebro-csrf'] || ''), csrfToken)) throw new Error('csrf-invalid');
-  if (!originAllowed(request)) throw new Error('origin-invalid');
 }
 
-async function assertMutation(request, authenticate, csrfToken, payload) {
-  await assertAuthenticatedPost(request, authenticate, csrfToken);
+function assertMutation(request, sessionToken, csrfToken, payload) {
+  assertAuthenticatedPost(request, sessionToken, csrfToken);
   if (payload.confirm !== true) throw new Error('confirmation-required');
 }
 
@@ -1349,27 +1341,6 @@ function experimentDetailFrom(pathname) {
   return match?.[1] || null;
 }
 
-function hermesActionFrom(pathname) {
-  if (pathname === '/api/integrations/hermes/project/bind') return { kind: 'project-bind' };
-  if (pathname === '/api/integrations/hermes/telegram') return { kind: 'telegram-configure' };
-  if (pathname === '/api/integrations/hermes/telegram/disconnect') return { kind: 'telegram-disconnect' };
-  if (pathname === '/api/integrations/hermes/doctor') return { kind: 'doctor' };
-  const gateway = pathname.match(/^\/api\/integrations\/hermes\/gateway\/(install|start|stop|restart)$/);
-  return gateway ? { kind: 'gateway', action: gateway[1] } : null;
-}
-
-function hermesActivationActionFrom(pathname) {
-  const routes = new Map([
-    ['/api/integrations/hermes/activation/prepare/start', 'prepare-start'],
-    ['/api/integrations/hermes/activation/codex/start', 'codex-start'],
-    ['/api/integrations/hermes/activation/telegram/start', 'telegram-start'],
-    ['/api/integrations/hermes/activation/owner/confirm', 'owner-confirm'],
-    ['/api/integrations/hermes/activation/owner/reject', 'owner-reject'],
-    ['/api/integrations/hermes/activation/cancel', 'cancel'],
-  ]);
-  return routes.get(pathname) || null;
-}
-
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
@@ -1400,32 +1371,10 @@ export function createConsoleServer({
   interfaceHealthTimeoutCeilingMs = 2000,
   updateFetch = globalThis.fetch,
   updateRunner,
-  hermesRunner,
-  hermesEnv = process.env,
-  hermesSpawn,
-  hermesFetch,
-  hermesPlatform,
-  demo = false,
 } = {}) {
   const brainRoot = resolve(root || process.cwd());
   recognizeConsoleBrain(brainRoot);
   let remoteUpdate = null;
-  let lastDoctor = null;
-  let hermesCache = null;
-  let hermesCacheAt = 0;
-  const hermesActivation = demo ? null : createHermesActivationController({
-    root: brainRoot,
-    hermesRunner,
-    hermesEnv,
-    ...(hermesSpawn ? { spawnProcess: hermesSpawn } : {}),
-    ...(hermesFetch ? { fetcher: hermesFetch } : {}),
-    ...(hermesPlatform ? { platform: hermesPlatform } : {}),
-    clock: () => clock().getTime(),
-  });
-  const authenticate = async (request) => {
-    if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
-    return { operatorRef: 'local-owner', canOperate: !demo, expiresAt: 'process-lifetime', sessionToken };
-  };
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || '/', 'http://127.0.0.1');
     const sessionCookie = `${COOKIE_NAME}=${sessionToken}; HttpOnly; SameSite=Strict; Path=/`;
@@ -1461,7 +1410,7 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname.startsWith('/files/')) {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const relative = decodeURIComponent(url.pathname.slice('/files/'.length));
         const resolved = resolve(brainRoot, relative);
         if (!resolved.startsWith(resolve(brainRoot) + '/') || !resolved.endsWith('.html')) throw new Error('not-found');
@@ -1472,14 +1421,14 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname.startsWith('/api/systems/') && url.pathname.endsWith('/workspace')) {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const ref = decodeURIComponent(url.pathname.slice('/api/systems/'.length, -'/workspace'.length));
         if (!SAFE_REF_RE.test(ref)) throw new Error('not-found');
         send(response, 200, systemWorkspace(brainRoot, ref));
         return;
       }
       if (request.method === 'GET' && url.pathname.startsWith('/api/systems/') && url.pathname.endsWith('/interface-health')) {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const ref = decodeURIComponent(url.pathname.slice('/api/systems/'.length, -'/interface-health'.length));
         if (!SAFE_REF_RE.test(ref)) throw new Error('not-found');
         send(response, 200, await systemInterfaceHealth(brainRoot, ref, {
@@ -1490,18 +1439,18 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/anatomy') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, anatomyModel(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/update') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, { ...anatomyModel(brainRoot).update_center, remote: remoteUpdate });
         return;
       }
       if (request.method === 'POST' && url.pathname === '/api/update/check') {
         const payload = await body(request);
-        await assertMutation(request, authenticate, csrfToken, payload);
+        assertMutation(request, sessionToken, csrfToken, payload);
         const local = anatomyModel(brainRoot).update_center;
         remoteUpdate = await checkLatestBrainRelease(local, { fetchImpl: updateFetch, clock });
         send(response, 200, { ...local, remote: remoteUpdate });
@@ -1509,7 +1458,7 @@ export function createConsoleServer({
       }
       if (request.method === 'POST' && url.pathname === '/api/update/apply') {
         const payload = await body(request);
-        await assertMutation(request, authenticate, csrfToken, payload);
+        assertMutation(request, sessionToken, csrfToken, payload);
         if (!remoteUpdate || payload.expected_tag !== remoteUpdate.tag) throw new Error('update-check-required');
         const result = await applyManagedBrainUpdate(brainRoot, remoteUpdate, {
           engineRoot: ENGINE_ROOT,
@@ -1520,7 +1469,7 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/skills') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const issues = [];
         const systems = listConsoleSystems(brainRoot, { issues });
         const catalog = buildSkillReadModel(brainRoot, { systems });
@@ -1528,7 +1477,7 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/society') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const issues = [];
         const installedSystems = listConsoleSystems(brainRoot, { issues });
         const catalog = buildSocietyCatalogReadModel(brainRoot, { installedSystems });
@@ -1536,23 +1485,23 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/runs') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, runsExplorerModel(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/decisions') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, decisionQueue(brainRoot));
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/decision-cases') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, listDecisionCases(brainRoot));
         return;
       }
       const preparedCaseId = request.method === 'GET' ? decisionCaseFrom(url.pathname) : null;
       if (preparedCaseId) {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, prepareDecisionCase(brainRoot, preparedCaseId));
         return;
       }
@@ -1562,8 +1511,8 @@ export function createConsoleServer({
       const decisionCaseAction = request.method === 'POST' ? decisionCaseActionFrom(url.pathname) : null;
       if (decisionCaseAction) {
         const payload = await body(request);
-        if (decisionCaseAction.action === 'preview') await assertAuthenticatedPost(request, authenticate, csrfToken);
-        else await assertMutation(request, authenticate, csrfToken, payload);
+        if (decisionCaseAction.action === 'preview') assertAuthenticatedPost(request, sessionToken, csrfToken);
+        else assertMutation(request, sessionToken, csrfToken, payload);
         const approvedBy = actor(payload);
         if (decisionCaseAction.action === 'rollback') {
           const result = rollbackDecisionCase(brainRoot, decisionCaseAction.caseId, {
@@ -1599,7 +1548,7 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/knowledge') {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, knowledgeIndex(brainRoot));
         return;
       }
@@ -1729,22 +1678,45 @@ export function createConsoleServer({
         });
         return;
       }
+      const experimentId = request.method === 'GET' ? experimentDetailFrom(url.pathname) : null;
+      if (experimentId) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        send(response, 200, readExperimentDetail(brainRoot, experimentId));
+        return;
+      }
+      const graphRequest = request.method === 'GET' ? graphRequestFrom(url.pathname) : null;
+      if (graphRequest) {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        const graph = graphRequest.type === 'brain' ? buildBrainGraph(brainRoot, { now: clock() })
+          : graphRequest.type === 'system' ? buildSystemGraph(brainRoot, graphRequest.ref)
+            : graphRequest.type === 'run-record' ? buildRunGraph(brainRoot, `run-record:${graphRequest.ref}`)
+              : buildRunGraph(brainRoot, graphRequest.ref);
+        send(response, 200, graph);
+        return;
+      }
+      const graphLayoutKey = request.method === 'PUT' ? graphLayoutFrom(url.pathname) : null;
+      if (graphLayoutKey) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        const approvedBy = actor(payload);
+        const graph = graphForLayout(brainRoot, graphLayoutKey);
+        const allowedNodes = new Set(graph.nodes.map((node) => node.id));
+        if (!payload.positions || typeof payload.positions !== 'object' || Array.isArray(payload.positions)) {
+          throw new Error('canvas-layout-positions-invalid');
+        }
+        if (Object.keys(payload.positions).some((nodeId) => !allowedNodes.has(nodeId))) {
+          throw new Error('canvas-layout-node-unknown');
+        }
+        const saved = saveCanvasLayout(brainRoot, graphLayoutKey, payload.positions, approvedBy, { clock });
+        send(response, 200, {
+          status: 'saved', layout_key: saved.layout_key, node_count: Object.keys(saved.positions).length,
+          topology_changed: false,
+        });
+        return;
+      }
       const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;
       if (outputReceiptId) {
-        await authenticate(request);
-        if (demo && outputReceiptId === 'demo-run-001') {
-          const content = '# Decisões da call\n\n- Priorizar a primeira entrega antes de ampliar o escopo.\n- Reutilizar o contexto aprovado no próximo briefing.\n\n> Demonstração sintética — nenhuma fonte real foi aberta.';
-          send(response, 200, {
-            receipt: { receipt_id: outputReceiptId, receipt_ref: `routine-receipt:${outputReceiptId}`, run_id: 'demo-run', routine_id: 'calls-em-decisoes', system_ref: 'calls', trigger: 'manual', completed_at: '2026-08-28T13:22:00.000Z', output_ref: 'private-output:demo-run-001' },
-            output: { content, bytes: Buffer.byteLength(content), media_type: 'text/markdown; charset=utf-8' },
-            judgment: { current: null, summary: { status: 'pending', verdict: null, action_intent: 'none', history_count: 0 }, history: [] },
-            correction: null,
-            correction_actions: { can_rerun_with_correction: false, can_compare: false, can_create_learning_candidate: false },
-            context_available: false,
-            privacy: { content_shared_with_inevita: false, output_in_console_read_model: false, explicit_local_read: true },
-          });
-          return;
-        }
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         const outputDetail = readPrivateRoutineOutput(brainRoot, outputReceiptId);
         let contextAvailable = false;
         try {
@@ -1763,7 +1735,7 @@ export function createConsoleServer({
       }
       const contextReceiptId = request.method === 'GET' ? contextReceiptFrom(url.pathname) : null;
       if (contextReceiptId) {
-        await authenticate(request);
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
         send(response, 200, readRoutineRunContext(brainRoot, contextReceiptId));
         return;
       }
@@ -1837,7 +1809,7 @@ export function createConsoleServer({
       const grantId = request.method === 'POST' ? grantRevocationFrom(url.pathname) : null;
       if (grantId) {
         const payload = await body(request);
-        await assertMutation(request, authenticate, csrfToken, payload);
+        assertMutation(request, sessionToken, csrfToken, payload);
         const approvedBy = actor(payload);
         const result = revokeAccessGrant(brainRoot, grantId, approvedBy, { now: clock() });
         send(response, 200, {

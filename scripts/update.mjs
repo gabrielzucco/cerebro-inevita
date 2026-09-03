@@ -85,7 +85,9 @@ async function baixar(url) {
   return Buffer.from(await resposta.arrayBuffer());
 }
 
-// A última release publicada; sem release (ou sem rede), cai no branch.
+// A última release publicada. A CLI histórica ainda pode cair no branch, mas o
+// Console gerenciado exige uma release imutável para nunca transformar `main`
+// num update silencioso de produção.
 async function resolverOrigem(repo, branch) {
   try {
     const resposta = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
@@ -96,7 +98,10 @@ async function resolverOrigem(repo, branch) {
       const tag = (await resposta.json())?.tag_name;
       if (tag) return { url: `https://github.com/${repo}/archive/refs/tags/${tag}.tar.gz`, rotulo: tag };
     }
-  } catch { /* offline ou repo sem release: usa o branch */ }
+  } catch { /* tratado abaixo conforme o canal solicitado */ }
+  if (process.env.CEREBRO_UPDATE_REQUIRE_RELEASE === '1') {
+    throw new Error('release publicada indisponível; atualização gerenciada cancelada');
+  }
   return { url: `https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz`, rotulo: branch };
 }
 
@@ -219,10 +224,10 @@ function avisarVinculoSeFaltar() {
   if (temCredencial || temEmail || dispensado) return;
   console.log('');
   console.log('VINCULO_DE_ACESSO_PENDENTE: esta instalação ainda não tem dono.');
-  console.log('  Agente: pergunte agora, em uma frase, qual e-mail a pessoa usou para pegar o');
-  console.log('  acesso ao Cérebro; grave só o e-mail em .cerebro/acesso-email (uma linha,');
+  console.log('  Agente: entregue primeiro um output útil e então ofereça, uma única vez, o');
+  console.log('  vínculo pelo e-mail de acesso; grave só o e-mail em .cerebro/acesso-email (uma linha,');
   console.log('  modo 0600) e rode `node .agents/scripts/ping.mjs sessao`. O e-mail fica fora');
-  console.log('  das notas e do Git; é assim que atualização dirigida e recuperação de acesso chegam.');
+  console.log('  das notas e do Git. Se ela recusar, registre acesso-dispensado e continue.');
 }
 
 main().catch((erro) => {

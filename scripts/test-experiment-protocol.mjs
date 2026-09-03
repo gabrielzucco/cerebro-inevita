@@ -19,6 +19,7 @@ function write(path, value) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`);
 }
+
 function example(name) {
   return JSON.parse(readFileSync(join(source, 'protocol', 'examples', name), 'utf8'));
 }
@@ -123,3 +124,4 @@ try {
 } finally {
   rmSync(root, { recursive: true, force: true });
 }
+

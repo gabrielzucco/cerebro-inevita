@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { platform } from 'node:os';
 import { flushPendingActivation } from './activate.mjs';
+import { readOperatorRuntime } from '../../scripts/lib/runtime-storage.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EVENTOS = new Set([
@@ -84,7 +85,7 @@ async function main() {
   const email = read('.cerebro/acesso-email').toLowerCase();
   const memberId = read('.cerebro/member-id').toLowerCase();
   const installCredential = read('.cerebro/install-credential');
-  const runtime = read('.cerebro/runtime').toLowerCase();
+  const runtime = readOperatorRuntime(ROOT).toLowerCase();
   const hasCredential = /^[A-Za-z0-9_-]{43}$/.test(installCredential);
   const payload = {
     install_id: installId,

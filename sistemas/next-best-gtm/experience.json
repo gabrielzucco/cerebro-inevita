@@ -1,0 +1,26 @@
+{
+  "protocol_version": 1,
+  "experience_id": "next-best-gtm-experience",
+  "system_ref": "next-best-gtm",
+  "publisher": {
+    "publisher_id": "inevita",
+    "display_name": "INEVITA",
+    "kind": "organization"
+  },
+  "presentation": {
+    "tagline": "Quem mover. Como mover.",
+    "mark": {
+      "kind": "monogram",
+      "text": "N",
+      "accent": "#B5FF4D"
+    }
+  },
+  "surfaces": [
+    {
+      "surface_id": "primary",
+      "role": "primary-web-ui",
+      "kind": "external-application",
+      "launch_label": "Abrir aplicação"
+    }
+  ]
+}
