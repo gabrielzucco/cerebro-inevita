@@ -1,5 +1,22 @@
 # Mudanças do cérebro INEVITA
 
+## v1.37.0 — 2026-09-03 · “o cérebro chega ao Telegram em três gestos”
+
+- **Hermes + Telegram dentro do Cockpit oficial:** a experiência rica que já opera em
+  `cerebro-ops` continua sendo a casca canônica e ganha uma jornada local para levar o contexto
+  do Cérebro ao Telegram, sem criar outro aplicativo ou control plane.
+- **Três gestos humanos:** o membro autoriza o Codex no navegador, cola o token criado no
+  BotFather e confirma “Sou eu” depois de enviar `/start`; instalação, configuração, serviço e
+  diagnóstico ficam por conta do Cockpit.
+- **Default deny e segredo local:** o gateway permanece parado durante a identificação,
+  `ALLOW_ALL` é forçado para falso, o ID numérico não aparece na interface e o token não passa por
+  respostas, logs, argumentos de processo ou Git.
+- **Aula sem credenciais:** `--demo` mostra o Console e a ativação completos em estado controlado,
+  bloqueando toda escrita, comando ou alteração de serviço.
+- **Fronteira do produto preservada:** Fonte, memória, skills e credenciais continuam na máquina
+  do membro; o Cockpit público não inclui Supabase, dados privados nem o control plane hospedado
+  da operação KOSMOS.
+
 ## v1.36.0 — 2026-09-03 · “a INEVITA ganha uma voz dentro do Cérebro”
 
 - **Central permanente em `Cérebro → Atualizações`:** versão instalada, verificação do motor,

@@ -77,7 +77,7 @@ async function request(base, path, { method = 'GET', cookie = '', csrf = '', bod
     headers: {
       ...(cookie ? { Cookie: cookie } : {}),
       ...(csrf ? { 'X-Cerebro-CSRF': csrf } : {}),
-      ...(method === 'POST' ? { Origin: origin } : {}),
+      ...(method !== 'GET' ? { Origin: origin } : {}),
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),

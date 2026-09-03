@@ -144,7 +144,7 @@ async function downloadInstaller(platform, fetcher, signal) {
   try {
     const response = await fetcher(spec.url, {
       redirect: 'error', signal: requestAbort.signal,
-      headers: { Accept: 'application/octet-stream', 'User-Agent': 'Cerebro-INEVITA-Cockpit/1.36.0' },
+      headers: { Accept: 'application/octet-stream', 'User-Agent': 'Cerebro-INEVITA-Cockpit/1.37.0' },
     });
     if (!response?.ok) throw new Error('hermes-installer-download-failed');
     bytes = await readLimited(response, INSTALLER_LIMIT);

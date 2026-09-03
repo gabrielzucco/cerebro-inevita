@@ -64,8 +64,13 @@ contexto. Depois de T4, a home vira `Hoje`: `Cérebro` mostra memória, recupera
 saúde e o recibo de ativação; `Sistemas` mostra apenas resultados de negócio plugados nessa base.
 `Cérebro → Atualizações` é o canal permanente para versão instalada, novidades públicas da
 INEVITA e releases. A Primeira Missão mostra só a novidade mais recente e aponta para essa central.
-Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu contexto para a
-INEVITA:
+É o mesmo núcleo visual e de protocolos do Console usado pela operação da INEVITA, adaptado à
+distribuição local. Sessão KOSMOS, Supabase, proxy, credenciais e controles hospedados não são
+distribuídos. Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu
+contexto para a INEVITA.
+
+Na aba `Telegram`, o Cockpit também prepara o Hermes, conduz a autorização do Codex e conecta um
+bot privado em três gestos: colar o token do BotFather, enviar `/start` e confirmar “Sou eu”:
 
 ```bash
 node scripts/cockpit.mjs
