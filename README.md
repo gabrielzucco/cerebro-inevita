@@ -32,8 +32,9 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 git clone https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
 
-Requisito: **Node.js 20+** (só a stdlib — o motor não tem nenhuma dependência externa,
-não existe `npm install`). Funciona em macOS, Linux e Windows.
+Requisito para usar a distribuição: **Node.js 20+**. O bundle visual já vem pronto e não exige
+`npm install`; as dependências de desenvolvimento só são necessárias para quem vai recompilar o
+Canvas. Funciona em macOS, Linux e Windows.
 
 Abre a pasta no teu agente e diz **"quero começar"**:
 
@@ -58,18 +59,22 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 
 ## Cockpit INEVITA (opcional)
 
-A superfície visual mostra a ativação do cérebro, Sistemas, Fontes, Rotinas, decisões e recibos.
-Também leva o cérebro ao Telegram em três gestos: você autoriza o Codex, cola o token criado no
-BotFather e confirma a conta que enviou `/start`. Instalação do Hermes, vínculo do contexto,
-allowlist, serviço e diagnóstico ficam com o Cockpit — sem criar outro banco nem enviar teu
-contexto para a INEVITA:
+É a versão local e portátil do mesmo Console usado pela operação da INEVITA. Mostra a anatomia do
+cérebro, workspaces de Sistemas, Skills, Canvas, Julgamentos, Runs, Fontes, Experimentos,
+compatibilidade, governança e saúde — sempre derivados dos arquivos e recibos locais. A sessão
+privada, o banco e o control plane da KOSMOS não fazem parte desta distribuição.
+
+O Cockpit também leva o cérebro ao Telegram em três gestos: você autoriza o Codex, cola o token
+criado no BotFather e confirma a conta que enviou `/start`. Instalação do Hermes, vínculo do
+contexto, allowlist, serviço e diagnóstico ficam com o Cockpit — sem criar outro banco nem enviar
+teu contexto para a INEVITA:
 
 ```bash
 node scripts/cockpit.mjs
 ```
 
-Ele abre no navegador em `127.0.0.1`; `--demo` mostra a jornada completa com dados sintéticos e
-bloqueia todas as ações. A ativação real é feita depois da aula.
+Ele abre no navegador em `127.0.0.1`; `--demo` apresenta um estado controlado, sem credenciais,
+escritas ou comandos reais. A ativação real é feita depois da aula.
 Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
 exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
 Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,

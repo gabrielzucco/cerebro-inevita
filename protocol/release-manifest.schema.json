@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/release-manifest-v1.json",
+  "title": "INEVITA Release Manifest V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "release_id",
+    "system_ref",
+    "version",
+    "channel",
+    "compatibility",
+    "contracts",
+    "publication",
+    "validation",
+    "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "release_id": { "$ref": "#/$defs/id" },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/version" },
+    "channel": { "enum": ["pilot", "stable"] },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum_brain_version"],
+      "properties": {
+        "minimum_brain_version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system_contract_ref", "capability_contract_ref"],
+      "properties": {
+        "system_contract_ref": { "$ref": "#/$defs/local_ref" },
+        "capability_contract_ref": { "$ref": "#/$defs/local_ref" },
+        "experience_manifest_ref": { "$ref": "#/$defs/local_ref" }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "catalog_visibility", "access_mode", "application_required"],
+      "properties": {
+        "status": { "enum": ["pilot", "published", "withdrawn"] },
+        "catalog_visibility": { "enum": ["validation-lab", "validated", "hidden"] },
+        "access_mode": { "enum": ["approved-participants", "public"] },
+        "application_required": { "type": "boolean" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "program_key",
+        "required_real_cycles",
+        "verified_real_cycles",
+        "required_distinct_member_brains",
+        "verified_distinct_member_brains",
+        "requires_repeat_use",
+        "requires_eval_pass",
+        "requires_human_approval"
+      ],
+      "properties": {
+        "program_key": { "$ref": "#/$defs/id" },
+        "required_real_cycles": { "type": "integer", "minimum": 1 },
+        "verified_real_cycles": { "type": "integer", "minimum": 0 },
+        "required_distinct_member_brains": { "type": "integer", "minimum": 1 },
+        "verified_distinct_member_brains": { "type": "integer", "minimum": 0 },
+        "requires_repeat_use": { "type": "boolean" },
+        "requires_eval_pass": { "type": "boolean" },
+        "requires_human_approval": { "type": "boolean" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "telemetry_content"],
+      "properties": {
+        "mode": { "const": "local-first" },
+        "telemetry_content": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./-]{0,127}$" }
+  }
+}

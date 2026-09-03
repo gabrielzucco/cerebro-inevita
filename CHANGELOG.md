@@ -2,6 +2,13 @@
 
 ## v1.36.0 — 2026-09-02 · "três gestos e o cérebro chega ao Telegram"
 
+- **Paridade com o Console oficial:** o Cockpit passa a usar o mesmo núcleo portátil publicado no
+  `cerebro-ops`: anatomia do cérebro, workspaces de Sistemas, Skills, Canvas, Decision Cases,
+  Experimentos, Execution Traces, compatibilidade, governança e saúde.
+- **Fronteira de produto preservada:** sessão KOSMOS, Supabase, proxy, tokens e control plane
+  hospedado não entram no Cérebro do membro. A distribuição continua local e reference-only.
+- **Protocolo ampliado:** manifests, bindings de fonte/runtime, contratos de Experimento e Handoff,
+  recibos de Decision Case e eventos de Execution Trace agora têm schemas, exemplos e validação.
 - **Ativação em três marcos:** o Cockpit prepara o Hermes, conduz o OAuth do Codex, recebe o token
   do BotFather e transforma um `/start` privado em confirmação humana — sem terminal, escolha de
   provider, modelo, ID numérico, gateway ou `doctor` no caminho principal.
@@ -14,8 +21,8 @@
   restauram a configuração anterior.
 - **Compatibilidade honesta:** versões com `skills trust` usam confiança explícita; as demais ligam
   apenas `.agents/skills` por `skills.external_dirs`, sem bloquear o cérebro nem abrir outras pastas.
-- **Aula sem risco:** `--demo` mostra o fluxo pronto e continua bloqueando toda mutação; a ativação
-  real do participante acontece depois da aula.
+- **Aula sem risco:** `--demo` mostra o Console e o fluxo prontos em estado controlado, sem
+  credenciais, escrita ou comando real; a ativação do participante acontece depois da aula.
 
 ## v1.35.0 — 2026-09-02 · "o cérebro ganhou um cockpit e chegou ao Telegram"
 

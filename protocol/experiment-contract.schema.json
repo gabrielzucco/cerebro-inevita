@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/protocol/experiment-contract.schema.json",
+  "title": "Company Brain Experiment Contract V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "experiment_id", "name", "version", "lifecycle", "contract_status", "gaps", "system_ref",
+    "measurement_system_refs", "owner_ref", "hypothesis", "change", "arms_status", "arms", "primary_metric",
+    "guardrails", "decision_rule", "window", "source_refs", "freeze", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "experiment_id": { "$ref": "#/$defs/experiment_id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "version": { "$ref": "#/$defs/version" },
+    "lifecycle": { "const": "frozen" },
+    "contract_status": { "enum": ["complete", "legacy-incomplete"] },
+    "gaps": {
+      "type": "array", "uniqueItems": true,
+      "items": { "enum": ["arms-not-structured", "guardrail-rule-missing", "decision-rule-missing"] }
+    },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "measurement_system_refs": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "owner_ref": { "$ref": "#/$defs/ref" },
+    "offer_ref": { "oneOf": [{ "$ref": "#/$defs/ref" }, { "type": "null" }] },
+    "baseline": { "type": ["string", "null"], "maxLength": 4000 },
+    "hypothesis": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "change": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "preconditions": { "type": ["string", "null"], "maxLength": 8000 },
+    "arms_status": { "enum": ["structured", "not-structured"] },
+    "arms": {
+      "type": "array", "maxItems": 20,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["arm_id", "role"],
+        "properties": {
+          "arm_id": { "$ref": "#/$defs/ref" },
+          "role": { "enum": ["control", "variation", "single", "unspecified"] },
+          "label": { "type": ["string", "null"], "maxLength": 240 }
+        }
+      }
+    },
+    "primary_metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["metric_id", "definition", "query_ref"],
+      "properties": {
+        "metric_id": { "$ref": "#/$defs/id" },
+        "definition": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "query_ref": { "oneOf": [{ "$ref": "#/$defs/ref" }, { "type": "null" }] }
+      }
+    },
+    "guardrails": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rule", "metric_refs"],
+      "properties": {
+        "rule": { "type": ["string", "null"], "maxLength": 6000 },
+        "metric_refs": {
+          "type": "array", "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "diagnostic_refs": {
+      "type": "array", "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "decision_rule": { "type": ["string", "null"], "maxLength": 8000 },
+    "window": {
+      "type": "object", "additionalProperties": false,
+      "required": ["started_on", "read_on"],
+      "properties": {
+        "started_on": { "type": ["string", "null"], "format": "date" },
+        "read_on": { "type": ["string", "null"], "format": "date" }
+      }
+    },
+    "source_refs": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/ref" }
+    },
+    "freeze": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "frozen_at", "source_ref", "source_sha256"],
+      "properties": {
+        "kind": { "enum": ["sha256", "legacy-attested"] },
+        "frozen_at": { "type": ["string", "null"], "format": "date-time" },
+        "source_ref": { "$ref": "#/$defs/local_ref" },
+        "source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content_shared_with_inevita", "summary_safe", "detail_requires_explicit_read"],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "summary_safe": { "const": true },
+        "detail_requires_explicit_read": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "experiment_id": { "type": "string", "pattern": "^EXP-[A-Za-z0-9_-]{1,48}$" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

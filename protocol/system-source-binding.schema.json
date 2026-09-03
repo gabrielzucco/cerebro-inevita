@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/system-source-binding-v1.json",
+  "title": "INEVITA System Source Binding V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "binding_id",
+    "system_ref",
+    "system_version",
+    "role",
+    "source_ref",
+    "requested_access",
+    "status",
+    "grant_ref",
+    "checked_at",
+    "reason_codes",
+    "approval",
+    "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "binding_id": { "$ref": "#/$defs/ref" },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "system_version": { "$ref": "#/$defs/version" },
+    "role": { "$ref": "#/$defs/id" },
+    "source_ref": { "$ref": "#/$defs/ref" },
+    "requested_access": { "enum": ["manual", "read-only", "write-with-approval"] },
+    "status": {
+      "enum": ["proposed", "awaiting-approval", "ready", "degraded", "incompatible", "revoked"]
+    },
+    "grant_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "checked_at": { "type": "string", "format": "date-time" },
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved_by", "approved_at"],
+      "properties": {
+        "approved_by": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_copied", "credential_stored", "shared_with_inevita"],
+      "properties": {
+        "content_copied": { "const": false },
+        "credential_stored": { "const": false },
+        "shared_with_inevita": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$" }
+  }
+}

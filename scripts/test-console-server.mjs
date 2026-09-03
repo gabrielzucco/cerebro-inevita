@@ -219,7 +219,10 @@ try {
     spawn: (command, args, options) => {
       calls.push({ command, args, options });
       assert.equal(command, 'codex');
-      if (calls.length === 1) assert.equal(options.input, 'PROMPT_ONLY_ON_STDIN\n');
+      if (calls.length === 1) {
+        assert(options.input.includes('PROMPT_ONLY_ON_STDIN\n'));
+        assert(options.input.includes('Isto é um Run de uma Routine Contract já registrada e governada.'));
+      }
       else assert(options.input.includes('Separar melhor a inferência da recomendação.'));
       assert.equal(args.includes('PROMPT_ONLY_ON_STDIN'), false);
       const outputIndex = args.indexOf('-o');

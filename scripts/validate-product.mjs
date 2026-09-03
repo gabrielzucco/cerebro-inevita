@@ -21,6 +21,10 @@ import {
   validateCorrectionRunReceipt,
   validateLearningCandidate,
 } from './lib/correction-loop.mjs';
+import { validateExecutionTraceEvent } from './lib/execution-trace-runtime.mjs';
+import { validateExperimentContract, validateExperimentState } from './lib/experiment-protocol.mjs';
+import { validateHandoffContract, validateHandoffReceipt } from './lib/handoff-protocol.mjs';
+import { validateBrainManifest } from './lib/compatibility-diagnostic.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -32,7 +36,7 @@ const required = [
   'templates/sistema/skill-contract.md', 'templates/sistema/evals.md',
   'templates/sistema/feedback.md', 'templates/sistema/changelog.md',
   'templates/sistema/contract.json', 'templates/sistema/capability.json',
-  'protocol/README.md', 'protocol/capability-contract.schema.json',
+  'protocol/README.md', 'protocol/brain-manifest.schema.json', 'protocol/capability-contract.schema.json',
   'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
   'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
   'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
@@ -44,6 +48,11 @@ const required = [
   'protocol/judgment-receipt.schema.json',
   'protocol/correction-run-receipt.schema.json',
   'protocol/learning-candidate.schema.json',
+  'protocol/execution-trace-event.schema.json',
+  'protocol/experiment-contract.schema.json', 'protocol/experiment-state.schema.json',
+  'protocol/handoff-contract.schema.json', 'protocol/handoff-receipt.schema.json',
+  'protocol/artifacts/creative-brief.schema.json', 'protocol/artifacts/funnel-reading.schema.json',
+  'protocol/examples/brain-manifest.v1.json',
   'protocol/examples/source-contract.v1.json', 'protocol/examples/system-contract.v2.json',
   'protocol/examples/run-record.v2.json', 'protocol/examples/access-grant.v1.json',
   'protocol/examples/access-receipt.v1.json',
@@ -54,6 +63,9 @@ const required = [
   'protocol/examples/judgment-receipt.v1.json',
   'protocol/examples/correction-run-receipt.v1.json',
   'protocol/examples/learning-candidate.v1.json',
+  'protocol/examples/execution-trace-event.v1.json',
+  'protocol/examples/experiment-contract.v1.json', 'protocol/examples/experiment-state.v1.json',
+  'protocol/examples/handoff-contract.v1.json', 'protocol/examples/handoff-receipt.v1.json',
   'meu-negocio', 'sistemas/_CATALOGO.md', 'skills/_CATALOGO.md', 'conexoes/_CATALOGO.md',
   'operacao/_LEIA.md', 'comunidade/inevita/_CATALOGO.md',
   'comunidade/minhas-contribuicoes/_LEIA.md', '.cerebro/seed.manifest', '.cerebro/layout.json',
@@ -93,22 +105,37 @@ const required = [
   'scripts/lib/system-protocol.mjs', 'scripts/lib/company-brain-protocol-v2.mjs',
   'scripts/lib/secret-provider.mjs', 'scripts/lib/access-runtime.mjs',
   'scripts/lib/routine-protocol.mjs', 'scripts/lib/model-executors.mjs',
-  'scripts/lib/routine-runtime.mjs', 'scripts/routine-runtime.mjs',
+  'scripts/lib/routine-runtime.mjs', 'scripts/lib/context-snapshot-runtime.mjs',
+  'scripts/lib/execution-trace-runtime.mjs', 'scripts/lib/evaluation-runtime.mjs',
+  'scripts/lib/experiment-protocol.mjs', 'scripts/import-legacy-experiments.mjs',
+  'scripts/lib/handoff-protocol.mjs', 'scripts/lib/compatibility-diagnostic.mjs',
+  'scripts/lib/json-schema-runtime.mjs', 'scripts/lib/replay-runtime.mjs',
+  'scripts/compatibility-diagnostic.mjs',
+  'scripts/lib/graph-read-model.mjs', 'scripts/lib/canvas-layout-runtime.mjs',
+  'scripts/routine-runtime.mjs',
   'scripts/lib/judgment-protocol.mjs',
   'scripts/lib/correction-loop.mjs',
   'scripts/lib/console-read-model.mjs', 'scripts/lib/cockpit-read-model.mjs',
   'scripts/lib/hermes-runtime.mjs', 'scripts/lib/hermes-activation.mjs',
   'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
   'scripts/cockpit.mjs',
-  'console/index.html', 'console/app.js', 'console/styles.css',
+  'console/index.html', 'console/app.js', 'console/canvas.js', 'console/canvas-layout-policy.js',
+  'console/canvas.bundle.js', 'console/styles.css',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
   'scripts/test-routine-runtime.mjs',
+  'scripts/test-context-snapshot-runtime.mjs',
+  'scripts/test-execution-trace.mjs', 'scripts/test-evaluation-runtime.mjs',
+  'scripts/test-graph-read-model.mjs',
+  'scripts/test-canvas-layout-readability.mjs',
   'scripts/test-judgment-protocol.mjs',
   'scripts/test-correction-loop.mjs',
   'scripts/test-console-server.mjs', 'scripts/test-cockpit.mjs', 'scripts/test-hermes-activation.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
+  'scripts/test-experiment-protocol.mjs',
+  'scripts/test-handoff-protocol.mjs', 'scripts/test-compatibility-diagnostic.mjs',
+  'scripts/test-replay-runtime.mjs',
   '.cerebro/private-ignore.manifest',
   '.claude/scripts/ensure-private-ignore.sh',
   'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json',
@@ -127,6 +154,8 @@ for (const item of required) {
 }
 
 for (const [label, path, validate] of [
+  ['example Brain Manifest v1', 'protocol/examples/brain-manifest.v1.json', validateBrainManifest],
+  ['Brain Manifest do starter', 'profiles/company-brain-starter-en/.cerebro/manifest.json', validateBrainManifest],
   ['template capability', 'templates/sistema/capability.json', validateCapabilityContract],
   ['template system contract', 'templates/sistema/contract.json', validateSystemContract],
   ['calls capability', 'sistemas/calls/capability.json', validateCapabilityContract],
@@ -147,6 +176,11 @@ for (const [label, path, validate] of [
   ['example judgment receipt v1', 'protocol/examples/judgment-receipt.v1.json', validateJudgmentReceipt],
   ['example correction receipt v1', 'protocol/examples/correction-run-receipt.v1.json', validateCorrectionRunReceipt],
   ['example learning candidate v1', 'protocol/examples/learning-candidate.v1.json', validateLearningCandidate],
+  ['example execution trace event v1', 'protocol/examples/execution-trace-event.v1.json', validateExecutionTraceEvent],
+  ['example experiment contract v1', 'protocol/examples/experiment-contract.v1.json', validateExperimentContract],
+  ['example experiment state v1', 'protocol/examples/experiment-state.v1.json', validateExperimentState],
+  ['example handoff contract v1', 'protocol/examples/handoff-contract.v1.json', validateHandoffContract],
+  ['example handoff receipt v1', 'protocol/examples/handoff-receipt.v1.json', validateHandoffReceipt],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));

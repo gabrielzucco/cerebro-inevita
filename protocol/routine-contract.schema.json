@@ -74,6 +74,11 @@
       "required": ["prompt_ref", "access_requests"],
       "properties": {
         "prompt_ref": { "$ref": "#/$defs/local_ref" },
+        "skill_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/local_ref" }
+        },
         "access_requests": {
           "type": "array",
           "items": {
@@ -139,7 +144,58 @@
           "properties": {
             "kind": { "const": "trusted-local-command" },
             "binding_ref": { "$ref": "#/$defs/ref" },
-            "output_ref": { "$ref": "#/$defs/local_ref" }
+            "output_ref": { "$ref": "#/$defs/local_ref" },
+            "source_selections": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source_ref", "selected_pointers", "freshness_pointer"],
+                    "properties": {
+                      "source_ref": { "$ref": "#/$defs/ref" },
+                      "selected_pointers": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": { "$ref": "#/$defs/json_pointer" }
+                      },
+                      "freshness_pointer": {
+                        "oneOf": [
+                          { "type": "null" },
+                          { "$ref": "#/$defs/json_pointer" }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source_ref", "retrieval_receipt_pointer", "expected_profile_sha256"],
+                    "properties": {
+                      "source_ref": { "$ref": "#/$defs/ref" },
+                      "retrieval_receipt_pointer": { "$ref": "#/$defs/json_pointer" },
+                      "expected_profile_sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "evaluation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "evaluator_ref", "source_pointer"],
+          "properties": {
+            "kind": { "const": "registered-evaluator" },
+            "evaluator_ref": { "enum": ["calls-deterministic-v1"] },
+            "source_pointer": { "$ref": "#/$defs/json_pointer" }
           }
         }
       }
@@ -149,6 +205,7 @@
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
     "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
     "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
-    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "json_pointer": { "type": "string", "pattern": "^/(?:[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*)?$" }
   }
 }

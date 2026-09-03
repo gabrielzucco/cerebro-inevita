@@ -85,7 +85,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const url = `http://127.0.0.1:${instance.port}`;
     console.log(`Cockpit INEVITA · ${url}`);
     console.log(options.demo
-      ? 'DEMONSTRAÇÃO · dados sintéticos em memória · nenhuma ação habilitada.'
+      ? 'DEMONSTRAÇÃO · nenhuma credencial, escrita ou comando real habilitado.'
       : 'Contexto e credenciais permanecem nesta máquina.');
     if (options.open) {
       try { openBrowser(url); } catch { console.log(`Abra no navegador: ${url}`); }

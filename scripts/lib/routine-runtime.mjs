@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync as nodeSpawnSync } from 'node:child_process';
 import {
   closeSync,
@@ -13,6 +13,9 @@ import {
 } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { checkAccess } from './access-runtime.mjs';
+import { appendCompletedRunRecord, prepareContextSnapshot } from './context-snapshot-runtime.mjs';
+import { evaluateRoutineOutput } from './evaluation-runtime.mjs';
+import { createExecutionTracer } from './execution-trace-runtime.mjs';
 import { runModelExecutor } from './model-executors.mjs';
 import {
   createSlotKey,
@@ -41,6 +44,17 @@ const UNAVAILABLE_SECRET_PROVIDER = Object.freeze({
 });
 const LOCAL_REF_RE = /^(?!\.?\.?$)(?!\.?\.?\/)(?!.*\/\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const MAX_SUPPLEMENTAL_PROMPT_CHARS = 8 * 1024;
+const ROUTINE_EXECUTION_ENVELOPE = `# Fronteira de execução do Runtime
+
+Isto é um Run de uma Routine Contract já registrada e governada. Execute agora o trabalho
+descrito nas instruções canônicas abaixo. Não crie, atualize, pause, exclua nem reagende
+automações, cron jobs, contratos, bindings ou rotinas. Metadados de agenda e cutover são
+somente contexto documental, nunca uma solicitação de configuração. Não declare conclusão
+sem executar e verificar os comandos e efeitos pedidos.
+
+# Instruções canônicas da rotina
+
+`;
 
 function clockValue(clock) {
   const value = typeof clock === 'function' ? clock() : clock;
@@ -51,6 +65,13 @@ function clockValue(clock) {
 
 function referencePath(root, absolute) {
   return relative(resolve(root), absolute).replaceAll('\\', '/');
+}
+
+function traceStepId(prefix, value = '') {
+  const normalized = `${prefix}-${String(value)}`.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  if (/^[a-z0-9]/.test(normalized) && normalized.length <= 64) return normalized;
+  const digest = createHash('sha256').update(`${prefix}:${value}`).digest('hex').slice(0, 16);
+  return `${prefix}-${digest}`.slice(0, 64);
 }
 
 function permissionAllows(profile, requested) {
@@ -93,12 +114,12 @@ function buildReceipt(contract, binding, {
     reason_code: reasonCode,
     started_at: startedAt.toISOString(),
     completed_at: completedAt.toISOString(),
-    input_refs: [
+    input_refs: [...new Set([
       contract.context.prompt_ref,
       ...preparationInputRefs,
       ...supplementalInputRefs,
       ...contract.context.access_requests.map((request) => `source:${request.source_ref}`),
-    ],
+    ])],
     output_ref: outputRef,
     access_receipt_refs: accessReceiptRefs,
     content_shared_with_provider: attempts > 0,
@@ -247,6 +268,7 @@ function grantId(grantRef) {
 
 function evaluateRoutineAccess(root, contract, now, provider) {
   const refs = [];
+  const results = [];
   for (const request of contract.context.access_requests) {
     let result;
     try {
@@ -258,17 +280,23 @@ function evaluateRoutineAccess(root, contract, now, provider) {
         mode: request.mode,
       }, provider, { now });
     } catch {
-      return { ok: false, reason_code: 'access-check-failed', receipt_refs: refs };
+      return { ok: false, reason_code: 'access-check-failed', receipt_refs: refs, results };
     }
     refs.push(result.receipt_ref);
+    results.push({
+      source_ref: request.source_ref,
+      assurance: result.assurance,
+      decision: result.decision,
+      receipt_ref: result.receipt_ref,
+    });
     if (!['allowed', 'file-only'].includes(result.decision)) {
-      return { ok: false, reason_code: result.reason_code, receipt_refs: refs };
+      return { ok: false, reason_code: result.reason_code, receipt_refs: refs, results };
     }
     if (result.assurance === 'runtime-enforced') {
-      return { ok: false, reason_code: 'runtime-connector-not-bound', receipt_refs: refs };
+      return { ok: false, reason_code: 'runtime-connector-not-bound', receipt_refs: refs, results };
     }
   }
-  return { ok: true, receipt_refs: refs };
+  return { ok: true, receipt_refs: refs, results };
 }
 
 export async function runRoutine(root, routineId, {
@@ -282,6 +310,10 @@ export async function runRoutine(root, routineId, {
   secretProvider = UNAVAILABLE_SECRET_PROVIDER,
   supplementalPrompt = '',
   supplementalInputRefs = [],
+  chainId = null,
+  mode = null,
+  experimentRef = null,
+  handoffRefs = [],
 } = {}) {
   const { contract } = loadRoutineContract(root, routineId);
   const startedAt = clockValue(clock);
@@ -301,6 +333,18 @@ export async function runRoutine(root, routineId, {
     throw new Error('supplemental-context-incomplete');
   }
   if (supplementalPrompt && trigger !== 'manual') throw new Error('supplemental-context-manual-only');
+  if (chainId !== null && !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(chainId)) {
+    throw new Error('chain-id-invalid');
+  }
+  if (chainId === null && mode !== null) throw new Error('mode-requires-chain-id');
+  if (chainId !== null && !['replay', 'live'].includes(mode)) throw new Error('chain-mode-invalid');
+  if (experimentRef !== null && !/^EXP-[A-Za-z0-9_-]{1,48}$/.test(experimentRef)) {
+    throw new Error('experiment-ref-invalid');
+  }
+  if (experimentRef !== null && chainId === null) throw new Error('experiment-ref-requires-chain-id');
+  if (!Array.isArray(handoffRefs)
+    || handoffRefs.some((ref) => !LOCAL_REF_RE.test(ref || ''))
+    || new Set(handoffRefs).size !== handoffRefs.length) throw new Error('handoff-refs-invalid');
   const base = {
     runId, receiptId, trigger, slotKey, scheduledFor: scheduledIso, startedAt, supplementalInputRefs,
   };
@@ -309,6 +353,25 @@ export async function runRoutine(root, routineId, {
     const existing = existingScheduledReceipt(root, routineId, slotKey);
     if (existing) return { status: 'no-change', receipt: existing, receipt_ref: `routine-receipt:${existing.receipt_id}` };
   }
+
+  const routineRef = `routine:${contract.routine_id}:${contract.version}`;
+  const tracer = createExecutionTracer(root, {
+    runId,
+    systemRef: contract.system_ref,
+    routineRef,
+    chainId,
+    mode,
+    experimentRef,
+    handoffRefs,
+    clock,
+  });
+  tracer.emit({
+    stepId: 'run', stepType: 'run', state: 'running', parentStepId: null,
+    inputRefs: [contract.context.prompt_ref],
+  });
+  const traceTerminal = (state, reasonCode, outputRefs = []) => tracer.emit({
+    stepId: 'run', stepType: 'run', state, parentStepId: null, reasonCode, outputRefs,
+  });
 
   let binding;
   try {
@@ -319,6 +382,7 @@ export async function runRoutine(root, routineId, {
       ...base, attempts: 0, status: 'denied', reasonCode: 'executor-binding-missing',
       completedAt: clockValue(clock),
     });
+    traceTerminal('denied', 'executor-binding-missing');
     return { status: 'denied', receipt: recorded.value, receipt_ref: recorded.ref };
   }
 
@@ -327,6 +391,7 @@ export async function runRoutine(root, routineId, {
       ...base, attempts: 0, status: 'denied', reasonCode,
       completedAt: clockValue(clock), accessReceiptRefs,
     });
+    traceTerminal('denied', reasonCode);
     return { status: 'denied', receipt: recorded.value, receipt_ref: recorded.ref };
   };
 
@@ -351,11 +416,34 @@ export async function runRoutine(root, routineId, {
       ...base, attempts: 0, status: 'skipped', reasonCode: 'routine-already-running',
       completedAt: clockValue(clock),
     });
+    traceTerminal('skipped', 'routine-already-running');
     return { status: 'skipped', receipt: recorded.value, receipt_ref: recorded.ref };
   }
 
   try {
     const access = evaluateRoutineAccess(root, contract, startedAt, secretProvider);
+    for (const result of access.results) {
+      const allowed = ['allowed', 'file-only'].includes(result.decision);
+      tracer.emit({
+        stepId: traceStepId('access', result.source_ref),
+        stepType: 'access',
+        state: allowed ? 'completed' : 'denied',
+        sourceRef: result.source_ref,
+        outputRefs: [result.receipt_ref],
+        reasonCode: allowed ? null : 'access-denied',
+        extensions: { assurance: result.assurance, decision: result.decision },
+      });
+      if (allowed) tracer.emit({
+        stepId: traceStepId('connector', result.source_ref),
+        stepType: 'connector',
+        state: 'completed',
+        parentStepId: traceStepId('access', result.source_ref),
+        sourceRef: result.source_ref,
+        connectorRef: result.source_ref,
+        assurance: result.assurance,
+        outputRefs: [result.receipt_ref],
+      });
+    }
     if (!access.ok) return deny(access.reason_code, access.receipt_refs);
 
     let destination;
@@ -365,10 +453,20 @@ export async function runRoutine(root, routineId, {
       return deny('destination-not-private', access.receipt_refs);
     }
 
+    if (contract.extensions?.preparation) {
+      tracer.emit({
+        stepId: 'collector', stepType: 'collector', state: 'running',
+        inputRefs: [contract.extensions.preparation.binding_ref],
+      });
+    }
     const preparation = prepareRoutineInput(root, contract, workspacePath, startedAt, {
       spawnCollector, env,
     });
     if (!preparation.ok) {
+      tracer.emit({
+        stepId: 'collector', stepType: 'collector', state: 'failed',
+        reasonCode: preparation.reason_code,
+      });
       const recorded = recordTerminal(root, contract, binding, {
         ...base,
         attempts: 0,
@@ -377,15 +475,78 @@ export async function runRoutine(root, routineId, {
         completedAt: clockValue(clock),
         accessReceiptRefs: access.receipt_refs,
       });
+      traceTerminal('failed', preparation.reason_code);
       return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
     }
+    if (contract.extensions?.preparation) {
+      tracer.emit({
+        stepId: 'collector', stepType: 'collector', state: 'completed',
+        outputRefs: preparation.input_refs,
+      });
+    }
+
+    let runContext = { status: 'not-declared', input_refs: [] };
+    if (contract.extensions?.preparation?.source_selections) {
+      tracer.emit({ stepId: 'retrieval', stepType: 'retrieval', state: 'running' });
+      try {
+        runContext = prepareContextSnapshot(root, contract, access.results);
+      } catch (error) {
+        const reasonCode = error instanceof Error ? error.message : 'context-snapshot-failed';
+        tracer.emit({
+          stepId: 'retrieval', stepType: 'retrieval', state: 'failed', reasonCode,
+        });
+        const recorded = recordTerminal(root, contract, binding, {
+          ...base,
+          attempts: 0,
+          status: 'failed',
+          reasonCode,
+          completedAt: clockValue(clock),
+          accessReceiptRefs: access.receipt_refs,
+          preparationInputRefs: preparation.input_refs,
+        });
+        traceTerminal('failed', reasonCode);
+        return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
+      }
+      tracer.emit({
+        stepId: 'retrieval', stepType: 'retrieval', state: 'completed',
+        outputRefs: runContext.input_refs,
+        extensions: {
+          selected_source_count: runContext.context_snapshot?.accesses.length || 0,
+          gap_count: runContext.context_snapshot?.gaps.length || 0,
+        },
+      });
+      for (const item of runContext.context_snapshot?.accesses || []) {
+        tracer.emit({
+          stepId: traceStepId('source', item.source_ref.id),
+          stepType: 'retrieval',
+          state: 'completed',
+          parentStepId: 'retrieval',
+          sourceRef: item.source_ref.id,
+          inputRefs: item.selected_refs,
+          extensions: { role: item.source_ref.role, assurance: item.assurance },
+        });
+      }
+      for (const gap of runContext.context_snapshot?.gaps || []) {
+        const source = runContext.system.sources.find((item) => item.role === gap.source_role);
+        tracer.emit({
+          stepId: traceStepId('source-gap', gap.source_role),
+          stepType: 'retrieval',
+          state: 'gap',
+          parentStepId: 'retrieval',
+          sourceRef: source?.source_id || null,
+          reasonCode: gap.reason_code,
+          extensions: { role: gap.source_role },
+        });
+      }
+    }
+    const governedInputRefs = [...preparation.input_refs, ...runContext.input_refs];
 
     let prompt;
     try {
       const promptRef = safeRelativePath(root, contract.context.prompt_ref, { mustExist: true });
-      prompt = readFileSync(resolve(root, promptRef), 'utf8');
-      if (!prompt.trim()) return deny('prompt-empty', access.receipt_refs);
-      prompt += supplementalPrompt;
+      const canonicalPrompt = readFileSync(resolve(root, promptRef), 'utf8');
+      if (!canonicalPrompt.trim()) return deny('prompt-empty', access.receipt_refs);
+      prompt = `${ROUTINE_EXECUTION_ENVELOPE}${canonicalPrompt}${supplementalPrompt}`;
     } catch {
       return deny('prompt-read-failed', access.receipt_refs);
     }
@@ -393,15 +554,38 @@ export async function runRoutine(root, routineId, {
     const executorBinding = { ...binding, workspace_path: workspacePath };
     mkdirSync(routineOutputDirectory(root), { recursive: true });
     const outputTempPath = resolve(routineOutputDirectory(root), `.provider-${runId}.tmp`);
+    const capabilityRef = runContext.system?.capability
+      ? `capability:${runContext.system.capability.capability_id}:${runContext.system.capability.version}`
+      : `system:${contract.system_ref}`;
+    tracer.emit({
+      stepId: 'capability', stepType: 'capability', state: 'running', capabilityRef,
+      inputRefs: governedInputRefs,
+      extensions: { requested_model: contract.executor.requested_model },
+    });
     let execution = { ok: false, reason_code: 'executor-failed' };
     let attempts = 0;
     let lastFailure = null;
+    tracer.emit({
+      stepId: 'model',
+      stepType: 'model',
+      state: 'running',
+      parentStepId: 'capability',
+      modelRef: contract.executor.requested_model,
+      assurance: 'requested-not-verified',
+      inputRefs: governedInputRefs,
+      extensions: { adapter: binding.adapter },
+    });
     for (let attempt = 1; attempt <= contract.operations.retry.max_attempts; attempt += 1) {
       attempts = attempt;
       execution = runModelExecutor(executorBinding, contract, prompt, {
         spawn, env, outputTempPath,
       });
       if (execution.ok) break;
+      tracer.emit({
+        stepId: 'capability', stepType: 'capability', state: 'failed',
+        capabilityRef, reasonCode: execution.reason_code,
+        extensions: { attempt },
+      });
       lastFailure = recordTerminal(root, contract, binding, {
         ...base,
         receiptId: `routine-receipt-${randomUUID()}`,
@@ -410,7 +594,7 @@ export async function runRoutine(root, routineId, {
         reasonCode: execution.reason_code,
         completedAt: clockValue(clock),
         accessReceiptRefs: access.receipt_refs,
-        preparationInputRefs: preparation.input_refs,
+        preparationInputRefs: governedInputRefs,
       });
       if (attempt < contract.operations.retry.max_attempts) {
         await wait(contract.operations.retry.backoff_seconds * 1000);
@@ -418,26 +602,143 @@ export async function runRoutine(root, routineId, {
     }
 
     if (!execution.ok) {
+      tracer.emit({
+        stepId: 'model',
+        stepType: 'model',
+        state: 'failed',
+        parentStepId: 'capability',
+        modelRef: contract.executor.requested_model,
+        assurance: 'requested-not-verified',
+        reasonCode: execution.reason_code,
+        extensions: { adapter: binding.adapter, attempts },
+      });
+      traceTerminal('failed', execution.reason_code);
       return { status: 'failed', receipt: lastFailure.value, receipt_ref: lastFailure.ref };
     }
 
+    tracer.emit({
+      stepId: 'model',
+      stepType: 'model',
+      state: 'completed',
+      parentStepId: 'capability',
+      modelRef: contract.executor.requested_model,
+      assurance: 'requested-not-verified',
+      inputRefs: governedInputRefs,
+      extensions: { adapter: binding.adapter, attempts },
+    });
+
+    const skillLoadRefs = [];
+    for (const loaded of execution.skill_loads || []) {
+      skillLoadRefs.push(`skill:${loaded.ref}:${loaded.evidence_ref}`);
+      tracer.emit({
+        stepId: traceStepId('skill', loaded.ref),
+        stepType: 'skill',
+        state: 'completed',
+        skillRef: loaded.ref,
+        evidenceRef: loaded.evidence_ref,
+      });
+    }
+    tracer.emit({
+      stepId: 'capability', stepType: 'capability', state: 'completed', capabilityRef,
+      extensions: { attempts, verified_skill_load_count: skillLoadRefs.length },
+    });
+
+    tracer.emit({ stepId: 'output', stepType: 'output', state: 'running' });
     try {
       writePrivateOutput(destination.absolute, execution.output);
     } catch {
+      tracer.emit({
+        stepId: 'output', stepType: 'output', state: 'failed', reasonCode: 'destination-write-failed',
+      });
       const recorded = recordTerminal(root, contract, binding, {
         ...base, attempts, status: 'failed', reasonCode: 'destination-write-failed',
         completedAt: clockValue(clock), accessReceiptRefs: access.receipt_refs,
-        preparationInputRefs: preparation.input_refs,
+        preparationInputRefs: governedInputRefs,
       });
+      traceTerminal('failed', 'destination-write-failed');
+      return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
+    }
+    tracer.emit({
+      stepId: 'output', stepType: 'output', state: 'completed', outputRefs: [destination.ref],
+    });
+
+    let evaluation;
+    tracer.emit({
+      stepId: 'eval', stepType: 'eval',
+      state: contract.extensions?.evaluation ? 'running' : 'pending',
+      reasonCode: contract.extensions?.evaluation ? null : 'evaluation-not-declared',
+    });
+    try {
+      evaluation = evaluateRoutineOutput(root, contract, runContext, destination.ref);
+    } catch (error) {
+      const reasonCode = error instanceof Error ? error.message : 'evaluation-failed';
+      tracer.emit({ stepId: 'eval', stepType: 'eval', state: 'failed', reasonCode });
+      const recorded = recordTerminal(root, contract, binding, {
+        ...base, attempts, status: 'failed', reasonCode,
+        completedAt: clockValue(clock), outputRef: destination.ref,
+        accessReceiptRefs: access.receipt_refs,
+        preparationInputRefs: governedInputRefs,
+      });
+      traceTerminal('failed', reasonCode, [destination.ref]);
+      return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
+    }
+    if (evaluation.status === 'completed') {
+      tracer.emit({
+        stepId: 'eval', stepType: 'eval', state: evaluation.passed ? 'completed' : 'failed',
+        reasonCode: evaluation.passed ? null : 'evaluation-gate-failed',
+        inputRefs: evaluation.input_refs,
+        evidenceRef: evaluation.evidence_ref,
+        extensions: {
+          evaluator_ref: evaluation.evaluator_ref,
+          gate_results: evaluation.gate_results,
+        },
+      });
+    }
+
+    const completedAt = clockValue(clock);
+    try {
+      appendCompletedRunRecord(root, contract, runContext, {
+        runId,
+        receiptId,
+        startedAt,
+        completedAt,
+        outputRef: destination.ref,
+        accessReceiptRefs: access.receipt_refs,
+        correctionRef: supplementalInputRefs.find((ref) => ref.startsWith('judgment-receipt:')) || null,
+        evaluation,
+        executionTraceRef: tracer.traceRef,
+        skillLoadRefs,
+        chainId,
+        mode,
+        experimentRef,
+        handoffRefs,
+      });
+    } catch {
+      const recorded = recordTerminal(root, contract, binding, {
+        ...base, attempts, status: 'failed', reasonCode: 'context-record-failed',
+        completedAt, outputRef: destination.ref,
+        accessReceiptRefs: access.receipt_refs,
+        preparationInputRefs: governedInputRefs,
+      });
+      traceTerminal('failed', 'context-record-failed', [destination.ref]);
       return { status: 'failed', receipt: recorded.value, receipt_ref: recorded.ref };
     }
 
-    const recorded = recordTerminal(root, contract, binding, {
-      ...base, attempts, status: 'completed', reasonCode: 'executor-completed',
-      completedAt: clockValue(clock), outputRef: destination.ref,
-      accessReceiptRefs: access.receipt_refs,
-      preparationInputRefs: preparation.input_refs,
+    tracer.emit({
+      stepId: 'judgment', stepType: 'judgment', state: 'pending',
+      inputRefs: [destination.ref], reasonCode: 'human-decision-pending',
     });
+
+    const recorded = recordTerminal(root, contract, binding, {
+      ...base, attempts, status: 'completed',
+      reasonCode: evaluation?.status === 'completed'
+        ? evaluation.passed ? 'evaluation-passed' : 'evaluation-gate-failed'
+        : 'executor-completed',
+      completedAt, outputRef: destination.ref,
+      accessReceiptRefs: access.receipt_refs,
+      preparationInputRefs: governedInputRefs,
+    });
+    traceTerminal('completed', recorded.value.reason_code, [destination.ref]);
     return { status: 'completed', receipt: recorded.value, receipt_ref: recorded.ref };
   } finally {
     releaseRoutineLock(lock);

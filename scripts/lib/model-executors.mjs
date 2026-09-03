@@ -1,5 +1,6 @@
-import { accessSync, constants, existsSync, readFileSync, unlinkSync } from 'node:fs';
-import { delimiter, join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { accessSync, constants, existsSync, lstatSync, readFileSync, statSync, unlinkSync } from 'node:fs';
+import { delimiter, join, relative, resolve, sep } from 'node:path';
 import { spawnSync as nodeSpawnSync } from 'node:child_process';
 
 const COMMANDS = Object.freeze({
@@ -36,6 +37,43 @@ function processReason(result) {
   if (result?.error?.code === 'ETIMEDOUT' || result?.signal === 'SIGTERM') return 'executor-timeout';
   if (result?.error?.code === 'ENOENT') return 'executor-missing';
   return 'executor-failed';
+}
+
+function skillFileEvidence(workspacePath, ref) {
+  const workspace = resolve(workspacePath);
+  const absolute = resolve(workspace, ref);
+  const rel = relative(workspace, absolute);
+  if (!rel || rel.startsWith('..') || rel.startsWith(sep)) return null;
+  try {
+    if (lstatSync(absolute).isSymbolicLink()) return null;
+    const stat = statSync(absolute);
+    if (!stat.isFile() || stat.size < 1 || stat.size > 1024 * 1024) return null;
+    return `sha256:${createHash('sha256').update(readFileSync(absolute)).digest('hex')}`;
+  } catch {
+    return null;
+  }
+}
+
+function observedSkillLoads(stdout, declaredRefs = [], workspacePath = '.') {
+  if (!Array.isArray(declaredRefs) || declaredRefs.length === 0) return [];
+  const observations = [];
+  for (const line of String(stdout || '').split('\n').filter(Boolean)) {
+    let event;
+    try { event = JSON.parse(line); } catch { continue; }
+    const item = event?.item;
+    if (!item || item.type !== 'command_execution') continue;
+    const command = String(item.command || '');
+    const completed = event.type === 'item.completed'
+      && (item.status === undefined || item.status === 'completed')
+      && (item.exit_code === undefined || item.exit_code === 0);
+    if (!completed || !/\b(?:cat|sed|head|tail|less|bat|Get-Content)\b/.test(command)) continue;
+    for (const ref of declaredRefs) {
+      if (!command.includes(ref) || observations.some((itemValue) => itemValue.ref === ref)) continue;
+      const evidenceRef = skillFileEvidence(workspacePath, ref);
+      if (evidenceRef) observations.push({ ref, evidence_ref: evidenceRef });
+    }
+  }
+  return observations;
 }
 
 export function observeExecutor(adapter, {
@@ -90,10 +128,13 @@ export function createExecutorBinding({
 }
 
 function codexArgs(binding, routine, outputTempPath) {
+  const permissionArgs = routine.permission_mode === 'workspace-write'
+    ? ['--approve-for-me']
+    : ['-s', routine.permission_mode];
   return [
     'exec', '--ephemeral', '--json',
     '-C', binding.workspace_path,
-    '-s', routine.permission_mode,
+    ...permissionArgs,
     '-m', routine.executor.requested_model,
     '-c', `model_reasoning_effort="${routine.executor.reasoning_effort}"`,
     '-o', outputTempPath,
@@ -164,7 +205,16 @@ export function runModelExecutor(binding, routine, prompt, {
       if (!existsSync(outputTempPath)) return { ok: false, reason_code: 'executor-output-invalid' };
       const output = readFileSync(outputTempPath, 'utf8');
       if (!output.trim()) return { ok: false, reason_code: 'executor-output-invalid' };
-      return { ok: true, reason_code: 'executor-completed', output };
+      return {
+        ok: true,
+        reason_code: 'executor-completed',
+        output,
+        skill_loads: observedSkillLoads(
+          result.stdout,
+          routine.context.skill_refs || [],
+          binding.workspace_path,
+        ),
+      };
     } catch {
       return { ok: false, reason_code: 'executor-output-invalid' };
     } finally {
@@ -177,7 +227,7 @@ export function runModelExecutor(binding, routine, prompt, {
     if (typeof parsed.result !== 'string' || !parsed.result.trim()) {
       return { ok: false, reason_code: 'executor-output-invalid' };
     }
-    return { ok: true, reason_code: 'executor-completed', output: parsed.result };
+    return { ok: true, reason_code: 'executor-completed', output: parsed.result, skill_loads: [] };
   } catch {
     return { ok: false, reason_code: 'executor-output-invalid' };
   }

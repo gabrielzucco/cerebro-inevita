@@ -1,8 +1,11 @@
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const REF_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
-const LOCAL_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$/;
+const LOCAL_REF_RE = /^(?!.*\.\.(?:\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
+const ACCEPTED_VERSION_RE = /^\d+(?:\.x|\.\d+(?:\.x|\.\d+)?)?$/;
 const ASSURANCES = new Set(['runtime-enforced', 'receipt-audited', 'exported']);
+const OPAQUE_REF_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
+const EXPERIMENT_ID_RE = /^EXP-[A-Za-z0-9_-]{1,48}$/;
 const LOCAL_SOURCE_TYPES = new Set([
   'local-folder', 'local-file', 'obsidian', 'git-repository', 'meetings-folder',
   'knowledge-workspace',
@@ -97,7 +100,7 @@ function validateSystemShape(errors, value, version) {
     'capability', 'entities', 'sources', 'pipeline', 'permissions', 'eval', 'learning',
     'extensions',
   ];
-  if (version === 2) top.push('retrieval');
+  if (version === 2) top.push('retrieval', 'artifacts');
   closed(errors, value, 'system_contract', top);
   closed(errors, value.result, 'result', [
     'statement', 'non_success', 'output_type', 'definition_of_done', 'owner', 'human_gate',
@@ -123,6 +126,10 @@ function validateSystemShape(errors, value, version) {
     'correction_policy', 'promotion_threshold', 'requires_replay', 'requires_human_approval',
   ]);
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
+  if (object(value.extensions) && value.extensions.interface_role !== undefined
+    && !ID_RE.test(value.extensions.interface_role || '')) {
+    errors.push('extensions.interface_role inválido');
+  }
 }
 
 function validateRetrieval(errors, retrieval, sources) {
@@ -211,6 +218,57 @@ function validateRetrieval(errors, retrieval, sources) {
   referenceOnly(errors, retrieval, 'retrieval');
 }
 
+function validateArtifacts(errors, artifacts) {
+  if (!object(artifacts)) {
+    errors.push('artifacts precisa ser objeto');
+    return;
+  }
+  closed(errors, artifacts, 'artifacts', ['produces', 'consumes']);
+  list(errors, artifacts.produces, 'artifacts.produces');
+  list(errors, artifacts.consumes, 'artifacts.consumes');
+  if (Array.isArray(artifacts.produces) && Array.isArray(artifacts.consumes)
+    && artifacts.produces.length + artifacts.consumes.length === 0) {
+    errors.push('artifacts precisa declarar ao menos um produces ou consumes');
+  }
+  const produceRoles = [];
+  for (const [index, item] of (Array.isArray(artifacts.produces) ? artifacts.produces : []).entries()) {
+    const path = `artifacts.produces[${index}]`;
+    if (!object(item)) {
+      errors.push(`${path} precisa ser objeto`);
+      continue;
+    }
+    closed(errors, item, path, ['role', 'artifact_type', 'schema_ref', 'schema_version', 'sensitivity']);
+    if (!ID_RE.test(item.role || '')) errors.push(`${path}.role inválido`);
+    produceRoles.push(item.role);
+    if (!ID_RE.test(item.artifact_type || '')) errors.push(`${path}.artifact_type inválido`);
+    if (!LOCAL_REF_RE.test(item.schema_ref || '')) errors.push(`${path}.schema_ref inválido`);
+    if (!VERSION_RE.test(item.schema_version || '')) errors.push(`${path}.schema_version precisa ser semver`);
+    if (!['private', 'team', 'public'].includes(item.sensitivity)) errors.push(`${path}.sensitivity inválido`);
+  }
+  unique(errors, produceRoles, 'artifacts.produces.role');
+  const consumeRoles = [];
+  for (const [index, item] of (Array.isArray(artifacts.consumes) ? artifacts.consumes : []).entries()) {
+    const path = `artifacts.consumes[${index}]`;
+    if (!object(item)) {
+      errors.push(`${path} precisa ser objeto`);
+      continue;
+    }
+    closed(errors, item, path, ['role', 'artifact_type', 'schema_ref', 'accepted_versions', 'required']);
+    if (!ID_RE.test(item.role || '')) errors.push(`${path}.role inválido`);
+    consumeRoles.push(item.role);
+    if (!ID_RE.test(item.artifact_type || '')) errors.push(`${path}.artifact_type inválido`);
+    if (!LOCAL_REF_RE.test(item.schema_ref || '')) errors.push(`${path}.schema_ref inválido`);
+    list(errors, item.accepted_versions, `${path}.accepted_versions`, 1);
+    for (const [rangeIndex, range] of (Array.isArray(item.accepted_versions) ? item.accepted_versions : []).entries()) {
+      if (!ACCEPTED_VERSION_RE.test(range || '')) errors.push(`${path}.accepted_versions[${rangeIndex}] inválido`);
+    }
+    unique(errors, item.accepted_versions, `${path}.accepted_versions`);
+    if (typeof item.required !== 'boolean') errors.push(`${path}.required precisa ser booleano`);
+  }
+  unique(errors, consumeRoles, 'artifacts.consumes.role');
+  referenceOnly(errors, artifacts, 'artifacts');
+}
+
 export function validateSystemContractVersion(value, validateV1) {
   if (!object(value)) return ['system contract precisa ser objeto'];
   if (value.protocol_version === 1) {
@@ -221,10 +279,12 @@ export function validateSystemContractVersion(value, validateV1) {
   if (value.protocol_version !== 2) return ['protocol_version de System Contract suportada: 1 ou 2'];
   const base = { ...value, protocol_version: 1 };
   delete base.retrieval;
+  delete base.artifacts;
   const errors = validateV1(base).filter((error) => error !== 'protocol_version precisa ser 1');
   validateSystemShape(errors, value, 2);
   list(errors, value.sources, 'sources', 1);
   validateRetrieval(errors, value.retrieval, value.sources);
+  if (value.artifacts !== undefined) validateArtifacts(errors, value.artifacts);
   return [...new Set(errors)];
 }
 
@@ -234,7 +294,7 @@ function validateRunShape(errors, value, version) {
     'started_at', 'completed_at', 'entity_refs', 'source_refs', 'output_refs', 'eval',
     'human_decision', 'correction_ref', 'outcomes', 'privacy', 'extensions',
   ];
-  if (version === 2) top.push('context_snapshot');
+  if (version === 2) top.push('context_snapshot', 'chain_id', 'mode', 'experiment_ref', 'handoff_refs');
   closed(errors, value, 'run_record', top);
   if (value.capability !== undefined && value.capability !== null) {
     if (!object(value.capability)) errors.push('capability precisa ser objeto ou null');
@@ -274,6 +334,24 @@ function validateRunShape(errors, value, version) {
   if (!object(value.privacy)) errors.push('privacy precisa ser objeto');
   else closed(errors, value.privacy, 'privacy', ['content_shared_with_inevita']);
   if (value.extensions !== undefined && !object(value.extensions)) errors.push('extensions precisa ser objeto');
+  if (version === 2) {
+    const lineageDeclared = ['chain_id', 'mode', 'experiment_ref', 'handoff_refs']
+      .some((key) => Object.hasOwn(value, key));
+    if (lineageDeclared) {
+      if (value.chain_id !== null && !OPAQUE_REF_RE.test(value.chain_id || '')) errors.push('chain_id inválido');
+      if (value.chain_id === null && value.mode !== null) errors.push('mode exige chain_id');
+      if (value.chain_id !== null && !['replay', 'live'].includes(value.mode)) errors.push('chain_id exige mode replay ou live');
+      if (value.mode !== null && value.mode !== undefined && !['replay', 'live'].includes(value.mode)) errors.push('mode inválido');
+      if (value.experiment_ref !== null && value.experiment_ref !== undefined
+        && !EXPERIMENT_ID_RE.test(value.experiment_ref || '')) errors.push('experiment_ref inválido');
+      if (value.experiment_ref && !value.chain_id) errors.push('experiment_ref exige chain_id');
+      stringList(errors, value.handoff_refs, 'handoff_refs');
+      unique(errors, value.handoff_refs, 'handoff_refs');
+      for (const [index, ref] of (Array.isArray(value.handoff_refs) ? value.handoff_refs : []).entries()) {
+        if (!LOCAL_REF_RE.test(ref || '')) errors.push(`handoff_refs[${index}] inválido`);
+      }
+    }
+  }
 }
 
 function validateContextSnapshot(errors, snapshot, run) {
@@ -369,6 +447,10 @@ export function validateRunRecordVersion(value, validateV1) {
   if (value.protocol_version !== 2) return ['protocol_version de Run Record suportada: 1 ou 2'];
   const base = { ...value, protocol_version: 1 };
   delete base.context_snapshot;
+  delete base.chain_id;
+  delete base.mode;
+  delete base.experiment_ref;
+  delete base.handoff_refs;
   const errors = validateV1(base).filter((error) => error !== 'protocol_version precisa ser 1');
   validateRunShape(errors, value, 2);
   validateContextSnapshot(errors, value.context_snapshot, value);

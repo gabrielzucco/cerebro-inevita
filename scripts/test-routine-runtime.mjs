@@ -85,7 +85,8 @@ function fakeCodex({ sequence = ['success'], calls }) {
   return (command, args, options) => {
     calls.push({ command, args, options });
     assert.equal(command, 'codex');
-    assert.equal(options.input, `${promptMarker}\n`);
+    assert(options.input.includes(`${promptMarker}\n`));
+    assert(options.input.includes('Isto é um Run de uma Routine Contract já registrada e governada.'));
     assert.equal(args.includes(promptMarker), false);
     assert.equal(args.some((arg) => arg.includes(promptMarker)), false);
     const outcome = sequence[Math.min(calls.length - 1, sequence.length - 1)];
@@ -485,7 +486,8 @@ try {
     spawn: (command, args, options) => {
       claudeCalls.push({ command, args, options });
       assert.equal(command, 'claude');
-      assert.equal(options.input, `${promptMarker}\n`);
+      assert(options.input.includes(`${promptMarker}\n`));
+      assert(options.input.includes('Isto é um Run de uma Routine Contract já registrada e governada.'));
       assert.equal(args.some((arg) => arg.includes(promptMarker)), false);
       return { status: 0, stdout: JSON.stringify({ result: outputMarker }), stderr: '' };
     },

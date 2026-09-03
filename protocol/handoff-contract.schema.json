@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/protocol/handoff-contract.schema.json",
+  "title": "Company Brain Handoff Contract V1",
+  "description": "Declara que um Sistema produtor entrega um artefato versionado a um Sistema consumidor, com gate de aceitação. A aresta entre Sistemas só existe quando este contrato existe; ela só acende com Handoff Receipt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "handoff_id", "name", "version", "status", "producer", "consumer",
+    "artifact", "trigger", "acceptance_gate", "permissions", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "handoff_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "version": { "$ref": "#/$defs/version" },
+    "status": { "enum": ["proposed", "active", "suspended"] },
+    "producer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["system_ref", "artifact_role"],
+      "properties": {
+        "system_ref": { "$ref": "#/$defs/id" },
+        "artifact_role": { "$ref": "#/$defs/id" }
+      }
+    },
+    "consumer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["system_ref", "input_role", "required"],
+      "properties": {
+        "system_ref": { "$ref": "#/$defs/id" },
+        "input_role": { "$ref": "#/$defs/id" },
+        "required": { "type": "boolean" }
+      }
+    },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifact_type", "schema_ref", "accepted_versions"],
+      "properties": {
+        "artifact_type": { "$ref": "#/$defs/id" },
+        "schema_ref": { "$ref": "#/$defs/local_ref" },
+        "accepted_versions": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/accepted_version" }
+        }
+      }
+    },
+    "trigger": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "description"],
+      "properties": {
+        "type": { "enum": ["manual", "event"] },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    },
+    "acceptance_gate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["deterministic_checks", "human_approval_required"],
+      "properties": {
+        "deterministic_checks": {
+          "type": "array", "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "human_approval_required": { "type": "boolean" }
+      }
+    },
+    "permissions": {
+      "type": "object", "additionalProperties": false,
+      "required": ["transfer", "external_actions"],
+      "properties": {
+        "transfer": { "const": "reference-only" },
+        "external_actions": { "const": false }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content_shared_with_inevita"],
+      "properties": { "content_shared_with_inevita": { "const": false } }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "accepted_version": { "type": "string", "pattern": "^\\d+(?:\\.x|\\.\\d+(?:\\.x|\\.\\d+)?)?$" }
+  }
+}

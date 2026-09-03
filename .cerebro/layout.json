@@ -12,6 +12,8 @@
   "activationContract": "operacao/arquitetura/primeiro-sistema.json",
   "systemContract": "operacao/arquitetura/primeiro-sistema.json",
   "sourceContracts": ".cerebro/contracts/sources",
+  "experimentContracts": ".cerebro/contracts/experiments",
+  "experimentStates": ".cerebro/runtime/experiments",
   "accessGrants": ".cerebro/contracts/access-grants",
   "accessReceipts": ".cerebro/runtime/receipts/access",
   "routineContracts": ".cerebro/contracts/routines",
@@ -23,6 +25,9 @@
   "routineJudgments": ".cerebro/runtime/judgments",
   "routineCorrections": ".cerebro/runtime/corrections",
   "learningCandidates": ".cerebro/runtime/learning-candidates",
+  "contextArtifacts": ".cerebro/runtime/context-artifacts",
+  "executionTraces": ".cerebro/runtime/traces",
+  "canvasLayouts": ".cerebro/runtime/canvas-layouts",
   "routineMigrations": ".cerebro/runtime/migrations/routines",
   "runLedger": ".cerebro/ledger/runs.jsonl",
   "learningRegister": ".cerebro/learning"

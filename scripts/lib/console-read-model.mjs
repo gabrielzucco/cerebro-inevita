@@ -1,6 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
-import { buildCockpitReadModel, demoCockpitReadModel } from './cockpit-read-model.mjs';
 import { loadAccessGrant } from './access-runtime.mjs';
 import {
   correctionActions,
@@ -8,6 +7,8 @@ import {
   listLearningCandidates,
 } from './correction-loop.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
+import { buildExperimentReadModel } from './experiment-protocol.mjs';
+import { buildCompatibilityDiagnostic, readBrainManifest } from './compatibility-diagnostic.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -20,10 +21,19 @@ import {
 } from './routine-protocol.mjs';
 import {
   layout,
+  latestRunRecords,
   readJson,
   validateSourceContract,
   validateSystemContract,
 } from './system-protocol.mjs';
+import {
+  operatingAreaLabel,
+  systemClassification,
+  systemTaxonomy,
+} from './system-taxonomy.mjs';
+import { indexSystemRuntimeBindings } from './system-runtime-binding.mjs';
+import { experienceManifestView, indexExperienceManifests } from './experience-manifest.mjs';
+import { countInstalledSkills } from './skill-read-model.mjs';
 
 function inside(root, configured, fallback) {
   const brain = resolve(root);
@@ -82,6 +92,8 @@ function collectSystemPaths(root) {
 
 function listSystemContracts(root, issues) {
   const systems = new Map();
+  const runtimeBindings = indexSystemRuntimeBindings(root, issues);
+  const experiences = indexExperienceManifests(root, issues);
   for (const path of collectSystemPaths(root)) {
     try {
       const contract = readJson(path, 'System Contract');
@@ -89,13 +101,58 @@ function listSystemContracts(root, issues) {
       if (errors.length) throw new Error(errors.join(' · '));
       const current = systems.get(contract.system_id);
       if (!current || String(current.version).localeCompare(String(contract.version), undefined, { numeric: true }) < 0) {
+        const portfolioSystemRef = contract.extensions?.portfolio_system_ref || contract.system_id;
+        const migrationStage = contract.extensions?.migration_stage
+          || (contract.status === 'active' ? 'active' : contract.status === 'proposed' ? 'mapped' : 'configured');
+        const classification = systemClassification(contract.extensions);
+        const runtimeEntry = runtimeBindings.get(portfolioSystemRef) || runtimeBindings.get(contract.system_id) || null;
+        const runtimeBinding = runtimeEntry?.binding || null;
+        const runtimeAmbiguous = runtimeEntry?.ambiguous === true;
+        const runtimeWorkspaceObserved = runtimeBinding
+          ? existsSync(resolve(root, runtimeBinding.workspace_path))
+          : false;
+        const runtimeBindingStatus = runtimeAmbiguous ? 'degraded'
+          : runtimeBinding?.status === 'installed' && !runtimeWorkspaceObserved ? 'degraded'
+            : runtimeBinding?.status || null;
+        if (runtimeBinding?.status === 'installed' && !runtimeWorkspaceObserved) {
+          issues.push({ reason_code: 'system-runtime-workspace-missing', ref: runtimeBinding.binding_id });
+        }
+        const legacyInterfaceRef = runtimeAmbiguous ? null : contract.extensions?.interface_ref || null;
+        const interfaceRole = runtimeBinding?.interface.role || contract.extensions?.interface_role || null;
+        const experience = experienceManifestView(
+          experiences.get(portfolioSystemRef) || experiences.get(contract.system_id) || null,
+          interfaceRole,
+        );
         systems.set(contract.system_id, {
-          system_id: contract.system_id,
-          name: contract.name,
+          contract_id: contract.system_id,
+          contract_ref: relative(root, path).replaceAll('\\', '/'),
+          system_id: portfolioSystemRef,
+          name: contract.extensions?.portfolio_name || contract.name,
           version: contract.version,
           status: contract.status,
-          area_ref: contract.extensions?.area_ref || 'geral',
+          migration_stage: migrationStage,
+          human_maturity: contract.extensions?.human_maturity || null,
+          source_manifest_ref: contract.extensions?.source_manifest_ref || null,
+          interface_expected: Boolean(contract.extensions?.interface_role || runtimeBinding || legacyInterfaceRef),
+          interface_role: interfaceRole,
+          interface_ref: runtimeBinding?.interface.url || legacyInterfaceRef,
+          interface_ref_source: runtimeBinding ? 'runtime-binding' : legacyInterfaceRef ? 'legacy-system-contract' : null,
+          interface_health_timeout_ms: runtimeBinding?.interface.healthcheck.timeout_ms || 800,
+          runtime_binding: runtimeBinding ? {
+            binding_id: runtimeBinding.binding_id,
+            status: runtimeBindingStatus,
+            host_ref: runtimeBinding.host_ref,
+            workspace_ref: runtimeBinding.workspace_ref,
+            observed_at: runtimeBinding.observed_at,
+          } : null,
+          runtime_binding_status: runtimeBindingStatus || (legacyInterfaceRef ? 'legacy' : 'unbound'),
+          experience,
+          component_statuses: contract.extensions?.component_statuses || null,
+          next_gate: contract.extensions?.next_gate || null,
+          operating_area: classification.operating_area,
+          business_function: classification.business_function,
           result: contract.result.statement,
+          operational_owner: contract.result.owner,
           human_gate: contract.result.human_gate,
           retrieval_status: contract.protocol_version === 2 ? 'declared' : 'retrieval-not-declared',
           source_refs: contract.sources.map((source) => ({
@@ -112,6 +169,10 @@ function listSystemContracts(root, issues) {
     }
   }
   return [...systems.values()].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+}
+
+export function listConsoleSystems(root, { issues = [] } = {}) {
+  return listSystemContracts(root, issues);
 }
 
 function scheduleSummary(contract) {
@@ -221,7 +282,7 @@ function healthReason(contract, state, binding, preparation, migration, receipts
     : 'ready-manual-run';
 }
 
-function routineView(root, contract, now) {
+function routineView(root, contract, now, runRecordsById) {
   const state = loadRoutineState(root, contract.routine_id).state;
   const binding = bindingView(root, contract);
   const preparation = preparationView(root, contract);
@@ -259,30 +320,39 @@ function routineView(root, contract, now) {
       can_confirm_legacy_pause: migration?.status === 'awaiting-legacy-pause',
       activation_evidence_ref: latestManual ? `routine-receipt:${latestManual.receipt_id}` : null,
     },
-    receipts: receipts.slice(0, 12).map((receipt) => ({
-      receipt_id: receipt.receipt_id,
-      receipt_ref: `routine-receipt:${receipt.receipt_id}`,
-      trigger: receipt.trigger,
-      status: receipt.status,
-      reason_code: receipt.reason_code,
-      scheduled_for: receipt.scheduled_for,
-      started_at: receipt.started_at,
-      completed_at: receipt.completed_at,
-      requested_model: receipt.requested_model,
-      model_observation: receipt.model_observation,
-      input_refs: receipt.input_refs,
-      output_ref: receipt.output_ref,
-      access_receipt_refs: receipt.access_receipt_refs,
-      content_shared_with_provider: receipt.content_shared_with_provider,
-    })),
+    receipts: receipts.slice(0, 12).map((receipt) => {
+      const runRecord = runRecordsById.get(receipt.run_id) || null;
+      return {
+        receipt_id: receipt.receipt_id,
+        receipt_ref: `routine-receipt:${receipt.receipt_id}`,
+        trigger: receipt.trigger,
+        status: receipt.status,
+        reason_code: receipt.reason_code,
+        scheduled_for: receipt.scheduled_for,
+        started_at: receipt.started_at,
+        completed_at: receipt.completed_at,
+        requested_model: receipt.requested_model,
+        model_observation: receipt.model_observation,
+        input_refs: receipt.input_refs,
+        output_ref: receipt.output_ref,
+        access_receipt_refs: receipt.access_receipt_refs,
+        content_shared_with_provider: receipt.content_shared_with_provider,
+        run_record_ref: runRecord ? `run-record:${runRecord.run_id}` : null,
+        context_status: runRecord?.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+        context_source_count: runRecord?.protocol_version === 2
+          ? runRecord.context_snapshot.accesses.length
+          : 0,
+      };
+    }),
   };
 }
 
-function judgmentInbox(root, routines, issues) {
+function judgmentInbox(root, routines, issues, runRecordsById) {
   const names = new Map(routines.map((routine) => [routine.routine_id, routine.name]));
   return listRoutineRunReceipts(root)
     .filter((receipt) => receipt.status === 'completed' && receipt.output_ref)
     .map((receipt) => {
+      const runRecord = runRecordsById.get(receipt.run_id) || null;
       let judgment;
       let correction = null;
       let actions = {
@@ -316,6 +386,11 @@ function judgmentInbox(root, routines, issues) {
         completed_at: receipt.completed_at,
         requested_model: receipt.requested_model,
         output_ref: receipt.output_ref,
+        run_record_ref: runRecord ? `run-record:${runRecord.run_id}` : null,
+        context_status: runRecord?.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+        context_source_count: runRecord?.protocol_version === 2
+          ? runRecord.context_snapshot.accesses.length
+          : 0,
         judgment,
         correction,
         actions,
@@ -331,23 +406,51 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const observedAt = new Date(now);
   if (!Number.isFinite(observedAt.getTime())) throw new Error('relógio inválido');
   const issues = [];
+  const compatibility = buildCompatibilityDiagnostic(root, { now: observedAt });
   const sources = listSourceContracts(root, issues);
   const systems = listSystemContracts(root, issues);
+  let runRecords = [];
+  try {
+    runRecords = latestRunRecords(root);
+  } catch {
+    issues.push({ reason_code: 'run-ledger-invalid', ref: '.cerebro/runtime/ledger/runs.jsonl' });
+  }
+  const runRecordsById = new Map(runRecords.map((record) => [record.run_id, record]));
+  const experimentModel = buildExperimentReadModel(root, { runRecords });
+  issues.push(...experimentModel.issues);
   let routines = [];
   try {
-    routines = listRoutineContracts(root).map((contract) => routineView(root, contract, observedAt));
+    routines = listRoutineContracts(root)
+      .map((contract) => routineView(root, contract, observedAt, runRecordsById));
   } catch {
     issues.push({ reason_code: 'routine-contract-invalid', ref: '.cerebro/contracts/routines' });
   }
-  const systemById = new Map(systems.map((system) => [system.system_id, system]));
-  const areas = [...new Set(systems.map((system) => system.area_ref))].sort().map((areaRef) => ({
-    area_ref: areaRef,
-    name: areaRef === 'geral' ? 'Geral' : areaRef.replaceAll('-', ' ').replace(/^./, (letter) => letter.toUpperCase()),
-    system_refs: systems.filter((system) => system.area_ref === areaRef).map((system) => system.system_id),
-    routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.area_ref === areaRef).map((routine) => routine.routine_id),
+  const systemById = new Map(systems.flatMap((system) => [
+    [system.system_id, system],
+    [system.contract_id, system],
+  ]));
+  const areas = [...new Set(systems.map((system) => system.operating_area))].sort().map((operatingArea) => ({
+    operating_area: operatingArea,
+    name: operatingAreaLabel(operatingArea),
+    system_refs: systems.filter((system) => system.operating_area === operatingArea).map((system) => system.system_id),
+    routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.operating_area === operatingArea).map((routine) => routine.routine_id),
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
-  const judgments = judgmentInbox(root, routines, issues);
+  const judgments = judgmentInbox(root, routines, issues, runRecordsById);
+  const routineRunIds = new Set(routines.flatMap((routine) => routine.receipts.map((receipt) => receipt.run_id)));
+  const runRecordViews = runRecords.map((record) => ({
+    run_id: record.run_id,
+    run_record_ref: `run-record:${record.run_id}`,
+    system_ref: record.system_id,
+    status: record.status,
+    started_at: record.started_at,
+    completed_at: record.completed_at,
+    chain_id: record.chain_id ?? null,
+    mode: record.mode ?? null,
+    experiment_ref: record.experiment_ref ?? null,
+    handoff_count: record.handoff_refs?.length || 0,
+    has_routine_receipt: routineRunIds.has(record.run_id),
+  }));
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
   let learningCandidates = 0;
   try {
@@ -355,11 +458,10 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   } catch {
     issues.push({ reason_code: 'learning-candidate-invalid', ref: '.cerebro/runtime/learning-candidates' });
   }
-  const cockpit = buildCockpitReadModel(root);
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['manifest', 'contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -369,18 +471,25 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     counts: {
       areas: areas.length,
       systems: systems.length,
+      skills: countInstalledSkills(root),
       sources: sources.length,
+      experiments: experimentModel.experiments.length,
       routines: routines.length,
       attention: attention.length,
       judgments: pendingJudgments.length,
+      executions: runRecordViews.length,
       learning_candidates: learningCandidates,
-      ...cockpit.counts,
+      compatibility_gaps: compatibility.checks.filter((item) => item.status !== 'met').length,
     },
+    system_taxonomy: systemTaxonomy(),
     areas,
     systems,
     sources,
+    experiments: experimentModel.experiments,
     routines,
+    run_records: runRecordViews,
     judgments,
+    compatibility,
     today: {
       needs_attention: attention.map((routine) => routine.routine_id),
       ready_to_work: routines.filter((routine) => ['ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code)).map((routine) => routine.routine_id),
@@ -388,72 +497,23 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
       pending_judgments: pendingJudgments.map((item) => item.receipt_id),
     },
     issues,
-    activation: cockpit.activation,
-    decisions: cockpit.decisions,
-    experiments: cockpit.experiments,
-    connections: cockpit.connections,
-    community: cockpit.community,
-  };
-}
-
-export function buildConsoleDemoModel({ now = new Date() } = {}) {
-  const cockpit = demoCockpitReadModel();
-  const receipt = {
-    receipt_id: 'demo-run-001', receipt_ref: 'routine-receipt:demo-run-001', trigger: 'manual',
-    status: 'completed', reason_code: 'completed', scheduled_for: null,
-    started_at: '2026-08-28T13:20:00.000Z', completed_at: '2026-08-28T13:22:00.000Z',
-    requested_model: 'provider-model', model_observation: 'requested-not-verified',
-    input_refs: ['source:call-demo'], output_ref: 'private-output:demo-run-001',
-    access_receipt_refs: [], content_shared_with_provider: true,
-  };
-  const routine = {
-    routine_id: 'calls-em-decisoes', name: 'Calls em Decisões', version: '0.1.0', lifecycle: 'approved',
-    system_ref: 'calls', trigger: 'manual', schedule: 'Manual', next_scheduled_at: null,
-    permission_mode: 'human-confirmed', destination: { kind: 'local', ref: 'operacao/execucoes' },
-    prompt_ref: 'skill:call', privacy: {}, operations: [],
-    state: { status: 'disabled' },
-    binding: { adapter: 'hermes', auth_status: 'ready', permission_profile: 'approval-required', requested_model: 'provider-model', model_observation: 'requested-not-verified', observed_at: now.toISOString() },
-    preparation: null, migration: null, access: [], health_reason_code: 'ready-to-activate',
-    actions: { can_run: false, can_activate: false, can_pause: false, can_resume: false, can_confirm_legacy_pause: false, activation_evidence_ref: receipt.receipt_ref },
-    receipts: [receipt],
-  };
-  const judgment = {
-    receipt_id: receipt.receipt_id, receipt_ref: receipt.receipt_ref, routine_id: routine.routine_id,
-    routine_name: routine.name, system_ref: routine.system_ref, run_id: 'demo-run', trigger: 'manual',
-    completed_at: receipt.completed_at, requested_model: receipt.requested_model, output_ref: receipt.output_ref,
-    judgment: { status: 'pending', verdict: null, action_intent: 'none', actor_ref: null, decided_at: null, history_count: 0 },
-    correction: null,
-    actions: { can_rerun_with_correction: false, can_compare: false, can_create_learning_candidate: false },
-  };
-  return {
-    protocol_version: 1,
-    generated_at: new Date(now).toISOString(),
-    demo: true,
-    cache: { kind: 'none', rebuildable_from: ['demo-memory'] },
-    privacy: { content_shared_with_inevita: false, raw_output_exposed: false, prompt_exposed: false, explicit_local_output_read: true },
-    counts: { areas: 1, systems: 2, sources: 1, routines: 1, attention: 0, judgments: 1, learning_candidates: 0, ...cockpit.counts },
-    areas: [{ area_ref: 'vendas', name: 'Vendas', system_refs: ['calls', 'briefing-comercial'], routine_refs: [routine.routine_id] }],
-    systems: [
-      { system_id: 'calls', name: 'Calls em Decisões', version: '0.1.0', status: 'active', area_ref: 'vendas', result: 'Transformar conversa em decisões e próximos passos.', human_gate: true, retrieval_status: 'declared', source_refs: [{ role: 'input', source_id: 'call-demo', required: true, access: 'read', freshness: 'current' }] },
-      { system_id: 'briefing-comercial', name: 'Briefing Comercial Inteligente', version: '0.1.0', status: 'available', area_ref: 'vendas', result: 'Preparar uma conversa comercial com contexto.', human_gate: true, retrieval_status: 'declared', source_refs: [] },
-    ],
-    sources: [{ source_id: 'call-demo', name: 'Pasta de calls', type: 'local-folder', status: 'active', assurance: 'runtime-enforced', custody: 'local', pii: 'private', modes: ['read'], freshness: 'current', revocation: 'future-only' }],
-    routines: [routine],
-    judgments: [judgment],
-    today: { needs_attention: [], ready_to_work: [routine.routine_id], active: [], pending_judgments: [receipt.receipt_id] },
-    issues: [],
-    activation: cockpit.activation,
-    decisions: cockpit.decisions,
-    experiments: cockpit.experiments,
-    connections: cockpit.connections,
-    community: cockpit.community,
   };
 }
 
 export function recognizeConsoleBrain(root) {
+  const manifest = readBrainManifest(root);
+  if (manifest.status === 'valid') {
+    const entrypoint = manifest.value.entrypoints.some((ref) => {
+      try { return statSync(join(root, ref)).isFile(); } catch { return false; }
+    });
+    if (!entrypoint || !existsSync(join(root, manifest.value.layout_ref))) {
+      throw new Error('Brain Manifest válido, mas referências essenciais estão ausentes');
+    }
+    return { kind: 'inevita-installation', profile: manifest.value.profile, manifest_version: 1 };
+  }
   const standard = existsSync(join(root, '.cerebro')) && existsSync(join(root, 'VERSION'))
     && (existsSync(join(root, 'COMECE-AQUI.md')) || existsSync(join(root, 'START-HERE.md')));
-  if (standard) return { kind: 'inevita-installation' };
+  if (standard) return { kind: 'inevita-installation-unmanifested' };
   const markerPath = join(root, '.cerebro', 'legacy-brain.json');
   if (!existsSync(markerPath) || !existsSync(join(root, '.cerebro', 'layout.json'))) {
     throw new Error('a pasta não é um Cérebro reconhecido pelo Console');

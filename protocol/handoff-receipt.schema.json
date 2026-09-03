@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/protocol/handoff-receipt.schema.json",
+  "title": "Company Brain Handoff Receipt V1",
+  "description": "Prova de um handoff real: Run produtor → artefato versionado e hasheado → gate de aceitação → Run consumidor. Reference-only: o recibo carrega referências e hash, nunca o conteúdo do artefato. chain_id é runtime e genérico; o Experimento apenas aponta para chains.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "receipt_id", "handoff_ref", "chain_id", "mode", "experiment_ref",
+    "producer_run_ref", "artifact", "gate", "consumer_run_ref", "status",
+    "produced_at", "gated_at", "consumed_at", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "receipt_id": { "$ref": "#/$defs/opaque_ref" },
+    "handoff_ref": { "$ref": "#/$defs/id" },
+    "chain_id": { "$ref": "#/$defs/opaque_ref" },
+    "mode": { "enum": ["replay", "live"] },
+    "experiment_ref": {
+      "oneOf": [
+        { "type": "string", "pattern": "^EXP-[A-Za-z0-9_-]{1,48}$" },
+        { "type": "null" }
+      ]
+    },
+    "producer_run_ref": { "$ref": "#/$defs/opaque_ref" },
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifact_ref", "artifact_type", "schema_ref", "schema_version", "sha256", "schema_validated"],
+      "properties": {
+        "artifact_ref": { "$ref": "#/$defs/local_ref" },
+        "artifact_type": { "$ref": "#/$defs/id" },
+        "schema_ref": { "$ref": "#/$defs/local_ref" },
+        "schema_version": { "$ref": "#/$defs/version" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "schema_validated": { "type": "boolean" }
+      }
+    },
+    "gate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["result", "checks", "human_decision"],
+      "properties": {
+        "result": { "enum": ["passed", "failed", "pending"] },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["check", "passed"],
+            "properties": {
+              "check": { "type": "string", "minLength": 1 },
+              "passed": { "type": "boolean" }
+            }
+          }
+        },
+        "human_decision": { "enum": ["approved", "rejected", "pending", "not-required"] }
+      }
+    },
+    "consumer_run_ref": {
+      "oneOf": [{ "$ref": "#/$defs/opaque_ref" }, { "type": "null" }]
+    },
+    "status": { "enum": ["delivered", "accepted", "rejected", "failed"] },
+    "produced_at": { "type": "string", "format": "date-time" },
+    "gated_at": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "consumed_at": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content_shared_with_inevita"],
+      "properties": { "content_shared_with_inevita": { "const": false } }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!.*\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "opaque_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" }
+  }
+}
