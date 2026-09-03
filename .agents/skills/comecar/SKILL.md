@@ -21,7 +21,7 @@ runtime.
 - Faça uma pergunta por mensagem. Se a resposta já está no pedido ou nos arquivos autorizados, não
   pergunte de novo.
 - Não abra com e-mail, menu, arquitetura, lista de ferramentas ou “o que você faz?”. O
-  vínculo de acesso é confirmado no passo 3, antes da ativação — nunca como primeira mensagem.
+  vínculo de acesso é oferecido somente depois do primeiro output útil e nunca bloqueia a ativação.
 - Não exponha run-id, relógio, telemetria, A0/A1/A2, T0–T4 ou nomes internos do método.
 - Não procure Node, rode `which node`, altere PATH ou instale dependências para helpers opcionais.
 - Telemetria nunca é pedágio. Só rode helpers silenciosos depois do primeiro output útil e ignore
@@ -64,27 +64,11 @@ Se a pessoa autorizar uma pasta externa recorrente, registre apenas a referênci
 `register-source.mjs`. Explique que isso é leitura manual autorizada, sem cópia, mudança ou sync
 automático; não é uma conexão automática.
 
-## 3. Confirmar o vínculo de acesso
+## 3. Não interromper o trabalho por acesso
 
-O Cérebro é entregue vinculado a um acesso por e-mail — é assim que você recebe atualizações,
-recupera o acesso e entra na comunidade. Esse vínculo não é telemetria nem pedágio técnico: é o
-contrato de entrega do produto, e a ativação não acontece sem ele.
-
-Antes de executar o sprint de ativação, confira `.cerebro/install-credential` e
-`.cerebro/acesso-email`:
-
-- **Um dos dois existe** → a instalação já tem dono (veio com a instrução da plataforma). Siga
-  direto, sem perguntar nada.
-- **Nenhum existe** (clone direto, sem instrução da plataforma) → peça, em uma frase:
-
-  > Antes de ativar: qual e-mail você usou para pegar o acesso ao Cérebro? A ativação fica
-  > vinculada a ele.
-
-  Grave a resposta em `.cerebro/acesso-email` (só o e-mail, uma linha, modo 0600) e siga. Se a
-  pessoa ainda não tem acesso, aponte o cadastro em `https://lp.inevitasociety.com/cerebro`
-  (ou `https://inevitasociety.com/comunidade/cerebro/recuperar` para quem já se cadastrou) e
-  **não prossiga para a ativação** até o vínculo existir. O e-mail fica fora das notas e do Git;
-  o que sai da máquina segue sendo só o recibo de uso.
+Neste ponto ainda não existe output. Não peça e-mail, não rode helper e não transforme acesso em
+pré-requisito. Somente depois do output útil, aplique a regra opcional do passo 5. O produto e a
+ativação funcionam mesmo se a pessoa não vincular a instalação.
 
 ## 4. Ativar o Cérebro Base
 
@@ -113,6 +97,17 @@ rotina antes de provar o run manual.
 Depois do primeiro output, pergunte naturalmente:
 
 > Você usaria isso do jeito que está ou mudaria alguma coisa antes?
+
+Agora, e só agora, confira `.cerebro/install-credential`, `.cerebro/acesso-email` e
+`.cerebro/acesso-dispensado`. Se a instalação já estiver vinculada ou a pessoa já tiver recusado,
+não pergunte nada. Se nenhum existir, ofereça uma única vez:
+
+> Uma coisa rápida: qual e-mail você usou para pegar o acesso ao Cérebro? É o que faz esta
+> instalação aparecer como sua na plataforma.
+
+Se responder, grave apenas o e-mail em `.cerebro/acesso-email`, uma linha e modo 0600. Se não
+quiser, grave `.cerebro/acesso-dispensado`, nunca mais pergunte e continue. O e-mail fica fora das
+notas e do Git; telemetria continua opcional e nunca carrega conteúdo.
 
 Grave a correção nas palavras da pessoa. Quando aprovado, atualize `operacao/_HOJE.md` e o recibo.
 Na próxima tarefa, leia primeiro o mapa, o Activation Brief e a CONFIGURAÇÃO persistidos. Não releia

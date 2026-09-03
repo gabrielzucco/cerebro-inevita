@@ -21,9 +21,10 @@ de slash é um atalho, não um requisito.
 
 O Cérebro é entregue ligado a um acesso por e-mail. Quem instala pela instrução da plataforma já
 chega vinculado (credencial em `.cerebro/`). Quem clonou esta pasta direto, sem instrução, informa
-o e-mail do acesso quando a skill `comecar` pedir — a ativação não acontece sem esse vínculo. Ainda
-sem acesso? Cadastre-se em https://lp.inevitasociety.com/cerebro. Seu conteúdo continua local; o
-vínculo só liga a instalação à pessoa.
+o e-mail do acesso quando a skill `comecar` oferecer isso, somente depois do primeiro output útil.
+Recusar não bloqueia a ativação: o agente registra a preferência e segue. Ainda sem acesso?
+Cadastre-se em https://lp.inevitasociety.com/cerebro. Seu conteúdo continua local; o vínculo só liga
+a instalação à pessoa.
 
 O agente precisa abrir esta pasta, ler e editar arquivos. Scripts validam o protocolo quando o
 ambiente permite, mas não são requisito para a primeira ativação. Se ele só recebe arquivos como
@@ -62,6 +63,12 @@ exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
 
 ## A primeira experiência
 
+No cockpit opcional, esta etapa aparece como **Primeira Missão**. É um estado transitório: antes
+de T4 orienta o próximo passo; depois de T4 desaparece da navegação e deixa seu recibo em
+`Cérebro`. `Cérebro Base` é a infraestrutura nativa de contexto, não um Sistema de negócio.
+A novidade mais recente pode aparecer ali em um cartão compacto; a comunicação completa e o
+histórico de releases vivem permanentemente em `Cérebro → Atualizações`.
+
 O cérebro começa entendendo uma situação recorrente do seu trabalho: o que ocupa tempo, volta para
 suas mãos ou ainda depende da sua decisão. Depois localiza onde esse trabalho deixa rastros e pede
 somente um caso recente — uma reunião, conversa, mensagem, documento ou outro material real.
@@ -77,6 +84,11 @@ tipo de entrega. O cérebro escolhe o formato pelo trabalho, não força todo ma
 Ao final, o resultado fica legível para você e também deixa o contrato de ativação do Cérebro Base
 e Run Records para que Sistemas futuros reutilizem entidades, fontes e aprendizados sem copiar o
 dado canônico.
+
+O acordo é explícito: a Fonte continua como casa da verdade; o Cérebro prepara, destila e recupera
+o recorte necessário; o Sistema pede contexto por papel e produz seu resultado. Leitura direta da
+Fonte só acontece quando dado fresco ou estruturado exige isso e o contrato, a permissão e o Run
+Record deixam a exceção visível.
 
 Depois que o contexto aprovado volta numa segunda tarefa, o Cérebro pode abrir o `/arquiteto`: ele
 mapeia como uma operação funciona, mostra o que é só declarado e o que já tem evidência, e propõe o

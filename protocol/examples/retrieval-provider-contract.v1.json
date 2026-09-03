@@ -1,0 +1,35 @@
+{
+  "protocol_version": 1,
+  "provider_id": "local-semantic-retrieval",
+  "name": "Índice semântico local",
+  "version": "1.0.0",
+  "status": "active",
+  "interface": {
+    "operations": ["retrieve", "resolve-context", "health"],
+    "receipt_kind": "retrieval-receipt",
+    "fail_mode": "closed"
+  },
+  "driver": {
+    "implementation": "gbrain",
+    "implementation_version": "0.46.30.0",
+    "transport": "local-unix-socket",
+    "adapter_ref": ".automacao/cerebro_retrieve.py",
+    "profile_ref": ".automacao/gbrain_retrieval_profile.v1.json"
+  },
+  "corpus": {
+    "source_ref": "operational-memory-index",
+    "catalog_ref": ".automacao/gbrain_retrieval_benchmark.py",
+    "policy": "explicit-allowlist"
+  },
+  "privacy": {
+    "local_only": true,
+    "query_persisted": false,
+    "content_persisted_in_receipt": false,
+    "third_party_zone_indexed": false
+  },
+  "assurance": "receipt-audited",
+  "license": {
+    "spdx": "MIT",
+    "notice_ref": "https://github.com/garrytan/gbrain/blob/master/LICENSE"
+  }
+}

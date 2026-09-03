@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadAccessGrant } from './access-runtime.mjs';
 import {
   correctionActions,
@@ -7,6 +8,8 @@ import {
   listLearningCandidates,
 } from './correction-loop.mjs';
 import { judgmentView } from './judgment-protocol.mjs';
+import { buildExperimentReadModel } from './experiment-protocol.mjs';
+import { buildCompatibilityDiagnostic, readBrainManifest } from './compatibility-diagnostic.mjs';
 import {
   listRoutineContracts,
   listRoutineRunReceipts,
@@ -15,14 +18,52 @@ import {
   loadRoutineMigration,
   loadRoutineState,
   routineMigrationBlocker,
-  scheduledSlotsBetween,
 } from './routine-protocol.mjs';
 import {
   layout,
+  latestRunRecords,
   readJson,
   validateSourceContract,
   validateSystemContract,
 } from './system-protocol.mjs';
+import {
+  operatingAreaLabel,
+  systemClassification,
+  systemTaxonomy,
+} from './system-taxonomy.mjs';
+import { indexSystemRuntimeBindings } from './system-runtime-binding.mjs';
+import { experienceManifestView, indexExperienceManifests } from './experience-manifest.mjs';
+import { countInstalledSkills } from './skill-read-model.mjs';
+import { buildCommunicationReadModel } from './communication-feed.mjs';
+
+const PRODUCT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const SOCIETY_CATALOG = join(PRODUCT_ROOT, 'society', 'catalog.v1.json');
+
+function loadSocietyCatalog(issues) {
+  try {
+    const catalog = JSON.parse(readFileSync(SOCIETY_CATALOG, 'utf8'));
+    const errors = [];
+    if (catalog.protocol_version !== 1) errors.push('protocol_version precisa ser 1');
+    if (typeof catalog.catalog_id !== 'string' || !catalog.catalog_id) errors.push('catalog_id ausente');
+    if (!Array.isArray(catalog.systems)) errors.push('systems precisa ser array');
+    for (const [index, system] of (catalog.systems || []).entries()) {
+      for (const field of ['system_id', 'name', 'descriptor', 'tagline', 'stage', 'release_version', 'result']) {
+        if (typeof system[field] !== 'string' || !system[field]) errors.push(`systems[${index}].${field} ausente`);
+      }
+      if (!Array.isArray(system.required_source_roles)) errors.push(`systems[${index}].required_source_roles precisa ser array`);
+      if (!Array.isArray(system.known_gaps)) errors.push(`systems[${index}].known_gaps precisa ser array`);
+      for (const field of ['companies', 'runs', 'approved_runs', 'judged_outcomes']) {
+        if (!Number.isInteger(system.evidence?.[field]) || system.evidence[field] < 0) errors.push(`systems[${index}].evidence.${field} inválido`);
+      }
+      if (typeof system.checkout?.available !== 'boolean') errors.push(`systems[${index}].checkout.available inválido`);
+    }
+    if (errors.length) throw new Error(errors.join(' · '));
+    return catalog;
+  } catch {
+    issues.push({ reason_code: 'society-catalog-invalid', ref: 'society/catalog.v1.json' });
+    return { protocol_version: 1, catalog_id: 'unavailable', systems: [] };
+  }
+}
 
 function inside(root, configured, fallback) {
   const brain = resolve(root);
@@ -35,6 +76,58 @@ function inside(root, configured, fallback) {
 function jsonFiles(directory) {
   if (!existsSync(directory)) return [];
   return readdirSync(directory).filter((name) => name.endsWith('.json')).sort().map((name) => join(directory, name));
+}
+
+const ACTIVATION_STEPS = [
+  { milestone: 'T0', id: 'work', name: 'Escolha um trabalho real', description: 'Comece pelo que precisa sair pronto agora; não pelo mapa inteiro da empresa.' },
+  { milestone: 'T1', id: 'source', name: 'Traga uma fonte-semente', description: 'Pode ser texto, fala, arquivo ou uma Fonte já conectada e autorizada.' },
+  { milestone: 'T2', id: 'result', name: 'Receba o primeiro resultado', description: 'O Cérebro usa o recorte observado para produzir algo útil e rastreável.' },
+  { milestone: 'T3', id: 'judgment', name: 'Julgue e corrija', description: 'Você confirma o que serve; correção não vira regra automaticamente.' },
+  { milestone: 'T4', id: 'reuse', name: 'Reutilize sem reexplicar', description: 'Uma segunda tarefa prova que o contexto aprovado voltou a trabalhar.' },
+];
+
+export function activationState(root, { issues = [] } = {}) {
+  const directory = join(root, '.cerebro', 'concierge-runs');
+  const runs = jsonFiles(directory).flatMap((path) => {
+    try {
+      const run = readJson(path, 'recibo da primeira missão');
+      if (!run || typeof run !== 'object' || !run.milestones || typeof run.milestones !== 'object') throw new Error('milestones ausentes');
+      return [{ ...run, run_ref: relative(root, path).replaceAll('\\', '/') }];
+    } catch {
+      issues.push({ reason_code: 'activation-receipt-invalid', ref: relative(root, path).replaceAll('\\', '/') });
+      return [];
+    }
+  });
+  const completedRuns = runs.filter((run) => Boolean(run.milestones.T4));
+  const candidates = completedRuns.length ? completedRuns : runs;
+  const activeRun = [...candidates].sort((left, right) => {
+    const leftAt = left.milestones.T4 || left.milestones.T3 || left.milestones.T2 || left.milestones.T1 || left.milestones.T0 || '';
+    const rightAt = right.milestones.T4 || right.milestones.T3 || right.milestones.T2 || right.milestones.T1 || right.milestones.T0 || '';
+    return String(rightAt).localeCompare(String(leftAt));
+  })[0] || null;
+  const milestones = Object.fromEntries(ACTIVATION_STEPS.map((step) => [step.milestone, activeRun?.milestones?.[step.milestone] || null]));
+  const steps = ACTIVATION_STEPS.map((step) => ({ ...step, completed_at: milestones[step.milestone] }));
+  const completedSteps = steps.filter((step) => step.completed_at).length;
+  const complete = Boolean(milestones.T4);
+  const currentStep = complete ? null : steps.find((step) => !step.completed_at) || steps.at(-1);
+  return {
+    status: complete ? 'complete' : activeRun ? 'in-progress' : 'not-started',
+    complete,
+    command: '/comecar',
+    run_id: activeRun?.runId || null,
+    system_id: activeRun?.systemId || 'cerebro-base',
+    product_version: activeRun?.productVersion || null,
+    run_ref: activeRun?.run_ref || null,
+    receipt_ref: complete ? activeRun.run_ref : null,
+    started_at: milestones.T0,
+    completed_at: milestones.T4,
+    completed_steps: completedSteps,
+    total_steps: steps.length,
+    current_step: currentStep?.id || null,
+    interventions: Array.isArray(activeRun?.interventions) ? activeRun.interventions.length : 0,
+    steps,
+    seed_options: ['Texto ou briefing', 'Fala ou reunião', 'Arquivo autorizado', 'Fonte conectada'],
+  };
 }
 
 function listSourceContracts(root, issues) {
@@ -81,6 +174,8 @@ function collectSystemPaths(root) {
 
 function listSystemContracts(root, issues) {
   const systems = new Map();
+  const runtimeBindings = indexSystemRuntimeBindings(root, issues);
+  const experiences = indexExperienceManifests(root, issues);
   for (const path of collectSystemPaths(root)) {
     try {
       const contract = readJson(path, 'System Contract');
@@ -88,13 +183,60 @@ function listSystemContracts(root, issues) {
       if (errors.length) throw new Error(errors.join(' · '));
       const current = systems.get(contract.system_id);
       if (!current || String(current.version).localeCompare(String(contract.version), undefined, { numeric: true }) < 0) {
+        const portfolioSystemRef = contract.extensions?.portfolio_system_ref || contract.system_id;
+        const migrationStage = contract.extensions?.migration_stage
+          || (contract.status === 'active' ? 'active' : contract.status === 'proposed' ? 'mapped' : 'configured');
+        const classification = systemClassification(contract.extensions, contract.system_id);
+        const runtimeEntry = runtimeBindings.get(portfolioSystemRef) || runtimeBindings.get(contract.system_id) || null;
+        const runtimeBinding = runtimeEntry?.binding || null;
+        const runtimeAmbiguous = runtimeEntry?.ambiguous === true;
+        const runtimeWorkspaceObserved = runtimeBinding
+          ? existsSync(resolve(root, runtimeBinding.workspace_path))
+          : false;
+        const runtimeBindingStatus = runtimeAmbiguous ? 'degraded'
+          : runtimeBinding?.status === 'installed' && !runtimeWorkspaceObserved ? 'degraded'
+            : runtimeBinding?.status || null;
+        if (runtimeBinding?.status === 'installed' && !runtimeWorkspaceObserved) {
+          issues.push({ reason_code: 'system-runtime-workspace-missing', ref: runtimeBinding.binding_id });
+        }
+        const legacyInterfaceRef = runtimeAmbiguous ? null : contract.extensions?.interface_ref || null;
+        const interfaceRole = runtimeBinding?.interface.role || contract.extensions?.interface_role || null;
+        const experience = experienceManifestView(
+          experiences.get(portfolioSystemRef) || experiences.get(contract.system_id) || null,
+          interfaceRole,
+        );
         systems.set(contract.system_id, {
-          system_id: contract.system_id,
-          name: contract.name,
+          contract_id: contract.system_id,
+          contract_ref: relative(root, path).replaceAll('\\', '/'),
+          system_id: portfolioSystemRef,
+          name: contract.extensions?.portfolio_name || contract.name,
           version: contract.version,
           status: contract.status,
-          area_ref: contract.extensions?.area_ref || 'geral',
+          migration_stage: migrationStage,
+          human_maturity: contract.extensions?.human_maturity || null,
+          source_manifest_ref: contract.extensions?.source_manifest_ref || null,
+          interface_expected: Boolean(contract.extensions?.interface_role || runtimeBinding || legacyInterfaceRef),
+          interface_role: interfaceRole,
+          interface_ref: runtimeBinding?.interface.url || legacyInterfaceRef,
+          interface_ref_source: runtimeBinding ? 'runtime-binding' : legacyInterfaceRef ? 'legacy-system-contract' : null,
+          interface_health_timeout_ms: runtimeBinding?.interface.healthcheck.timeout_ms || 800,
+          runtime_binding: runtimeBinding ? {
+            binding_id: runtimeBinding.binding_id,
+            status: runtimeBindingStatus,
+            host_ref: runtimeBinding.host_ref,
+            workspace_ref: runtimeBinding.workspace_ref,
+            observed_at: runtimeBinding.observed_at,
+          } : null,
+          runtime_binding_status: runtimeBindingStatus || (legacyInterfaceRef ? 'legacy' : 'unbound'),
+          experience,
+          component_statuses: contract.extensions?.component_statuses || null,
+          next_gate: contract.extensions?.next_gate || null,
+          operating_area: classification.operating_area,
+          business_function: classification.business_function,
+          product_kind: classification.product_kind,
+          surface: classification.surface,
           result: contract.result.statement,
+          operational_owner: contract.result.owner,
           human_gate: contract.result.human_gate,
           retrieval_status: contract.protocol_version === 2 ? 'declared' : 'retrieval-not-declared',
           source_refs: contract.sources.map((source) => ({
@@ -113,6 +255,10 @@ function listSystemContracts(root, issues) {
   return [...systems.values()].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
 }
 
+export function listConsoleSystems(root, { issues = [] } = {}) {
+  return listSystemContracts(root, issues);
+}
+
 function scheduleSummary(contract) {
   if (contract.trigger.type === 'manual') return 'Manual';
   const schedule = contract.trigger.schedule;
@@ -122,10 +268,58 @@ function scheduleSummary(contract) {
   return `${cadence} às ${schedule.time} · ${schedule.timezone}`;
 }
 
+function scheduleParts(instant, timezone) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
+  }).formatToParts(instant);
+  const value = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  return {
+    date: `${value.year}-${value.month}-${value.day}`,
+    day: Number(value.day),
+    time: `${value.hour}:${value.minute}`,
+    weekday: { Mon: 'MO', Tue: 'TU', Wed: 'WE', Thu: 'TH', Fri: 'FR', Sat: 'SA', Sun: 'SU' }[value.weekday],
+  };
+}
+
+function addLocalDays(localDate, days) {
+  const [year, month, day] = localDate.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function localInstant(localDate, time, timezone) {
+  const [year, month, day] = localDate.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const target = Date.UTC(year, month - 1, day, hour, minute);
+  let candidate = target;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const parts = scheduleParts(new Date(candidate), timezone);
+    const [observedYear, observedMonth, observedDay] = parts.date.split('-').map(Number);
+    const [observedHour, observedMinute] = parts.time.split(':').map(Number);
+    const observed = Date.UTC(observedYear, observedMonth - 1, observedDay, observedHour, observedMinute);
+    const delta = target - observed;
+    candidate += delta;
+    if (delta === 0) break;
+  }
+  const parts = scheduleParts(new Date(candidate), timezone);
+  return parts.date === localDate && parts.time === time ? new Date(candidate) : null;
+}
+
 function nextScheduledAt(contract, state, now) {
   if (contract.trigger.type !== 'schedule' || state.status !== 'active') return null;
-  const horizon = new Date(now.getTime() + 62 * 24 * 60 * 60 * 1000);
-  return scheduledSlotsBetween(contract.trigger.schedule, now, horizon)[0] || null;
+  const schedule = contract.trigger.schedule;
+  const firstLocalDate = scheduleParts(now, schedule.timezone).date;
+  for (let offset = 0; offset <= 400; offset += 1) {
+    const date = addLocalDays(firstLocalDate, offset);
+    const candidate = localInstant(date, schedule.time, schedule.timezone);
+    if (!candidate || candidate <= now || candidate < new Date(schedule.not_before)) continue;
+    const parts = scheduleParts(candidate, schedule.timezone);
+    if (schedule.cadence === 'weekly' && !schedule.weekdays.includes(parts.weekday)) continue;
+    if (schedule.cadence === 'monthly' && !schedule.month_days.includes(parts.day)) continue;
+    return candidate.toISOString();
+  }
+  return null;
 }
 
 function bindingView(root, contract) {
@@ -220,7 +414,7 @@ function healthReason(contract, state, binding, preparation, migration, receipts
     : 'ready-manual-run';
 }
 
-function routineView(root, contract, now) {
+function routineView(root, contract, now, runRecordsById) {
   const state = loadRoutineState(root, contract.routine_id).state;
   const binding = bindingView(root, contract);
   const preparation = preparationView(root, contract);
@@ -258,30 +452,39 @@ function routineView(root, contract, now) {
       can_confirm_legacy_pause: migration?.status === 'awaiting-legacy-pause',
       activation_evidence_ref: latestManual ? `routine-receipt:${latestManual.receipt_id}` : null,
     },
-    receipts: receipts.slice(0, 12).map((receipt) => ({
-      receipt_id: receipt.receipt_id,
-      receipt_ref: `routine-receipt:${receipt.receipt_id}`,
-      trigger: receipt.trigger,
-      status: receipt.status,
-      reason_code: receipt.reason_code,
-      scheduled_for: receipt.scheduled_for,
-      started_at: receipt.started_at,
-      completed_at: receipt.completed_at,
-      requested_model: receipt.requested_model,
-      model_observation: receipt.model_observation,
-      input_refs: receipt.input_refs,
-      output_ref: receipt.output_ref,
-      access_receipt_refs: receipt.access_receipt_refs,
-      content_shared_with_provider: receipt.content_shared_with_provider,
-    })),
+    receipts: receipts.slice(0, 12).map((receipt) => {
+      const runRecord = runRecordsById.get(receipt.run_id) || null;
+      return {
+        receipt_id: receipt.receipt_id,
+        receipt_ref: `routine-receipt:${receipt.receipt_id}`,
+        trigger: receipt.trigger,
+        status: receipt.status,
+        reason_code: receipt.reason_code,
+        scheduled_for: receipt.scheduled_for,
+        started_at: receipt.started_at,
+        completed_at: receipt.completed_at,
+        requested_model: receipt.requested_model,
+        model_observation: receipt.model_observation,
+        input_refs: receipt.input_refs,
+        output_ref: receipt.output_ref,
+        access_receipt_refs: receipt.access_receipt_refs,
+        content_shared_with_provider: receipt.content_shared_with_provider,
+        run_record_ref: runRecord ? `run-record:${runRecord.run_id}` : null,
+        context_status: runRecord?.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+        context_source_count: runRecord?.protocol_version === 2
+          ? runRecord.context_snapshot.accesses.length
+          : 0,
+      };
+    }),
   };
 }
 
-function judgmentInbox(root, routines, issues) {
+function judgmentInbox(root, routines, issues, runRecordsById) {
   const names = new Map(routines.map((routine) => [routine.routine_id, routine.name]));
   return listRoutineRunReceipts(root)
     .filter((receipt) => receipt.status === 'completed' && receipt.output_ref)
     .map((receipt) => {
+      const runRecord = runRecordsById.get(receipt.run_id) || null;
       let judgment;
       let correction = null;
       let actions = {
@@ -315,6 +518,11 @@ function judgmentInbox(root, routines, issues) {
         completed_at: receipt.completed_at,
         requested_model: receipt.requested_model,
         output_ref: receipt.output_ref,
+        run_record_ref: runRecord ? `run-record:${runRecord.run_id}` : null,
+        context_status: runRecord?.protocol_version === 2 ? 'recorded' : 'context-not-recorded',
+        context_source_count: runRecord?.protocol_version === 2
+          ? runRecord.context_snapshot.accesses.length
+          : 0,
         judgment,
         correction,
         actions,
@@ -330,24 +538,69 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const observedAt = new Date(now);
   if (!Number.isFinite(observedAt.getTime())) throw new Error('relógio inválido');
   const issues = [];
+  const compatibility = buildCompatibilityDiagnostic(root, { now: observedAt });
   const sources = listSourceContracts(root, issues);
-  const systems = listSystemContracts(root, issues);
+  const allSystems = listSystemContracts(root, issues);
+  const systems = allSystems.filter((system) => system.product_kind === 'business-system' && system.surface === 'systems');
+  const nativeSystems = allSystems.filter((system) => system.product_kind === 'brain-native' || system.surface === 'brain');
+  const activation = activationState(root, { issues });
+  const communication = buildCommunicationReadModel(PRODUCT_ROOT);
+  let runRecords = [];
+  try {
+    runRecords = latestRunRecords(root);
+  } catch {
+    issues.push({ reason_code: 'run-ledger-invalid', ref: '.cerebro/runtime/ledger/runs.jsonl' });
+  }
+  const runRecordsById = new Map(runRecords.map((record) => [record.run_id, record]));
+  const experimentModel = buildExperimentReadModel(root, { runRecords });
+  issues.push(...experimentModel.issues);
   let routines = [];
   try {
-    routines = listRoutineContracts(root).map((contract) => routineView(root, contract, observedAt));
+    routines = listRoutineContracts(root)
+      .map((contract) => routineView(root, contract, observedAt, runRecordsById));
   } catch {
     issues.push({ reason_code: 'routine-contract-invalid', ref: '.cerebro/contracts/routines' });
   }
-  const systemById = new Map(systems.map((system) => [system.system_id, system]));
-  const areas = [...new Set(systems.map((system) => system.area_ref))].sort().map((areaRef) => ({
-    area_ref: areaRef,
-    name: areaRef === 'geral' ? 'Geral' : areaRef.replaceAll('-', ' ').replace(/^./, (letter) => letter.toUpperCase()),
-    system_refs: systems.filter((system) => system.area_ref === areaRef).map((system) => system.system_id),
-    routine_refs: routines.filter((routine) => systemById.get(routine.system_ref)?.area_ref === areaRef).map((routine) => routine.routine_id),
+  const systemById = new Map(allSystems.flatMap((system) => [
+    [system.system_id, system],
+    [system.contract_id, system],
+  ]));
+  const businessSystemById = new Map(systems.flatMap((system) => [
+    [system.system_id, system],
+    [system.contract_id, system],
+  ]));
+  routines = routines.map((routine) => {
+    const system = systemById.get(routine.system_ref);
+    return {
+      ...routine,
+      product_kind: system?.product_kind || 'business-system',
+      surface: system?.surface || 'systems',
+    };
+  });
+  const areas = [...new Set(systems.map((system) => system.operating_area))].sort().map((operatingArea) => ({
+    operating_area: operatingArea,
+    name: operatingAreaLabel(operatingArea),
+    system_refs: systems.filter((system) => system.operating_area === operatingArea).map((system) => system.system_id),
+    routine_refs: routines.filter((routine) => businessSystemById.get(routine.system_ref)?.operating_area === operatingArea).map((routine) => routine.routine_id),
   }));
   const attention = routines.filter((routine) => !['active', 'ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code));
-  const judgments = judgmentInbox(root, routines, issues);
+  const judgments = judgmentInbox(root, routines, issues, runRecordsById);
+  const routineRunIds = new Set(routines.flatMap((routine) => routine.receipts.map((receipt) => receipt.run_id)));
+  const runRecordViews = runRecords.map((record) => ({
+    run_id: record.run_id,
+    run_record_ref: `run-record:${record.run_id}`,
+    system_ref: record.system_id,
+    status: record.status,
+    started_at: record.started_at,
+    completed_at: record.completed_at,
+    chain_id: record.chain_id ?? null,
+    mode: record.mode ?? null,
+    experiment_ref: record.experiment_ref ?? null,
+    handoff_count: record.handoff_refs?.length || 0,
+    has_routine_receipt: routineRunIds.has(record.run_id),
+  }));
   const pendingJudgments = judgments.filter((item) => item.judgment.status === 'pending');
+  const society = loadSocietyCatalog(issues);
   let learningCandidates = 0;
   try {
     learningCandidates = listLearningCandidates(root).length;
@@ -357,7 +610,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['contracts', 'bindings', 'state', 'receipts', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['manifest', 'contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates', 'public-update-feed', 'changelog'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -367,17 +620,30 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     counts: {
       areas: areas.length,
       systems: systems.length,
+      skills: countInstalledSkills(root),
       sources: sources.length,
+      experiments: experimentModel.experiments.length,
       routines: routines.length,
       attention: attention.length,
       judgments: pendingJudgments.length,
+      executions: runRecordViews.length,
       learning_candidates: learningCandidates,
+      society_systems: society.systems.length,
+      compatibility_gaps: compatibility.checks.filter((item) => item.status !== 'met').length,
     },
+    system_taxonomy: systemTaxonomy(),
+    activation,
+    communication,
     areas,
     systems,
+    native_systems: nativeSystems,
     sources,
+    experiments: experimentModel.experiments,
     routines,
+    run_records: runRecordViews,
     judgments,
+    society,
+    compatibility,
     today: {
       needs_attention: attention.map((routine) => routine.routine_id),
       ready_to_work: routines.filter((routine) => ['ready-manual-run', 'ready-to-activate'].includes(routine.health_reason_code)).map((routine) => routine.routine_id),
@@ -389,9 +655,19 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
 }
 
 export function recognizeConsoleBrain(root) {
+  const manifest = readBrainManifest(root);
+  if (manifest.status === 'valid') {
+    const entrypoint = manifest.value.entrypoints.some((ref) => {
+      try { return statSync(join(root, ref)).isFile(); } catch { return false; }
+    });
+    if (!entrypoint || !existsSync(join(root, manifest.value.layout_ref))) {
+      throw new Error('Brain Manifest válido, mas referências essenciais estão ausentes');
+    }
+    return { kind: 'inevita-installation', profile: manifest.value.profile, manifest_version: 1 };
+  }
   const standard = existsSync(join(root, '.cerebro')) && existsSync(join(root, 'VERSION'))
     && (existsSync(join(root, 'COMECE-AQUI.md')) || existsSync(join(root, 'START-HERE.md')));
-  if (standard) return { kind: 'inevita-installation' };
+  if (standard) return { kind: 'inevita-installation-unmanifested' };
   const markerPath = join(root, '.cerebro', 'legacy-brain.json');
   if (!existsSync(markerPath) || !existsSync(join(root, '.cerebro', 'layout.json'))) {
     throw new Error('a pasta não é um Cérebro reconhecido pelo Console');

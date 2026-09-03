@@ -23,6 +23,18 @@ solicitação de ajuste pode gerar exatamente um novo Run ligado àquele julgame
 podem ser comparados por leitura local explícita e um resultado corrigido aprovado pode virar
 candidato de aprendizado — nunca alteração automática do motor.
 
+O corte local seguinte fecha a costura que ainda faltava entre protocolo e execução: a Rotina V1
+declara quais recortes do artefato do coletor correspondem a cada papel do System Contract V2; o
+runtime valida isso antes do provider, persiste o artefato privado por hash e grava o Run Record V2.
+O Console lê somente o Context Snapshot reference-only e permite revogar Access Grants para Runs
+futuros. Este corte permanece local até ser publicado junto com o funil completo.
+
+O dogfood interno seguinte não cria outro Cérebro nem reorganiza o vault: um importador
+determinístico lê os manifestos humanos existentes, produz somente contratos privados em
+`.cerebro/` e liga uma vertical executável já existente ao Sistema de portfólio correspondente.
+O Console passa a distinguir `mapped`, `configured` e `active`, impedindo que mapa, recuperação
+declarada e operação com recibo apareçam como a mesma coisa.
+
 ## Decisões congeladas
 
 - **Console local:** a primeira interface é servida em `localhost`, sem enviar fontes, outputs,
@@ -266,6 +278,20 @@ garantia para `runtime-enforced`.
 - criar candidato não muda prompt, contrato, Fonte, rotina ou ação externa. Três ocorrências
   comparáveis, replay e nova aprovação humana continuam obrigatórios para promover uma mudança.
 
+### Corte local candidato — Context Snapshot no runtime
+
+- `source_selections` liga cada Fonte do System Contract V2 a JSON Pointers válidos do artefato
+  determinístico produzido pelo Collector Binding;
+- Fonte obrigatória, recorte obrigatório ausente, Fonte não declarada, artefato fora do Cérebro,
+  payload inválido ou redirecionamento por symlink bloqueiam o provider;
+- o artefato completo fica privado e content-addressed no runtime; Run Record V2 recebe apenas hash,
+  ponteiros, janela, filtros, frescor, lacunas e garantia;
+- Routine Run Receipt e Run Record são ligados por `run_id` e referências explícitas; rerun de
+  correção aponta para o Judgment Receipt sem copiar a nota;
+- Execuções mostram o contexto selecionado sem abrir o artefato. Governança revoga o grant apenas
+  para o futuro e não apaga recibos ou outputs passados;
+- fixture sanitizada cobre três Fontes, dois Runs, julgamento, correção e revoke antes do provider.
+
 ### Primeira vertical
 
 Dogfood na operação de Marketing da INEVITA, usando dados já conectados e um fixture sanitizado
@@ -323,6 +349,10 @@ no repositório:
       no read model, e o novo output volta à Caixa de Julgamento.
 - [x] Um Run corrigido aprovado cria candidato `1/3` por confirmação explícita, sem alterar o motor;
       rejeitado, pendente ou Run sem correção não pode virar candidato.
+- [x] A Rotina compila `source_selections` em Context Snapshot, falha antes do provider quando um
+      recorte obrigatório não existe e não coloca valores recuperados no Run Record.
+- [x] O Console abre o Context Snapshot por sessão local e revoga Access Grant com efeito futuro;
+      o E2E prova que o Run seguinte é negado antes do modelo.
 - [ ] Uma vertical de Marketing usa ao menos três papéis de Fonte, gera Run Record V2 com Context
       Snapshot, recebe julgamento humano e produz um segundo Run comparável.
 - [ ] Em menos de dois minutos, o dono consegue visualizar o contrato, abrir o contexto usado e
@@ -333,6 +363,12 @@ no repositório:
 - [x] O starter EN, update, schemas V1, sistemas existentes, CI Linux/Windows e E2Es atuais não
       regridem.
 - [x] `.obsidian/graph.json`, `Sem título.md` e o draft local de Cockpit permanecem intocados.
+- [x] Manifestos humanos existentes podem virar contratos por preview + confirmação, sem mover,
+      copiar ou editar Fonte, manifesto ou pasta do Cérebro.
+- [x] Alias explícito preserva o System Contract e os recibos da vertical ativa sem criar um 15º
+      Sistema de portfólio ou sobrescrever contrato não gerenciado.
+- [x] O Console diferencia `mapped`, `configured` e `active`, exibe o próximo gate e reconstrói o
+      mapa plural do cérebro interno com 14 Sistemas, três Áreas e Fontes compartilhadas.
 
 ## O que medir
 
@@ -380,6 +416,12 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - [x] Especificar e validar Correction Run Receipt V1 e Learning Candidate V1.
 - [x] Implementar rerun corrigido, comparação privada e candidato de aprendizado no Console.
 - [x] Criar fixture sanitizado multi-Fonte e E2E de dois Runs.
+- [x] Ligar Collector, Retrieval Contract, Context Snapshot e Run Record V2 no runtime de Rotinas.
+- [x] Expor seleção de contexto e revogação futura no Console sem abrir bruto.
+- [x] Implementar importação aditiva e idempotente dos manifestos humanos para System/Source
+      Contracts, com preview e garantias de uma única pasta.
+- [x] Migrar localmente o mapa do cérebro interno sem publicar release, mantendo apenas a vertical
+      do funil como ativa.
 - [ ] Dogfood interno e implantação externa assistida.
 - [ ] Registrar as métricas e decidir continuar, corrigir ou matar o Console.
 
@@ -439,11 +481,13 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `protocol/system-contract-v2.schema.json`
 - `scripts/lib/company-brain-protocol-v2.mjs`
 - `scripts/lib/console-read-model.mjs`
+- `scripts/lib/context-snapshot-runtime.mjs`
 - `scripts/lib/access-runtime.mjs`
 - `scripts/lib/model-executors.mjs`
 - `scripts/lib/routine-protocol.mjs`
 - `scripts/lib/routine-runtime.mjs`
 - `scripts/lib/judgment-protocol.mjs`
+- `scripts/lib/legacy-system-import.mjs`
 - `scripts/lib/correction-loop.mjs`
 - `scripts/lib/secret-provider.mjs`
 - `scripts/lib/system-protocol.mjs`
@@ -453,6 +497,7 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/routine-runtime.mjs`
 - `scripts/console-bootstrap.mjs`
 - `scripts/console-server.mjs`
+- `scripts/import-system-manifests.mjs`
 - `scripts/source-contract.mjs`
 - `scripts/system-run.mjs`
 - `scripts/test-access-runtime.mjs`
@@ -462,6 +507,8 @@ O Console só prova valor aditivo se melhorar o comportamento além do fluxo con
 - `scripts/test-judgment-protocol.mjs`
 - `scripts/test-correction-loop.mjs`
 - `scripts/test-console-server.mjs`
+- `scripts/test-context-snapshot-runtime.mjs`
+- `scripts/test-legacy-system-import.mjs`
 - `scripts/validate-product.mjs`
 - `console/app.js`
 - `console/index.html`

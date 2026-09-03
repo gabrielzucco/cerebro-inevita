@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/system-surface.json",
+  "title": "INEVITA System Surface Classification",
+  "description": "Classificação de superfície usada dentro de System Contract extensions sem alterar envelopes V1 imutáveis.",
+  "type": "object",
+  "required": ["product_kind", "surface"],
+  "properties": {
+    "product_kind": { "enum": ["business-system", "brain-native"] },
+    "surface": { "enum": ["systems", "brain"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "product_kind": { "const": "brain-native" } } },
+      "then": { "properties": { "surface": { "const": "brain" } } }
+    },
+    {
+      "if": { "properties": { "product_kind": { "const": "business-system" } } },
+      "then": { "properties": { "surface": { "const": "systems" } } }
+    }
+  ],
+  "additionalProperties": true
+}

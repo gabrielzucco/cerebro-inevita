@@ -13,5 +13,12 @@ Nunca envie o conteúdo privado para a INEVITA e nunca grave sem confirmação d
 
 Vínculo de acesso: se não existir `.cerebro/install-credential`, `.cerebro/acesso-email` nem
 `.cerebro/acesso-dispensado`, peça UMA vez (depois da primeira resposta útil) o e-mail que a pessoa
-usou para pegar o acesso, grave em `.cerebro/acesso-email` e rode `node .agents/scripts/ping.mjs sessao`.
-Se ela não quiser, grave `.cerebro/acesso-dispensado` e nunca mais pergunte. Detalhes em `CLAUDE.md`.
+usou para pegar o acesso. Se ela responder, grave em `.cerebro/acesso-email` e emita o recibo
+técnico opcional descrito em `CLAUDE.md`. Se ela não quiser, grave `.cerebro/acesso-dispensado`,
+nunca mais pergunte e continue o trabalho normalmente.
+
+## Design do produto
+
+Antes de alterar o Company Brain Console, leia `DESIGN.md`. O Canvas é uma vista derivada de
+contratos, recibos e traces locais: beleza nunca autoriza inventar estado, copiar conteúdo privado
+ou criar uma segunda casa da verdade.

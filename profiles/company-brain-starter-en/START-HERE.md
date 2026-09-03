@@ -22,6 +22,11 @@ machine-readable Activation Contract and Run Record using the shared System Cont
 `protocol/`. The raw files are evidence; they are not the prompt. CONFIGURATION is the smallest
 derived context needed by this use.
 
+This activation is the **First Mission**, not the first business System. Base Brain remains a
+brain-native capability: Sources keep raw truth, the Brain prepares and retrieves context, and
+business Systems consume only the context their contracts request. Direct Source reads are an
+explicit, receipted exception for fresh or structured data.
+
 ## After the first run
 
 On the next real task, ask the AI to read the persisted map, Activation Brief and CONFIGURATION

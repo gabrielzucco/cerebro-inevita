@@ -1,0 +1,36 @@
+{
+  "protocol_version": 1,
+  "trace_id": "execution-trace-example-001",
+  "event_id": "trace-event-example-001",
+  "run_id": "routine-run-example-001",
+  "sequence": 7,
+  "step_id": "skill-calls",
+  "step_type": "skill",
+  "state": "completed",
+  "occurred_at": "2026-08-24T10:45:00.000Z",
+  "parent_step_id": "run",
+  "system_ref": "calls",
+  "routine_ref": "routine:call-em-decisoes-manual:1.0.0",
+  "source_ref": null,
+  "capability_ref": null,
+  "skill_ref": ".claude/skills/calls/SKILL.md",
+  "model_ref": null,
+  "connector_ref": null,
+  "assurance": null,
+  "chain_id": "chain-call-example-001",
+  "mode": "replay",
+  "experiment_ref": null,
+  "handoff_refs": [],
+  "input_refs": [],
+  "output_refs": [],
+  "reason_code": null,
+  "evidence_ref": "sha256:7c9d01bbfce5f44c4e66f8a23e40fc7dd495a1dbde36b1f22ef7845ff8e4ba91",
+  "privacy": {
+    "content_shared_with_inevita": false,
+    "payload_recorded": false,
+    "raw_error_recorded": false
+  },
+  "extensions": {
+    "executor_observation": "successful-local-read"
+  }
+}

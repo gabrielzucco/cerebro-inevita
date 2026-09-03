@@ -57,8 +57,13 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 
 ## Console local (opcional)
 
-Depois que existirem contratos reais, a primeira superfície visual mostra Sistemas, Fontes,
-Rotinas, garantias e recibos sem criar outro banco nem enviar teu contexto para a INEVITA:
+Na primeira abertura, o cockpit mostra a **Primeira Missão** até o Cérebro provar reutilização do
+contexto. Depois de T4, a home vira `Hoje`: `Cérebro` mostra memória, recuperação, aprendizado,
+saúde e o recibo de ativação; `Sistemas` mostra apenas resultados de negócio plugados nessa base.
+`Cérebro → Atualizações` é o canal permanente para versão instalada, novidades públicas da
+INEVITA e releases. A Primeira Missão mostra só a novidade mais recente e aponta para essa central.
+Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu contexto para a
+INEVITA:
 
 ```bash
 node scripts/console-server.mjs
@@ -68,7 +73,10 @@ Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, 
 exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
 Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,
 rejeitar ou propor uma ação. Um ajuste pode autorizar um novo Run, comparar baseline × resultado e
-criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa ação externa.
+criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa ação externa. Runs
+governados por System Contract V2 também mostram o Context Snapshot: fontes e recortes selecionados,
+janela, frescor, lacunas e nível de garantia, sempre por referência. A Governança pode revogar um
+Access Grant para Runs futuros sem prometer apagar artefatos ou recibos já consumidos.
 
 ## O que vem dentro
 

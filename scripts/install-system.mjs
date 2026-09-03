@@ -4,7 +4,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateCapabilityContract } from './lib/system-protocol.mjs';
+import { validateCapabilityContract, validateSystemContract } from './lib/system-protocol.mjs';
+import { validateExperienceManifest } from './lib/experience-manifest.mjs';
+import { validateReleaseManifest } from './lib/release-manifest.mjs';
+import { summarizeSystemSourceBindings } from './lib/system-source-binding.mjs';
 
 const SOURCE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET_ROOT = resolve(process.env.CEREBRO_INSTALL_ROOT || SOURCE_ROOT);
@@ -29,7 +32,7 @@ const SHA256_RE = /^[0-9a-f]{64}$/;
 const GRANT_RE = /^[A-Za-z0-9_-]{40,96}$/;
 const RUNTIMES = new Set(['claude-code', 'codex', 'gemini-cli', 'antigravity', 'outro']);
 const PACKAGE_FILES = ['manifest.json', 'manifest.md', 'pipeline.md', 'rotinas.md', 'evals.md', 'changelog.md'];
-const OPTIONAL_PACKAGE_FILES = ['capability.json'];
+const OPTIONAL_PACKAGE_FILES = ['capability.json', 'contract.json', 'release.json', 'experience.json'];
 const TEMPLATE_FILES = [
   ['feedback.template.md', 'feedback.md'],
   ['configuracao.template.md', 'configuracao.md'],
@@ -92,6 +95,47 @@ function ensureInstallId() {
   return created;
 }
 
+function validatePackageProtocol(files, legacyManifest) {
+  if (typeof files['release.json'] !== 'string') {
+    return { release: null, contract: null, systemId: legacyManifest.system_id, version: legacyManifest.release?.version || '' };
+  }
+  let release;
+  try { release = JSON.parse(files['release.json']); } catch { fail('release manifest inválido'); }
+  const releaseErrors = validateReleaseManifest(release);
+  if (releaseErrors.length) fail(`release manifest inválido: ${releaseErrors.join(' · ')}`);
+  const systemRef = release.contracts.system_contract_ref;
+  const capabilityRef = release.contracts.capability_contract_ref;
+  if (typeof files[systemRef] !== 'string' || typeof files[capabilityRef] !== 'string') {
+    fail('release manifest aponta para contrato ausente no pacote');
+  }
+  let contract;
+  let capability;
+  try {
+    contract = JSON.parse(files[systemRef]);
+    capability = JSON.parse(files[capabilityRef]);
+  } catch { fail('contrato referenciado pelo release manifest é inválido'); }
+  const contractErrors = validateSystemContract(contract);
+  const capabilityErrors = validateCapabilityContract(capability);
+  if (contractErrors.length) fail(`system contract inválido: ${contractErrors.join(' · ')}`);
+  if (capabilityErrors.length) fail(`capability contract inválido: ${capabilityErrors.join(' · ')}`);
+  if (release.system_ref !== contract.system_id || release.version !== contract.version
+    || contract.capability.capability_id !== capability.capability_id
+    || contract.capability.version !== capability.version) {
+    fail('release, system contract e capability contract divergem; nenhum arquivo foi alterado');
+  }
+  const experienceRef = release.contracts.experience_manifest_ref;
+  if (experienceRef !== undefined) {
+    if (typeof files[experienceRef] !== 'string') fail('release manifest aponta para experience manifest ausente');
+    let experience;
+    try { experience = JSON.parse(files[experienceRef]); } catch { fail('experience manifest inválido'); }
+    const experienceErrors = validateExperienceManifest(experience);
+    if (experienceErrors.length || experience.system_ref !== release.system_ref) {
+      fail(`experience manifest incompatível: ${experienceErrors.join(' · ') || 'system_ref divergente'}`);
+    }
+  }
+  return { release, contract, systemId: release.system_ref, version: release.version };
+}
+
 async function postDistribution(action, payload, timeoutMs = 12_000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -140,7 +184,8 @@ function validateRemotePackage(responseBody) {
     fail('o pacote não confere com a versão autorizada pela plataforma; nenhum arquivo foi alterado');
   }
   const manifest = JSON.parse(bundle.files['manifest.json']);
-  if (manifest.system_id !== bundle.system_id || manifest.release?.version !== bundle.version) {
+  const protocol = validatePackageProtocol(bundle.files, manifest);
+  if (protocol.systemId !== bundle.system_id || protocol.version !== bundle.version) {
     fail('manifesto e envelope do pacote divergem; nenhum arquivo foi alterado');
   }
   if (typeof bundle.files['capability.json'] === 'string') {
@@ -148,7 +193,7 @@ function validateRemotePackage(responseBody) {
     const errors = validateCapabilityContract(capability);
     if (errors.length) fail(`capability contract inválido: ${errors.join(' · ')}`);
   }
-  return { bundle, manifest, files: bundle.files, packageSha256: calculated };
+  return { bundle, manifest, ...protocol, files: bundle.files, packageSha256: calculated };
 }
 
 function loadLocalPackage() {
@@ -171,29 +216,31 @@ function loadLocalPackage() {
   const skillPath = join(source, 'skill', 'SKILL.md');
   if (existsSync(skillPath)) files['skill/SKILL.md'] = readFileSync(skillPath, 'utf8');
   const manifest = JSON.parse(files['manifest.json']);
+  const protocol = validatePackageProtocol(files, manifest);
   return {
     bundle: {
       schema_version: 1,
       slug,
-      system_id: manifest.system_id || slug,
-      version: manifest.release?.version || '',
+      system_id: protocol.systemId || slug,
+      version: protocol.version,
       files,
     },
     manifest,
+    ...protocol,
     files,
     packageSha256: sha256(stableStringify({
       schema_version: 1,
       slug,
-      system_id: manifest.system_id || slug,
-      version: manifest.release?.version || '',
+      system_id: protocol.systemId || slug,
+      version: protocol.version,
       files,
     })),
   };
 }
 
-function writePackage({ bundle, manifest, files, packageSha256 }) {
+function writePackage({ bundle, manifest, release, contract, files, packageSha256 }) {
   const targetVersion = readFileSync(join(TARGET_ROOT, 'VERSION'), 'utf8').trim();
-  const minimumBrain = String(manifest.release?.minimum_brain_version || '').trim();
+  const minimumBrain = String(release?.compatibility.minimum_brain_version || manifest.release?.minimum_brain_version || '').trim();
   if (minimumBrain && !atLeast(targetVersion, minimumBrain)) {
     fail(`este pacote exige Cérebro >= ${minimumBrain}; o destino está em ${targetVersion}. Atualize antes de instalar.`);
   }
@@ -205,7 +252,8 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
   if (memberIdArg && UUID_RE.test(existingMemberId) && existingMemberId !== memberIdArg) {
     fail('este Cérebro já pertence a outro member-id — não reatribua uma instalação; comissione a partir de base limpa');
   }
-  const gated = manifest.validation?.access_mode === 'approved_participants';
+  const gated = (release?.publication.access_mode || manifest.validation?.access_mode) === 'approved-participants'
+    || (!release && manifest.validation?.access_mode === 'approved_participants');
   if (gated && !UUID_RE.test(memberIdArg || existingMemberId)) {
     fail('pacote de acesso restrito exige a costura do participante: rode com --member-id=<uuid> (ou grave .cerebro/member-id antes)');
   }
@@ -242,7 +290,7 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
   mkdirSync(dirname(catalogPath), { recursive: true });
   const start = `<!-- system:${slug}:start -->`;
   const end = `<!-- system:${slug}:end -->`;
-  const entry = `${start}\n- [${manifest.name || slug}](${slug}/manifest.md) · pacote adicionado · \`operar ${slug}\`\n${end}`;
+  const entry = `${start}\n- [${contract?.name || manifest.name || slug}](${slug}/manifest.md) · pacote adicionado · \`operar ${slug}\`\n${end}`;
   let catalog = existsSync(catalogPath)
     ? readFileSync(catalogPath, 'utf8')
     : '# Sistemas adicionados\n\nA configuração e o feedback continuam privados neste Cérebro.\n';
@@ -263,19 +311,29 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
     const errors = validateCapabilityContract(capability);
     if (errors.length) fail(`capability contract inválido: ${errors.join(' · ')}`);
   }
+  const sourceRequirements = Array.isArray(contract?.sources) ? contract.sources : [];
+  const sourceBindings = contract
+    ? summarizeSystemSourceBindings(TARGET_ROOT, contract)
+    : sameRelease && previous.source_bindings ? previous.source_bindings : {
+      total_roles: sourceRequirements.length,
+      required_roles: sourceRequirements.filter((source) => source.required === true).length,
+      ready_roles: 0,
+      status: sourceRequirements.length ? 'unbound' : 'not-required',
+    };
   writeFileSync(statePath, `${JSON.stringify({
     ...(sameRelease ? previous : {}),
     slug,
     system_id: bundle.system_id,
     package_version: bundle.version,
     package_sha256: packageSha256,
-    release_channel: manifest.release?.channel || 'unknown',
-    validation_stage: manifest.validation?.stage || 'unknown',
+    release_channel: release?.channel || manifest.release?.channel || 'unknown',
+    validation_stage: release?.publication.status || manifest.validation?.stage || 'unknown',
     capability: capability ? {
       capability_id: capability.capability_id,
       version: capability.version,
       origin: 'inevita',
     } : null,
+    source_bindings: sourceBindings,
     status: sameRelease ? (previous.status || 'package_added') : 'package_added',
     updated_at: new Date().toISOString(),
   }, null, 2)}\n`, { mode: 0o600 });
@@ -291,10 +349,11 @@ function writePackage({ bundle, manifest, files, packageSha256 }) {
     `- system-id: ${bundle.system_id}`,
     `- versão: ${bundle.version}`,
     '- estado: pacote adicionado; ainda não ativo',
-    '- fontes conectadas: nenhuma',
+    `- papéis de Fonte: ${sourceBindings.total_roles} (${sourceBindings.required_roles} obrigatórios)`,
+    `- bindings prontos: ${sourceBindings.ready_roles}`,
     '- contexto alterado: não',
     '- conteúdo enviado à INEVITA: não',
-    '- próximo passo: configuração com uma fonte real e julgamento humano',
+    `- próximo passo: mapear papéis com \`node scripts/system-source-binding.mjs plan ${bundle.system_id}\``,
     '',
   ].join('\n'));
 
@@ -385,7 +444,7 @@ async function main() {
   }
 
   console.log(`✓ ${state.system_id || slug}@${state.package_version || 'desconhecida'} adicionado; o Sistema ainda não está ativo`);
-  console.log(`Próximo passo: abra este Cérebro no agente e rode /${state.system_id === 'calls-decisoes' ? 'call' : slug} com uma fonte real.`);
+  console.log(`Próximo passo: mapeie as Fontes com node scripts/system-source-binding.mjs plan ${state.system_id || slug}; só depois rode o primeiro caso real.`);
 }
 
 await main();

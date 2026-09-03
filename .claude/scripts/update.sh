@@ -80,3 +80,4 @@ bash "$ROOT/.claude/scripts/ensure-private-ignore.sh" 2>/dev/null || true
 
 echo "✓ Motor atualizado para a versão $NEW. Veja o que mudou em CHANGELOG.md."
 bash "$ROOT/.claude/scripts/ping.sh" atualizou 2>/dev/null || true
+node "$ROOT/scripts/post-update.mjs" --root "$ROOT" || true

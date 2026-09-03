@@ -22,11 +22,13 @@ try {
     'skills/company-brain-sprint/references/output-contract.md', 'raw/.gitkeep',
     'systems/first-system/contract.template.json', 'systems/first-system/capability.template.json',
     'protocol/system-contract.schema.json', 'protocol/run-record.schema.json',
+    'protocol/system-surface.schema.json',
     'protocol/source-contract.schema.json', 'protocol/system-contract-v2.schema.json',
     'protocol/run-record-v2.schema.json', 'protocol/access-grant.schema.json',
     'protocol/access-receipt.schema.json', 'protocol/examples/access-receipt.v1.json',
     'protocol/routine-contract.schema.json', 'protocol/executor-binding.schema.json',
     'protocol/routine-run-receipt.schema.json',
+    'protocol/experience-manifest.schema.json', 'protocol/examples/experience-manifest.v1.json',
     'protocol/examples/routine-contract.v1.json', 'protocol/examples/executor-binding.v1.json',
     'protocol/examples/routine-run-receipt.v1.json',
   ];
@@ -35,7 +37,7 @@ try {
 
   if (existsSync(join(output, '.cerebro', 'layout.json'))) {
     const layout = JSON.parse(readFileSync(join(output, '.cerebro', 'layout.json'), 'utf8'));
-    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'sourceContracts', 'accessGrants', 'accessReceipts', 'routineContracts', 'executorBindings', 'routineReceipts', 'routineState', 'routineOutputs', 'runLedger', 'learningRegister']) {
+    for (const key of ['companyMap', 'sourceRegister', 'activationBrief', 'firstSystemBrief', 'configuration', 'contextPack', 'firstOutput', 'activationReceipt', 'corrections', 'activationContract', 'systemContract', 'sourceContracts', 'experienceManifests', 'accessGrants', 'accessReceipts', 'routineContracts', 'executorBindings', 'systemRuntimeBindings', 'routineReceipts', 'routineState', 'routineOutputs', 'runLedger', 'learningRegister']) {
       const value = layout[key];
       if (!value || value.startsWith('/') || value.includes('..')) errors.push(`unsafe layout path: ${key}`);
     }
@@ -45,7 +47,7 @@ try {
   }
 
   const start = readFileSync(join(output, 'START-HERE.md'), 'utf8');
-  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'Activation Contract', 'Run Record']) {
+  for (const contract of ['folder is your Company Brain', 'My Computer', '.cerebro/layout.json', 'The raw files are evidence', 'Activation Contract', 'Run Record', 'First Mission', 'brain-native capability']) {
     if (!start.includes(contract)) errors.push(`START-HERE missing contract: ${contract}`);
   }
   const skill = readFileSync(join(output, 'skills', 'company-brain-sprint', 'SKILL.md'), 'utf8');

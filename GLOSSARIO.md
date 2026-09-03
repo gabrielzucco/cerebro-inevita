@@ -6,8 +6,10 @@
 |---|---|
 | **Engenharia de Contexto** | O método: montar o contexto certo pra IA em vez de caçar o prompt perfeito. [context engineering — Karpathy] |
 | **Contexto** | Tudo que a IA precisa saber do TEU negócio pra responder como sócio, não como estranho. O modelo é igual pra todo mundo; o contexto é a vantagem. |
-| **Cérebro** | O cofre de notas + as skills que o operam. A tua IA equipada com o teu contexto. |
-| **Cérebro Base** | O metassistema que ativa a pasta: orienta o mapa, registra fontes sem conectá-las, usa uma fonte real e prova que o contexto aprovado volta numa segunda tarefa. Não é o primeiro Sistema de negócio. |
+| **Cérebro** | A infraestrutura local de contexto: registra Fontes, prepara e destila memória, recupera o recorte necessário, registra recibos e aprende com julgamento humano. Sistemas plugam nessa base. |
+| **Cérebro Base** | O metassistema nativo que ativa a pasta: orienta o mapa, registra fontes sem conectá-las, usa uma fonte real e prova que o contexto aprovado volta numa segunda tarefa. Tem contrato interno, mas aparece na superfície Cérebro e não no catálogo de Sistemas de negócio. |
+| **Primeira Missão** | Estado transitório da home antes de T4: trabalho real → fonte-semente → primeiro resultado → julgamento → reutilização. Depois da ativação, vira recibo no Cérebro. |
+| **Central de Atualizações** | Página permanente em `Cérebro → Atualizações`: separa o estado da instalação, a verificação explícita do motor, os comunicados públicos da INEVITA e os releases de Sistemas. Carregar a central não envia contexto nem telemetria. |
 | **Ativação** | O gate `usar → reutilizar`: uma fonte real gera output aprovado e o contexto salvo volta numa segunda tarefa sem releitura do bruto nem reexplicação. T0→T4 mede este ciclo; instalação sozinha não basta. |
 | **Átomo** | Nota de UMA ideia: afirmação + citação literal + por quê + elos. Sem citação não é átomo, é palpite. |
 | **Bruto** | O material na íntegra (transcrição, print, texto colado), imutável, na bandeja `capturas/`. Guarda-se tudo; opera-se pouco. |
@@ -17,7 +19,7 @@
 | **Motor vs contexto** | Motor = skills e gabaritos (nossos, atualizam via `/atualizar`). Contexto = tuas notas (nunca tocadas por atualização). [harness — o termo do Vale: "fix your harness, don't reprompt"] |
 | **Skill** | Know-how executável: um comando que sabe fazer UMA coisa, com as regras embutidas. [skills — workshop AIEWF] |
 | **Capability** | Contrato portátil do que uma skill sabe fazer: entradas por papel, output, permissões, autoridade humana e evals; ganha contexto privado só quando compõe um Sistema. |
-| **Sistema** | Pacote de um resultado completo: manifest + pipeline + rotinas + skill + eval + feedback + versão. |
+| **Sistema** | Pacote de um resultado de negócio: manifest + pipeline + rotinas + skill + eval + feedback + versão. Pede ao Cérebro o contexto necessário; acesso direto à Fonte é exceção declarada em contrato e recibo. |
 | **System Contract** | Envelope legível por máquina que liga resultado, Capability, entidades, fontes, pipeline, permissões, eval e aprendizado sem carregar conteúdo privado. |
 | **Source Contract** | Contrato reference-only de uma Fonte: casa da verdade, autoridade, escopo, sensibilidade, modos, frescor, retenção, conector, consumidores e garantia real. Nunca contém credencial ou bruto. |
 | **Retrieval Contract** | Bloco do System Contract V2 que decide quais papéis de Fonte consultar, em que ordem, com quais filtros, janela, frescor, fallback, parada, orçamento e exigência de proveniência. |

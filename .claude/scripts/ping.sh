@@ -6,5 +6,6 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 # scripts novos. Como ele chama este ping no fim, fechamos aqui a migração de
 # privacidade já na primeira passagem.
 bash "$ROOT/.claude/scripts/ensure-private-ignore.sh" >/dev/null 2>&1 || true
+node "$ROOT/scripts/post-update.mjs" --root "$ROOT" >/dev/null 2>&1 || true
 node "$ROOT/.agents/scripts/ping.mjs" "${1:-sessao}" >/dev/null 2>&1 || true
 exit 0

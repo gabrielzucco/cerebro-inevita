@@ -1,0 +1,20 @@
+{
+  "protocol_version": 1,
+  "channel_id": "inevita-product-updates",
+  "generated_at": "2026-09-03",
+  "entries": [
+    {
+      "update_id": "central-atualizacoes-v1-36",
+      "kind": "product-update",
+      "title": "A comunicação da INEVITA agora mora no Cérebro",
+      "summary": "A Central de Atualizações separa o estado da sua instalação, as novidades da INEVITA e os releases do Cérebro e dos Sistemas.",
+      "published_at": "2026-09-03",
+      "release_version": "1.36.0",
+      "highlights": [
+        "Verificação e atualização continuam sob comando explícito.",
+        "A Primeira Missão recebe apenas um aviso compacto.",
+        "Nenhum contexto privado é enviado para carregar a central."
+      ]
+    }
+  ]
+}

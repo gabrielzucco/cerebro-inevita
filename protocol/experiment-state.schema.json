@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/protocol/experiment-state.schema.json",
+  "title": "Company Brain Experiment State V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "experiment_id", "status", "phase", "started_on", "read_on", "closed_on",
+    "amendment_count", "amendments", "run_refs", "measurement", "verdict", "learning", "observed_at", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "experiment_id": { "$ref": "#/$defs/experiment_id" },
+    "status": { "enum": ["queued", "running", "ready-for-read", "decided", "cancelled", "blocked"] },
+    "phase": { "enum": ["contract", "execution", "measurement", "decision", "learning"] },
+    "started_on": { "type": ["string", "null"], "format": "date" },
+    "read_on": { "type": ["string", "null"], "format": "date" },
+    "closed_on": { "type": ["string", "null"], "format": "date" },
+    "amendment_count": { "type": "integer", "minimum": 0 },
+    "amendments": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["amendment_id", "on", "reason", "change_count"],
+        "properties": {
+          "amendment_id": { "$ref": "#/$defs/ref" },
+          "on": { "type": ["string", "null"], "format": "date" },
+          "reason": { "type": "string", "maxLength": 4000 },
+          "change_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "run_refs": {
+      "type": "array", "uniqueItems": true,
+      "items": { "$ref": "#/$defs/ref" }
+    },
+    "chain_refs": {
+      "type": "array", "uniqueItems": true,
+      "items": { "$ref": "#/$defs/ref" },
+      "description": "Chains de handoff que este Experimento atravessa. Opcional e aditivo: o chain_id é runtime e genérico; o Experimento apenas aponta para uma ou mais chains."
+    },
+    "measurement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "primary_metric_ref", "diagnostic_refs"],
+      "properties": {
+        "status": { "enum": ["not-started", "collecting", "ready", "complete", "blocked"] },
+        "primary_metric_ref": { "$ref": "#/$defs/id" },
+        "diagnostic_refs": {
+          "type": "array", "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "verdict": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "decided_on", "summary"],
+      "properties": {
+        "status": { "enum": ["pending", "recorded", "not-executed"] },
+        "decided_on": { "type": ["string", "null"], "format": "date" },
+        "summary": { "type": ["string", "null"], "maxLength": 12000 }
+      }
+    },
+    "learning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "ref"],
+      "properties": {
+        "status": { "enum": ["pending", "unlinked", "linked", "not-applicable"] },
+        "ref": { "oneOf": [{ "$ref": "#/$defs/local_ref" }, { "type": "null" }] }
+      }
+    },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content_shared_with_inevita", "verdict_in_summary"],
+      "properties": {
+        "content_shared_with_inevita": { "const": false },
+        "verdict_in_summary": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "experiment_id": { "type": "string", "pattern": "^EXP-[A-Za-z0-9_-]{1,48}$" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

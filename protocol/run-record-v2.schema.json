@@ -22,6 +22,10 @@
   "properties": {
     "protocol_version": { "const": 2 },
     "run_id": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "chain_id": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$" },
+    "mode": { "enum": ["replay", "live", null] },
+    "experiment_ref": { "type": ["string", "null"], "pattern": "^EXP-[A-Za-z0-9_-]{1,48}$" },
+    "handoff_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" }, "uniqueItems": true },
     "system_id": { "$ref": "#/$defs/id" },
     "system_version": { "type": "string", "minLength": 1 },
     "capability": {
@@ -94,6 +98,7 @@
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
     "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_./:-]{0,255}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!.*\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
     "ref_object": {
       "type": "object", "additionalProperties": false, "required": ["role", "id"],
       "properties": {

@@ -1,5 +1,41 @@
 # Mudanças do cérebro INEVITA
 
+## v1.36.0 — 2026-09-03 · “a INEVITA ganha uma voz dentro do Cérebro”
+
+- **Central permanente em `Cérebro → Atualizações`:** versão instalada, verificação do motor,
+  novidades da INEVITA e releases passam a ter casas visíveis e diferentes no mesmo cockpit.
+- **Primeira Missão continua sendo missão:** ela recebe somente o comunicado público mais recente
+  em um cartão compacto, com passagem para a central completa.
+- **Cérebro não é Sistema:** o histórico do motor vem do changelog local; releases de Sistemas
+  vêm da Society e atualizar o motor não instala nem ativa nenhum deles.
+- **Canal público, local e somente de entrada:** o feed empacotado é validado por allowlist,
+  funciona offline e não envia Fonte, memória, query, output ou telemetria para a INEVITA.
+- A busca por release remota continua manual. Aplicar uma versão continua exigindo confirmação,
+  release publicada e instalação gerenciada; checkout Git e caminhos do dono permanecem protegidos.
+
+## v1.35.0 — 2026-09-02 · “o Cérebro deixa de parecer um Sistema”
+
+- **Cockpit rico como casca canônica:** `Hoje`, `Cérebro`, `Sistemas`, `Skills`, `Canvas`,
+  `Julgamento`, `Estrutura`, `Confiança` e `Society` passam a conviver na experiência publicada,
+  sem perder Context Snapshot, compatibilidade, atualização segura ou o handshake de instalação.
+- A primeira abertura passa a projetar a ativação T0→T4 como **Primeira Missão**; depois de T4 a
+  home volta a ser `Hoje` e a ativação permanece como recibo no Cérebro.
+- `Cérebro Base` continua existindo como metassistema interno, mas deixa de aparecer como Sistema
+  de negócio no catálogo, nas contagens, filtros de área e launcher. Rotinas nativas e rotinas de
+  Sistemas também passam a carregar classificação explícita.
+- **Acordo de Contexto visível:** Fonte continua sendo casa da verdade; o Cérebro coleta, prepara,
+  destila e recupera; o Sistema consome o recorte e produz o resultado; o Run Record prova qual
+  caminho foi usado. Leitura direta da Fonte fica como exceção declarada para dado fresco ou
+  estruturado, nunca como atalho invisível.
+- **Migração sem perda para instalações antigas:** o nome do operador sai do arquivo legado
+  `.cerebro/runtime` e vai para `.cerebro/operator-runtime`; `runtime/` fica reservado ao estado
+  privado dos protocolos. Abrir o cockpit continua read-only e os dois atualizadores migram o
+  marcador de forma idempotente.
+- **Installation Compatibility V1:** a ficha da Society cruza papéis do pacote com Source Contracts
+  e bindings deste Cérebro antes da instalação; matching propõe, binding e grant aprovados provam.
+- **System Source Binding V1:** um papel exigido pode reutilizar uma Fonte existente sem duplicar
+  conector, credencial, conteúdo ou contrato da Fonte.
+
 ## v1.34.2 — 2026-08-28 · "o vínculo passa a valer na sessão, não só no update"
 
 - **Por que existiu:** na v1.34.1 o aviso do vínculo foi posto dentro do atualizador — mas o
