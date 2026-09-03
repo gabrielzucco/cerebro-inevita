@@ -38,10 +38,12 @@ jobs:
           CEREBRO_TELEMETRY: 'off'
         run: node .agents/scripts/ping.mjs --diagnose | grep -q 'desativado'
 
-  # O motor promete rodar onde o agente roda — inclusive Windows sem WSL, onde
-  # bash/curl/tar não existem. Só o updater Node é cobrado aqui.
+  # O motor promete rodar onde o agente roda. O job mantém UTF-8 explícito e
+  # cobra a mesma suíte no Windows nativo, além da checagem de sintaxe.
   windows:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,7 +54,7 @@ jobs:
         run: |
           Get-ChildItem -Recurse -Filter *.mjs -Path scripts, .agents/scripts |
             ForEach-Object { node --check $_.FullName }
-      - name: Cockpit e bridge Hermes em Windows
+      - name: Suíte completa em Windows
         shell: pwsh
         run: |
           node scripts/validate-product.mjs
@@ -71,7 +73,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Cockpit e bridge Hermes em macOS
+      - name: Suíte completa em macOS
         run: |
           node scripts/validate-product.mjs
           falhou=0

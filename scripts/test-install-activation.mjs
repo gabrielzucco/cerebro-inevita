@@ -84,7 +84,9 @@ try {
   assert.equal(JSON.stringify(fresh).includes(CLAIM), false);
   assert.equal(JSON.stringify(fresh).includes(CREDENTIAL), false);
   assert.equal(readFileSync(join(freshRoot, '.cerebro/install-credential'), 'utf8').trim(), CREDENTIAL);
-  assert.equal(statSync(join(freshRoot, '.cerebro/install-credential')).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(join(freshRoot, '.cerebro/install-credential')).mode & 0o777, 0o600);
+  }
   assert.equal(existsSync(join(freshRoot, '.cerebro/install-activation-outbox.json')), false);
 
   const reconnectRoot = fixture();
@@ -141,4 +143,3 @@ try {
 } finally {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
 }
-

@@ -514,7 +514,7 @@ try {
   assert.equal(existsSync(join(root, '.cerebro', 'contracts', 'routines', 'funil-diario-cerebro.json')), true);
   const originalLayout = json(join(root, '.cerebro', 'layout.json'));
   write(join(root, '.cerebro', 'layout.json'), `${JSON.stringify({ ...originalLayout, routineOutputs: 'public/runtime' })}\n`);
-  assert.throws(() => routineOutputDirectory(root), /precisa ficar em \.cerebro\/runtime/);
+  assert.throws(() => routineOutputDirectory(root), /precisa ficar em \.cerebro[\\/]runtime/);
   write(join(root, '.cerebro', 'layout.json'), `${JSON.stringify(originalLayout)}\n`);
 } finally {
   rmSync(root, { recursive: true, force: true });
