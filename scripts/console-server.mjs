@@ -1130,6 +1130,7 @@ function anatomyModel(root) {
       engineRoot: ENGINE_ROOT,
       compatibilityPercent: model.compatibility?.score?.percent ?? null,
       societyCounts: societyCatalog.counts,
+      societySystems: societyCatalog.systems,
     }),
     identity: {
       canonical: '01-nucleo-privado/_SISTEMAS.md',

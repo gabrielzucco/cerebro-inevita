@@ -12,7 +12,7 @@ const story = read('docs/stories/2026-08-27-system-workspace-dedup-v1.md');
 const tabs = app.match(/const WS_TABS = \[([\s\S]*?)\n\];/)?.[1] || '';
 assert.equal((tabs.match(/\['/g) || []).length, 6, 'workspace deve expor seis superfícies');
 for (const [id, label] of [
-  ['overview', 'Visão geral'], ['how', 'Como funciona'], ['runs', 'Execuções'],
+  ['overview', 'Sobre'], ['how', 'Como funciona'], ['runs', 'Execuções'],
   ['experiments', 'Experimentos'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
 ]) {
   assert.match(tabs, new RegExp(`\\['${id}', '${label}'\\]`), `superfície ausente: ${label}`);

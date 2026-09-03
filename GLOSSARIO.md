@@ -9,6 +9,7 @@
 | **Cérebro** | A infraestrutura local de contexto: registra Fontes, prepara e destila memória, recupera o recorte necessário, registra recibos e aprende com julgamento humano. Sistemas plugam nessa base. |
 | **Cérebro Base** | O metassistema nativo que ativa a pasta: orienta o mapa, registra fontes sem conectá-las, usa uma fonte real e prova que o contexto aprovado volta numa segunda tarefa. Tem contrato interno, mas aparece na superfície Cérebro e não no catálogo de Sistemas de negócio. |
 | **Primeira Missão** | Estado transitório da home antes de T4: trabalho real → fonte-semente → primeiro resultado → julgamento → reutilização. Depois da ativação, vira recibo no Cérebro. |
+| **Central de Atualizações** | Página permanente em `Cérebro → Atualizações`: separa o estado da instalação, a verificação explícita do motor, os comunicados públicos da INEVITA e os releases de Sistemas. Carregar a central não envia contexto nem telemetria. |
 | **Ativação** | O gate `usar → reutilizar`: uma fonte real gera output aprovado e o contexto salvo volta numa segunda tarefa sem releitura do bruto nem reexplicação. T0→T4 mede este ciclo; instalação sozinha não basta. |
 | **Átomo** | Nota de UMA ideia: afirmação + citação literal + por quê + elos. Sem citação não é átomo, é palpite. |
 | **Bruto** | O material na íntegra (transcrição, print, texto colado), imutável, na bandeja `capturas/`. Guarda-se tudo; opera-se pouco. |

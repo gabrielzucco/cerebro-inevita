@@ -60,6 +60,8 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 Na primeira abertura, o cockpit mostra a **Primeira Missão** até o Cérebro provar reutilização do
 contexto. Depois de T4, a home vira `Hoje`: `Cérebro` mostra memória, recuperação, aprendizado,
 saúde e o recibo de ativação; `Sistemas` mostra apenas resultados de negócio plugados nessa base.
+`Cérebro → Atualizações` é o canal permanente para versão instalada, novidades públicas da
+INEVITA e releases. A Primeira Missão mostra só a novidade mais recente e aponta para essa central.
 Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu contexto para a
 INEVITA:
 

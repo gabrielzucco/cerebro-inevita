@@ -705,7 +705,46 @@ tr.ws-diff td { background: rgba(78, 156, 245, .07); }
 .brain-update-error { border-color: rgba(235, 176, 70, .28); background: rgba(235, 176, 70, .07); }
 .brain-update-result b, .brain-update-error b { color: var(--text); font-size: var(--fs-meta); }
 .brain-update-result span, .brain-update-error span { color: var(--text-3); font-size: var(--fs-micro); }
+.brain-update-now { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, auto); gap: var(--s6); align-items: center; padding: var(--s5); border: 1px solid var(--hairline-2); border-radius: var(--r-lg); background: linear-gradient(120deg, rgba(201, 243, 29, .055), transparent 58%), var(--surface); }
+.brain-update-now-copy > p:last-child { max-width: 680px; margin: var(--s2) 0 0; color: var(--text-3); font-size: var(--fs-meta); line-height: 1.55; }
+.brain-update-now .brain-update-status { margin: var(--s2) 0 0; min-height: 36px; }
+.brain-update-now-action { display: grid; justify-items: end; gap: var(--s2); }
+.brain-update-now-action .brain-update-actions { justify-content: flex-end; margin: 0; }
+.brain-update-now-action > small { max-width: 360px; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.5; text-align: right; }
+.brain-news, .brain-releases { padding-top: var(--s2); }
+.brain-news > header, .brain-releases > header { display: flex; align-items: end; justify-content: space-between; gap: var(--s5); margin-bottom: var(--s4); }
+.brain-news > header h2, .brain-releases > header h2 { margin: var(--s1) 0 0; color: var(--text); font-size: 23px; font-weight: 580; letter-spacing: -.025em; }
+.brain-news > header > span, .brain-releases > header > p { margin: 0; color: var(--text-3); font-size: var(--fs-micro); }
+.brain-news-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--s3); }
+.brain-news-entry { min-width: 0; padding: var(--s5); border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
+.brain-news-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); color: var(--text-3); font: 550 var(--fs-micro) var(--font-mono); }
+.brain-news-meta > span { color: var(--brand); letter-spacing: .06em; }
+.brain-news-meta > b { margin-left: auto; color: var(--text-2); font-weight: 580; }
+.brain-news-entry h3 { max-width: 720px; margin: var(--s3) 0 var(--s2); color: var(--text); font-size: 20px; font-weight: 580; letter-spacing: -.02em; }
+.brain-news-entry > p { max-width: 780px; margin: 0; color: var(--text-2); line-height: 1.6; }
+.brain-news-entry ul { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s4) 0 0; padding: var(--s3) 0 0; border-top: 1px solid var(--hairline); list-style: none; }
+.brain-news-entry li { padding: 5px 9px; color: var(--text-3); border: 1px solid var(--hairline); border-radius: 999px; font-size: var(--fs-micro); }
+.brain-release-board { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
+.brain-release-column { min-width: 0; padding: var(--s5); }
+.brain-release-column + .brain-release-column { border-left: 1px solid var(--hairline); }
+.brain-release-column > header { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding-bottom: var(--s4); border-bottom: 1px solid var(--hairline); }
+.brain-release-column > header > div { display: flex; align-items: center; gap: var(--s3); }
+.brain-release-mark { display: grid; width: 32px; height: 32px; place-items: center; color: var(--brand); border: 1px solid var(--hairline-2); border-radius: var(--r-sm); background: var(--bg); font: 620 var(--fs-meta) var(--font-mono); }
+.brain-release-column header strong, .brain-release-column header small { display: block; }
+.brain-release-column header strong { color: var(--text); font-size: var(--fs-meta); }
+.brain-release-column header small, .brain-release-column header > b { color: var(--text-3); font: 520 var(--fs-micro) var(--font-mono); }
+.brain-release-column header button { padding: 0; color: var(--text-3); border: 0; background: none; font-size: var(--fs-micro); cursor: pointer; }
+.brain-release-column header button:hover { color: var(--text); }
+.brain-release-column ol { margin: 0; padding: 0; list-style: none; }
+.brain-release-column li { padding: var(--s4) 0; border-bottom: 1px solid var(--hairline); }
+.brain-release-column li:last-child { padding-bottom: 0; border-bottom: 0; }
+.brain-release-column li > div { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s2); }
+.brain-release-column li > div span { color: var(--text-2); font: 570 var(--fs-micro) var(--font-mono); }
+.brain-release-column li > div time { color: var(--text-3); font-size: var(--fs-micro); }
+.brain-release-column li > strong { display: block; color: var(--text); font-size: var(--fs-meta); font-weight: 570; }
+.brain-release-column li > p { display: -webkit-box; margin: var(--s1) 0 0; overflow: hidden; color: var(--text-3); font-size: var(--fs-micro); line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .brain-update-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
+.brain-update-grid.brain-update-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .brain-update-card { min-width: 0; padding: var(--s5); border-right: 1px solid var(--hairline); }
 .brain-update-card:first-child { padding-left: 0; }
 .brain-update-card:last-child { padding-right: 0; border-right: 0; }
@@ -1111,6 +1150,9 @@ button.brain-run-row:hover { background: rgba(255, 255, 255, .018); }
   .brain-flow-step:nth-child(-n+3) { border-bottom: 1px solid var(--hairline); }
   .brain-overview-hero, .brain-overview-lower, .brain-learning-lead, .brain-architecture-lead { grid-template-columns: 1fr; gap: var(--s5); }
   .brain-update-grid { grid-template-columns: 1fr; }
+  .brain-update-grid.brain-update-detail-grid { grid-template-columns: 1fr; }
+  .brain-release-board { grid-template-columns: 1fr; }
+  .brain-release-column + .brain-release-column { border-top: 1px solid var(--hairline); border-left: 0; }
   .brain-update-card, .brain-update-card:first-child, .brain-update-card:last-child { padding: var(--s5) 0; border-right: 0; border-bottom: 1px solid var(--hairline); }
   .brain-update-card:last-child { border-bottom: 0; }
   .brain-recovery-asset { padding: var(--s5) 0 0; border-top: 1px solid var(--hairline); border-left: 0; }
@@ -1151,6 +1193,14 @@ button.brain-run-row:hover { background: rgba(255, 255, 255, .018); }
   .brain-update-hero h2 { font-size: 26px; }
   .brain-update-identity { padding: var(--s3) 0 0; border-top: 1px solid var(--hairline); border-left: 0; }
   .brain-update-result, .brain-update-error, .brain-update-boundary { align-items: flex-start; flex-direction: column; }
+  .brain-update-now { grid-template-columns: 1fr; padding: var(--s4); }
+  .brain-update-now-action { justify-items: start; }
+  .brain-update-now-action .brain-update-actions { justify-content: flex-start; }
+  .brain-update-now-action > small { text-align: left; }
+  .brain-news > header, .brain-releases > header { align-items: flex-start; flex-direction: column; gap: var(--s2); }
+  .brain-news-list { grid-template-columns: minmax(0, 1fr); }
+  .brain-news-entry, .brain-release-column { padding: var(--s4); }
+  .brain-news-entry ul { align-items: flex-start; flex-direction: column; }
   .brain-update-boundary ul { justify-content: flex-start; }
   .brain-overview-lead h2, .brain-lifecycle h2, .brain-learning-lead h2, .brain-architecture-lead h2 { font-size: 24px; }
   .brain-overview-facts { grid-template-columns: 1fr; }
@@ -2578,6 +2628,11 @@ body[data-current-view="activation"] .topbar { padding-bottom: var(--s4); border
 .first-mission-secondary { color: var(--text-2); border: 1px solid var(--hairline-2); background: transparent; }
 .first-mission-secondary:hover { color: var(--text); background: rgba(255, 255, 255, .04); }
 .first-mission-copy > small { display: block; max-width: 660px; margin-top: var(--s3); color: var(--text-3); font-size: var(--fs-micro); line-height: 1.55; }
+.first-mission-update { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s5); align-items: center; padding: var(--s4) var(--s5); border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); }
+.first-mission-update h3 { margin: var(--s1) 0; color: var(--text); font-size: var(--fs-lead); font-weight: 580; letter-spacing: -.02em; }
+.first-mission-update p:not(.micro) { max-width: 820px; margin: 0; color: var(--text-3); font-size: var(--fs-meta); line-height: 1.55; }
+.first-mission-update button { padding: 0; color: var(--text-2); border: 0; background: transparent; font-size: var(--fs-meta); white-space: nowrap; cursor: pointer; }
+.first-mission-update button:hover { color: var(--brand); }
 .first-mission-promise { position: relative; overflow: hidden; padding: var(--s6); border: 1px solid var(--hairline-2); border-radius: 20px; background: radial-gradient(circle at 88% 10%, rgba(201, 243, 29, .09), transparent 38%), var(--surface); }
 .first-mission-promise::after { content: ''; position: absolute; inset: auto -60px -90px auto; width: 210px; height: 210px; border: 1px solid var(--hairline); border-radius: 50%; }
 .first-mission-mark { display: flex; align-items: flex-end; gap: 4px; width: 44px; height: 44px; margin-bottom: var(--s6); padding: 10px; border: 1px solid var(--hairline-2); border-radius: var(--r-md); background: var(--bg); }
@@ -2627,5 +2682,6 @@ body[data-current-view="activation"] .topbar { padding-bottom: var(--s4); border
 
 @media (max-width: 620px) {
   .first-mission { gap: var(--s6); padding-top: var(--s2); }.first-mission-copy h2 { font-size: 38px; }.first-mission-promise { padding: var(--s5); }.first-mission-source ul { grid-template-columns: 1fr; }
+  .first-mission-update { grid-template-columns: 1fr; padding: var(--s4); }
   .first-mission-actions > button { width: 100%; }.brain-activation-receipt dl { grid-template-columns: 1fr; gap: var(--s3); }.brain-context-agreement ol { grid-template-columns: 1fr; }.brain-context-agreement li, .brain-context-agreement li:first-child, .brain-context-agreement li:nth-child(3) { padding: var(--s3) 0; border-top: 1px solid var(--hairline); border-left: 0; }
 }

@@ -63,12 +63,17 @@ try {
   assert(model.systems.some((system) => system.system_id === 'calls-decisoes'));
   assert.equal(model.counts.systems, model.systems.length);
   assert(!model.areas.some((area) => area.system_refs.includes('cerebro-base')));
+  assert.equal(model.communication.available, true);
+  assert.equal(model.communication.latest.update_id, 'central-atualizacoes-v1-36');
+  assert.equal(model.communication.privacy.company_context_sent, false);
 
   const app = readFileSync(join(root, 'console', 'app.js'), 'utf8');
   assert.match(app, /activation\.complete \? 'today' : 'activation'/);
   assert.match(app, /function renderActivation\(\)/);
   assert.match(app, /Leitura direta é exceção explícita/);
   assert.match(app, /Rotina do Cérebro/);
+  assert.match(app, /NOVIDADE DA INEVITA/);
+  assert.match(app, /data-open-brain-updates/);
   console.log('cockpit-first-mission: ok');
 } finally {
   rmSync(fixture, { recursive: true, force: true });

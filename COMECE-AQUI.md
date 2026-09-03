@@ -66,6 +66,8 @@ exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
 No cockpit opcional, esta etapa aparece como **Primeira Missão**. É um estado transitório: antes
 de T4 orienta o próximo passo; depois de T4 desaparece da navegação e deixa seu recibo em
 `Cérebro`. `Cérebro Base` é a infraestrutura nativa de contexto, não um Sistema de negócio.
+A novidade mais recente pode aparecer ali em um cartão compacto; a comunicação completa e o
+histórico de releases vivem permanentemente em `Cérebro → Atualizações`.
 
 O cérebro começa entendendo uma situação recorrente do seu trabalho: o que ocupa tempo, volta para
 suas mãos ou ainda depende da sua decisão. Depois localiza onde esse trabalho deixa rastros e pede

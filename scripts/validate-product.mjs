@@ -32,6 +32,7 @@ import { validateSystemSourceBinding } from './lib/system-source-binding.mjs';
 import { validateExperienceManifest } from './lib/experience-manifest.mjs';
 import { validateSocietyPackageManifest } from './lib/society-catalog-read-model.mjs';
 import { validateReleaseManifest } from './lib/release-manifest.mjs';
+import { validateCommunicationFeed } from './lib/communication-feed.mjs';
 
 const ROOT = resolve(process.cwd());
 const errors = [];
@@ -154,6 +155,8 @@ const required = [
   'console/index.html', 'console/app.js', 'console/canvas.js', 'console/canvas-layout-policy.js',
   'console/canvas.bundle.js', 'console/styles.css',
   'society/catalog.v1.json',
+  'comunidade/inevita/atualizacoes/feed.v1.json',
+  'scripts/lib/communication-feed.mjs', 'scripts/test-communication-feed-v1.mjs',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
   'scripts/test-access-runtime.mjs',
   'scripts/test-routine-runtime.mjs',
@@ -258,6 +261,7 @@ for (const [label, path, validate] of [
   ['Society briefing package manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/manifest.json', validateSocietyPackageManifest],
   ['Society briefing Release Manifest', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/release.json', validateReleaseManifest],
   ['Society briefing System Contract', 'comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente/contract.json', validateSystemContract],
+  ['Feed público de atualizações', 'comunidade/inevita/atualizacoes/feed.v1.json', validateCommunicationFeed],
 ]) {
   if (!existsSync(join(ROOT, path))) continue;
   const validationErrors = validate(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
@@ -526,6 +530,7 @@ for (const contract of [
   'METODO-SISTEMAS.md',
   'METODO-EXPERIMENTOS.md',
   'templates',
+  'comunidade/inevita/atualizacoes/feed.v1.json',
 ]) {
   if (!motorManifest.includes(contract)) errors.push(`manifesto do motor sem upgrade: ${contract}`);
 }

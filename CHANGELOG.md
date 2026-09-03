@@ -1,5 +1,18 @@
 # Mudanças do cérebro INEVITA
 
+## v1.36.0 — 2026-09-03 · “a INEVITA ganha uma voz dentro do Cérebro”
+
+- **Central permanente em `Cérebro → Atualizações`:** versão instalada, verificação do motor,
+  novidades da INEVITA e releases passam a ter casas visíveis e diferentes no mesmo cockpit.
+- **Primeira Missão continua sendo missão:** ela recebe somente o comunicado público mais recente
+  em um cartão compacto, com passagem para a central completa.
+- **Cérebro não é Sistema:** o histórico do motor vem do changelog local; releases de Sistemas
+  vêm da Society e atualizar o motor não instala nem ativa nenhum deles.
+- **Canal público, local e somente de entrada:** o feed empacotado é validado por allowlist,
+  funciona offline e não envia Fonte, memória, query, output ou telemetria para a INEVITA.
+- A busca por release remota continua manual. Aplicar uma versão continua exigindo confirmação,
+  release publicada e instalação gerenciada; checkout Git e caminhos do dono permanecem protegidos.
+
 ## v1.35.0 — 2026-09-02 · “o Cérebro deixa de parecer um Sistema”
 
 - **Cockpit rico como casca canônica:** `Hoje`, `Cérebro`, `Sistemas`, `Skills`, `Canvas`,

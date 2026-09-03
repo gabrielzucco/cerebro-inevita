@@ -14,7 +14,7 @@ assert.match(html, /data-view="areas" data-views="areas,sources,experiments"/, '
 assert.doesNotMatch(html, /data-view="areas" data-views="[^"]*systems/, 'Sistemas não pode continuar escondido em Estrutura');
 
 const tabs = app.match(/const WS_TABS = \[([\s\S]*?)\n\];/)?.[1] || '';
-for (const name of ['Visão geral', 'Como funciona', 'Execuções', 'Experimentos', 'Aprendizado', 'Configuração']) {
+for (const name of ['Sobre', 'Como funciona', 'Execuções', 'Experimentos', 'Aprendizado', 'Configuração']) {
   assert.match(tabs, new RegExp(name), `workspace deve conter ${name}`);
 }
 for (const duplicateName of ['Canvas', 'Julgamento', 'Governança']) {
@@ -26,7 +26,7 @@ const card = app.match(/function systemCard\(system\) \{([\s\S]*?)\n\}/)?.[1] ||
 assert.match(card, /systemLaunchAction\(system\)/, 'card deve oferecer abertura da aplicação');
 assert.match(app, /data-system-launch=/, 'ação de abrir aplicação deve ser rastreável');
 assert.match(card, /data-open-system=/, 'card deve oferecer Inspecionar operação');
-assert.match(card, />Inspecionar</, 'porta operacional deve ser explícita');
+assert.match(card, />Ver Sistema</, 'porta operacional deve ser explícita');
 assert.doesNotMatch(card, /<article[^>]+data-open-system=/, 'card inteiro não pode ser a ação implícita');
 assert.match(app, /url\.protocol === 'https:' \|\| localHttp/, 'interface externa deve aplicar allowlist de protocolo');
 assert.match(app, /rel="noopener noreferrer"/, 'interface externa deve isolar o opener');

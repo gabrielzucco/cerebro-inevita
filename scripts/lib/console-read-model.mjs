@@ -34,6 +34,7 @@ import {
 import { indexSystemRuntimeBindings } from './system-runtime-binding.mjs';
 import { experienceManifestView, indexExperienceManifests } from './experience-manifest.mjs';
 import { countInstalledSkills } from './skill-read-model.mjs';
+import { buildCommunicationReadModel } from './communication-feed.mjs';
 
 const PRODUCT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const SOCIETY_CATALOG = join(PRODUCT_ROOT, 'society', 'catalog.v1.json');
@@ -543,6 +544,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   const systems = allSystems.filter((system) => system.product_kind === 'business-system' && system.surface === 'systems');
   const nativeSystems = allSystems.filter((system) => system.product_kind === 'brain-native' || system.surface === 'brain');
   const activation = activationState(root, { issues });
+  const communication = buildCommunicationReadModel(PRODUCT_ROOT);
   let runRecords = [];
   try {
     runRecords = latestRunRecords(root);
@@ -608,7 +610,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
   return {
     protocol_version: 1,
     generated_at: observedAt.toISOString(),
-    cache: { kind: 'none', rebuildable_from: ['manifest', 'contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates'] },
+    cache: { kind: 'none', rebuildable_from: ['manifest', 'contracts', 'bindings', 'state', 'receipts', 'run-ledger', 'experiments', 'judgments', 'corrections', 'learning-candidates', 'public-update-feed', 'changelog'] },
     privacy: {
       content_shared_with_inevita: false,
       raw_output_exposed: false,
@@ -631,6 +633,7 @@ export function buildConsoleReadModel(root, { now = new Date() } = {}) {
     },
     system_taxonomy: systemTaxonomy(),
     activation,
+    communication,
     areas,
     systems,
     native_systems: nativeSystems,

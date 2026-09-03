@@ -31,6 +31,17 @@ try {
   write(join(engine, 'VERSION'), '1.32.0\n');
   write(join(engine, '.cerebro', 'manifest.json'), manifest('full', 'inevita', 'VERSION'));
   write(join(engine, '.cerebro', 'source'), 'REPO=gabrielzucco/cerebro-inevita\nBRANCH=main\n');
+  write(join(engine, 'CHANGELOG.md'), '# Histórico\n\n## v1.32.0 — 2026-08-24 · “motor local”\n\n- Primeira release observada.\n');
+  write(join(engine, 'comunidade', 'inevita', 'atualizacoes', 'feed.v1.json'), `${JSON.stringify({
+    protocol_version: 1,
+    channel_id: 'inevita-product-updates',
+    generated_at: '2026-08-28',
+    entries: [{
+      update_id: 'motor-local-v1-32', kind: 'product-update', title: 'Motor local publicado',
+      summary: 'Uma atualização pública e segura para o Cérebro da empresa.',
+      published_at: '2026-08-28', release_version: '1.32.0', highlights: [],
+    }],
+  }, null, 2)}\n`);
   mkdirSync(join(engine, '.git'), { recursive: true });
 
   const privateBrain = join(sandbox, 'private-brain');
@@ -40,6 +51,11 @@ try {
     engineRoot: engine,
     compatibilityPercent: 100,
     societyCounts: { visible: 4, validated: 1, validation: 3, installed: 3 },
+    societySystems: [{
+      system_id: 'briefing-comercial', name: 'Briefing Comercial',
+      release: { version: '0.1.1', channel: 'pilot' },
+      availability: 'validation', installation_status: 'not-installed',
+    }],
   });
   assert.equal(privateCenter.installation.version, '2026.08.24');
   assert.equal(privateCenter.installation.profile, 'legacy-compatible');
@@ -49,6 +65,10 @@ try {
   assert.equal(privateCenter.motor.can_check, true);
   assert.equal(privateCenter.motor.can_apply, false);
   assert.equal(privateCenter.society.visible, 4);
+  assert.equal(privateCenter.society.releases[0].system_id, 'briefing-comercial');
+  assert.equal(privateCenter.communication.available, true);
+  assert.equal(privateCenter.communication.latest.release_version, '1.32.0');
+  assert.equal(privateCenter.communication.privacy.company_context_sent, false);
 
   let requestedUrl = '';
   const remote = await checkLatestBrainRelease(privateCenter, {
@@ -107,6 +127,9 @@ try {
     'VERSÃO E CONTINUIDADE',
     'CÉREBRO DA EMPRESA',
     'MOTOR & CONSOLE',
+    'DA INEVITA',
+    'NOVOS RELEASES',
+    'Cérebro e Sistemas evoluem em trilhas diferentes',
     'SOCIETY',
     'data-update-check',
     'data-update-apply',
@@ -117,7 +140,7 @@ try {
     assert(server.includes(endpoint), `servidor sem endpoint: ${endpoint}`);
   }
   assert(updater.includes("CEREBRO_UPDATE_REQUIRE_RELEASE === '1'"), 'Console precisa exigir release publicada');
-  for (const selector of ['.brain-mode-bar', '.brain-version-chip', '.brain-update-grid', '.brain-update-boundary']) {
+  for (const selector of ['.brain-mode-bar', '.brain-version-chip', '.brain-update-now', '.brain-news', '.brain-release-board', '.brain-update-grid', '.brain-update-boundary']) {
     assert(css.includes(selector), `estilo ausente: ${selector}`);
   }
 

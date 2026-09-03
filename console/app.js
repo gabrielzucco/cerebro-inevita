@@ -272,6 +272,7 @@ function empty(title, body) {
 
 function renderActivation() {
   const activation = state.model.activation;
+  const update = state.model.communication?.latest || null;
   const current = activation.steps.find((step) => step.id === activation.current_step) || activation.steps[0];
   const started = activation.status === 'in-progress';
   const progress = Math.round((activation.completed_steps / activation.total_steps) * 100);
@@ -295,6 +296,11 @@ function renderActivation() {
         <div><span>Cérebro</span><i>prepara contexto</i><span>Sistema</span><i>produz resultado</i></div>
       </div>
     </section>
+
+    ${update ? `<section class="first-mission-update">
+      <div><p class="micro">NOVIDADE DA INEVITA · ${fmtDate(update.published_at, false)}</p><h3>${escapeHtml(update.title)}</h3><p>${escapeHtml(update.summary)}</p></div>
+      <button type="button" data-open-brain-updates>Ver atualizações →</button>
+    </section>` : ''}
 
     <section class="first-mission-source">
       <div><p class="micro">E SE EU NÃO TIVER FONTE CONECTADA?</p><h3>Nenhuma integração é necessária para começar.</h3><p>A fonte-semente é só o menor pedaço de realidade capaz de sustentar o primeiro trabalho.</p></div>
@@ -1267,6 +1273,22 @@ function updateRemoteCopy(remote) {
   }[remote.status] || { label: label(remote.status), tone: 'neutral', detail: '' };
 }
 
+function communicationKind(value) {
+  return {
+    announcement: 'COMUNICADO',
+    maintenance: 'MANUTENÇÃO',
+    'product-update': 'NOVIDADE DO PRODUTO',
+  }[value] || 'ATUALIZAÇÃO';
+}
+
+function societyReleaseState(value) {
+  return {
+    validated: 'Disponível',
+    validation: 'Em validação',
+    hidden: 'Em preparação',
+  }[value] || 'Catálogo atual';
+}
+
 function renderBrainUpdates(anatomy) {
   const updates = state.brain.updates;
   if (!updates.data && !updates.loading) void loadBrainUpdates();
@@ -1275,6 +1297,10 @@ function renderBrainUpdates(anatomy) {
   const installation = center.installation;
   const motor = center.motor;
   const society = center.society;
+  const communication = center.communication || { entries: [], brain_releases: [], privacy: {} };
+  const news = communication.entries || [];
+  const brainReleases = communication.brain_releases || [];
+  const systemReleases = society.releases || [];
   const remote = center.remote || null;
   const remoteCopy = updateRemoteCopy(remote);
   const managed = installation.update_management === 'managed-release';
@@ -1295,7 +1321,42 @@ function renderBrainUpdates(anatomy) {
     ${center.last_update ? `<div class="brain-update-result"><b>Motor atualizado para v${escapeHtml(center.last_update.installed_version)}</b><span>Reabra o Console para carregar o código novo. O contexto privado não foi enviado.</span></div>` : ''}
     ${updates.error ? `<div class="brain-update-error"><b>Verificação interrompida</b><span>${escapeHtml(updateReasonCopy(updates.error))}</span></div>` : ''}
 
-    <section class="brain-update-grid">
+    <section class="brain-update-now">
+      <div class="brain-update-now-copy">
+        <p class="micro">SEU CÉREBRO · MOTOR & CONSOLE</p>
+        <div class="brain-update-status"><span class="${escapeHtml(remoteCopy.tone)}"></span><div><strong>${escapeHtml(remoteCopy.label)}</strong><small>${escapeHtml(remoteCopy.detail)}</small></div></div>
+        <p>Você está usando o motor v${escapeHtml(motor.version)}. A verificação procura somente metadados da release pública mais recente.</p>
+      </div>
+      <div class="brain-update-now-action">
+        <div class="brain-update-actions"><button type="button" class="action" data-update-check ${!motor.can_check || updates.checking || updates.applying ? 'disabled' : ''}>${escapeHtml(checkLabel)}</button>${applyButton}</div>
+        <small>Nenhuma Fonte, query, memória ou output sai desta máquina.</small>
+      </div>
+    </section>
+
+    <section class="brain-news">
+      <header><div><p class="micro">DA INEVITA</p><h2>O que muda para você</h2></div><span>canal público · funciona offline</span></header>
+      ${news.length ? `<div class="brain-news-list">${news.map((entry) => `<article class="brain-news-entry">
+        <div class="brain-news-meta"><span>${escapeHtml(communicationKind(entry.kind))}</span><time>${fmtDate(entry.published_at, false)}</time>${entry.release_version ? `<b>v${escapeHtml(entry.release_version)}</b>` : ''}</div>
+        <h3>${escapeHtml(entry.title)}</h3><p>${escapeHtml(entry.summary)}</p>
+        ${entry.highlights?.length ? `<ul>${entry.highlights.map((highlight) => `<li>${escapeHtml(highlight)}</li>`).join('')}</ul>` : ''}
+      </article>`).join('')}</div>` : '<p class="brain-clear-state">O canal local está sem comunicados públicos nesta versão.</p>'}
+    </section>
+
+    <section class="brain-releases">
+      <header><div><p class="micro">NOVOS RELEASES</p><h2>Cérebro e Sistemas evoluem em trilhas diferentes</h2></div><p>Atualizar o Cérebro não instala nem ativa um Sistema.</p></header>
+      <div class="brain-release-board">
+        <article class="brain-release-column">
+          <header><div><span class="brain-release-mark">C</span><div><strong>Cérebro</strong><small>motor, cockpit e protocolos</small></div></div><b>${brainReleases.length} no histórico</b></header>
+          ${brainReleases.length ? `<ol>${brainReleases.slice(0, 5).map((release) => `<li><div><span>v${escapeHtml(release.version)}</span><time>${fmtDate(release.published_at, false)}</time></div><strong>${escapeHtml(release.title)}</strong><p>${escapeHtml(release.summary)}</p></li>`).join('')}</ol>` : '<p class="brain-clear-state">Nenhum release local reconhecido.</p>'}
+        </article>
+        <article class="brain-release-column is-systems">
+          <header><div><span class="brain-release-mark">S</span><div><strong>Sistemas</strong><small>resultados instaláveis da Society</small></div></div><button type="button" data-view="society">Abrir Society →</button></header>
+          ${systemReleases.length ? `<ol>${systemReleases.map((release) => `<li><div><span>v${escapeHtml(release.version)}</span><time>${escapeHtml(societyReleaseState(release.availability))}</time></div><strong>${escapeHtml(release.name)}</strong><p>${escapeHtml(release.channel ? `Canal ${release.channel}. A instalação continua separada do update do Cérebro.` : 'A instalação continua separada do update do Cérebro.')}</p></li>`).join('')}</ol>` : '<p class="brain-clear-state">Nenhum release de Sistema está visível para esta instalação.</p>'}
+        </article>
+      </div>
+    </section>
+
+    <section class="brain-update-grid brain-update-detail-grid">
       <article class="brain-update-card">
         <header><span>01</span><div><p class="micro">CÉREBRO DA EMPRESA</p><h3>Sua instalação privada</h3></div></header>
         <dl><div><dt>Versão</dt><dd>v${escapeHtml(installation.version)}</dd></div><div><dt>Brain Manifest</dt><dd>${installation.manifest_version ? `v${escapeHtml(installation.manifest_version)}` : 'não observado'}</dd></div><div><dt>Compatibilidade</dt><dd>${installation.compatibility_percent == null ? 'não medida' : `${brainCount(installation.compatibility_percent)}%`}</dd></div><div><dt>Canal</dt><dd>${managed ? 'gerenciado' : 'ainda não gerenciado'}</dd></div></dl>
@@ -1303,16 +1364,8 @@ function renderBrainUpdates(anatomy) {
         ${managed ? '' : '<button type="button" class="text-action" data-view="compatibility">Ver conformidade antes da migração →</button>'}
       </article>
 
-      <article class="brain-update-card is-motor">
-        <header><span>02</span><div><p class="micro">MOTOR & CONSOLE</p><h3>O software que opera o Cérebro</h3></div></header>
-        <div class="brain-update-status"><span class="${escapeHtml(remoteCopy.tone)}"></span><div><strong>${escapeHtml(remoteCopy.label)}</strong><small>${escapeHtml(remoteCopy.detail)}</small></div></div>
-        <dl><div><dt>Versão local</dt><dd>v${escapeHtml(motor.version)}</dd></div><div><dt>Modo</dt><dd>${motor.mode === 'development-checkout' ? 'checkout de desenvolvimento' : 'release empacotada'}</dd></div><div><dt>Origem</dt><dd>${escapeHtml(motor.source.repo || 'não configurada')}</dd></div><div><dt>Último check</dt><dd>${remote?.checked_at ? fmtDate(remote.checked_at) : 'nunca'}</dd></div></dl>
-        <div class="brain-update-actions"><button type="button" class="action" data-update-check ${!motor.can_check || updates.checking || updates.applying ? 'disabled' : ''}>${escapeHtml(checkLabel)}</button>${applyButton}</div>
-        <small>A consulta envia apenas o nome público do repositório e recebe metadados da release. Nenhuma Fonte, query ou output sai desta máquina.</small>
-      </article>
-
       <article class="brain-update-card">
-        <header><span>03</span><div><p class="micro">SOCIETY</p><h3>Catálogo distribuído com o motor</h3></div></header>
+        <header><span>02</span><div><p class="micro">SOCIETY</p><h3>Catálogo distribuído com o motor</h3></div></header>
         <div class="brain-society-version"><strong>v${escapeHtml(society.distribution_version)}</strong><span>${brainCount(society.visible)} no catálogo · ${brainCount(society.installed)} destes já ${society.installed === 1 ? 'está' : 'estão'} no Cérebro</span></div>
         <p>Novas fichas, contratos e releases publicados chegam no pacote do motor. Seus Sistemas instalados, grants, julgamentos e contexto continuam locais.</p>
         <button type="button" class="text-action" data-view="society">Abrir catálogo da Society →</button>
@@ -3797,6 +3850,16 @@ document.addEventListener('click', (event) => {
   }
   if (event.target.closest('[data-update-check]')) { void checkBrainUpdates(); return; }
   if (event.target.closest('[data-update-apply]')) { void applyBrainUpdate(); return; }
+  if (event.target.closest('[data-open-brain-updates]')) {
+    state.view = 'anatomy';
+    state.brain.mode = 'updates';
+    state.brain.query = '';
+    try { localStorage.setItem('cb-brain-mode', state.brain.mode); } catch { /* preferência local */ }
+    closeDrawer();
+    void loadBrainUpdates();
+    render();
+    return;
+  }
   const brainMode = event.target.closest('[data-brain-mode]');
   if (brainMode) {
     state.brain.mode = brainMode.dataset.brainMode;
