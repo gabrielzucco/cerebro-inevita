@@ -113,7 +113,9 @@ try {
   });
   assert.equal(pending.pending, true);
   assert.equal(existsSync(join(retryRoot, '.cerebro/install-activation-outbox.json')), true);
-  assert.equal(statSync(join(retryRoot, '.cerebro/install-activation-outbox.json')).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(join(retryRoot, '.cerebro/install-activation-outbox.json')).mode & 0o777, 0o600);
+  }
 
   const recoveredApi = api();
   const recovered = await flushPendingActivation({
