@@ -1558,6 +1558,13 @@ function canvasRefOptions() {
   return '';
 }
 
+function defaultCanvasSystemRef() {
+  const systems = visibleSystems();
+  return systems.find((item) => item.migration_stage === 'active')?.system_id
+    || systems[0]?.system_id
+    || null;
+}
+
 // Execuções de um sistema, prontas pro seletor do Canvas
 function executionsForSystem(system) {
   const routineIds = new Set(state.model.routines.filter((routine) => refMatchesSystem(routine.system_ref, system)).map((routine) => routine.routine_id));
@@ -3281,7 +3288,7 @@ function cycleCanvasRef(step) {
 
 async function mountCanvasView() {
   startParticles();
-  if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id;
+  if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = defaultCanvasSystemRef();
   if (state.canvas.scope === 'run' && !state.canvas.ref) state.canvas.ref = allCanvasExecutions()[0]?.selector_ref;
   const container = $('#operational-canvas');
   if (!container || (state.canvas.scope !== 'brain' && !state.canvas.ref)) {
@@ -4068,7 +4075,7 @@ document.addEventListener('click', (event) => {
   if (canvasScope) {
     state.canvas.scope = canvasScope.dataset.canvasScope;
     state.canvas.ref = state.canvas.scope === 'system'
-      ? state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id || null
+      ? defaultCanvasSystemRef()
       : state.canvas.scope === 'run' ? allCanvasExecutions()[0]?.selector_ref || null : null;
     state.canvas.positions = null;
     render();

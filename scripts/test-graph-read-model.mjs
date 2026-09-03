@@ -60,6 +60,13 @@ try {
   write(join(root, '.cerebro', 'contracts', 'systems', 'conteudo.json'), contentSystem);
   const handoff = example('handoff-contract.v1.json');
   registerHandoffContract(root, handoff);
+  const pendingSourceSystem = {
+    ...structuredClone(funilSystem),
+    system_id: 'fonte-pendente',
+    name: 'Sistema com Fonte pendente',
+    sources: funilSystem.sources.map((item) => ({ ...item, source_id: 'fonte-ainda-nao-conectada' })),
+  };
+  write(join(root, '.cerebro', 'contracts', 'systems', 'fonte-pendente.json'), pendingSourceSystem);
   const routine = example('routine-contract.v1.json');
   registerRoutineContract(root, {
     ...routine,
@@ -173,6 +180,33 @@ try {
   const brain = buildBrainGraph(root);
   assert(brain.nodes.some((node) => node.kind === 'handoff' && node.actual));
   assert(brain.edges.some((edge) => edge.relation === 'produces-handoff' && edge.actual));
+  const missingSource = brain.nodes.find((node) => node.id === 'source:fonte-ainda-nao-conectada');
+  assert.equal(missingSource?.state, 'gap');
+  assert.equal(missingSource?.details.reason_code, 'source-contract-missing');
+  const brainNodeIds = new Set(brain.nodes.map((node) => node.id));
+  assert.equal(brain.edges.every((edge) => brainNodeIds.has(edge.source) && brainNodeIds.has(edge.target)), true,
+    'o Canvas nunca pode receber uma aresta apontando para nó inexistente');
+
+  const portfolioRoot = mkdtempSync(join(tmpdir(), 'graph-portfolio-'));
+  try {
+    write(join(portfolioRoot, '.cerebro', 'layout.json'), {
+      version: 3,
+      sourceContracts: '.cerebro/contracts/sources',
+      systemContracts: '.cerebro/contracts/systems',
+      routineContracts: '.cerebro/contracts/routines',
+      routineReceipts: '.cerebro/runtime/receipts/routines',
+      runLedger: '.cerebro/runtime/ledger/runs.jsonl',
+      executionTraces: '.cerebro/runtime/traces',
+      canvasLayouts: '.cerebro/runtime/canvas-layouts',
+    });
+    write(join(portfolioRoot, '.cerebro', 'contracts', 'sources', `${source.source_id}.json`), source);
+    write(join(portfolioRoot, 'sistemas', 'funil', 'contract.json'), funilSystem);
+    const portfolioGraph = buildSystemGraph(portfolioRoot, funilSystem.system_id);
+    assert.equal(portfolioGraph.graph_type, 'system');
+    assert.equal(portfolioGraph.graph_ref, funilSystem.system_id);
+  } finally {
+    rmSync(portfolioRoot, { recursive: true, force: true });
+  }
   const standalone = buildRunGraph(root, `run-record:${producerRun.run_id}`);
   assert.equal(standalone.run.canonical_ref, `run-record:${producerRun.run_id}`);
   assert.equal(standalone.run.routine_receipt_ref, null);

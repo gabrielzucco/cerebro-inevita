@@ -13,6 +13,9 @@
   respostas, logs, argumentos de processo ou Git.
 - **Aula sem credenciais:** `--demo` mostra o Console e a ativação completos em estado controlado,
   bloqueando toda escrita, comando ou alteração de serviço.
+- **Canvas resiliente no cérebro recém-instalado:** Fontes prometidas por um Sistema, mas ainda
+  não conectadas, aparecem como lacunas em vez de derrubar o mapa; contratos publicados em
+  `sistemas/` também passam a alimentar corretamente os Canvas de Sistema.
 - **Fronteira do produto preservada:** Fonte, memória, skills e credenciais continuam na máquina
   do membro; o Cockpit público não inclui Supabase, dados privados nem o control plane hospedado
   da operação KOSMOS.
