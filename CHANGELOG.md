@@ -16,6 +16,8 @@
 - **Canvas resiliente no cérebro recém-instalado:** Fontes prometidas por um Sistema, mas ainda
   não conectadas, aparecem como lacunas em vez de derrubar o mapa; contratos publicados em
   `sistemas/` também passam a alimentar corretamente os Canvas de Sistema.
+- **Cabeçalho volta ao topo:** o sprite SVG de ícones sai explicitamente do fluxo do documento,
+  evitando o espaço invisível de 150 px que empurrava toda a interface para baixo em alguns browsers.
 - **Fronteira do produto preservada:** Fonte, memória, skills e credenciais continuam na máquina
   do membro; o Cockpit público não inclui Supabase, dados privados nem o control plane hospedado
   da operação KOSMOS.
