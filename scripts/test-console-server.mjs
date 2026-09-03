@@ -68,12 +68,13 @@ function grant(grantId, sourceRef) {
   };
 }
 
-async function request(base, path, { method = 'GET', cookie = '', csrf = '', body = null } = {}) {
+async function request(base, path, { method = 'GET', cookie = '', csrf = '', body = null, origin = base } = {}) {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
       ...(cookie ? { Cookie: cookie } : {}),
       ...(csrf ? { 'X-Cerebro-CSRF': csrf } : {}),
+      ...(method === 'POST' ? { Origin: origin } : {}),
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -227,6 +228,9 @@ try {
         : 'CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL\n');
       return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
     },
+    hermesRunner: (_command, args) => args[0] === '--version'
+      ? { status: null, stdout: '', stderr: '', error: { code: 'ENOENT' } }
+      : { status: 1, stdout: '', stderr: '', error: null },
   });
   await new Promise((resolveListen) => instance.server.listen(0, '127.0.0.1', resolveListen));
   const base = `http://127.0.0.1:${instance.server.address().port}`;
@@ -260,6 +264,12 @@ try {
     method: 'POST', cookie, body: { confirm: true },
   });
   assert.equal(missingCsrf.status, 403);
+  assert.equal(calls.length, 0);
+  const invalidOrigin = await request(base, '/api/routines/funil-diario-cerebro/run', {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', origin: 'https://attacker.example', body: { confirm: true },
+  });
+  assert.equal(invalidOrigin.status, 403);
+  assert.equal(invalidOrigin.value.reason_code, 'origin-invalid');
   assert.equal(calls.length, 0);
   const missingConfirm = await request(base, '/api/routines/funil-diario-cerebro/run', {
     method: 'POST', cookie, csrf: 'fixed-csrf-token', body: { confirm: false },

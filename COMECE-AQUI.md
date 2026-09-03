@@ -64,8 +64,10 @@ exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
 ## Quer ver e conectar pelo Telegram?
 
 Abra o Cockpit local com `node scripts/cockpit.mjs`. A tela mostra o progresso em linguagem humana,
-organiza o que pede decisão e conduz a instalação do Hermes, a escolha do provider, a confiança das
-skills e a allowlist do Telegram. O guia completo está em [`COCKPIT.md`](COCKPIT.md).
+organiza o que pede decisão e leva o cérebro ao Telegram em três gestos: autorizar o Codex, colar o
+token criado no BotFather e confirmar a conta que enviou `/start`. O Cockpit cuida do Hermes, das
+skills, da allowlist, do serviço e do diagnóstico. O guia completo está em
+[`COCKPIT.md`](COCKPIT.md).
 
 ## A primeira experiência
 

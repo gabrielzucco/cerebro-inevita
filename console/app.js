@@ -5,6 +5,7 @@ const state = {
   selectedRoutine: null,
   selectedJudgment: null,
   busy: false,
+  activationTimer: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -43,6 +44,22 @@ const labels = {
   'not-eligible': 'Ainda não elegível',
   available: 'Disponível', beta: 'Beta', locked: 'Exclusivo', future: 'Em construção', configured: 'Configurada',
   draft: 'Rascunho', 'pre-registered': 'Pré-registrado', passed: 'Aprovado', attention: 'Pede atenção',
+  running: 'Em andamento', 'awaiting-confirmation': 'Aguardando você', succeeded: 'Concluído', cancelled: 'Cancelado', error: 'Pede atenção',
+  'activation-busy': 'Já existe uma ativação em andamento',
+  'activation-action-invalid': 'Esta etapa expirou; tente novamente',
+  'hermes-installer-download-failed': 'Não foi possível baixar o instalador oficial',
+  'hermes-installer-checksum-failed': 'A verificação de segurança do instalador falhou',
+  'hermes-process-timeout': 'A operação demorou mais que o esperado',
+  'hermes-process-failed': 'O Hermes não concluiu esta etapa',
+  'hermes-install-not-detected': 'A instalação terminou, mas o Hermes ainda não foi encontrado',
+  'hermes-version-unrecognized': 'Não foi possível confirmar a versão instalada do Hermes',
+  'hermes-codex-login-failed': 'A autorização do Codex não foi concluída',
+  'telegram-token-invalid': 'O token do BotFather não é válido',
+  'telegram-request-failed': 'Não foi possível falar com o Telegram',
+  'telegram-owner-timeout': 'Não encontramos seu /start; tente novamente',
+  'hermes-doctor-attention': 'O diagnóstico encontrou algo para corrigir',
+  'hermes-verification-failed': 'A checagem final não confirmou todos os componentes',
+  'origin-invalid': 'A ação precisa partir deste Cockpit local',
 };
 
 function label(value) {
@@ -87,7 +104,7 @@ async function mutate(path, payload) {
 
 function summaryCards() {
   const model = state.model;
-  const hermesReady = model.hermes?.installed && model.hermes?.provider_configured && model.hermes?.gateway?.running;
+  const hermesReady = model.hermes?.activation?.phase === 'ready';
   return [
     ['Ativação do cérebro', `${model.activation.percent}%`, `${model.activation.completed}/${model.activation.total} marcos de valor`, 'signal'],
     ['Pedem seu martelo', model.counts.judgments + model.counts.decisions, 'Entregas e decisões aguardando você', 'decision'],
@@ -122,9 +139,11 @@ function activationCompact() {
 
 function hermesCompact() {
   const hermes = state.model.hermes;
-  const ready = hermes.installed && hermes.provider_configured && hermes.project_bound && hermes.skills_trusted && hermes.telegram.token_configured && hermes.gateway.running;
+  const prepared = hermes.installed && hermes.codex_authenticated && hermes.project_bound && hermes.skills_trusted;
+  const telegram = hermes.telegram.token_configured && hermes.telegram.allowlist_configured && hermes.telegram.allow_all_disabled;
+  const ready = hermes.activation?.phase === 'ready';
   return `<article class="rail-card hermes-compact"><div class="rail-head"><div><p class="micro">HERMES</p><h3>Colega no Telegram</h3></div>${badge(ready ? 'active' : 'attention')}</div>
-    <div class="mini-checks"><span class="${hermes.installed ? 'done' : ''}">Instalado</span><span class="${hermes.provider_configured ? 'done' : ''}">Provedor</span><span class="${hermes.project_bound && hermes.skills_trusted ? 'done' : ''}">Cérebro</span><span class="${hermes.telegram.token_configured ? 'done' : ''}">Telegram</span><span class="${hermes.gateway.running ? 'done' : ''}">24/7</span></div>
+    <div class="mini-checks"><span class="${prepared ? 'done' : ''}">Hermes + Codex</span><span class="${telegram ? 'done' : ''}">Telegram</span><span class="${ready ? 'done' : ''}">Pronto</span></div>
     <button class="text-action" data-go-view="hermes">${ready ? 'Ver operação' : 'Continuar configuração'} →</button></article>`;
 }
 
@@ -159,12 +178,12 @@ function renderToday() {
   const pending = state.model.judgments.filter((item) => item.judgment.status === 'pending');
   const nextStage = state.model.activation.stages.find((stage) => !stage.completed);
   const hermes = state.model.hermes;
-  const setupNeeded = !hermes.installed || !hermes.provider_configured || !hermes.project_bound || !hermes.skills_trusted || !hermes.telegram.token_configured || !hermes.gateway.running;
+  const setupNeeded = hermes.activation?.phase !== 'ready';
   return `<div class="now-grid">
     <section class="now-primary">
       <div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>${pending.length ? 'Tem uma entrega esperando você' : setupNeeded ? 'Coloque seu cérebro no Telegram' : nextStage ? `Próximo marco: ${escapeHtml(nextStage.label)}` : 'Seu cérebro está em operação'}</h2></div><p>O Cockpit mostra o que já existe no seu cérebro. Você continua dando o martelo.</p></div>
       ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
-      ${!pending.length && setupNeeded ? `<article class="next-action"><span>01</span><div><p class="micro">PRÓXIMA AÇÃO</p><h3>Concluir a conexão com o Hermes</h3><p>Provedor, cérebro, Telegram e serviço persistente em um fluxo guiado.</p></div><button class="action primary" data-go-view="hermes">Configurar Hermes →</button></article>` : ''}
+      ${!pending.length && setupNeeded ? `<article class="next-action"><span>01</span><div><p class="micro">PRÓXIMA AÇÃO</p><h3>Levar seu cérebro para o Telegram</h3><p>Autorize o Codex, conecte seu bot e confirme sua conta.</p></div><button class="action primary" data-go-view="hermes">Começar ativação →</button></article>` : ''}
       ${!pending.length && !setupNeeded && nextStage ? `<article class="next-action"><span>${escapeHtml(nextStage.key)}</span><div><p class="micro">ATIVAÇÃO</p><h3>${escapeHtml(nextStage.label)}</h3><p>${escapeHtml(nextStage.description)}</p></div><button class="action primary" data-go-view="activation">Ver progresso →</button></article>` : ''}
       <div class="today-block"><div class="subheading"><h3>Operação local</h3><span>${routines.length}</span></div><div class="routine-list">${routines.length ? routines.map(routineCard).join('') : empty('Mesa limpa', 'Nenhuma rotina pede atenção. Você pode começar pela ativação do cérebro.')}</div></div>
     </section>
@@ -233,36 +252,40 @@ function renderExperiments() {
     <div class="object-grid">${state.model.experiments.map((item) => `<article class="object-card"><div class="object-card-top">${badge(item.status)}</div><p class="micro">${escapeHtml(item.system_ref || 'SISTEMA A DEFINIR')}</p><h3>${escapeHtml(item.title)}</h3><p>${item.decision_due_at ? `Leitura em ${fmtDate(item.decision_due_at)}` : 'Aguardando janela de leitura.'}</p><div class="ref-list"><code>${escapeHtml(item.experiment_id)}</code></div></article>`).join('') || empty('Nenhum experimento ativo', 'Experimento nasce dentro de um Sistema, depois que um gargalo real foi comprovado.')}</div>`;
 }
 
-function setupStep(index, title, description, complete, body) {
-  return `<article class="setup-step ${complete ? 'complete' : ''}"><div class="step-number">${complete ? '✓' : String(index).padStart(2, '0')}</div><div class="step-content"><div class="step-heading"><div><p class="micro">PASSO ${String(index).padStart(2, '0')}</p><h3>${escapeHtml(title)}</h3></div>${badge(complete ? 'completed' : 'pending', complete ? 'good' : 'neutral')}</div><p>${escapeHtml(description)}</p>${body}</div></article>`;
-}
-
-function commandBox(command, labelText = 'Copiar comando') {
-  return `<div class="command-box"><code>${escapeHtml(command)}</code><button type="button" data-copy-command="${escapeHtml(command)}">${escapeHtml(labelText)}</button></div>`;
-}
-
 function renderHermes() {
   const hermes = state.model.hermes;
+  const activation = hermes.activation || { phase: 'prepare', action: { status: 'idle', progress: 0 }, bot: {} };
+  const action = activation.action || {};
   const locked = state.model.demo ? 'disabled' : '';
-  const brainReady = hermes.project_bound && hermes.skills_trusted;
+  const busy = ['running', 'awaiting-confirmation'].includes(action.status);
+  const preparing = action.status === 'running' && ['prepare', 'codex-login'].includes(action.kind);
+  const identifying = activation.phase === 'identify-owner' && action.kind === 'telegram-owner';
+  const finalizing = activation.phase === 'finalizing';
+  const brainReady = hermes.installed && hermes.project_bound && hermes.skills_trusted && hermes.codex_authenticated;
   const telegramReady = hermes.telegram.token_configured && hermes.telegram.allowlist_configured && hermes.telegram.allow_all_disabled;
-  const installBody = `<div class="install-grid"><div><strong>macOS / Linux · CLI</strong>${commandBox('curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash')}</div><div><strong>Windows · PowerShell</strong>${commandBox('iex (irm https://hermes-agent.nousresearch.com/install.ps1)')}</div></div><p class="fine-print">Instalação guiada: o Cockpit mostra o comando oficial e detecta o resultado; ele não baixa nem executa instaladores sozinho.</p>`;
-  const providerBody = `<div class="provider-grid"><article><span>01</span><h4>Nous Portal</h4><p>Assinatura própria da Nous. OAuth, sem API key.</p>${commandBox('hermes setup --portal')}</article><article><span>02</span><h4>OpenAI Codex</h4><p>Usa sua assinatura ChatGPT/Codex via device login.</p>${commandBox('hermes model')}</article><article><span>03</span><h4>Outro provider</h4><p>API key ou endpoint compatível, cobrado pelo provedor escolhido.</p>${commandBox('hermes model')}</article></div><p class="fine-print">A autenticação acontece no assistente oficial do Hermes, no terminal. O Cockpit nunca recebe nem guarda credenciais do provider.</p>`;
-  const brainBody = `${!hermes.skills_trust_supported ? `<div class="boundary-note"><b>Atualização necessária</b>Sua versão do Hermes ainda não oferece confiança explícita para skills do projeto. Atualize antes de conectar o cérebro.</div>${commandBox('hermes update', 'Copiar atualização')}` : `<div class="boundary-note"><b>O que será autorizado</b>Hermes inicia dentro deste cérebro, lê AGENTS.md e carrega as skills locais. Escritas continuam exigindo confirmação humana; modo autônomo não é habilitado.</div><button class="action primary" data-hermes-action="bind" ${locked || !hermes.installed ? 'disabled' : ''}>Conectar este cérebro e confiar nas skills</button>`}`;
-  const telegramBody = `<form id="telegram-form" class="telegram-form" autocomplete="off"><label>Token do BotFather<input id="telegram-token" name="telegram-token" type="password" autocomplete="off" data-1p-ignore="true" spellcheck="false" maxlength="256" placeholder="123456789:••••••••••" required></label><label>Seu ID numérico do Telegram<input id="telegram-users" name="telegram-users" inputmode="numeric" autocomplete="off" maxlength="220" placeholder="123456789" required><small>Mais de uma pessoa: separe os IDs por vírgula. Use @userinfobot para descobrir o número.</small></label><div class="form-actions"><button class="action primary" type="submit" ${locked || !hermes.installed ? 'disabled' : ''}>${telegramReady ? 'Trocar token / allowlist' : 'Salvar com acesso restrito'}</button>${telegramReady ? `<button class="action" type="button" data-hermes-action="disconnect" ${locked}>Desconectar Telegram</button>` : ''}</div></form><p class="fine-print">O token vai direto para o arquivo secreto oficial do Hermes, com permissão local restrita. Não passa por argumentos de comando, Git, logs ou navegador.</p>`;
-  const gatewayBody = `<div class="gateway-actions"><button class="action primary" data-hermes-action="gateway-install" ${locked || !telegramReady ? 'disabled' : ''}>Instalar serviço 24/7</button><button class="action" data-hermes-action="gateway-start" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Iniciar</button><button class="action" data-hermes-action="gateway-stop" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Parar</button><button class="action" data-hermes-action="gateway-restart" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Reiniciar</button></div>`;
-  const doctorReady = hermes.last_doctor?.status === 'passed';
-  const doctorBody = `<div class="doctor-row"><button class="action primary" data-hermes-action="doctor" ${locked || !hermes.installed ? 'disabled' : ''}>Rodar diagnóstico</button>${hermes.last_doctor ? `<span>${badge(hermes.last_doctor.status)} · ${fmtDate(hermes.last_doctor.checked_at)}</span>` : '<span class="muted">Ainda não executado nesta sessão.</span>'}</div><div class="boundary-note"><b>Conversa continua no Telegram</b>O Cockpit configura e mostra o estado. Ele não cria um segundo chat nem copia a memória do Hermes.</div>`;
-  return `<div class="section-heading"><div><p class="eyebrow">COLEGA NO BOLSO</p><h2>Hermes + Telegram</h2></div><p>Um setup guiado, local e reversível. Provedor e Telegram são escolhas suas; o cérebro continua sendo a fonte.</p></div>
-    <div class="hermes-status"><div><span class="status-orb ${hermes.gateway.running ? 'online' : ''}"></span><div><p class="micro">ESTADO ATUAL</p><h3>${hermes.gateway.running ? 'Hermes disponível' : hermes.installed ? 'Hermes instalado, setup incompleto' : 'Hermes ainda não instalado'}</h3><p>${escapeHtml(hermes.provider_label || hermes.version || 'Aguardando detecção local')}</p></div></div>${badge(hermes.gateway.running ? 'active' : 'attention')}</div>
-    <div class="setup-list">
-      ${setupStep(1, 'Instalar o Hermes', 'Use o instalador oficial adequado à sua máquina.', hermes.installed, installBody)}
-      ${setupStep(2, 'Escolher um provedor', 'Conecte o modelo no assistente oficial e volte para atualizar o estado.', hermes.provider_configured, providerBody)}
-      ${setupStep(3, 'Conectar o cérebro', 'Defina este repositório como contexto e autorize suas skills locais.', brainReady, brainBody)}
-      ${setupStep(4, 'Conectar o Telegram', 'Guarde o token do BotFather e restrinja o bot aos IDs autorizados.', telegramReady, telegramBody)}
-      ${setupStep(5, 'Manter o gateway ligado', 'Instale o serviço local para o bot voltar após login ou reinício.', hermes.gateway.running, gatewayBody)}
-      ${setupStep(6, 'Validar e conversar', 'Rode o doctor; depois abra seu bot no Telegram e diga “quero começar”.', doctorReady, doctorBody)}
-    </div>`;
+  const ready = activation.phase === 'ready' && brainReady && telegramReady && hermes.gateway.running;
+  const botUsername = activation.bot?.username;
+  const progress = action.status === 'running' ? `<div class="activation-progress"><div><span>${Math.max(1, action.progress || 1)}%</span><b>${action.kind === 'codex-login' ? 'Aguardando autorização…' : finalizing ? 'Ligando seu colega…' : 'Preparando com segurança…'}</b></div><div class="progress-track"><i style="width:${Math.max(1, action.progress || 1)}%"></i></div>${finalizing ? '' : `<button class="text-action" data-activation-action="cancel" data-action-id="${escapeHtml(action.id)}">Cancelar</button>`}</div>` : '';
+  const oauth = action.kind === 'codex-login' && (action.verification_url || action.user_code) ? `<div class="oauth-card"><p class="micro">AUTORIZAÇÃO OPENAI</p><h4>Confirme no navegador</h4>${action.user_code ? `<strong>${escapeHtml(action.user_code)}</strong><p>Copie este código se a página pedir.</p>` : '<p>Gerando seu código seguro…</p>'}${action.verification_url ? `<a class="action primary" href="${escapeHtml(action.verification_url)}" target="_blank" rel="noreferrer">Abrir autorização →</a>` : ''}</div>` : '';
+  const prepareAction = !hermes.installed || !hermes.project_bound || !hermes.skills_trusted
+    ? `<button class="action primary activation-cta" data-activation-action="prepare" ${locked || busy ? 'disabled' : ''}>Preparar Hermes →</button>`
+    : !hermes.codex_authenticated
+      ? `<button class="action primary activation-cta" data-activation-action="codex" ${locked || busy ? 'disabled' : ''}>Autorizar Codex →</button>`
+      : '<div class="step-done-copy">Hermes instalado, Codex autorizado e cérebro conectado.</div>';
+  const botForm = brainReady && !identifying && !finalizing && !ready ? `<div class="botfather-guide"><a href="https://t.me/BotFather" target="_blank" rel="noreferrer">Abrir @BotFather ↗</a><ol><li>Envie <code>/newbot</code></li><li>Escolha nome e username</li><li>Copie o token recebido</li></ol></div><form id="telegram-activation-form" class="telegram-form telegram-single" autocomplete="off"><label>Token do BotFather<input id="telegram-token" type="password" autocomplete="off" data-1p-ignore="true" spellcheck="false" maxlength="256" placeholder="Cole o token aqui" required></label><div class="form-actions"><button class="action primary activation-cta" type="submit" ${locked || busy ? 'disabled' : ''}>Conectar meu bot →</button></div></form><p class="fine-print">O token sai deste campo imediatamente e fica somente no arquivo secreto local do Hermes.</p>` : '';
+  const identifyBody = identifying ? `<div class="identify-owner"><p class="micro">IDENTIFICAR VOCÊ</p>${activation.bot?.owner_candidate_display ? `<h4>Esta conta é você?</h4><strong>${escapeHtml(activation.bot.owner_candidate_display)}</strong><div class="owner-actions"><button class="action primary" data-activation-action="owner-confirm" data-action-id="${escapeHtml(action.id)}">Sou eu</button><button class="action" data-activation-action="owner-reject" data-action-id="${escapeHtml(action.id)}">Não sou eu</button></div>` : botUsername ? `<h4>Envie <code>/start</code> para @${escapeHtml(botUsername)}</h4><p>O Cockpit identifica a próxima conta privada. Nenhum ID precisa ser copiado.</p><a class="action primary" href="https://t.me/${escapeHtml(botUsername)}" target="_blank" rel="noreferrer">Abrir meu bot →</a><button class="text-action" data-activation-action="cancel" data-action-id="${escapeHtml(action.id)}">Cancelar busca</button>` : `<h4>Validando seu bot…</h4><p>Espere o nome do bot aparecer antes de enviar <code>/start</code>.</p>${progress}`}</div>` : '';
+  const errorBox = action.status === 'error' ? `<div class="activation-error"><b>${escapeHtml(label(action.error_code))}</b><p>Nenhuma configuração incompleta foi mantida. Você pode repetir a etapa.</p></div>` : '';
+  const steps = [
+    { title: 'Preparar o Hermes', done: brainReady, current: !brainReady || preparing, body: `${!brainReady ? '<p>O Cockpit instala o Hermes oficial, conecta este cérebro e abre a autorização do Codex.</p>' : ''}${prepareAction}${progress}${oauth}` },
+    { title: 'Conectar o Telegram', done: telegramReady, current: brainReady && !ready, body: `${!telegramReady ? '<p>Crie um bot, cole o token e mande um /start. O Cockpit cuida da allowlist.</p>' : '<div class="step-done-copy">Bot conectado com acesso privado e allow-all desligado.</div>'}${botForm}${identifyBody}${finalizing ? progress : ''}` },
+    { title: 'Começar a conversar', done: ready, current: ready, body: ready ? `<div class="ready-callout"><span class="status-orb online"></span><div><h4>Seu cérebro está no Telegram</h4><p>Gateway ativo, diagnóstico concluído e acesso restrito à sua conta.</p></div>${botUsername ? `<a class="action primary" href="https://t.me/${escapeHtml(botUsername)}" target="_blank" rel="noreferrer">Abrir conversa →</a>` : ''}</div>` : '<p>Depois da sua confirmação, o Cockpit liga o serviço e faz o diagnóstico automaticamente.</p>' },
+  ];
+  const advanced = `<details class="advanced-setup"><summary>Detalhes técnicos</summary><div class="advanced-grid"><article><b>Hermes</b><span>${escapeHtml(hermes.version || 'Não instalado')}</span></article><article><b>Provider</b><span>${escapeHtml(hermes.provider_label || 'Pendente')}</span></article><article><b>Cérebro</b><span>${brainReady ? 'Conectado' : 'Pendente'}</span></article><article><b>Gateway</b><span>${hermes.gateway.running ? 'Ativo' : 'Parado'}</span></article></div><div class="gateway-actions"><button class="action" data-hermes-action="doctor" ${locked || !hermes.installed ? 'disabled' : ''}>Rodar diagnóstico</button><button class="action" data-hermes-action="gateway-restart" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Reiniciar gateway</button>${telegramReady ? `<button class="action warn" data-hermes-action="disconnect" ${locked}>Trocar conexão</button>` : ''}</div><p class="fine-print">Providers alternativos e manutenção manual continuam disponíveis no Hermes, fora do caminho principal.</p></details>`;
+  return `<div class="section-heading hermes-heading"><div><p class="eyebrow">COLEGA NO BOLSO</p><h2>Leve seu cérebro para o Telegram</h2></div><p>Três gestos seus. Instalação, segurança e diagnóstico ficam com o Cockpit.</p></div>
+    ${state.model.demo ? '<div class="boundary-note"><b>Fluxo de aula</b>Esta é a experiência completa em demonstração. Nenhuma credencial ou serviço real é alterado.</div>' : ''}
+    ${errorBox}
+    <div class="activation-journey">${steps.map((step, index) => `<article class="journey-step ${step.done ? 'complete' : ''} ${step.current ? 'current' : ''}"><div class="journey-marker"><span>${step.done ? '✓' : index + 1}</span><i></i></div><div class="journey-content"><div class="step-heading"><div><p class="micro">${index === 0 ? 'HERMES + CODEX' : index === 1 ? 'BOTFATHER + /START' : 'PRONTO'}</p><h3>${escapeHtml(step.title)}</h3></div>${badge(step.done ? 'completed' : step.current ? 'running' : 'pending', step.done ? 'good' : step.current ? 'warn' : 'neutral')}</div>${step.body}</div></article>`).join('')}</div>
+    ${advanced}`;
 }
 
 function renderHealth() {
@@ -288,7 +311,7 @@ const titles = {
   decisions: ['Decisões', 'Evidência e consequência separadas pelo martelo humano.'],
   experiments: ['Experimentos', 'Critério antes do dado; aprendizado depois da decisão.'],
   activation: ['Ativação', 'Do primeiro contato ao contexto que volta sozinho.'],
-  hermes: ['Hermes', 'Conecte seu cérebro ao Telegram com acesso restrito.'],
+  hermes: ['Hermes', 'Três gestos para levar seu cérebro ao Telegram com acesso restrito.'],
   governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
   health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
   society: ['INEVITA', 'A comunidade distribui capacidade; o contexto do founder continua local.'],
@@ -542,24 +565,76 @@ async function performHermesAction(action) {
   }
 }
 
-async function configureTelegram(form) {
+function scheduleActivationPoll(delay = 800) {
+  clearTimeout(state.activationTimer);
+  const status = state.model?.hermes?.activation?.action?.status;
+  const identityLoading = state.model?.hermes?.activation?.bot?.identity_loading;
+  if (status !== 'running' && !identityLoading) return;
+  state.activationTimer = setTimeout(pollActivation, delay);
+}
+
+async function pollActivation() {
+  try {
+    const activation = await getJson('/api/integrations/hermes/activation');
+    if (!state.model?.hermes) return;
+    state.model.hermes.activation = activation;
+    if (state.view === 'hermes') render();
+    if (activation.action.status === 'running' || activation.bot?.identity_loading) scheduleActivationPoll(900);
+    else await loadModel();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  }
+}
+
+async function performActivationAction(actionName, actionId = '') {
+  if (state.busy || state.model.demo) return;
+  const routes = {
+    prepare: '/api/integrations/hermes/activation/prepare/start',
+    codex: '/api/integrations/hermes/activation/codex/start',
+    'owner-confirm': '/api/integrations/hermes/activation/owner/confirm',
+    'owner-reject': '/api/integrations/hermes/activation/owner/reject',
+    cancel: '/api/integrations/hermes/activation/cancel',
+  };
+  if (!routes[actionName]) return;
+  if (actionName === 'prepare' && !window.confirm('Preparar o Hermes nesta máquina? O Cockpit reutiliza versões compatíveis ou instala somente o pacote oficial verificado.')) return;
+  state.busy = true;
+  document.querySelectorAll('[data-activation-action], #telegram-activation-form input, #telegram-activation-form button').forEach((element) => { element.disabled = true; });
+  try {
+    const result = await mutate(routes[actionName], actionId ? { action_id: actionId } : {});
+    state.model.hermes.activation = result;
+    render();
+    if (actionName === 'owner-confirm') toast('Confirmado. Ligando seu colega no Telegram…');
+    else if (actionName === 'owner-reject') toast('Conta descartada. Envie /start pela conta certa.');
+    scheduleActivationPoll(250);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+    await loadModel();
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function connectTelegram(form) {
   if (state.busy || state.model.demo) return;
   const token = form.querySelector('#telegram-token')?.value.trim() || '';
-  const allowedUsers = form.querySelector('#telegram-users')?.value.split(',').map((item) => item.trim()).filter(Boolean) || [];
-  if (!token || !allowedUsers.length) {
-    toast('Informe o token e pelo menos um ID autorizado.', 'bad');
+  if (!token) {
+    toast('Cole o token recebido do BotFather.', 'bad');
     return;
   }
-  if (!window.confirm(`Autorizar ${allowedUsers.length} usuário(s) no Telegram e manter todo o resto bloqueado? O token ficará apenas no arquivo secreto local do Hermes.`)) return;
+  const replacing = state.model.hermes.telegram.token_configured;
+  if (replacing && !window.confirm('Trocar o bot conectado? A configuração atual será preservada se a nova conexão falhar.')) return;
+  form.reset();
   state.busy = true;
   form.querySelectorAll('button, input').forEach((element) => { element.disabled = true; });
   try {
-    const result = await mutate('/api/integrations/hermes/telegram', { token, allowed_users: allowedUsers });
-    form.reset();
-    toast(`Telegram configurado para ${result.allowed_user_count} usuário(s). Reinicie o gateway.`);
-    await loadModel();
+    const result = await mutate('/api/integrations/hermes/activation/telegram/start', { token });
+    state.model.hermes.activation = result;
+    render();
+    toast('Validando o bot com o Telegram…');
+    scheduleActivationPoll(250);
   } catch (error) {
     toast(label(error.message), 'bad');
+    await loadModel();
   } finally {
     state.busy = false;
   }
@@ -568,6 +643,7 @@ async function configureTelegram(form) {
 async function loadModel() {
   state.model = await getJson('/api/console');
   render();
+  scheduleActivationPoll();
 }
 
 document.addEventListener('click', (event) => {
@@ -584,6 +660,11 @@ document.addEventListener('click', (event) => {
   }
   const hermesAction = event.target.closest('[data-hermes-action]');
   if (hermesAction) { performHermesAction(hermesAction.dataset.hermesAction); return; }
+  const activationAction = event.target.closest('[data-activation-action]');
+  if (activationAction) {
+    performActivationAction(activationAction.dataset.activationAction, activationAction.dataset.actionId || '');
+    return;
+  }
   const open = event.target.closest('[data-open-routine]');
   if (open) { openDrawer(open.dataset.openRoutine); return; }
   const judgment = event.target.closest('[data-open-judgment]');
@@ -596,9 +677,9 @@ document.addEventListener('click', (event) => {
   if (action) performAction(action.dataset.routineAction);
 });
 document.addEventListener('submit', (event) => {
-  if (event.target.matches('#telegram-form')) {
+  if (event.target.matches('#telegram-activation-form')) {
     event.preventDefault();
-    configureTelegram(event.target);
+    connectTelegram(event.target);
   }
 });
 $('#close-drawer').addEventListener('click', closeDrawer);

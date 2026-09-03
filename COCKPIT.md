@@ -37,25 +37,30 @@ O comando antigo `node scripts/console-server.mjs` continua funcionando na porta
 
 ## Conectar o Hermes ao Telegram
 
-O Cockpit conduz seis passos, mas respeita as superfícies oficiais do Hermes:
+O caminho principal tem três marcos e não pede comandos de terminal:
 
-1. **Instalação:** copie o instalador oficial exibido para macOS/Linux ou Windows. O Cockpit não
-   executa instaladores remotos.
-2. **Provider:** escolha uma rota no terminal:
-   - Nous Portal — assinatura da Nous, via `hermes setup --portal`;
-   - OpenAI Codex — assinatura ChatGPT/Codex, pelo assistente `hermes model`;
-   - outro provider — API key ou endpoint compatível, também por `hermes model`.
-   A credencial do provider nunca entra no Cockpit.
-3. **Cérebro:** autorize este repositório como diretório de trabalho e confie explicitamente nas
-   skills de `.agents/skills/`. Versões antigas do Hermes precisam de `hermes update` antes.
-4. **Telegram:** crie o bot no `@BotFather`, informe o token no campo secreto e adicione pelo menos
-   um ID numérico de usuário. O ID pode ser consultado no `@userinfobot`.
-5. **Gateway:** instale o serviço do usuário e deixe-o iniciar com a sessão da máquina.
-6. **Validação:** rode o diagnóstico e mande “quero começar” para o bot.
+1. **Preparar o Hermes:** clique em “Preparar Hermes” e autorize o Codex na página oficial aberta
+   pelo Hermes. O Cockpit reutiliza uma versão compatível; se precisar instalar, baixa o instalador
+   oficial fixado, verifica SHA-256 e executa sem shell. Depois aponta o Hermes para este cérebro e
+   conecta somente as skills locais.
+2. **Conectar o Telegram:** crie um bot em `@BotFather` com `/newbot` e cole o token no campo
+   secreto. O Cockpit valida o bot e apaga o token do formulário imediatamente.
+3. **Começar a conversar:** mande `/start` em conversa privada. O Cockpit mostra a conta candidata;
+   você clica “Sou eu”. Só então ele grava a allowlist, liga o serviço e roda o diagnóstico.
 
-O token é escrito diretamente no `.env` oficial do perfil Hermes, nunca em argumento de comando.
-O arquivo recebe permissão `0600` em sistemas POSIX. O Cockpit força allowlist, mantém
-`GATEWAY_ALLOW_ALL_USERS` desligado e nunca devolve o token pela API, tela ou log.
+Você não informa provider, modelo, ID numérico, comandos do gateway ou comandos de diagnóstico. O
+Codex é o provider principal e o modelo compatível continua sendo escolhido pelo Hermes. Providers
+alternativos ficam fora do caminho principal, em configuração avançada do próprio Hermes.
+
+O token é escrito diretamente no `.env` oficial do perfil Hermes, nunca em argumento de processo.
+O arquivo e qualquer snapshot de rollback recebem permissão `0600` em sistemas POSIX. Enquanto o
+Cockpit identifica o `/start`, o gateway fica parado para evitar dois consumidores. Mensagens
+antigas, grupos e canais são ignorados. O Cockpit força allowlist, mantém os dois `ALLOW_ALL`
+desligados e nunca devolve token ou ID numérico pela API, tela ou log.
+
+Se a versão do Hermes oferecer `skills trust`, o Cockpit usa a confiança explícita do projeto. Em
+versões compatíveis sem esse comando, ele registra apenas `.agents/skills` em
+`skills.external_dirs`; a ausência do comando não bloqueia a ativação.
 
 ## Fronteira humana
 
@@ -64,19 +69,22 @@ agente pode propor uma captura, uma decisão ou uma mudança, mas a escrita cont
 aprovação do dono, conforme `AGENTS.md` e `CLAUDE.md`.
 
 O Cockpit não contém chat: a conversa acontece no Telegram. Também não configura memória avançada,
-modelos finos, Paperclip, WhatsApp ou automações sem supervisão nesta versão.
+modelos finos, Paperclip, WhatsApp, grupos do Telegram ou automações sem supervisão nesta versão.
 
 ## Roteiro curto para aula ao vivo
 
 1. Abra em `--demo` e mostre a diferença entre “IA pronta” e “contexto que volta”.
 2. Passe pelos cinco marcos sem expor os códigos T0–T4 como conteúdo principal.
 3. Mostre uma entrega esperando julgamento: output de IA continua rascunho.
-4. Conecte um Hermes real pelo fluxo guiado, usando uma credencial preparada para a aula.
-5. No Telegram, peça uma resposta sobre uma fonte do cérebro e depois peça a reutilização do
+4. Mostre em `--demo` os três gestos da ativação, sem usar credencial real na transmissão.
+5. Mostre uma conversa já preparada no Telegram: uma resposta sobre uma fonte e a reutilização do
    contexto aprovado.
 6. Volte ao Cockpit para mostrar o avanço e o rastro local.
 7. Feche na área INEVITA: o cérebro gratuito organiza o contexto individual; a comunidade
    acrescenta sistemas, referências e ciclos validados sem receber as fontes privadas.
+
+O participante faz a ativação real depois da aula, com o Cockpit normal. BotFather, autorização
+OAuth e “Sou eu” são os três gestos que permanecem humanos.
 
 Antes da transmissão, teste em uma instalação descartável, não mostre token, e-mail, ID de usuário,
 nome de cliente ou conteúdo privado na tela compartilhada.

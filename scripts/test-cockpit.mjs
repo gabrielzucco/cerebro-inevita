@@ -139,6 +139,14 @@ try {
   bindHermesProject(brain, { runner });
   assert(calls.some((call) => call.slice(1).join(' ') === `config set terminal.cwd ${brain}`));
   assert(calls.some((call) => call.slice(1).join(' ') === `skills trust ${brain}`));
+  const fallbackCalls = [];
+  const fallbackRunner = (command, args) => {
+    fallbackCalls.push([command, ...args]);
+    if (args.join(' ') === 'skills trust --help') return result('', 2);
+    return runner(command, args);
+  };
+  bindHermesProject(brain, { runner: fallbackRunner });
+  assert(fallbackCalls.some((call) => call.slice(1).join(' ') === `config set skills.external_dirs.0 ${join(brain, '.agents', 'skills')}`));
 
   disconnectHermesTelegram(brain, { runner });
   const disconnected = readFileSync(envPath, 'utf8');
@@ -169,6 +177,13 @@ try {
 
   await demoReadOnly();
   await portFallback();
+  const appSource = readFileSync(new URL('../console/app.js', import.meta.url), 'utf8');
+  assert.match(appSource, /Leve seu cérebro para o Telegram/);
+  assert.match(appSource, /Preparar o Hermes/);
+  assert.match(appSource, /Sou eu/);
+  assert.equal(appSource.includes('telegram-users'), false);
+  assert.equal(appSource.includes('userinfobot'), false);
+  assert.equal(appSource.includes('auth.json'), false);
   console.log('✓ Cockpit lê T0–T4, protege secrets do Hermes e mantém a demo sem mutações');
 } finally {
   rmSync(sandbox, { recursive: true, force: true });

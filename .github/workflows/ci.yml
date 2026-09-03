@@ -1,6 +1,6 @@
 name: motor
 
-# O motor tem 20 testes e nenhum deles pode ficar fora do push/PR: um commit ruim chegaria
+# Todos os testes do motor precisam entrar no push/PR: um commit ruim chegaria
 # ao main sem verificação — e o updater distribui a partir de release, que sai
 # do main. Este workflow é o portão que faltava.
 on:
@@ -53,7 +53,16 @@ jobs:
           Get-ChildItem -Recurse -Filter *.mjs -Path scripts, .agents/scripts |
             ForEach-Object { node --check $_.FullName }
       - name: Cockpit e bridge Hermes em Windows
-        run: node scripts/test-cockpit.mjs
+        shell: pwsh
+        run: |
+          node scripts/validate-product.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $falhou = 0
+          Get-ChildItem scripts/test-*.mjs | ForEach-Object {
+            node $_.FullName
+            if ($LASTEXITCODE -ne 0) { $falhou = 1 }
+          }
+          exit $falhou
 
   cockpit-macos:
     runs-on: macos-latest
@@ -63,4 +72,14 @@ jobs:
         with:
           node-version: '20'
       - name: Cockpit e bridge Hermes em macOS
-        run: node scripts/test-cockpit.mjs
+        run: |
+          node scripts/validate-product.mjs
+          falhou=0
+          for teste in scripts/test-*.mjs; do
+            if node "$teste"; then
+              echo "✓ $teste"
+            else
+              echo "✗ $teste"; falhou=1
+            fi
+          done
+          exit $falhou

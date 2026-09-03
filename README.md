@@ -59,14 +59,17 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 ## Cockpit INEVITA (opcional)
 
 A superfície visual mostra a ativação do cérebro, Sistemas, Fontes, Rotinas, decisões e recibos.
-Também conduz a conexão do Hermes com o Telegram sem criar outro banco nem enviar teu contexto para
-a INEVITA:
+Também leva o cérebro ao Telegram em três gestos: você autoriza o Codex, cola o token criado no
+BotFather e confirma a conta que enviou `/start`. Instalação do Hermes, vínculo do contexto,
+allowlist, serviço e diagnóstico ficam com o Cockpit — sem criar outro banco nem enviar teu
+contexto para a INEVITA:
 
 ```bash
 node scripts/cockpit.mjs
 ```
 
-Ele abre no navegador em `127.0.0.1`; `--demo` mostra dados sintéticos e bloqueia todas as ações.
+Ele abre no navegador em `127.0.0.1`; `--demo` mostra a jornada completa com dados sintéticos e
+bloqueia todas as ações. A ativação real é feita depois da aula.
 Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
 exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
 Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,

@@ -24,6 +24,7 @@ import {
   readHermesStatus,
   runHermesDoctor,
 } from './lib/hermes-runtime.mjs';
+import { createHermesActivationController } from './lib/hermes-activation.mjs';
 import {
   correctionActions,
   correctionView,
@@ -104,6 +105,7 @@ function safeReason(error) {
 function assertMutation(request, sessionToken, csrfToken, payload) {
   if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
   if (!exactEqual(String(request.headers['x-cerebro-csrf'] || ''), csrfToken)) throw new Error('csrf-invalid');
+  if (!originAllowed(request)) throw new Error('origin-invalid');
   if (payload.confirm !== true) throw new Error('confirmation-required');
 }
 
@@ -146,10 +148,35 @@ function hermesActionFrom(pathname) {
   return gateway ? { kind: 'gateway', action: gateway[1] } : null;
 }
 
+function hermesActivationActionFrom(pathname) {
+  const routes = new Map([
+    ['/api/integrations/hermes/activation/prepare/start', 'prepare-start'],
+    ['/api/integrations/hermes/activation/codex/start', 'codex-start'],
+    ['/api/integrations/hermes/activation/telegram/start', 'telegram-start'],
+    ['/api/integrations/hermes/activation/owner/confirm', 'owner-confirm'],
+    ['/api/integrations/hermes/activation/owner/reject', 'owner-reject'],
+    ['/api/integrations/hermes/activation/cancel', 'cancel'],
+  ]);
+  return routes.get(pathname) || null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
   return ['127.0.0.1', 'localhost', '[::1]'].includes(hostname);
+}
+
+function originAllowed(request) {
+  const raw = String(request.headers.origin || '');
+  if (!raw) return false;
+  try {
+    const origin = new URL(raw);
+    return origin.protocol === 'http:'
+      && ['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname === '::1' ? '[::1]' : origin.hostname)
+      && origin.host.toLowerCase() === String(request.headers.host || '').toLowerCase();
+  } catch {
+    return false;
+  }
 }
 
 export function createConsoleServer({
@@ -158,6 +185,9 @@ export function createConsoleServer({
   spawnCollector,
   hermesRunner,
   hermesEnv = process.env,
+  hermesSpawn,
+  hermesFetch,
+  hermesPlatform,
   demo = false,
   clock = () => new Date(),
   sessionToken = opaqueToken(),
@@ -168,6 +198,15 @@ export function createConsoleServer({
   let lastDoctor = null;
   let hermesCache = null;
   let hermesCacheAt = 0;
+  const hermesActivation = demo ? null : createHermesActivationController({
+    root: brainRoot,
+    hermesRunner,
+    hermesEnv,
+    ...(hermesSpawn ? { spawnProcess: hermesSpawn } : {}),
+    ...(hermesFetch ? { fetcher: hermesFetch } : {}),
+    ...(hermesPlatform ? { platform: hermesPlatform } : {}),
+    clock: () => clock().getTime(),
+  });
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || '/', 'http://127.0.0.1');
     const sessionCookie = `${COOKIE_NAME}=${sessionToken}; HttpOnly; SameSite=Strict; Path=/`;
@@ -209,19 +248,54 @@ export function createConsoleServer({
           version: 'Hermes Agent · demonstração',
           provider_configured: true,
           provider_label: 'OpenAI Codex',
+          codex_authenticated: true,
           project_bound: true,
           skills_trusted: true,
           skills_trust_supported: true,
           telegram: { token_configured: true, allowlist_configured: true, allowed_user_count: 1, home_channel_configured: true, allow_all_disabled: true },
           gateway: { installed: true, running: true },
           last_doctor: { status: 'passed', checked_at: clock().toISOString() },
+          activation: {
+            phase: 'ready',
+            action: { id: null, kind: null, status: 'succeeded', progress: 100, verification_url: null, user_code: null, expires_at: null, error_code: null },
+            bot: { username: 'inevita_demo_bot', owner_candidate_display: null, connected: true },
+          },
         } : (() => {
-          if (hermesCache && Date.now() - hermesCacheAt < 3_000) return hermesCache;
-          hermesCache = readHermesStatus(brainRoot, { runner: hermesRunner, env: hermesEnv, lastDoctor });
-          hermesCacheAt = Date.now();
-          return hermesCache;
+          if (!hermesCache || Date.now() - hermesCacheAt >= 3_000) {
+            hermesCache = readHermesStatus(brainRoot, { runner: hermesRunner, env: hermesEnv, lastDoctor });
+            hermesCacheAt = Date.now();
+          }
+          return { ...hermesCache, activation: hermesActivation.status() };
         })();
         send(response, 200, { ...model, hermes });
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/integrations/hermes/activation') {
+        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        if (demo) {
+          send(response, 200, {
+            phase: 'ready',
+            action: { id: null, kind: null, status: 'succeeded', progress: 100, verification_url: null, user_code: null, expires_at: null, error_code: null },
+            bot: { username: 'inevita_demo_bot', owner_candidate_display: null, connected: true },
+          });
+        } else {
+          send(response, 200, hermesActivation.status());
+        }
+        return;
+      }
+      const activationAction = request.method === 'POST' ? hermesActivationActionFrom(url.pathname) : null;
+      if (activationAction) {
+        const payload = await body(request);
+        assertMutation(request, sessionToken, csrfToken, payload);
+        let result;
+        if (activationAction === 'prepare-start') result = hermesActivation.startPrepare();
+        else if (activationAction === 'codex-start') result = hermesActivation.startCodex();
+        else if (activationAction === 'telegram-start') result = hermesActivation.startTelegram(payload.token);
+        else if (activationAction === 'owner-confirm') result = hermesActivation.confirmOwner(payload.action_id);
+        else if (activationAction === 'owner-reject') result = hermesActivation.rejectOwner(payload.action_id);
+        else result = hermesActivation.cancel(payload.action_id);
+        hermesCache = null;
+        send(response, 202, result);
         return;
       }
       const hermesAction = request.method === 'POST' ? hermesActionFrom(url.pathname) : null;
@@ -369,12 +443,13 @@ export function createConsoleServer({
       send(response, 404, { reason_code: 'not-found' });
     } catch (error) {
       const reasonCode = safeReason(error);
-      const status = reasonCode === 'session-required' || reasonCode === 'csrf-invalid' ? 403
+      const status = ['session-required', 'csrf-invalid', 'origin-invalid'].includes(reasonCode) ? 403
         : reasonCode === 'not-found' ? 404
           : reasonCode === 'demo-read-only' ? 409 : 400;
       send(response, status, { reason_code: reasonCode });
     }
   });
+  server.once('close', () => hermesActivation?.dispose());
   return { server, sessionToken, csrfToken, root: brainRoot };
 }
 

@@ -1,5 +1,22 @@
 # Mudanças do cérebro INEVITA
 
+## v1.36.0 — 2026-09-02 · "três gestos e o cérebro chega ao Telegram"
+
+- **Ativação em três marcos:** o Cockpit prepara o Hermes, conduz o OAuth do Codex, recebe o token
+  do BotFather e transforma um `/start` privado em confirmação humana — sem terminal, escolha de
+  provider, modelo, ID numérico, gateway ou `doctor` no caminho principal.
+- **Instalador verificável:** quando necessário, o Cockpit baixa somente o instalador oficial
+  fixado no commit testado, valida SHA-256, executa sem shell e preserva versões mais novas.
+- **OAuth sem custódia paralela:** a autorização pertence ao Hermes; o Cockpit mostra apenas URL,
+  código temporário e estado. Tokens e arquivos de autenticação nunca entram na API ou no repo.
+- **Telegram default deny:** o gateway para durante a identificação, grupos e mensagens antigas são
+  ignorados, a conta candidata exige “Sou eu” e o ID fica somente na allowlist secreta. Falhas
+  restauram a configuração anterior.
+- **Compatibilidade honesta:** versões com `skills trust` usam confiança explícita; as demais ligam
+  apenas `.agents/skills` por `skills.external_dirs`, sem bloquear o cérebro nem abrir outras pastas.
+- **Aula sem risco:** `--demo` mostra o fluxo pronto e continua bloqueando toda mutação; a ativação
+  real do participante acontece depois da aula.
+
 ## v1.35.0 — 2026-09-02 · "o cérebro ganhou um cockpit e chegou ao Telegram"
 
 - **Cockpit INEVITA:** o Console local virou uma superfície completa de ativação e operação. A
