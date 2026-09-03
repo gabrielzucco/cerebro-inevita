@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/gabrielzucco/cerebro-inevita?label=vers%C3%A3o&color=C5A35A)](https://github.com/gabrielzucco/cerebro-inevita/releases)
 [![Motor: MIT](https://img.shields.io/badge/motor-MIT-green)](LICENSE)
 [![Conteúdo: CC BY-NC 4.0](https://img.shields.io/badge/conte%C3%BAdo-CC%20BY--NC%204.0-blue)](LICENSE-CONTEUDO.md)
-[![Agentes](https://img.shields.io/badge/agentes-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Gemini%20CLI%20%C2%B7%20Antigravity-black)](#comece-em-2-minutos)
+[![Agentes](https://img.shields.io/badge/agentes-Hermes%20%C2%B7%20Codex%20%C2%B7%20Claude%20Code%20%C2%B7%20Gemini-black)](#comece-em-2-minutos)
 
 Não é uma pasta pra tu baixar e esquecer. É um sistema local que lê fontes reais,
 aprende teu contexto e começa a operar contigo. A IA já é boa — e é a mesma pra todos.
@@ -32,8 +32,9 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 git clone https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
 
-Requisito: **Node.js 20+** (só a stdlib — o motor não tem nenhuma dependência externa,
-não existe `npm install`). Funciona em macOS, Linux e Windows.
+Requisito para usar a distribuição: **Node.js 20+**. O bundle visual já vem pronto e não exige
+`npm install`; as dependências de desenvolvimento só são necessárias para quem vai recompilar o
+Canvas. Funciona em macOS, Linux e Windows.
 
 Abre a pasta no teu agente e diz **"quero começar"**:
 
@@ -43,6 +44,7 @@ Abre a pasta no teu agente e diz **"quero começar"**:
 | Codex | `$comecar` ou "quero começar" |
 | Gemini CLI (grátis) | "quero começar" |
 | Antigravity (grátis) | "quero começar meu cérebro" |
+| Hermes | "quero começar" — inclusive pelo Telegram |
 | Outro agente local | ler `.agents/skills/comecar/SKILL.md` |
 
 O agente conduz o resto: primeira vitória em minutos, teu negócio dentro em seguida.
@@ -55,21 +57,28 @@ Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](
 - **Transformar uma call em trabalho** — decisões, pendências com dono, contexto que volta na próxima.
 - **Criar com a minha voz** — a peça nasce do teu contexto, tu ajusta em vez de reescrever.
 
-## Console local (opcional)
+## Cockpit INEVITA (opcional)
 
 Na primeira abertura, o cockpit mostra a **Primeira Missão** até o Cérebro provar reutilização do
 contexto. Depois de T4, a home vira `Hoje`: `Cérebro` mostra memória, recuperação, aprendizado,
 saúde e o recibo de ativação; `Sistemas` mostra apenas resultados de negócio plugados nessa base.
 `Cérebro → Atualizações` é o canal permanente para versão instalada, novidades públicas da
 INEVITA e releases. A Primeira Missão mostra só a novidade mais recente e aponta para essa central.
-Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu contexto para a
-INEVITA:
+É o mesmo núcleo visual e de protocolos do Console usado pela operação da INEVITA, adaptado à
+distribuição local. Sessão KOSMOS, Supabase, proxy, credenciais e controles hospedados não são
+distribuídos. Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu
+contexto para a INEVITA.
+
+Na aba `Telegram`, o Cockpit também prepara o Hermes, conduz a autorização do Codex e conecta um
+bot privado em três gestos: colar o token do BotFather, enviar `/start` e confirmar “Sou eu”:
 
 ```bash
-node scripts/console-server.mjs
+node scripts/cockpit.mjs
 ```
 
-Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
+Ele abre no navegador em `127.0.0.1`; `--demo` apresenta um estado controlado, sem credenciais,
+escritas ou comandos reais. A ativação real é feita depois da aula.
+Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
 exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
 Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,
 rejeitar ou propor uma ação. Um ajuste pode autorizar um novo Run, comparar baseline × resultado e
@@ -77,6 +86,8 @@ criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa a�
 governados por System Contract V2 também mostram o Context Snapshot: fontes e recortes selecionados,
 janela, frescor, lacunas e nível de garantia, sempre por referência. A Governança pode revogar um
 Access Grant para Runs futuros sem prometer apagar artefatos ou recibos já consumidos.
+
+Guia de uso, segurança e roteiro de aula: [`COCKPIT.md`](COCKPIT.md).
 
 ## O que vem dentro
 
@@ -86,7 +97,7 @@ sistemas/       trabalho recorrente vira Sistema: roda, deixa rastro, melhora
 skills/         os comandos que o agente executa (/comecar, /daily, /sistematizar…)
 meu-negocio/    TEU contexto — nasce vazio, é o que dá vida ao resto
 protocol/       contratos que mantêm tudo auditável (Capability, Run Record…)
-console/        interface localhost opcional, derivada dos mesmos contratos e recibos
+console/        Cockpit localhost, derivado dos mesmos contratos e recibos
 ```
 
 ## Privacidade e telemetria — sem letra miúda
@@ -113,7 +124,7 @@ export CEREBRO_TELEMETRY=off        # ou: touch .cerebro/sem-telemetria
   Cérebro rodando, pergunta, propõe.
 - **[Grupo no WhatsApp](https://chat.whatsapp.com/FyEWHhKdoKY5QLZnlnvFoi)** — destrave de instalação
   com quem já passou por ela.
-- **[INEVITA Society](https://inevitasociety.com/society)** — a rede que valida Sistemas em lote,
+- **[INEVITA Society](https://inevitasociety.com)** — a rede que valida Sistemas em lote,
   julga execuções e distribui capacidade em cima da base aberta.
 
 ## Versões

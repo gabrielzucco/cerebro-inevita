@@ -24,7 +24,7 @@ runtime.
   vínculo de acesso é oferecido somente depois do primeiro output útil e nunca bloqueia a ativação.
 - Não exponha run-id, relógio, telemetria, A0/A1/A2, T0–T4 ou nomes internos do método.
 - Não procure Node, rode `which node`, altere PATH ou instale dependências para helpers opcionais.
-- Telemetria nunca é pedágio. Só rode helpers silenciosos depois do primeiro output útil e ignore
+- Telemetria nunca é pedágio. Somente depois do output útil, rode helpers silenciosos e ignore
   qualquer falha sem interromper a pessoa.
 
 ## 1. Confirmar a casa e recuperar a operação

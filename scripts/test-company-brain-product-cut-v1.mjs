@@ -7,7 +7,12 @@ const root = resolve(process.cwd());
 const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const app = read('console/app.js');
 const css = read('console/styles.css');
+const index = read('console/index.html');
 const readModel = read('scripts/lib/console-read-model.mjs');
+
+assert.match(index, /<svg class="icon-definitions" hidden/, 'sprite de ícones precisa sair do fluxo visual');
+assert.match(css, /\.icon-definitions\s*\{[^}]*position:\s*absolute;[^}]*width:\s*0;[^}]*height:\s*0;/s,
+  'sprite não pode empurrar o shell e o cabeçalho para baixo');
 
 assert.doesNotMatch(app, /^import .*canvas\.bundle\.js/m, 'Canvas não pode bloquear o bootstrap');
 assert.match(app, /import\('\/canvas\.bundle\.js\?v=5'\)/, 'Canvas deve ser carregado dinamicamente');

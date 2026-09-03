@@ -38,10 +38,12 @@ jobs:
           CEREBRO_TELEMETRY: 'off'
         run: node .agents/scripts/ping.mjs --diagnose | grep -q 'desativado'
 
-  # O motor promete rodar onde o agente roda — inclusive Windows sem WSL, onde
-  # bash/curl/tar não existem. Só o updater Node é cobrado aqui.
+  # O motor promete rodar onde o agente roda. O job mantém UTF-8 explícito e
+  # cobra a mesma suíte no Windows nativo, além da checagem de sintaxe.
   windows:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -52,3 +54,34 @@ jobs:
         run: |
           Get-ChildItem -Recurse -Filter *.mjs -Path scripts, .agents/scripts |
             ForEach-Object { node --check $_.FullName }
+      - name: Suíte completa em Windows
+        shell: pwsh
+        run: |
+          node scripts/validate-product.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $falhou = 0
+          Get-ChildItem scripts/test-*.mjs | ForEach-Object {
+            node $_.FullName
+            if ($LASTEXITCODE -ne 0) { $falhou = 1 }
+          }
+          exit $falhou
+
+  cockpit-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Suíte completa em macOS
+        run: |
+          node scripts/validate-product.mjs
+          falhou=0
+          for teste in scripts/test-*.mjs; do
+            if node "$teste"; then
+              echo "✓ $teste"
+            else
+              echo "✗ $teste"; falhou=1
+            fi
+          done
+          exit $falhou

@@ -120,8 +120,10 @@ const packageFiles = [
   'changelog.md',
 ];
 for (const name of packageFiles) assert(existsSync(join(packageRoot, name)), `pacote sem ${name}`);
-assert((statSync(join(packageRoot, 'configuracao.md')).mode & 0o777) === 0o600, 'configuração não está privada');
-assert((statSync(join(packageRoot, 'feedback.md')).mode & 0o777) === 0o600, 'feedback não está privado');
+if (process.platform !== 'win32') {
+  assert((statSync(join(packageRoot, 'configuracao.md')).mode & 0o777) === 0o600, 'configuração não está privada');
+  assert((statSync(join(packageRoot, 'feedback.md')).mode & 0o777) === 0o600, 'feedback não está privado');
+}
 
 const capability = readJson(join(packageRoot, 'capability.json'));
 const contract = readJson(join(packageRoot, 'contract.json'));

@@ -37,7 +37,7 @@ import { validateCommunicationFeed } from './lib/communication-feed.mjs';
 const ROOT = resolve(process.cwd());
 const errors = [];
 const required = [
-  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md',
+  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md', 'COCKPIT.md',
   'templates/experimento.md',
   'templates/sistema/manifest.md', 'templates/sistema/configuracao.md',
   'templates/sistema/pipeline.md', 'templates/sistema/rotinas.md',
@@ -336,12 +336,12 @@ if (JSON.stringify(claudeFiles) !== JSON.stringify(agentFiles)) {
 
 for (const file of claudeFiles.filter((name) => name.endsWith('SKILL.md'))) {
   const content = readFileSync(join(ROOT, '.claude', 'skills', file), 'utf8');
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) {
     errors.push(`skill sem frontmatter: ${file}`);
     continue;
   }
-  const lines = match[1].split('\n').filter(Boolean);
+  const lines = match[1].split(/\r?\n/).filter(Boolean);
   const keys = lines.map((line) => line.split(':', 1)[0].trim());
   if (keys.join(',') !== 'name,description') errors.push(`frontmatter inválido em ${file}`);
   const name = lines.find((line) => line.startsWith('name:'))?.slice(5).trim() ?? '';

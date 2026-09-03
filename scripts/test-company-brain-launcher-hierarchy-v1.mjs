@@ -9,7 +9,7 @@ const css = readFileSync(resolve(root, 'console/styles.css'), 'utf8');
 
 assert.match(
   app,
-  /\['activation', 'canvas', 'system', 'systems', 'skills', 'society'\]\.includes\(state\.view\) \|\| state\.view === 'anatomy'/,
+  /\['activation', 'canvas', 'system', 'systems', 'skills', 'hermes', 'society'\]\.includes\(state\.view\) \|\| state\.view === 'anatomy'/,
   'Launcher e catálogo de capacidades não devem repetir o resumo operacional de Hoje',
 );
 assert.match(

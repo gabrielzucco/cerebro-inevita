@@ -42,8 +42,10 @@ try {
   assert.equal(migrated.migrated, true);
   assert.equal(readOperatorRuntime(legacy), 'codex');
   assert.equal(statSync(join(legacy, '.cerebro', 'runtime')).isDirectory(), true);
-  assert.equal(statSync(join(legacy, '.cerebro', 'runtime')).mode & 0o777, 0o700);
-  assert.equal(statSync(join(legacy, '.cerebro', 'operator-runtime')).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(join(legacy, '.cerebro', 'runtime')).mode & 0o777, 0o700);
+    assert.equal(statSync(join(legacy, '.cerebro', 'operator-runtime')).mode & 0o777, 0o600);
+  }
 
   saveCanvasLayout(legacy, 'brain', { capability: { x: 120, y: 48 } }, 'qa', {
     clock: () => new Date('2026-09-02T12:00:00.000Z'),

@@ -51,6 +51,15 @@ import {
   buildBrainUpdateCenter,
   checkLatestBrainRelease,
 } from './lib/brain-update-center.mjs';
+import {
+  bindHermesProject,
+  configureHermesTelegram,
+  controlHermesGateway,
+  disconnectHermesTelegram,
+  readHermesStatus,
+  runHermesDoctor,
+} from './lib/hermes-runtime.mjs';
+import { createHermesActivationController } from './lib/hermes-activation.mjs';
 
 // Índice derivado do conhecimento: varre SOMENTE 01-nucleo-privado (fosso, baixo
 // risco), nunca 02-dados-terceiros. Reconstruível a cada chamada; não cria verdade.
@@ -1261,13 +1270,14 @@ function safeReason(error) {
   return /^[a-z0-9-]+$/.test(message) ? message : 'request-failed';
 }
 
-function assertAuthenticatedPost(request, sessionToken, csrfToken) {
-  if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+async function assertAuthenticatedPost(request, authenticate, csrfToken) {
+  await authenticate(request);
   if (!exactEqual(String(request.headers['x-cerebro-csrf'] || ''), csrfToken)) throw new Error('csrf-invalid');
+  if (!originAllowed(request)) throw new Error('origin-invalid');
 }
 
-function assertMutation(request, sessionToken, csrfToken, payload) {
-  assertAuthenticatedPost(request, sessionToken, csrfToken);
+async function assertMutation(request, authenticate, csrfToken, payload) {
+  await assertAuthenticatedPost(request, authenticate, csrfToken);
   if (payload.confirm !== true) throw new Error('confirmation-required');
 }
 
@@ -1341,10 +1351,44 @@ function experimentDetailFrom(pathname) {
   return match?.[1] || null;
 }
 
+function hermesActionFrom(pathname) {
+  if (pathname === '/api/integrations/hermes/project/bind') return { kind: 'project-bind' };
+  if (pathname === '/api/integrations/hermes/telegram') return { kind: 'telegram-configure' };
+  if (pathname === '/api/integrations/hermes/telegram/disconnect') return { kind: 'telegram-disconnect' };
+  if (pathname === '/api/integrations/hermes/doctor') return { kind: 'doctor' };
+  const gateway = pathname.match(/^\/api\/integrations\/hermes\/gateway\/(install|start|stop|restart)$/);
+  return gateway ? { kind: 'gateway', action: gateway[1] } : null;
+}
+
+function hermesActivationActionFrom(pathname) {
+  const routes = new Map([
+    ['/api/integrations/hermes/activation/prepare/start', 'prepare-start'],
+    ['/api/integrations/hermes/activation/codex/start', 'codex-start'],
+    ['/api/integrations/hermes/activation/telegram/start', 'telegram-start'],
+    ['/api/integrations/hermes/activation/owner/confirm', 'owner-confirm'],
+    ['/api/integrations/hermes/activation/owner/reject', 'owner-reject'],
+    ['/api/integrations/hermes/activation/cancel', 'cancel'],
+  ]);
+  return routes.get(pathname) || null;
+}
+
 function hostAllowed(request) {
   const value = String(request.headers.host || '').toLowerCase();
   const hostname = value.startsWith('[') ? value.slice(0, value.indexOf(']') + 1) : value.split(':', 1)[0];
-  return ['127.0.0.1', 'localhost', '[::1]'].includes(hostname);
+  return new Set(['127.0.0.1', 'localhost', '[::1]']).has(hostname);
+}
+
+function originAllowed(request) {
+  const raw = String(request.headers.origin || '');
+  if (!raw) return false;
+  try {
+    const origin = new URL(raw);
+    return origin.protocol === 'http:'
+      && ['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname === '::1' ? '[::1]' : origin.hostname)
+      && origin.host.toLowerCase() === String(request.headers.host || '').toLowerCase();
+  } catch {
+    return false;
+  }
 }
 
 export function createConsoleServer({
@@ -1358,10 +1402,32 @@ export function createConsoleServer({
   interfaceHealthTimeoutCeilingMs = 2000,
   updateFetch = globalThis.fetch,
   updateRunner,
+  hermesRunner,
+  hermesEnv = process.env,
+  hermesSpawn,
+  hermesFetch,
+  hermesPlatform,
+  demo = false,
 } = {}) {
   const brainRoot = resolve(root || process.cwd());
   recognizeConsoleBrain(brainRoot);
   let remoteUpdate = null;
+  let lastDoctor = null;
+  let hermesCache = null;
+  let hermesCacheAt = 0;
+  const hermesActivation = demo ? null : createHermesActivationController({
+    root: brainRoot,
+    hermesRunner,
+    hermesEnv,
+    ...(hermesSpawn ? { spawnProcess: hermesSpawn } : {}),
+    ...(hermesFetch ? { fetcher: hermesFetch } : {}),
+    ...(hermesPlatform ? { platform: hermesPlatform } : {}),
+    clock: () => clock().getTime(),
+  });
+  const authenticate = async (request) => {
+    if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+    return { operatorRef: 'local-owner', canOperate: !demo, expiresAt: 'process-lifetime', sessionToken };
+  };
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || '/', 'http://127.0.0.1');
     const sessionCookie = `${COOKIE_NAME}=${sessionToken}; HttpOnly; SameSite=Strict; Path=/`;
@@ -1370,6 +1436,11 @@ export function createConsoleServer({
         send(response, 421, { reason_code: 'host-not-allowed' });
         return;
       }
+      if (request.method === 'GET' && url.pathname === '/healthz') {
+        send(response, 200, { status: 'ok', service: 'company-brain-console', demo });
+        return;
+      }
+      if (demo && request.method !== 'GET') throw new Error('demo-read-only');
       if (request.method === 'GET' && (url.pathname === '/' || url.pathname === '/rotinas')) {
         sendStatic(response, 'index.html', 'text/html; charset=utf-8', { 'Set-Cookie': sessionCookie });
         return;
@@ -1432,7 +1503,7 @@ export function createConsoleServer({
       }
       if (request.method === 'POST' && url.pathname === '/api/update/check') {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         const local = anatomyModel(brainRoot).update_center;
         remoteUpdate = await checkLatestBrainRelease(local, { fetchImpl: updateFetch, clock });
         send(response, 200, { ...local, remote: remoteUpdate });
@@ -1440,7 +1511,7 @@ export function createConsoleServer({
       }
       if (request.method === 'POST' && url.pathname === '/api/update/apply') {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         if (!remoteUpdate || payload.expected_tag !== remoteUpdate.tag) throw new Error('update-check-required');
         const result = await applyManagedBrainUpdate(brainRoot, remoteUpdate, {
           engineRoot: ENGINE_ROOT,
@@ -1493,8 +1564,8 @@ export function createConsoleServer({
       const decisionCaseAction = request.method === 'POST' ? decisionCaseActionFrom(url.pathname) : null;
       if (decisionCaseAction) {
         const payload = await body(request);
-        if (decisionCaseAction.action === 'preview') assertAuthenticatedPost(request, sessionToken, csrfToken);
-        else assertMutation(request, sessionToken, csrfToken, payload);
+        if (decisionCaseAction.action === 'preview') await assertAuthenticatedPost(request, authenticate, csrfToken);
+        else await assertMutation(request, authenticate, csrfToken, payload);
         const approvedBy = actor(payload);
         if (decisionCaseAction.action === 'rollback') {
           const result = rollbackDecisionCase(brainRoot, decisionCaseAction.caseId, {
@@ -1535,24 +1606,104 @@ export function createConsoleServer({
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/session') {
-        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
-        send(response, 200, { csrf_token: csrfToken, expires: 'process-lifetime' });
+        const access = await authenticate(request);
+        send(response, 200, {
+          csrf_token: csrfToken,
+          expires: access.expiresAt,
+          can_operate: access.canOperate,
+          demo,
+        });
         return;
       }
       if (request.method === 'GET' && url.pathname === '/api/console') {
-        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
-        send(response, 200, buildConsoleReadModel(brainRoot, { now: clock() }));
+        await authenticate(request);
+        const local = buildConsoleReadModel(brainRoot, { now: clock() });
+        const hermes = demo ? {
+          installed: true,
+          version: 'Hermes Agent · demonstração',
+          provider_configured: true,
+          provider_label: 'OpenAI Codex',
+          codex_authenticated: true,
+          project_bound: true,
+          skills_trusted: true,
+          skills_trust_supported: true,
+          telegram: { token_configured: true, allowlist_configured: true, allowed_user_count: 1, home_channel_configured: true, allow_all_disabled: true },
+          gateway: { installed: true, running: true },
+          last_doctor: { status: 'passed', checked_at: clock().toISOString() },
+          activation: {
+            phase: 'ready',
+            action: { id: null, kind: null, status: 'succeeded', progress: 100, verification_url: null, user_code: null, expires_at: null, error_code: null },
+            bot: { username: 'inevita_demo_bot', owner_candidate_display: null, connected: true },
+          },
+        } : (() => {
+          if (!hermesCache || Date.now() - hermesCacheAt >= 3_000) {
+            hermesCache = readHermesStatus(brainRoot, { runner: hermesRunner, env: hermesEnv, lastDoctor });
+            hermesCacheAt = Date.now();
+          }
+          return { ...hermesCache, activation: hermesActivation.status() };
+        })();
+        send(response, 200, { ...local, demo, hermes });
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/api/integrations/hermes/activation') {
+        await authenticate(request);
+        if (demo) {
+          send(response, 200, {
+            phase: 'ready',
+            action: { id: null, kind: null, status: 'succeeded', progress: 100, verification_url: null, user_code: null, expires_at: null, error_code: null },
+            bot: { username: 'inevita_demo_bot', owner_candidate_display: null, connected: true },
+          });
+        } else {
+          send(response, 200, hermesActivation.status());
+        }
+        return;
+      }
+      const activationAction = request.method === 'POST' ? hermesActivationActionFrom(url.pathname) : null;
+      if (activationAction) {
+        const payload = await body(request);
+        await assertMutation(request, authenticate, csrfToken, payload);
+        let result;
+        if (activationAction === 'prepare-start') result = hermesActivation.startPrepare();
+        else if (activationAction === 'codex-start') result = hermesActivation.startCodex();
+        else if (activationAction === 'telegram-start') result = hermesActivation.startTelegram(payload.token);
+        else if (activationAction === 'owner-confirm') result = hermesActivation.confirmOwner(payload.action_id);
+        else if (activationAction === 'owner-reject') result = hermesActivation.rejectOwner(payload.action_id);
+        else result = hermesActivation.cancel(payload.action_id);
+        hermesCache = null;
+        send(response, 202, result);
+        return;
+      }
+      const hermesAction = request.method === 'POST' ? hermesActionFrom(url.pathname) : null;
+      if (hermesAction) {
+        const payload = await body(request);
+        await assertMutation(request, authenticate, csrfToken, payload);
+        const options = { runner: hermesRunner, env: hermesEnv };
+        let result;
+        if (hermesAction.kind === 'project-bind') {
+          result = bindHermesProject(brainRoot, options);
+        } else if (hermesAction.kind === 'telegram-configure') {
+          result = configureHermesTelegram(brainRoot, payload, options);
+        } else if (hermesAction.kind === 'telegram-disconnect') {
+          result = disconnectHermesTelegram(brainRoot, options);
+        } else if (hermesAction.kind === 'doctor') {
+          lastDoctor = runHermesDoctor(brainRoot, options);
+          result = lastDoctor;
+        } else {
+          result = controlHermesGateway(brainRoot, hermesAction.action, options);
+        }
+        hermesCache = null;
+        send(response, 200, result);
         return;
       }
       const experimentId = request.method === 'GET' ? experimentDetailFrom(url.pathname) : null;
       if (experimentId) {
-        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        await authenticate(request);
         send(response, 200, readExperimentDetail(brainRoot, experimentId));
         return;
       }
       const graphRequest = request.method === 'GET' ? graphRequestFrom(url.pathname) : null;
       if (graphRequest) {
-        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        await authenticate(request);
         const graph = graphRequest.type === 'brain' ? buildBrainGraph(brainRoot, { now: clock() })
           : graphRequest.type === 'system' ? buildSystemGraph(brainRoot, graphRequest.ref)
             : graphRequest.type === 'run-record' ? buildRunGraph(brainRoot, `run-record:${graphRequest.ref}`)
@@ -1563,7 +1714,7 @@ export function createConsoleServer({
       const graphLayoutKey = request.method === 'PUT' ? graphLayoutFrom(url.pathname) : null;
       if (graphLayoutKey) {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         const approvedBy = actor(payload);
         const graph = graphForLayout(brainRoot, graphLayoutKey);
         const allowedNodes = new Set(graph.nodes.map((node) => node.id));
@@ -1582,7 +1733,20 @@ export function createConsoleServer({
       }
       const outputReceiptId = request.method === 'GET' ? outputReceiptFrom(url.pathname) : null;
       if (outputReceiptId) {
-        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        await authenticate(request);
+        if (demo && outputReceiptId === 'demo-run-001') {
+          const content = '# Decisões da call\n\n- Priorizar a primeira entrega antes de ampliar o escopo.\n- Reutilizar o contexto aprovado no próximo briefing.\n\n> Demonstração sintética — nenhuma fonte real foi aberta.';
+          send(response, 200, {
+            receipt: { receipt_id: outputReceiptId, receipt_ref: `routine-receipt:${outputReceiptId}`, run_id: 'demo-run', routine_id: 'calls-em-decisoes', system_ref: 'calls', trigger: 'manual', completed_at: '2026-08-28T13:22:00.000Z', output_ref: 'private-output:demo-run-001' },
+            output: { content, bytes: Buffer.byteLength(content), media_type: 'text/markdown; charset=utf-8' },
+            judgment: { current: null, summary: { status: 'pending', verdict: null, action_intent: 'none', history_count: 0 }, history: [] },
+            correction: null,
+            correction_actions: { can_rerun_with_correction: false, can_compare: false, can_create_learning_candidate: false },
+            context_available: false,
+            privacy: { content_shared_with_inevita: false, output_in_console_read_model: false, explicit_local_read: true },
+          });
+          return;
+        }
         const outputDetail = readPrivateRoutineOutput(brainRoot, outputReceiptId);
         let contextAvailable = false;
         try {
@@ -1607,14 +1771,14 @@ export function createConsoleServer({
       }
       const comparisonReceiptId = request.method === 'GET' ? comparisonReceiptFrom(url.pathname) : null;
       if (comparisonReceiptId) {
-        if (!exactEqual(cookies(request)[COOKIE_NAME], sessionToken)) throw new Error('session-required');
+        await authenticate(request);
         send(response, 200, readCorrectionComparison(brainRoot, comparisonReceiptId));
         return;
       }
       const judgmentReceiptId = request.method === 'POST' ? judgmentReceiptFrom(url.pathname) : null;
       if (judgmentReceiptId) {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         const approvedBy = actor(payload);
         if (!['approved', 'changes-requested', 'rejected'].includes(payload.verdict)) {
           throw new Error('judgment-verdict-invalid');
@@ -1644,7 +1808,7 @@ export function createConsoleServer({
       const correctionAction = request.method === 'POST' ? correctionActionFrom(url.pathname) : null;
       if (correctionAction) {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         const approvedBy = actor(payload);
         if (correctionAction.action === 'rerun-with-correction') {
           const result = await rerunWithCorrection(brainRoot, correctionAction.receiptId, approvedBy, {
@@ -1675,7 +1839,7 @@ export function createConsoleServer({
       const grantId = request.method === 'POST' ? grantRevocationFrom(url.pathname) : null;
       if (grantId) {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         const approvedBy = actor(payload);
         const result = revokeAccessGrant(brainRoot, grantId, approvedBy, { now: clock() });
         send(response, 200, {
@@ -1691,7 +1855,7 @@ export function createConsoleServer({
       const action = request.method === 'POST' ? actionFrom(url.pathname) : null;
       if (action) {
         const payload = await body(request);
-        assertMutation(request, sessionToken, csrfToken, payload);
+        await assertMutation(request, authenticate, csrfToken, payload);
         let result;
         if (action.action === 'run') {
           result = await runRoutine(brainRoot, action.routineId, {
@@ -1722,11 +1886,13 @@ export function createConsoleServer({
       send(response, 404, { reason_code: 'not-found' });
     } catch (error) {
       const reasonCode = safeReason(error);
-      const status = reasonCode === 'session-required' || reasonCode === 'csrf-invalid' ? 403
-        : reasonCode === 'not-found' ? 404 : 400;
+      const status = ['session-required', 'csrf-invalid', 'origin-invalid'].includes(reasonCode) ? 403
+        : reasonCode === 'not-found' ? 404
+          : reasonCode === 'demo-read-only' ? 409 : 400;
       send(response, status, { reason_code: reasonCode });
     }
   });
+  server.once('close', () => hermesActivation?.dispose());
   return { server, sessionToken, csrfToken, root: brainRoot };
 }
 
@@ -1742,7 +1908,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(1);
   }
   try {
-    const instance = createConsoleServer({ root: option('root') || process.env.CEREBRO_INSTALL_ROOT || process.cwd() });
+    const instance = createConsoleServer({
+      root: option('root') || process.env.CEREBRO_INSTALL_ROOT || process.cwd(),
+      demo: process.argv.includes('--demo'),
+    });
     instance.server.listen(port, '127.0.0.1', () => {
       const address = instance.server.address();
       console.log(`Company Brain Console · http://127.0.0.1:${address.port}`);
