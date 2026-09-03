@@ -147,8 +147,9 @@ try {
   };
   bindHermesProject(brain, { runner: fallbackRunner });
   const fallbackConfig = readFileSync(configPath, 'utf8');
+  const fallbackSkillRoot = join(brain, '.agents', 'skills');
   assert.match(fallbackConfig, /external_dirs:\n\s+- "/);
-  assert.match(fallbackConfig, new RegExp(join(brain, '.agents', 'skills').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert(fallbackConfig.includes(`- ${JSON.stringify(fallbackSkillRoot)}`));
   assert.equal(fallbackConfig.includes("'0':"), false);
   assert.equal(fallbackCalls.some((call) => call.slice(1).join(' ').startsWith('config set skills.external_dirs.')), false);
 
