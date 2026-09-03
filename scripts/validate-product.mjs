@@ -97,7 +97,8 @@ const required = [
   'scripts/lib/judgment-protocol.mjs',
   'scripts/lib/correction-loop.mjs',
   'scripts/lib/console-read-model.mjs', 'scripts/lib/cockpit-read-model.mjs',
-  'scripts/lib/hermes-runtime.mjs', 'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
+  'scripts/lib/hermes-runtime.mjs', 'scripts/lib/hermes-activation.mjs',
+  'scripts/console-server.mjs', 'scripts/console-bootstrap.mjs',
   'scripts/cockpit.mjs',
   'console/index.html', 'console/app.js', 'console/styles.css',
   'scripts/test-system-protocol.mjs', 'scripts/test-company-brain-protocol-v2.mjs',
@@ -105,7 +106,7 @@ const required = [
   'scripts/test-routine-runtime.mjs',
   'scripts/test-judgment-protocol.mjs',
   'scripts/test-correction-loop.mjs',
-  'scripts/test-console-server.mjs', 'scripts/test-cockpit.mjs',
+  'scripts/test-console-server.mjs', 'scripts/test-cockpit.mjs', 'scripts/test-hermes-activation.mjs',
   'scripts/test-operating-brief.mjs',
   'scripts/system-experiment.mjs', 'scripts/test-system-experiment.mjs',
   '.cerebro/private-ignore.manifest',
@@ -220,12 +221,12 @@ if (JSON.stringify(claudeFiles) !== JSON.stringify(agentFiles)) {
 
 for (const file of claudeFiles.filter((name) => name.endsWith('SKILL.md'))) {
   const content = readFileSync(join(ROOT, '.claude', 'skills', file), 'utf8');
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) {
     errors.push(`skill sem frontmatter: ${file}`);
     continue;
   }
-  const lines = match[1].split('\n').filter(Boolean);
+  const lines = match[1].split(/\r?\n/).filter(Boolean);
   const keys = lines.map((line) => line.split(':', 1)[0].trim());
   if (keys.join(',') !== 'name,description') errors.push(`frontmatter inválido em ${file}`);
   const name = lines.find((line) => line.startsWith('name:'))?.slice(5).trim() ?? '';
