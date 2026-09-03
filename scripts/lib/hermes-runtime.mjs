@@ -129,6 +129,81 @@ function writeHermesEnv(options, changes) {
   if (process.platform !== 'win32') chmodSync(envPath, 0o600);
 }
 
+function rewriteYamlList(text, dottedKey, values) {
+  const [parentKey, childKey, ...rest] = dottedKey.split('.');
+  if (!parentKey || !childKey || rest.length) throw new Error('hermes-config-key-invalid');
+  const newline = String(text).includes('\r\n') ? '\r\n' : '\n';
+  const lines = String(text || '').split(/\r?\n/);
+  if (lines.at(-1) === '') lines.pop();
+  const indentation = (line) => line.match(/^[ \t]*/)?.[0].replaceAll('\t', '  ').length || 0;
+  const isContent = (line) => line.trim() && !line.trimStart().startsWith('#');
+  const mapping = (line) => line.match(/^(\s*)([A-Za-z0-9_-]+):(?:\s*(.*))?$/);
+  const rendered = [
+    `  ${childKey}:`,
+    ...values.map((value) => `    - ${JSON.stringify(String(value))}`),
+  ];
+
+  let parentIndex = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = mapping(lines[index]);
+    if (match && indentation(lines[index]) === 0 && match[2] === parentKey) {
+      if (match[3] && match[3].trim() !== '{}') throw new Error('hermes-config-shape-unsupported');
+      if (match[3]) lines[index] = `${parentKey}:`;
+      parentIndex = index;
+      break;
+    }
+  }
+  if (parentIndex < 0) {
+    if (lines.length && lines.at(-1) !== '') lines.push('');
+    lines.push(`${parentKey}:`, ...rendered);
+    return `${lines.join(newline)}${newline}`;
+  }
+
+  let parentEnd = lines.length;
+  for (let index = parentIndex + 1; index < lines.length; index += 1) {
+    if (isContent(lines[index]) && indentation(lines[index]) === 0) {
+      parentEnd = index;
+      break;
+    }
+  }
+  let childIndex = -1;
+  for (let index = parentIndex + 1; index < parentEnd; index += 1) {
+    const match = mapping(lines[index]);
+    if (match && indentation(lines[index]) === 2 && match[2] === childKey) {
+      childIndex = index;
+      break;
+    }
+  }
+  if (childIndex < 0) {
+    lines.splice(parentEnd, 0, ...rendered);
+    return `${lines.join(newline)}${newline}`;
+  }
+
+  let childEnd = parentEnd;
+  for (let index = childIndex + 1; index < parentEnd; index += 1) {
+    if (isContent(lines[index]) && indentation(lines[index]) <= 2) {
+      childEnd = index;
+      break;
+    }
+  }
+  lines.splice(childIndex, childEnd - childIndex, ...rendered);
+  return `${lines.join(newline)}${newline}`;
+}
+
+function writeHermesConfigList(options, dottedKey, values) {
+  const { configPath } = hermesPaths(options);
+  if (existsSync(configPath) && lstatSync(configPath).isSymbolicLink()) {
+    throw new Error('hermes-config-symlink-denied');
+  }
+  const current = existsSync(configPath) ? readFileSync(configPath, 'utf8') : '';
+  const next = rewriteYamlList(current, dottedKey, values);
+  const temporary = `${configPath}.cockpit-${randomBytes(8).toString('hex')}.tmp`;
+  writeFileSync(temporary, next, { mode: 0o600, flag: 'wx' });
+  if (process.platform !== 'win32') chmodSync(temporary, 0o600);
+  renameSync(temporary, configPath);
+  if (process.platform !== 'win32') chmodSync(configPath, 0o600);
+}
+
 function allowedUsers(value) {
   const raw = Array.isArray(value) ? value : String(value || '').split(',');
   const users = [...new Set(raw.map((item) => String(item).trim()).filter(Boolean))];
@@ -329,10 +404,7 @@ export function bindHermesProject(root, options = {}) {
   const skillRoot = resolve(root, '.agents', 'skills');
   const externalSkills = yamlList(configText, 'skills.external_dirs');
   if (!pathInList(externalSkills, skillRoot)) {
-    assertSucceeded(
-      invoke(['config', 'set', `skills.external_dirs.${externalSkills.length}`, skillRoot], invokeOptions),
-      'hermes-skills-connect-failed',
-    );
+    writeHermesConfigList(invokeOptions, 'skills.external_dirs', [...externalSkills, skillRoot]);
   }
   return { status: 'bound', skills_trusted: true, skills_mode: 'external-directory' };
 }

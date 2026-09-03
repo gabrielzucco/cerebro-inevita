@@ -146,7 +146,11 @@ try {
     return runner(command, args);
   };
   bindHermesProject(brain, { runner: fallbackRunner });
-  assert(fallbackCalls.some((call) => call.slice(1).join(' ') === `config set skills.external_dirs.0 ${join(brain, '.agents', 'skills')}`));
+  const fallbackConfig = readFileSync(configPath, 'utf8');
+  assert.match(fallbackConfig, /external_dirs:\n\s+- "/);
+  assert.match(fallbackConfig, new RegExp(join(brain, '.agents', 'skills').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.equal(fallbackConfig.includes("'0':"), false);
+  assert.equal(fallbackCalls.some((call) => call.slice(1).join(' ').startsWith('config set skills.external_dirs.')), false);
 
   disconnectHermesTelegram(brain, { runner });
   const disconnected = readFileSync(envPath, 'utf8');
