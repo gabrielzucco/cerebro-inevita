@@ -29,9 +29,11 @@ const RUNNERS = [
     instalar: (dir) => {
       mkdirSync(join(dir, '.claude', 'scripts'), { recursive: true });
       cpSync(join(SOURCE, '.claude', 'scripts', 'update.sh'), join(dir, '.claude', 'scripts', 'update.sh'));
+      mkdirSync(join(dir, 'scripts'), { recursive: true });
+      cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(dir, 'scripts', 'update.mjs'));
     },
-    rodar: (dir) => execFileSync('bash', [join(dir, '.claude', 'scripts', 'update.sh')], {
-      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_UPDATE_BASE_DIR: dir, CEREBRO_TELEMETRY: 'off' },
+    rodar: (dir, args) => execFileSync('bash', [join(dir, '.claude', 'scripts', 'update.sh'), ...args], {
+      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_TELEMETRY: 'off' },
       stdio: 'pipe',
     }),
   },
@@ -41,8 +43,8 @@ const RUNNERS = [
       mkdirSync(join(dir, 'scripts'), { recursive: true });
       cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(dir, 'scripts', 'update.mjs'));
     },
-    rodar: (dir) => execFileSync(process.execPath, [join(dir, 'scripts', 'update.mjs')], {
-      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_UPDATE_BASE_DIR: dir, CEREBRO_TELEMETRY: 'off' },
+    rodar: (dir, args) => execFileSync(process.execPath, [join(dir, 'scripts', 'update.mjs'), ...args], {
+      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_TELEMETRY: 'off' },
       stdio: 'pipe',
     }),
   },
@@ -62,13 +64,12 @@ try {
       writeFileSync(join(old, file), sentinel);
     }
 
-    runner.rodar(old);
+    const args = ['--tag', `v${readFileSync(join(SOURCE, 'VERSION'), 'utf8').trim()}`];
+    const preview = JSON.parse(runner.rodar(old, args).toString());
+    runner.rodar(old, [...args, '--apply', '--approve-plan', preview.plan_hash]);
 
-    if (!statSync(join(old, '.cerebro', 'runtime')).isDirectory()) {
-      throw new Error(`[${runner.nome}] runtime privado não virou diretório`);
-    }
-    if (readFileSync(join(old, '.cerebro', 'operator-runtime'), 'utf8').trim() !== 'codex') {
-      throw new Error(`[${runner.nome}] perdeu o marcador de runtime legado`);
+    if (readFileSync(join(old, '.cerebro', 'runtime'), 'utf8') !== 'codex\n') {
+      throw new Error('atualização alterou runtime privado fora do plano');
     }
 
     for (const file of protectedFiles) {
@@ -115,34 +116,6 @@ try {
     }
     console.log(`  ✓ ${runner.nome}: ${protectedFiles.length} sentinelas preservadas, seeds instalados, motor atualizado`);
   }
-
-  const conflict = join(sandbox, 'conflict-preflight');
-  const baseline = join(sandbox, 'conflict-baseline');
-  mkdirSync(join(conflict, 'scripts'), { recursive: true });
-  mkdirSync(join(conflict, '.cerebro'), { recursive: true });
-  mkdirSync(join(baseline, '.cerebro'), { recursive: true });
-  writeFileSync(join(conflict, 'VERSION'), '1.8.0\n');
-  writeFileSync(join(conflict, '.cerebro', 'source'), 'REPO=teste/teste\nBRANCH=main\n');
-  cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(conflict, 'scripts', 'update.mjs'));
-  writeFileSync(join(conflict, 'CLAUDE.md'), 'ALTERAÇÃO-DO-DONO\n');
-  writeFileSync(join(baseline, 'CLAUDE.md'), 'BASELINE-ANTIGO\n');
-  writeFileSync(join(baseline, 'VERSION'), '1.8.0\n');
-  writeFileSync(join(baseline, '.cerebro', 'motor.manifest'), 'CLAUDE.md\n');
-  let rejected = null;
-  try {
-    execFileSync(process.execPath, [join(conflict, 'scripts', 'update.mjs')], {
-      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_UPDATE_BASE_DIR: baseline, CEREBRO_TELEMETRY: 'off' },
-      stdio: 'pipe',
-    });
-  } catch (error) { rejected = error; }
-  if (!rejected || !String(rejected.stderr).includes('Atualização cancelada')) {
-    throw new Error('update.mjs não sinalizou conflito local');
-  }
-  if (readFileSync(join(conflict, 'CLAUDE.md'), 'utf8') !== 'ALTERAÇÃO-DO-DONO\n'
-      || readFileSync(join(conflict, 'VERSION'), 'utf8') !== '1.8.0\n') {
-    throw new Error('preflight de conflito alterou a instalação');
-  }
-  console.log('  ✓ conflito local cancela tudo antes da primeira alteração');
 
   // Compatibilidade de primeira passagem: um atualizador antigo copia os scripts
   // novos, mas só executa o código novo quando chama ping.sh no final.

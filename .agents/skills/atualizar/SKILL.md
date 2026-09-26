@@ -1,42 +1,44 @@
 ---
 name: atualizar
-description: Atualiza o motor do cérebro (skills, gabaritos, conhecimento do Vale) pra última versão, sem tocar no contexto do negócio da pessoa. Use quando ela pede pra atualizar, quando aparece aviso de versão nova (ATUALIZACAO_DISPONIVEL), ou quando algo do cérebro parece desatualizado.
+description: Prepara a atualização do motor por tag explícita, mostra os conflitos e aplica o plano aprovado preservando personalizações e contexto do negócio.
 ---
 
-# Atualizar o cérebro
+# Atualizar o Cérebro
 
-Traz as últimas melhorias do **motor** (skills novas, gabaritos melhores, mais conhecimento do Vale) **sem tocar** no contexto do negócio da pessoa (`meu-negocio/`, `capturas/`, `privado/`).
+Use sempre `você`, `seu` e `sua`. Atualize a partir de uma versão exata escolhida pelo dono.
+`latest` serve apenas para descobrir novidades; não é endereço de aplicação. Nunca use `main`,
+fallback de branch ou o atualizador antigo para fazer a primeira passagem segura.
 
-## Como rodar
-1. Execute o atualizador:
+1. Leia `VERSION`, a fonte em `.cerebro/source` e a seção de atualização em `COMECE-AQUI.md`.
+   Se o updater instalado não tem prévia/`--tag`, obtenha o pacote de uma **tag fixa** em pasta
+   temporária e execute o script novo com `--root` apontando para a instalação. Nunca atualize
+   primeiro pelo script destrutivo legado para “ganhar” a versão segura.
+2. Escolha a tag publicada e confira o changelog. `v1.37.0` nos exemplos só funciona depois da
+   publicação aprovada; não anuncie disponibilidade por existir um `VERSION` no checkout.
+3. Execute a prévia, sem `--apply`:
+   ```bash
+   node /caminho/pacote/scripts/update.mjs --tag v1.37.0 --root /caminho/cerebro
    ```
-   node scripts/update.mjs
-   ```
-   (Funciona em macOS, Linux e Windows. O `bash .claude/scripts/update.sh` continua
-   existindo para cérebros antigos e cumpre o mesmo contrato.)
-2. Mostre o resultado pra pessoa. Se atualizou, **resuma o que mudou** lendo o topo do `CHANGELOG.md`.
-3. **Depois de mostrar o resumo útil da atualização**, trate o vínculo de acesso no máximo uma vez
-   quando o atualizador imprimir `VINCULO_DE_ACESSO_PENDENTE`: confira
-   `.cerebro/install-credential`, `.cerebro/acesso-email` e `.cerebro/acesso-dispensado`.
-   - **Um dos dois existe** → a instalação já tem dono. Não pergunte nada.
-   - **Nenhum existe** → ofereça, em uma frase:
+   Mostre os arquivos que mudarão, conflitos, tag e `plan_hash`. Sem recibo anterior, arquivos
+   existentes diferentes do pacote são conflitos de origem desconhecida. Preserve a dúvida;
+   não aceite todos automaticamente. O conteúdo fora do bloco gerenciado do `CLAUDE.md` é do
+   membro. Um CLAUDE legado sem marcadores é preservado inteiro e recebe o bloco novo ao final;
+   proponha revisão de instruções duplicadas/contraditórias, nunca as apague por conta própria.
+4. Peça aprovação do plano concreto. Só então acrescente `--apply --approve-plan <plan_hash>`
+   ao mesmo comando. O hash deve vir da prévia que a pessoa viu; mudança em arquivos ou pacote
+   exige nova prévia e nova aprovação. Não contorne conflitos para concluir uma atualização.
+5. Confira `VERSION`, o resultado e o backup em `.cerebro/update-backups/`. Resuma as mudanças
+   úteis. O recibo `.cerebro/update-state.json` permite distinguir futuras edições locais. Backups
+   contêm conteúdo privado: nunca stage, upload ou compartilhamento.
+6. Se aparecer `RUNTIME_LEGADO`, o arquivo privado de runtime precisa de migração separada antes
+   de gravar estado no cockpit. Leia `scripts/post-update.mjs`, apresente os caminhos e peça
+   aprovação antes de executá-lo. O updater não executa código pós-update ou ping automaticamente.
 
-     > Antes de fechar: qual e-mail você usou para pegar o acesso ao Cérebro? As atualizações e a
-     > recuperação de acesso ficam vinculadas a ele.
+A entrada `bash .claude/scripts/update.sh` encaminha para o mesmo planejador Node 20+ e aceita
+os mesmos argumentos. Sem Node ou planejador seguro, para sem escrever. Arquivos extras em
+skills/diretórios do motor são preservados; arquivos obsoletos não são apagados automaticamente.
 
-     Grave a resposta em `.cerebro/acesso-email` (só o e-mail, uma linha, modo 0600) e rode
-     `node .agents/scripts/ping.mjs sessao` em silêncio. Se a pessoa não tem acesso ainda, aponte
-     `https://lp.inevitasociety.com/cerebro`; se já se cadastrou e não lembra,
-     `https://inevitasociety.com/comunidade/cerebro/recuperar`. Se ela não quiser responder agora,
-     grave `.cerebro/acesso-dispensado` e siga sem insistir — a atualização nunca fica refém do
-     vínculo. O e-mail fica fora das notas e do Git.
-4. Se der erro de download, diga pra ela conferir a conexão — e tranquilize: **o contexto dela está intacto** (o script não começa a sobrescrever sem ter baixado tudo antes).
-
-## Regras
-- **Nunca** edite à mão `meu-negocio/`, `capturas/` ou `privado/` durante a atualização — o script já é blindado pra não tocar nelas.
-- Skills que a própria pessoa criou (fora da lista do motor) **são preservadas**.
-- A atualização vem da **última release publicada**, não do último commit — o que chega
-  na máquina dela passou por versão.
-- Se ela perguntar "o que vem por aí", aponte o `CHANGELOG.md`.
-
-> **Por que isso importa (a lei da portabilidade):** o motor (o *harness* — skills, gabaritos) é nosso e atualiza; **o teu contexto vive em arquivo aberto, é teu, e nenhuma atualização toca nele**. Ferramenta se troca; capital não se abandona. No Vale: *"if you don't own your harness, you don't own your memory."*
+Em falha, leia o resultado: antes da aplicação nada foi escrito; falha durante a escrita tenta
+restaurar os arquivos do plano e mantém backup. Não prometa restauração completa em falta de disco
+ou encerramento abrupto. Não remova locks ou backups sem conferir o processo e os arquivos.
+O update não edita o contexto para resolver erro nem pede acesso à conta para poder continuar.

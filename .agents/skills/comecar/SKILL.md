@@ -29,6 +29,17 @@ runtime.
 
 ## 1. Confirmar a casa e recuperar a operação
 
+Antes de iniciar ou retomar a ativação, se o pedido for instalar/reinstalar ou se encontrar um
+Cérebro existente sem escolha explícita, mostre três caminhos: **usar o existente**, **instalar
+novo em pasta nova** ou **migrar**. Isso vale mesmo quando há apenas uma instalação. Pergunte:
+“Você quer continuar neste Cérebro, criar um novo em outra pasta ou planejar a migração?”
+A escolha vem antes de gravação, telemetria ou sprint. Pedido explícito de “novo/limpo/reinstalar
+em outra pasta” escolhe o segundo caminho; nunca reutilize a pasta antiga por conveniência.
+Usar o existente permite `auditar-cerebro`; novo segue a tag fixa em `COMECE-AQUI.md`; migrar
+ativa `migrar-cerebro` na fase de planejamento. Se a pessoa já escolheu, não pergunte de novo.
+O menu de instalação só aparece nessa decisão concreta; não substitui a conversa de ativação.
+
+
 Confirme em uma frase que o trabalho será gravado na pasta local atual e que as fontes não serão
 movidas nem alteradas sem autorização. Procure uma operação concreta na mensagem atual,
 `operacao/decisoes-pendentes/onboarding.md` ou nos arquivos que a pessoa já autorizou.

@@ -21,6 +21,8 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 | `teste` | mede o cérebro inteiro com perguntas-canário |
 | `metodo` | explica e aplica Engenharia de Contexto |
 | `society` | sincroniza o acervo exclusivo de quem é membro pagante |
+| `auditar-cerebro` | diagnostica contexto, fontes, contratos e dependências em somente leitura |
+| `migrar-cerebro` | planeja, pede aprovação e copia conteúdo com proveniência preservando origem e motor |
 | `atualizar` | atualiza motor sem tocar no que é privado |
 | `society` | sincroniza o acervo exclusivo quando existe acesso de membro |
 

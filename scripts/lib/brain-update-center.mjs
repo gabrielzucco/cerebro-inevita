@@ -3,10 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCommunicationReadModel } from './communication-feed.mjs';
+import { TAG_RE } from '../update.mjs';
 
 const PRODUCT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const REPO_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-const TAG_RE = /^v?[0-9][A-Za-z0-9._-]{0,31}$/;
 
 function readText(path) {
   try { return readFileSync(path, 'utf8').trim(); } catch { return null; }
@@ -184,9 +184,10 @@ export async function applyManagedBrainUpdate(brainRoot, remote, {
   if (remote?.status !== 'update-available' || !TAG_RE.test(remote.tag || '')) {
     throw new Error('update-check-required');
   }
-  const script = join(root, 'scripts', 'update.mjs');
+  // O updater antigo pode ignorar --tag e apagar pastas; executar o motor desta versão.
+  const script = join(resolve(engineRoot), 'scripts', 'update.mjs');
   try {
-    await runner(process.execPath, [script], {
+    await runner(process.execPath, [script, '--root', root, '--tag', remote.tag, '--apply'], {
       cwd: root,
       env: { ...process.env, CEREBRO_UPDATE_REQUIRE_RELEASE: '1' },
       timeout: 120_000,
@@ -197,6 +198,7 @@ export async function applyManagedBrainUpdate(brainRoot, remote, {
     throw new Error('managed-update-failed');
   }
   const updated = buildBrainUpdateCenter(root, { engineRoot });
+  if (updated.installation.version !== remote.tag.slice(1)) throw new Error('managed-update-version-mismatch');
   return {
     status: 'updated',
     previous_version: center.installation.version,

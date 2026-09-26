@@ -39,3 +39,8 @@ comunidade/minhas-contribuicoes/aprovadas/*
 !comunidade/minhas-contribuicoes/aprovadas/_LEIA.md
 comunidade/minhas-contribuicoes/enviadas/*
 !comunidade/minhas-contribuicoes/enviadas/_LEIA.md
+
+# Recibos e backups de atualização permanecem locais.
+.cerebro/update-state.json
+.cerebro/update-backups/
+.cerebro/update.lock

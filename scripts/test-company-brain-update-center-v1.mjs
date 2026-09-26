@@ -104,6 +104,7 @@ try {
       runnerCalled = true;
       assert.equal(executable, process.execPath);
       assert.equal(args[0], join(managedBrain, 'scripts', 'update.mjs'));
+      assert.deepEqual(args.slice(1), ['--root', managedBrain, '--tag', 'v1.33.0', '--apply']);
       assert.equal(options.cwd, managedBrain);
       assert.equal(options.env.CEREBRO_UPDATE_REQUIRE_RELEASE, '1');
       write(join(managedBrain, 'VERSION'), '1.33.0\n');
@@ -139,7 +140,11 @@ try {
   for (const endpoint of ['/api/update', '/api/update/check', '/api/update/apply']) {
     assert(server.includes(endpoint), `servidor sem endpoint: ${endpoint}`);
   }
-  assert(updater.includes("CEREBRO_UPDATE_REQUIRE_RELEASE === '1'"), 'Console precisa exigir release publicada');
+  assert(!updater.includes('/releases/latest'), 'aplicação nunca consulta latest novamente');
+  await assert.rejects(() => applyManagedBrainUpdate(managedBrain, { status: 'update-available', tag: 'v1.34.0' }, {
+    engineRoot: managedBrain,
+    runner: async () => write(join(managedBrain, 'VERSION'), '1.35.0\n'),
+  }), /managed-update-version-mismatch/);
   for (const selector of ['.brain-mode-bar', '.brain-version-chip', '.brain-update-now', '.brain-news', '.brain-release-board', '.brain-update-grid', '.brain-update-boundary']) {
     assert(css.includes(selector), `estilo ausente: ${selector}`);
   }
