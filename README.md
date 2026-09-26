@@ -29,8 +29,12 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 ## Comece em 2 minutos
 
 ```bash
-git clone https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
+git clone --branch v1.37.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
+
+Escolha uma tag publicada. `v1.37.0` está preparada localmente e depende de publicação aprovada.
+Se já existe um Cérebro, escolha usar o existente, instalar em pasta nova ou planejar a migração;
+o agente não reutiliza a pasta por conta própria. Veja [instalação e atualização segura](COMECE-AQUI.md).
 
 Requisito: **Node.js 20+** (só a stdlib — o motor não tem nenhuma dependência externa,
 não existe `npm install`). Funciona em macOS, Linux e Windows.

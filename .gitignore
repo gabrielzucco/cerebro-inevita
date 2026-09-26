@@ -71,3 +71,7 @@ __pycache__/
 # Local backups of platform routing changes
 .cerebro/platform-migration-backup/
 .cerebro/migrate-platform.mjs
+# Recibos e backups de atualização permanecem locais.
+.cerebro/update-state.json
+.cerebro/update-backups/
+.cerebro/update.lock

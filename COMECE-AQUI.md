@@ -36,9 +36,61 @@ trabalho. Só peça para abrir uma nova sessão quando o ambiente realmente não
 ou executar aqui. Antes disso, grave a primeira tarefa e o estágio em
 `operacao/decisoes-pendentes/onboarding.md`; a sessão seguinte retoma sem repetir perguntas.
 
-Quando houver mais de um Cérebro no computador, o agente mostra as opções e a pessoa escolhe. Ele
-nunca decide sozinho qual é o “real” ou “de teste”. “Novo e limpo” significa criar outra pasta sem
-alterar ou apagar nenhuma instalação existente.
+### Instalar, reinstalar ou continuar
+
+Ao encontrar um Cérebro existente, o agente oferece **três caminhos**, mesmo que só exista um:
+
+1. **Usar o existente:** você escolhe a pasta e pode pedir `auditar-cerebro` antes de continuar.
+2. **Instalar novo em pasta nova:** você escolhe outro destino; a instalação anterior fica intacta.
+3. **Migrar:** `migrar-cerebro` faz primeiro um plano de classificação e fontes; só copia depois
+   da sua aprovação, com proveniência, sem mover a origem ou alterar o motor.
+
+O agente nunca decide sozinho qual é o “real” ou “de teste”. Pedido de novo/limpo não autoriza
+reaproveitar ou limpar a pasta encontrada. Nenhuma escolha conecta automaticamente CRM, banco ou
+Drive. Essas fontes podem ser consideradas mesmo sem arquivos locais.
+
+### Versão fixa para instalar e atualizar
+
+Escolha uma tag publicada, como `v1.37.0`, em Releases. **Esta versão está preparada localmente;
+o exemplo só ficará disponível após a publicação aprovada.** Não use `main` ou `latest` como
+fonte de instalação. O `VERSION` de um checkout não prova que a release está publicada.
+
+Para obter o pacote e o atualizador seguro, clone a tag escolhida em uma **pasta nova**:
+
+```bash
+git clone --branch v1.37.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.37.0
+```
+
+A pasta clonada já pode ser usada como Cérebro após a sua escolha explícita. Se preferir uma
+instalação gerenciada em outra pasta, o instalador copia apenas motor e seeds do pacote:
+
+```bash
+node pacote-1.37.0/scripts/install.mjs --tag v1.37.0 --destination /caminho/novo-cerebro
+node pacote-1.37.0/scripts/install.mjs --tag v1.37.0 --destination /caminho/novo-cerebro --apply
+```
+
+O primeiro comando mostra a prévia. Execute o segundo apenas depois de aprová-la. Destino
+existente devolve as três opções e não escreve. A versão do pacote precisa coincidir com a tag.
+Node.js 20+ é necessário para esses scripts; sem runtime, o agente pode orientar o plano.
+
+**Primeira atualização de uma instalação antiga:** use o script seguro da tag nova em separado.
+O script antigo pode apagar personalizações antes de receber a correção; não o execute.
+
+```bash
+node pacote-1.37.0/scripts/update.mjs --tag v1.37.0 --root /caminho/cerebro-existente
+```
+
+A prévia lista conflitos e seu `plan_hash`. Após revisar e aprovar esse plano, repita o comando
+com `--apply --approve-plan HASH_DA_PREVIA`. Se qualquer conteúdo mudar, revise uma nova prévia.
+O updater não consulta latest novamente e não recorre a main se o download da tag falhar.
+Arquivos fora do pacote permanecem, inclusive skills próprias. Texto fora do bloco
+`INEVITA:MANAGED` no `CLAUDE.md` é preservado; um arquivo legado sem bloco fica inteiro antes
+do bloco novo. Revise eventuais regras duplicadas sem descartá-las automaticamente.
+
+Backups ficam em `.cerebro/update-backups/`, privados e fora do Git. Arquivos retirados do pacote
+não são removidos automaticamente. A migração privada de runtime, se necessária, aparece como
+próximo passo separado; não roda nem envia telemetria durante a atualização. O Console só aplica
+atualizações sem conflitos; para revisar personalizações use `atualizar` e a prévia acima.
 
 ### Cérebro existente não é a mesma coisa que contexto existente
 

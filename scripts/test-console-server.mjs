@@ -306,7 +306,7 @@ try {
   const skillsCatalog = await request(base, '/api/skills', { cookie });
   assert.equal(skillsCatalog.status, 200);
   assert.equal(skillsCatalog.value.counts.company, 0);
-  assert.equal(skillsCatalog.value.counts.engine, 19, 'inclui a skill de transcrição preservada neste fork');
+  assert.equal(skillsCatalog.value.counts.engine, 21, 'inclui a skill de transcrição preservada neste fork e as skills de auditoria e migração');
   assert.equal(skillsCatalog.value.privacy.skill_body_exposed, false);
   const societyCatalog = await request(base, '/api/society', { cookie });
   assert.equal(societyCatalog.status, 200);

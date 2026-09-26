@@ -32,7 +32,7 @@ export function migratePlatform(root,{apply=false}={}) {
   const source=safe('.cerebro/source');
   if(existsSync(source)) {
     const before=readFileSync(source,'utf8');
-    const after=before.replace(/^REPO=gabrielzucco\/cerebro-inevita\s*$/m,'REPO=vinicius-leveron/cerebro-inevita');
+    const after=before.replace(/^REPO=vinicius-leveron\/cerebro-inevita\s*$/m,'REPO=gabrielzucco/cerebro-inevita');
     if(after!==before)changes.push({file:'.cerebro/source',path:source,before,after,mode:lstatSync(source).mode&0o777});
   }
   if(!apply||!changes.length)return {applied:false,files:changes.map(c=>c.file)};

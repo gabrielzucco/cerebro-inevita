@@ -1,5 +1,6 @@
 # Arquivos e pastas que FORMAM o motor do cérebro.
-# O /atualizar sobrescreve SÓ o que está listado aqui.
+# Diretórios são expandidos nos arquivos PRESENTES no pacote; nunca são removidos.
+# Arquivos extras do membro permanecem. Alterações locais aparecem como conflitos.
 # NUNCA liste meu-negocio/, capturas/ ou privado/ — são do dono do cérebro.
 CLAUDE.md
 AGENTS.md
@@ -31,6 +32,8 @@ CHANGELOG.md
 .claude/skills/operar
 .claude/skills/briefing-comercial
 .claude/skills/atualizar
+.claude/skills/auditar-cerebro
+.claude/skills/migrar-cerebro
 .claude/skills/metodo
 .claude/skills/guardar
 .claude/skills/daily

@@ -1,5 +1,20 @@
 # Mudanças do cérebro INEVITA
 
+## v1.37.0 — preparada, sem publicação
+
+Complemento local de 26/09/2026:
+
+- Canal da distribuição volta a ser `gabrielzucco/cerebro-inevita`; `migrate-platform` aponta
+  instalações do canal anterior (`vinicius-leveron/cerebro-inevita`) para ele.
+- Instalação e atualização exigem tag explícita e conferem a versão do pacote.
+- Atualizador mostra prévia/conflitos, preserva skills próprias e texto local do CLAUDE.md,
+  cria backup privado e restaura os arquivos do plano em falha recuperável.
+- Instalação encontrada oferece continuar, criar outra pasta ou planejar migração.
+- Skills `auditar-cerebro` (somente leitura) e `migrar-cerebro` (aprovação antes da cópia).
+- Migração de runtime privado passa a ser etapa separada; update não dispara pós-update/ping.
+- Atualizadores antigos precisam ser substituídos pelo uso do script seguro da tag em pasta
+  separada ANTES da primeira atualização. Notas e checklist em `docs/releases/1.37.0.md`.
+
 ## v1.36.1 — 2026-09-06 · Endereço estável da plataforma
 
 - Ativação, telemetria, instalação de Sistemas e Society usam o proxy do domínio INEVITA.
