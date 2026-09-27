@@ -1,6 +1,27 @@
 # Mudanças do cérebro INEVITA
 
-## v1.37.0 — preparada, sem publicação
+## v1.38.0 — 2026-09-27 · Candidato unificado para piloto, sem publicação
+
+- Uma linha para o membro no canal oficial `gabrielzucco/cerebro-inevita`: Cockpit com
+  Hermes/Telegram, redesenho de 23/09, instalação e migração com prévia.
+- Para 1.34.2: entram o Cockpit, a Central de Atualizações, os fluxos de trabalho e o
+  atualizador seguro. Para 1.36.1: entram Hermes/Telegram, redesenho e instalação por tag.
+  Para 1.37.x: esta versão reúne as duas linhas e exige atualização pelo script deste pacote.
+- Atualização com tag e VERSION conferidos, baseline da versão antiga, plano com hash,
+  conflito que cancela antes da escrita, backup privado, rollback, lock, preservação de
+  skills próprias e do texto fora do bloco gerenciado do `CLAUDE.md`.
+- Telegram é condição de aceite do piloto real: confirmar autorização, identificação,
+  allowlist, diagnóstico e resposta com fonte, sem envio automático nesta candidata.
+- A 1.37.0 preparada em 26/09 e a 1.37.1 do fork ficam incorporadas nesta candidata;
+  nenhuma delas é release desta branch. Detalhes em `docs/releases/1.38.0.md`.
+
+## v1.37.1 — histórico do fork, incorporado à 1.38.0
+
+- Resultado e origem aparecem juntos no Cockpit; correção e aprovação têm estados distintos.
+- O preflight da atualização cancela quando encontra arquivo do motor alterado localmente.
+- O caminho Bash delega ao atualizador Node multiplataforma.
+
+## v1.37.0 — proposta anterior, substituída pela candidata 1.38.0
 
 Complemento local de 26/09/2026:
 

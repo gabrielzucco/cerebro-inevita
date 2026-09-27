@@ -64,7 +64,9 @@ try {
       writeFileSync(join(old, file), sentinel);
     }
 
-    const args = ['--tag', `v${readFileSync(join(SOURCE, 'VERSION'), 'utf8').trim()}`];
+    const baseline = `${old}-baseline`;
+    cpSync(old, baseline, { recursive: true });
+    const args = ['--tag', `v${readFileSync(join(SOURCE, 'VERSION'), 'utf8').trim()}`, '--baseline-dir', baseline];
     const preview = JSON.parse(runner.rodar(old, args).toString());
     runner.rodar(old, [...args, '--apply', '--approve-plan', preview.plan_hash]);
 

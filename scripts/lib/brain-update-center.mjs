@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -109,7 +108,8 @@ export function buildBrainUpdateCenter(brainRoot, {
       mode: existsSync(join(engine, '.git')) ? 'development-checkout' : 'packaged-release',
       source: { repo: checkSource.repo, branch: checkSource.branch },
       can_check: Boolean(checkSource.repo),
-      can_apply: managed,
+      // A UI ainda não apresenta o plano/hash; aplicar daqui violaria a prévia obrigatória.
+      can_apply: false,
       target_version: managed ? installation.version : motor.version,
     },
     society: {
@@ -165,46 +165,6 @@ export async function checkLatestBrainRelease(center, {
   };
 }
 
-function defaultRunner(executable, args, options) {
-  return new Promise((resolveRun, rejectRun) => {
-    execFile(executable, args, options, (error) => {
-      if (error) rejectRun(error);
-      else resolveRun();
-    });
-  });
-}
-
-export async function applyManagedBrainUpdate(brainRoot, remote, {
-  engineRoot = PRODUCT_ROOT,
-  runner = defaultRunner,
-} = {}) {
-  const root = resolve(brainRoot);
-  const center = buildBrainUpdateCenter(root, { engineRoot });
-  if (!center.motor.can_apply) throw new Error('managed-update-unavailable');
-  if (remote?.status !== 'update-available' || !TAG_RE.test(remote.tag || '')) {
-    throw new Error('update-check-required');
-  }
-  // O updater antigo pode ignorar --tag e apagar pastas; executar o motor desta versão.
-  const script = join(resolve(engineRoot), 'scripts', 'update.mjs');
-  try {
-    await runner(process.execPath, [script, '--root', root, '--tag', remote.tag, '--apply'], {
-      cwd: root,
-      env: { ...process.env, CEREBRO_UPDATE_REQUIRE_RELEASE: '1' },
-      timeout: 120_000,
-      maxBuffer: 1024 * 1024,
-      windowsHide: true,
-    });
-  } catch {
-    throw new Error('managed-update-failed');
-  }
-  const updated = buildBrainUpdateCenter(root, { engineRoot });
-  if (updated.installation.version !== remote.tag.slice(1)) throw new Error('managed-update-version-mismatch');
-  return {
-    status: 'updated',
-    previous_version: center.installation.version,
-    installed_version: updated.installation.version,
-    expected_release: remote.tag,
-    restart_required: true,
-    context_uploaded: false,
-  };
+export async function applyManagedBrainUpdate() {
+  throw new Error('manual-update-preview-required');
 }

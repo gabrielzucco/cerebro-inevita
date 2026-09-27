@@ -97,13 +97,15 @@ export function mergeClaude(local, incoming) {
     : text + (text && !text.endsWith('\n') ? '\n' : '') + (text ? '\n' : '') + block + '\n');
 }
 
-export function planUpdate(root, source, tag) {
+export function planUpdate(root, source, tag, { baseline = null } = {}) {
   if (!TAG_RE.test(tag || '')) throw new Error('explicit-tag-required: use --tag vX.Y.Z');
   if (resolve(root) === resolve(source)) throw new Error('source-is-destination');
   if (bytesAt(source, 'VERSION')?.toString('utf8').trim() !== tag.slice(1)) throw new Error('package-version-mismatch');
   const stateBytes = bytesAt(root, STATE);
   const state = stateBytes ? JSON.parse(stateBytes) : { files: {} };
   if (stateBytes && (state.schema !== 1 || !state.files || typeof state.files !== 'object')) throw new Error('update-state-invalid');
+  if (baseline && bytesAt(baseline, 'VERSION')?.toString('utf8').trim()
+      !== bytesAt(root, 'VERSION')?.toString('utf8').trim()) throw new Error('baseline-version-mismatch');
   const changes = new Map();
   const owned = {};
   function add(item, incoming, kind) {
@@ -111,7 +113,8 @@ export function planUpdate(root, source, tag) {
     const after = item === 'CLAUDE.md' ? mergeClaude(before, incoming) : incoming;
     const beforeHash = before === null ? null : hash(before);
     const afterHash = hash(after);
-    const previousHash = state.files[item];
+    const baselineBytes = baseline ? bytesAt(baseline, item) : null;
+    const previousHash = state.files[item] ?? (baselineBytes === null ? null : hash(baselineBytes));
     const action = beforeHash === afterHash ? 'unchanged' : before === null ? 'create' : 'replace';
     const conflict = action === 'replace' && kind === 'motor' && item !== 'CLAUDE.md'
       && previousHash !== beforeHash;
@@ -144,7 +147,7 @@ export function planUpdate(root, source, tag) {
 }
 
 export function applyPlan(root, plan, { approvePlan, write = atomicWrite } = {}) {
-  if (plan.conflicts.length && approvePlan !== plan.digest) throw new Error('conflicts-require-approval: use --approve-plan <plan-hash> after review');
+  if (plan.conflicts.length) throw new Error(`update-conflicts: ${plan.conflicts.join(', ')}`);
   if (approvePlan && approvePlan !== plan.digest) throw new Error('plan-changed: preview again');
   const lock = safePath(root, LOCK);
   mkdirSync(dirname(lock), { recursive: true });
@@ -262,9 +265,9 @@ function args(argv) {
   const options = { root: ROOT, apply: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--apply') options.apply = true;
-    else if (['--tag', '--root', '--approve-plan'].includes(argv[i]) && argv[i + 1] && !argv[i + 1].startsWith('--')) {
+    else if (['--tag', '--root', '--approve-plan', '--baseline-dir'].includes(argv[i]) && argv[i + 1] && !argv[i + 1].startsWith('--')) {
       options[argv[i].slice(2)] = argv[++i];
-    } else throw new Error('usage: update.mjs --tag vX.Y.Z [--root path] [--apply] [--approve-plan hash]');
+    } else throw new Error('usage: update.mjs --tag vX.Y.Z [--root path] [--baseline-dir path] [--apply] [--approve-plan hash]');
   }
   if (!TAG_RE.test(options.tag || '')) throw new Error('explicit-tag-required: use --tag vX.Y.Z');
   return options;
@@ -280,7 +283,7 @@ async function main() {
     const source = process.env.CEREBRO_UPDATE_SOURCE_DIR
       ? resolve(process.env.CEREBRO_UPDATE_SOURCE_DIR)
       : await downloadPackage(repo, options.tag, temp);
-    const plan = planUpdate(root, source, options.tag);
+    const plan = planUpdate(root, source, options.tag, { baseline: options['baseline-dir'] && resolve(options['baseline-dir']) });
     console.log(JSON.stringify({ mode: 'preview', tag: plan.tag, plan_hash: plan.digest,
       conflicts: plan.conflicts, files: plan.summary }, null, 2));
     if (!options.apply) return;

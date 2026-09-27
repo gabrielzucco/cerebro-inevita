@@ -1281,6 +1281,7 @@ function updateReasonCopy(code) {
     'update-check-unavailable': 'Não foi possível consultar a última release agora.',
     'update-channel-unmanaged': 'Nenhum canal oficial de releases está configurado.',
     'managed-update-unavailable': 'Esta instalação não aceita atualização automática com segurança.',
+    'manual-update-preview-required': 'Abra COMECE-AQUI.md e use a prévia do atualizador por tag antes de aplicar.',
     'managed-update-failed': 'A atualização foi cancelada. O contexto privado permaneceu intacto.',
     'update-check-required': 'Verifique novamente a última release antes de atualizar.',
   }[code] || label(code || 'não observado');
@@ -1333,7 +1334,7 @@ function renderBrainUpdates(anatomy) {
   const checkLabel = updates.checking ? 'Verificando…' : remote ? 'Verificar novamente' : 'Verificar atualização';
   const applyButton = remote?.status === 'update-available' && motor.can_apply
     ? `<button type="button" class="action primary" data-update-apply ${updates.applying ? 'disabled' : ''}>${updates.applying ? 'Atualizando…' : `Atualizar para ${escapeHtml(remote.tag)}`}</button>` : '';
-  const unmanagedNote = managed ? 'Esta instalação pode receber uma release publicada com confirmação explícita.'
+  const unmanagedNote = managed ? 'Para atualizar, abra COMECE-AQUI.md e revise a prévia por tag. O Cockpit ainda não aplica planos.'
     : updateReasonCopy(installation.reason_code);
   return `<div class="brain-control-view brain-updates-view">
     <section class="brain-update-hero">

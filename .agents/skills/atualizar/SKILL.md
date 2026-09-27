@@ -13,20 +13,20 @@ fallback de branch ou o atualizador antigo para fazer a primeira passagem segura
    Se o updater instalado não tem prévia/`--tag`, obtenha o pacote de uma **tag fixa** em pasta
    temporária e execute o script novo com `--root` apontando para a instalação. Nunca atualize
    primeiro pelo script destrutivo legado para “ganhar” a versão segura.
-2. Escolha a tag publicada e confira o changelog. `v1.37.0` nos exemplos só funciona depois da
-   publicação aprovada; não anuncie disponibilidade por existir um `VERSION` no checkout.
+2. Escolha a tag publicada e confira o changelog. `v1.38.0` é candidato local e só funcionará
+   no canal oficial depois da publicação aprovada; para piloto offline use o pacote local.
 3. Execute a prévia, sem `--apply`:
    ```bash
-   node /caminho/pacote/scripts/update.mjs --tag v1.37.0 --root /caminho/cerebro
+   CEREBRO_UPDATE_SOURCE_DIR=/caminho/pacote node /caminho/pacote/scripts/update.mjs --tag v1.38.0 --root /caminho/cerebro --baseline-dir /caminho/pacote-da-versao-instalada
    ```
-   Mostre os arquivos que mudarão, conflitos, tag e `plan_hash`. Sem recibo anterior, arquivos
-   existentes diferentes do pacote são conflitos de origem desconhecida. Preserve a dúvida;
+   Mostre os arquivos que mudarão, conflitos, tag e `plan_hash`. Sem recibo anterior, use o
+   baseline íntegro da versão instalada; arquivos diferentes dele são conflitos. Preserve a dúvida;
    não aceite todos automaticamente. O conteúdo fora do bloco gerenciado do `CLAUDE.md` é do
    membro. Um CLAUDE legado sem marcadores é preservado inteiro e recebe o bloco novo ao final;
    proponha revisão de instruções duplicadas/contraditórias, nunca as apague por conta própria.
 4. Peça aprovação do plano concreto. Só então acrescente `--apply --approve-plan <plan_hash>`
    ao mesmo comando. O hash deve vir da prévia que a pessoa viu; mudança em arquivos ou pacote
-   exige nova prévia e nova aprovação. Não contorne conflitos para concluir uma atualização.
+   exige nova prévia e nova aprovação. Conflitos impedem aplicação mesmo com hash aprovado.
 5. Confira `VERSION`, o resultado e o backup em `.cerebro/update-backups/`. Resuma as mudanças
    úteis. O recibo `.cerebro/update-state.json` permite distinguir futuras edições locais. Backups
    contêm conteúdo privado: nunca stage, upload ou compartilhamento.
