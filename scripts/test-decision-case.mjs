@@ -299,17 +299,20 @@ try {
   // ela nunca desaparece sem um evento de reversão de pé.
   const currentState = decisionCaseState(root, CASE_ID);
   assert.equal(currentState.status, 'applied');
-  const secondNotePath = join(root, currentState.canonical_path);
-  assert.equal(existsSync(secondNotePath), true);
-  const receiptsDir = join(root, '.cerebro', 'runtime', 'receipts', 'decisions', CASE_ID);
-  chmodSync(receiptsDir, 0o500); // leitura ok, escrita negada — writeJsonAtomic falha
-  try {
-    assert.throws(() => rollbackDecisionCase(root, CASE_ID, { actorRef: ACTOR, reasonCode: 'mistake' }));
-  } finally {
-    chmodSync(receiptsDir, 0o700);
+  if (process.platform !== 'win32') {
+    // Windows não aplica os bits POSIX de chmod; sem uma falha real não há fault injection.
+    const secondNotePath = join(root, currentState.canonical_path);
+    assert.equal(existsSync(secondNotePath), true);
+    const receiptsDir = join(root, '.cerebro', 'runtime', 'receipts', 'decisions', CASE_ID);
+    chmodSync(receiptsDir, 0o500); // leitura ok, escrita negada — writeJsonAtomic falha
+    try {
+      assert.throws(() => rollbackDecisionCase(root, CASE_ID, { actorRef: ACTOR, reasonCode: 'mistake' }));
+    } finally {
+      chmodSync(receiptsDir, 0o700);
+    }
+    assert.equal(existsSync(secondNotePath), true, 'recibo falhou → a nota tem que voltar');
+    assert.equal(decisionCaseState(root, CASE_ID).status, 'applied', 'estado intacto após falha de reversão');
   }
-  assert.equal(existsSync(secondNotePath), true, 'recibo falhou → a nota tem que voltar');
-  assert.equal(decisionCaseState(root, CASE_ID).status, 'applied', 'estado intacto após falha de reversão');
 
   // ------------------------------------ claim exclusivo por sequência (TOCTOU)
   // O nome do arquivo É a sequência: dois processos em corrida disputam o mesmo

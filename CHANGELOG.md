@@ -1,11 +1,38 @@
 # Mudanças do cérebro INEVITA
 
+## v1.37.1 — 2026-09-07 · “a primeira prova fecha sem apagar o que é teu”
+
+- Resultado e origem aparecem juntos no Cockpit; correção e aprovação são estados distintos.
+- A atualização faz preflight e cancela antes da cópia se houver conflito no motor.
+- O atualizador Bash delega ao caminho Node multiplataforma.
+
 ## v1.36.1 — 2026-09-06 · Endereço estável da plataforma
 
 - Ativação, telemetria, instalação de Sistemas e Society usam o proxy do domínio INEVITA.
 - Canal desta distribuição: `vinicius-leveron/cerebro-inevita`.
 - A skill de transcrição existente nesta cópia foi preservada.
 
+## v1.37.0 — 2026-09-03 · “o cérebro chega ao Telegram em três gestos”
+
+- **Hermes + Telegram dentro do Cockpit oficial:** a experiência rica que já opera em
+  `cerebro-ops` continua sendo a casca canônica e ganha uma jornada local para levar o contexto
+  do Cérebro ao Telegram, sem criar outro aplicativo ou control plane.
+- **Três gestos humanos:** o membro autoriza o Codex no navegador, cola o token criado no
+  BotFather e confirma “Sou eu” depois de enviar `/start`; instalação, configuração, serviço e
+  diagnóstico ficam por conta do Cockpit.
+- **Default deny e segredo local:** o gateway permanece parado durante a identificação,
+  `ALLOW_ALL` é forçado para falso, o ID numérico não aparece na interface e o token não passa por
+  respostas, logs, argumentos de processo ou Git.
+- **Aula sem credenciais:** `--demo` mostra o Console e a ativação completos em estado controlado,
+  bloqueando toda escrita, comando ou alteração de serviço.
+- **Canvas resiliente no cérebro recém-instalado:** Fontes prometidas por um Sistema, mas ainda
+  não conectadas, aparecem como lacunas em vez de derrubar o mapa; contratos publicados em
+  `sistemas/` também passam a alimentar corretamente os Canvas de Sistema.
+- **Cabeçalho volta ao topo:** o sprite SVG de ícones sai explicitamente do fluxo do documento,
+  evitando o espaço invisível de 150 px que empurrava toda a interface para baixo em alguns browsers.
+- **Fronteira do produto preservada:** Fonte, memória, skills e credenciais continuam na máquina
+  do membro; o Cockpit público não inclui Supabase, dados privados nem o control plane hospedado
+  da operação KOSMOS.
 
 ## v1.36.0 — 2026-09-03 · “a INEVITA ganha uma voz dentro do Cérebro”
 

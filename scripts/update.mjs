@@ -10,14 +10,16 @@
 // Por que RELEASE e não `main`: um commit ruim no main chegaria instantaneamente
 // em todo Cérebro instalado. A casa versiona com disciplina (releases nomeadas);
 // o updater passa a respeitar isso. `main` só entra como último recurso.
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { gunzipSync } from 'node:zlib';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = process.env.CEREBRO_UPDATE_TARGET_DIR
+  ? resolve(process.env.CEREBRO_UPDATE_TARGET_DIR)
+  : resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Caminhos que pertencem ao dono e nunca são sobrescritos — mesma trava do
 // contrato anterior, agora expressa como predicado testável.
@@ -132,6 +134,116 @@ function aplicarManifesto(caminho, origem, { somenteSeFaltar }) {
   return aplicados;
 }
 
+function itensDoManifesto(caminho) {
+  if (!existsSync(caminho)) return [];
+  return readFileSync(caminho, 'utf8').split(/\r?\n/)
+    .map((linha) => linha.trim())
+    .filter((item) => item && !item.startsWith('#') && !ehDoDono(item));
+}
+
+function arquivosGerenciados(base, item) {
+  const inicio = join(base, item);
+  if (!existsSync(inicio)) return [];
+  const info = lstatSync(inicio);
+  if (info.isSymbolicLink()) throw new Error(`pacote contém link simbólico gerenciado: ${item}`);
+  if (info.isFile()) return [item];
+  if (!info.isDirectory()) throw new Error(`tipo de arquivo não suportado no pacote: ${item}`);
+  const encontrados = [];
+  const visitar = (diretorio) => {
+    for (const entrada of readdirSync(diretorio, { withFileTypes: true })) {
+      const caminho = join(diretorio, entrada.name);
+      const rel = relative(base, caminho).replaceAll('\\', '/');
+      if (entrada.isSymbolicLink()) throw new Error(`pacote contém link simbólico gerenciado: ${rel}`);
+      if (entrada.isDirectory()) visitar(caminho);
+      else if (entrada.isFile()) encontrados.push(rel);
+      else throw new Error(`tipo de arquivo não suportado no pacote: ${rel}`);
+    }
+  };
+  visitar(inicio);
+  return encontrados.sort();
+}
+
+function arquivoIgual(esquerda, direita) {
+  return existsSync(esquerda) && existsSync(direita)
+    && lstatSync(esquerda).isFile() && lstatSync(direita).isFile()
+    && readFileSync(esquerda).equals(readFileSync(direita));
+}
+
+function caminhoLocalSeguro(rel) {
+  let atual = ROOT;
+  for (const parte of rel.split('/').slice(0, -1)) {
+    atual = join(atual, parte);
+    if (existsSync(atual) && lstatSync(atual).isSymbolicLink()) return false;
+  }
+  return true;
+}
+
+function planejarAtualizacao(origem, baseline) {
+  const itens = new Set([
+    ...itensDoManifesto(join(origem, '.cerebro', 'motor.manifest')),
+    ...itensDoManifesto(join(baseline, '.cerebro', 'motor.manifest')),
+  ]);
+  const novos = new Set([...itens].flatMap((item) => arquivosGerenciados(origem, item)));
+  const antigos = new Set([...itens].flatMap((item) => arquivosGerenciados(baseline, item)));
+  const todos = [...new Set([...novos, ...antigos])].sort();
+  const copiar = [];
+  const remover = [];
+  const conflitos = [];
+
+  for (const rel of todos) {
+    const local = join(ROOT, rel);
+    const novo = join(origem, rel);
+    const antigo = join(baseline, rel);
+    if (!caminhoLocalSeguro(rel)) { conflitos.push(`${rel} (pai é link simbólico)`); continue; }
+    if (existsSync(local) && lstatSync(local).isSymbolicLink()) { conflitos.push(`${rel} (link simbólico local)`); continue; }
+    const temNovo = novos.has(rel);
+    const temAntigo = antigos.has(rel);
+    const temLocal = existsSync(local);
+
+    if (temNovo) {
+      if (!temLocal) { copiar.push(rel); continue; }
+      if (!lstatSync(local).isFile()) { conflitos.push(`${rel} (tipo local divergente)`); continue; }
+      if (arquivoIgual(local, novo)) continue;
+      if (temAntigo && arquivoIgual(local, antigo)) { copiar.push(rel); continue; }
+      conflitos.push(rel);
+      continue;
+    }
+    if (temAntigo && temLocal) {
+      if (arquivoIgual(local, antigo)) remover.push(rel);
+      else conflitos.push(rel);
+    }
+  }
+  return { copiar, remover, conflitos };
+}
+
+function aplicarPlano(plano, origem) {
+  for (const rel of plano.copiar) {
+    mkdirSync(dirname(join(ROOT, rel)), { recursive: true });
+    cpSync(join(origem, rel), join(ROOT, rel));
+  }
+  for (const rel of plano.remover) rmSync(join(ROOT, rel), { force: true });
+}
+
+async function resolverBaseline(repo, versao, origem, temp) {
+  if (process.env.CEREBRO_UPDATE_BASE_DIR) return resolve(process.env.CEREBRO_UPDATE_BASE_DIR);
+  if (lerVersao(origem) === versao) return origem;
+  if (!repo || !/^\d+\.\d+\.\d+(?:[-+].+)?$/.test(versao)) {
+    throw new Error('baseline da versão instalada indisponível');
+  }
+  const destino = join(temp, 'baseline');
+  mkdirSync(destino, { recursive: true });
+  let pacote;
+  try {
+    pacote = await baixar(`https://github.com/${repo}/archive/refs/tags/v${versao}.tar.gz`);
+  } catch {
+    pacote = await baixar(`https://github.com/${repo}/archive/refs/tags/${versao}.tar.gz`);
+  }
+  extrairTarGz(pacote, destino);
+  const [raiz] = readdirSync(destino);
+  if (!raiz) throw new Error('baseline da versão instalada vazio');
+  return join(destino, raiz);
+}
+
 async function main() {
   const { repo, branch } = lerFonte();
   const temp = mkdtempSync(join(tmpdir(), 'cerebro-update-'));
@@ -171,8 +283,18 @@ async function main() {
     const antes = lerVersao(ROOT);
     const depois = lerVersao(origem);
     console.log(`→ Atualizando ${antes} → ${depois}. Teu contexto, operação e contribuições NÃO serão tocados.`);
-
-    aplicarManifesto(join(origem, '.cerebro', 'motor.manifest'), origem, { somenteSeFaltar: false });
+    const baseline = await resolverBaseline(repo, antes, origem, temp);
+    const plano = planejarAtualizacao(origem, baseline);
+    if (plano.conflitos.length) {
+      console.error('✗ Atualização cancelada: existem alterações locais em arquivos do motor.');
+      for (const conflito of plano.conflitos.slice(0, 20)) console.error(`  conflito: ${conflito}`);
+      if (plano.conflitos.length > 20) console.error(`  e mais ${plano.conflitos.length - 20} conflito(s)`);
+      console.error('  Nenhum arquivo foi alterado. Preserve as mudanças e resolva o conflito antes de tentar novamente.');
+      process.exitCode = 2;
+      return;
+    }
+    aplicarPlano(plano, origem);
+    console.log(`  ✓ ${plano.copiar.length} arquivo(s) do motor atualizados; ${plano.remover.length} obsoleto(s) removidos`);
     aplicarManifesto(join(origem, '.cerebro', 'seed.manifest'), origem, { somenteSeFaltar: true });
 
     rodarSilencioso(join(ROOT, '.claude', 'scripts', 'ensure-private-ignore.sh'));

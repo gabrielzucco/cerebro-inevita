@@ -15,6 +15,7 @@ de slash é um atalho, não um requisito.
 | Codex | `.agents/skills/` | `$comecar` ou “quero começar” |
 | Gemini CLI | `.agents/skills/` | “quero começar” |
 | Antigravity | `.agents/skills/` | “quero começar meu cérebro” |
+| Hermes | `.agents/skills/` | “quero começar” no CLI ou Telegram |
 | outro agente local | `.agents/skills/` | ler `comecar/SKILL.md` |
 
 ### O acesso é vinculado (e-mail ou credencial)
@@ -60,6 +61,17 @@ conector real e consentimento específico.
 
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não
 exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
+
+## Quer ver e conectar pelo Telegram?
+
+Abra o Cockpit local com `node scripts/cockpit.mjs`. É o mesmo núcleo visual do Console usado na
+operação da INEVITA, adaptado para funcionar inteiramente na sua máquina. **Hoje** mostra o que
+precisa de você. Em **Meus trabalhos**, escolha o resultado que quer produzir. Em **Entregas**, leia
+o rascunho, veja quais informações foram usadas e aprove ou peça ajuste. Os registros técnicos
+ficam em **Ver como foi feito**, dentro de cada resultado. A tela também leva o cérebro ao Telegram
+em três passos: preparar o agente, conectar o bot criado no BotFather e confirmar a conta que enviou
+`/start`. O Cockpit cuida da configuração e do diagnóstico. O guia completo está em
+[`COCKPIT.md`](COCKPIT.md).
 
 ## A primeira experiência
 

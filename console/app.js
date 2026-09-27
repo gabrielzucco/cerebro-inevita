@@ -1,3 +1,5 @@
+import { detailDisclosure, friendlyFailure, renderBrainHumanSummary, renderJourneyCue, viewLanguage } from './experience.js';
+
 let operationalCanvasModulePromise = null;
 
 function loadOperationalCanvas() {
@@ -45,6 +47,7 @@ const state = {
   canvas: {
     scope: 'brain', ref: null, editable: false, controller: null, graph: null, positions: null,
   },
+  activationTimer: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -86,6 +89,7 @@ function fmtDuration(value) {
 
 const labels = {
   active: 'Ativa',
+  healthy: 'Saudável', stale: 'Desatualizada', disabled: 'Desabilitada', unknown: 'Não verificada',
   'ready-manual-run': 'Pronta para replay',
   'ready-to-activate': 'Pronta para ativar',
   'legacy-schedule-not-paused': 'Agenda antiga não pausada',
@@ -162,6 +166,24 @@ const labels = {
   'decision-notes-missing': 'A casa canônica das decisões não existe',
   'wrong-verdict': 'Veredito errado', 'wrong-evidence': 'Evidência errada',
   duplicate: 'Duplicado', superseded: 'Superado', mistake: 'Registro por engano',
+  configured: 'Configurada', beta: 'Beta', locked: 'Exclusivo', future: 'Em construção',
+  draft: 'Rascunho', 'pre-registered': 'Pré-registrado', passed: 'Aprovado', attention: 'Pede atenção',
+  'awaiting-confirmation': 'Aguardando você', succeeded: 'Concluído', cancelled: 'Cancelado', error: 'Pede atenção',
+  'activation-busy': 'Já existe uma ativação em andamento',
+  'activation-action-invalid': 'Esta etapa expirou; tente novamente',
+  'hermes-installer-download-failed': 'Não foi possível baixar o instalador oficial',
+  'hermes-installer-checksum-failed': 'A verificação de segurança do instalador falhou',
+  'hermes-process-timeout': 'A operação demorou mais que o esperado',
+  'hermes-process-failed': 'O Hermes não concluiu esta etapa',
+  'hermes-install-not-detected': 'A instalação terminou, mas o Hermes ainda não foi encontrado',
+  'hermes-version-unrecognized': 'Não foi possível confirmar a versão instalada do Hermes',
+  'hermes-codex-login-failed': 'A autorização do Codex não foi concluída',
+  'telegram-token-invalid': 'O token do BotFather não é válido',
+  'telegram-request-failed': 'Não foi possível falar com o Telegram',
+  'telegram-owner-timeout': 'Não encontramos seu /start; tente novamente',
+  'hermes-doctor-attention': 'O diagnóstico encontrou algo para corrigir',
+  'hermes-verification-failed': 'A checagem final não confirmou todos os componentes',
+  'origin-invalid': 'A ação precisa partir deste Cockpit local',
 };
 
 function label(value) {
@@ -169,9 +191,9 @@ function label(value) {
 }
 
 function tone(reason) {
-  if (['active', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided'].includes(reason)) return 'good';
-  if (['legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'changes-requested', 'gap', 'ready-for-read', 'unlinked'].includes(reason)) return 'warn';
-  if (['declared', 'running', 'skipped', 'queued', 'collecting', 'not-started'].includes(reason)) return 'neutral';
+  if (['active', 'healthy', 'succeeded', 'completed', 'ready-manual-run', 'ready-to-activate', 'approved', 'decided'].includes(reason)) return 'good';
+  if (['degraded', 'stale', 'partial', 'legacy-schedule-not-paused', 'routine-paused', 'executor-authentication-required', 'pending', 'waiting_approval', 'changes-requested', 'gap', 'ready-for-read', 'unlinked'].includes(reason)) return 'warn';
+  if (['disabled', 'unknown', 'declared', 'running', 'skipped', 'queued', 'collecting', 'not-started', 'canceled'].includes(reason)) return 'neutral';
   return 'bad';
 }
 
@@ -250,19 +272,16 @@ function routineTodayChip(routine) {
 }
 
 function routineCard(routine) {
-  const access = routine.access.length ? routine.access.map((item) => badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')).join('') : '<span class="muted">Sem grants declarados</span>';
   const last = routine.receipts[0] || null;
   const next = routine.next_scheduled_at
     ? `${fmtRelative(routine.next_scheduled_at)} · ${fmtDate(routine.next_scheduled_at)}`
     : routine.state.status === 'disabled' ? 'Relógio desligado' : 'Sem próxima ocorrência';
   const origin = routine.product_kind === 'brain-native' ? 'Rotina do Cérebro' : 'Rotina de Sistema';
   return `<article class="routine-card" data-routine-kind="${escapeHtml(routine.product_kind)}" data-open-routine="${escapeHtml(routine.routine_id)}" role="button" tabindex="0">
-    <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(origin)} · ${escapeHtml(routine.system_ref)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
+    <div class="routine-card-head"><div class="routine-symbol">↻</div><div><p class="micro">${escapeHtml(origin)}</p><h3>${escapeHtml(routine.name)}</h3></div>${badge(routine.health_reason_code)}</div>
     <div class="run-chips">${routineTodayChip(routine)}${last ? `<span class="run-chip ${tone(last.status)}">Último: ${escapeHtml(label(last.status))} ${escapeHtml(fmtRelative(last.completed_at || last.started_at))}</span>` : '<span class="run-chip neutral">Nunca executou</span>'}</div>
     <div class="routine-meta"><span><b>Cadência</b>${escapeHtml(routine.schedule)}</span><span><b>Próxima</b>${escapeHtml(next)}</span></div>
-    <div class="routine-meta"><span><b>Executor</b>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</span></div>
-    <div class="assurance-row">${access}</div>
-    <div class="card-footer"><button type="button" class="table-action" data-runs-for-routine="${escapeHtml(routine.routine_id)}">${routine.receipts.length} execução(ões) →</button><button data-open-routine="${escapeHtml(routine.routine_id)}">Inspecionar <b>→</b></button></div>
+    <div class="card-footer"><button type="button" class="table-action" data-runs-for-routine="${escapeHtml(routine.routine_id)}">Ver histórico (${routine.receipts.length}) →</button><button data-open-routine="${escapeHtml(routine.routine_id)}">Ver trabalho <b>→</b></button></div>
   </article>`;
 }
 
@@ -280,20 +299,20 @@ function renderActivation() {
     <section class="first-mission-hero">
       <div class="first-mission-copy">
         <p class="micro">PRIMEIRA MISSÃO · ${started ? 'EM ANDAMENTO' : 'COMECE POR AQUI'}</p>
-        <h2>${started ? escapeHtml(current.name) : 'Ative seu Cérebro com um trabalho que já precisa acontecer.'}</h2>
+        <h2>${started ? escapeHtml(current.name) : 'Comece com um trabalho que você já precisa fazer.'}</h2>
         <p>${started ? escapeHtml(current.description) : 'Você não precisa organizar a empresa inteira nem conectar ferramentas. Traga um trabalho real e uma pequena amostra da realidade; o resto nasce do uso.'}</p>
         <div class="first-mission-actions">
-          <button type="button" class="first-mission-primary" data-copy-ref="${escapeHtml(activation.command)}">Copiar ${escapeHtml(activation.command)}</button>
+          <button type="button" class="first-mission-primary" data-copy-ref="${escapeHtml(activation.command)}">Copiar mensagem para começar</button>
           <button type="button" class="first-mission-secondary" data-view="anatomy">Conhecer o Cérebro</button>
         </div>
-        <small>Cole o comando na conversa com seu agente. Abrir este cockpit não chama modelo, conecta Fonte nem envia conteúdo.</small>
+        <small>Cole a mensagem na conversa com seu agente. Abrir esta tela não inicia trabalho nem envia seu conteúdo à INEVITA.</small>
       </div>
       <div class="first-mission-promise" aria-label="O que esta missão prova">
         <span class="first-mission-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         <p class="micro">O QUE VAI FICAR PRONTO</p>
         <strong>Um resultado que você usaria.</strong>
         <p>Depois, o mesmo contexto volta para uma segunda tarefa sem você precisar explicar tudo outra vez.</p>
-        <div><span>Cérebro</span><i>prepara contexto</i><span>Sistema</span><i>produz resultado</i></div>
+        <div><span>Suas informações</span><i>ajudam a preparar</i><span>O resultado</span><i>que você revisa</i></div>
       </div>
     </section>
 
@@ -303,12 +322,12 @@ function renderActivation() {
     </section>` : ''}
 
     <section class="first-mission-source">
-      <div><p class="micro">E SE EU NÃO TIVER FONTE CONECTADA?</p><h3>Nenhuma integração é necessária para começar.</h3><p>A fonte-semente é só o menor pedaço de realidade capaz de sustentar o primeiro trabalho.</p></div>
+      <div><p class="micro">E SE EU NÃO TIVER INFORMAÇÕES CONECTADAS?</p><h3>Nenhuma integração é necessária para começar.</h3><p>Um exemplo recente do seu trabalho já basta para dar o primeiro passo.</p></div>
       <ul>${activation.seed_options.map((option) => `<li><i></i>${escapeHtml(option)}</li>`).join('')}</ul>
     </section>
 
     <section class="first-mission-progress">
-      <header><div><p class="micro">ATIVAÇÃO POR USO</p><h3>${activation.completed_steps} de ${activation.total_steps} passos observados</h3></div><span>${progress}%</span></header>
+      <header><div><p class="micro">SUA PRIMEIRA ENTREGA</p><h3>${activation.completed_steps} de ${activation.total_steps} passos concluídos</h3></div><span>${progress}%</span></header>
       <progress max="100" value="${progress}">${progress}%</progress>
       <ol>${activation.steps.map((step, index) => {
         const stepState = step.completed_at ? 'complete' : step.id === activation.current_step ? 'current' : 'pending';
@@ -429,8 +448,8 @@ function renderRoutines() {
 /* Workspace do Sistema — trabalho fora; confiança e operação dentro do Cockpit. */
 
 const WS_TABS = [
-  ['overview', 'Sobre'], ['how', 'Como funciona'], ['runs', 'Execuções'],
-  ['experiments', 'Experimentos'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
+  ['overview', 'Sobre'], ['how', 'Como funciona'], ['runs', 'Trabalhos feitos'],
+  ['experiments', 'Testes'], ['learning', 'Aprendizado'], ['config', 'Detalhes técnicos'],
 ];
 
 function openWorkspace(ref, tab = 'overview') {
@@ -532,20 +551,21 @@ function wsOverview(ws) {
   const result = ws.contract.result || {};
   const lastRun = ws.records[0];
   return `<div class="ws-stack">
-    <section class="organ system-about"><header class="organ-head"><div><p class="micro">SOBRE O SISTEMA</p><h3>Para que este sistema existe</h3></div></header>
+    <section class="organ system-about"><header class="organ-head"><div><p class="micro">RESULTADO ESPERADO</p><h3>O que este trabalho entrega</h3></div></header>
       <p class="organ-answer">${escapeHtml(ws.system.result)} ${prov('declarado')}</p>
-      <dl class="ws-dl">
+      <p class="workspace-observed">${lastRun ? `Último trabalho registrado em ${fmtDate(lastRun.completed_at)}.` : 'Ainda não há trabalho concluído nos registros.'} ${ws.judgments.filter((item) => item.judgment.status === 'pending').length ? 'Há uma entrega para revisar.' : 'Nenhuma entrega espera revisão.'}</p>
+      ${detailDisclosure(`<dl class="ws-dl">
         <div><dt>Dono</dt><dd>${escapeHtml(result.owner || '—')}</dd></div>
         <div><dt>Gate humano</dt><dd>${escapeHtml(result.human_gate || ws.system.human_gate || '—')}</dd></div>
         <div><dt>Pronto quando</dt><dd>${escapeHtml(result.definition_of_done || '—')}</dd></div>
         <div><dt>Não é sucesso</dt><dd>${escapeHtml(result.non_success || '—')}</dd></div>
         <div><dt>Estágio</dt><dd>${escapeHtml(label(ws.system.migration_stage))} · ${escapeHtml(ws.system.human_maturity || '—')} · v${escapeHtml(ws.system.version)}</dd></div>
         <div><dt>Última execução</dt><dd>${lastRun ? `${fmtDate(lastRun.completed_at)} ${prov('observado')}` : 'nenhuma no ledger'}</dd></div>
-      </dl>
+      </dl>`, { label: 'Ver responsáveis e critérios' })}
       ${ws.system.next_gate ? `<div class="organ-gaps"><span>Próximo gate: ${escapeHtml(ws.system.next_gate)}</span></div>` : ''}
     </section>
-    <details class="ws-technical-summary"><summary><span><b>Saúde dos sete componentes</b><small>Pipeline, rotinas, Skills, interfaces, gates, evals e aprendizado</small></span><i>Ver estado →</i></summary><section class="organ"><header class="organ-head"><div><h3>Os sete componentes</h3><p>estado declarado × evidência observada</p></div></header>${wsMatrix(ws)}</section></details>
-    <section class="ws-evidence"><div class="section-heading"><div><p class="eyebrow">EVIDÊNCIA OPERACIONAL</p><h2>O que já aconteceu de verdade</h2></div><p>Runs, contexto, julgamento e valor permanecem separados da promessa publicada.</p></div>${wsMetrics(ws)}</section>
+    <details class="ws-technical-summary"><summary><span><b>Ver preparação deste trabalho</b><small>Condições, fontes, etapas e limites que podem afetar o resultado</small></span><i>Ver estado →</i></summary><section class="organ"><header class="organ-head"><div><h3>Os sete componentes</h3><p>estado declarado × evidência observada</p></div></header>${wsMatrix(ws)}</section></details>
+    ${detailDisclosure(`<section class="ws-evidence"><div class="section-heading"><div><p class="eyebrow">REGISTROS OBSERVADOS</p><h2>O que já aconteceu</h2></div><p>Os números abaixo vêm dos registros deste trabalho.</p></div>${wsMetrics(ws)}</section>`, { label: 'Ver números e registros deste trabalho' })}
   </div>`;
 }
 
@@ -640,8 +660,8 @@ function wsRunJudgment(ws, record) {
 
 function wsRuns(ws) {
   const pending = ws.judgments.filter((item) => item.judgment.status === 'pending').length;
-  const authority = `<div class="boundary-note ws-run-authority"><div><b>Uma fila constitucional</b>Execuções projeta o estado do julgamento em cada Run. O martelo e o recibo continuam na Caixa de Julgamento global.</div><button class="action" data-view="judgments">Abrir fila${pending ? ` · ${pending} pendente${pending === 1 ? '' : 's'}` : ''} →</button></div>`;
-  if (!ws.records.length) return `<div class="ws-stack">${authority}${empty('Nenhuma execução no ledger', 'O primeiro run registrado aparece aqui com contexto, eval e comparação.')}</div>`;
+  const authority = `<div class="boundary-note ws-run-authority"><div><b>Revisão humana</b>As entregas deste trabalho aparecem aqui. Aprovar ou pedir ajuste acontece na área Entregas.</div><button class="action" data-view="judgments">Ver entregas${pending ? ` · ${pending} pendente${pending === 1 ? '' : 's'}` : ''} →</button></div>`;
+  if (!ws.records.length) return `<div class="ws-stack">${authority}${empty('Nenhum trabalho realizado ainda', 'O primeiro resultado registrado aparecerá aqui com seu estado e fontes.')}</div>`;
   const rows = ws.records.map((record) => `<tr>
     <td><strong>${fmtDate(record.completed_at)}</strong><small>${escapeHtml(record.run_id.slice(0, 24))}…</small></td>
     <td>${escapeHtml(label(record.mode || '—'))}</td><td>${badge(record.status)}</td>
@@ -651,11 +671,16 @@ function wsRuns(ws) {
     <td><button class="table-action" data-canvas-jump-run="${escapeHtml(wsRunSelector(record))}">trace →</button></td>
   </tr>`).join('');
   const options = ws.records.map((record, index) => `<option value="${index}">${fmtDate(record.completed_at)} · ${escapeHtml(label(record.mode || 'run'))}</option>`);
-  const compare = ws.records.length >= 2 ? `<section class="organ"><header class="organ-head"><div><h3>O que mudou entre duas runs</h3></div></header>
+  const compare = ws.records.length >= 2 ? `<section class="organ"><header class="organ-head"><div><h3>Comparar dois trabalhos registrados</h3></div></header>
     <div class="ws-compare-pick"><label>A <select id="ws-cmp-a">${options.map((option, index) => index === 1 ? option.replace('<option', '<option selected') : option).join('')}</select></label>
     <label>B <select id="ws-cmp-b">${options.map((option, index) => index === 0 ? option.replace('<option', '<option selected') : option).join('')}</select></label></div>
     <div id="ws-compare">${wsCompareTable(ws, 1, 0)}</div></section>` : '<p class="section-help">Comparação disponível a partir de duas execuções.</p>';
-  return `<div class="ws-stack">${authority}<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Modo</th><th>Status</th><th>Contexto</th><th>Eval</th><th>Julgamento</th><th>Trace</th></tr></thead><tbody>${rows}</tbody></table></div>${compare}</div>`;
+  const recent = ws.records.slice(0, 12).map((record) => {
+    const judgment = wsJudgmentForRun(ws, record);
+    const sources = record.context_snapshot?.accesses?.length;
+    return `<article class="work-history-item"><div><span class="meta">${fmtDate(record.completed_at)}</span><h3>${escapeHtml(ws.system.name)}</h3><p>${escapeHtml(label(record.status))}${judgment ? ` · ${escapeHtml(label(judgment.judgment?.verdict || judgment.judgment?.status))}` : ''}</p><small>${sources ? `${sources} ${sources === 1 ? 'fonte registrada' : 'fontes registradas'}` : 'Fontes usadas não foram registradas neste trabalho.'}</small></div><div class="work-history-actions">${judgment ? `<button type="button" class="table-action" data-open-judgment="${escapeHtml(judgment.receipt_id)}">Ver entrega →</button>` : ''}<button type="button" class="table-action" data-canvas-jump-run="${escapeHtml(wsRunSelector(record))}">Ver como foi feito →</button></div></article>`;
+  }).join('');
+  return `<div class="ws-stack">${authority}<div class="work-history">${recent}</div>${ws.records.length > 12 ? `<p>Mostrando os 12 trabalhos mais recentes de ${ws.records.length}.</p>` : ''}${detailDisclosure(`<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Modo</th><th>Status</th><th>Contexto</th><th>Eval</th><th>Julgamento</th><th>Trace</th></tr></thead><tbody>${rows}</tbody></table></div>${compare}`, { label: 'Filtrar e comparar registros técnicos' })}</div>`;
 }
 
 function wsCompareTable(ws, indexA, indexB) {
@@ -742,7 +767,7 @@ function renderSystemWorkspace() {
   const workspace = state.workspace;
   if (!workspace) return empty('Nenhum sistema aberto', 'Abra um sistema pela lista ou pelo Canvas.');
   const ws = workspace.data;
-  if (!ws) return '<div class="loading"><i></i><span>Abrindo o workspace do sistema…</span></div>';
+  if (!ws) return '<div class="loading"><i></i><span>Abrindo o trabalho…</span></div>';
   const tabs = {
     overview: wsOverview,
     how: wsHowItWorks,
@@ -753,12 +778,10 @@ function renderSystemWorkspace() {
   };
   return `<div class="ws">
     <div class="ws-top">
-      <button class="action" data-view="systems">← Sistemas</button>
+      <button class="action" data-view="systems">← Meus trabalhos</button>
       ${systemIdentity(ws.system, 'is-workspace')}
       <span class="ws-experience"><b>${escapeHtml(ws.system.experience?.presentation?.tagline || ws.system.name)}</b><small>${ws.system.experience ? `Publicado por ${escapeHtml(ws.system.experience.publisher.display_name)}` : 'Identidade constitucional'}</small></span>
       ${badge(ws.system.migration_stage, ws.system.migration_stage === 'active' ? 'good' : 'neutral')}
-      <span class="system-kind-mark" aria-hidden="true">● Sistema</span>
-      <span class="muted">${escapeHtml(operatingAreaName(ws.system.operating_area))} · ${escapeHtml(businessFunctionName(ws.system.business_function))} · v${escapeHtml(ws.system.version)} · ${ws.records.length} execuções · ${ws.judgments.filter((item) => item.judgment.status === 'pending').length} para julgar</span>
       <span class="canvas-spacer"></span>
       ${systemLaunchAction(ws.system)}
     </div>
@@ -1380,7 +1403,7 @@ function renderAnatomy() {
   const anatomy = state.anatomy;
   if (!anatomy) {
     void loadAnatomy();
-    return '<div class="loading"><i></i><span>Compilando contratos e recibos do Cérebro…</span></div>';
+    return '<div class="loading"><i></i><span>Preparando as informações do Cérebro…</span></div>';
   }
   if (!anatomy.control_center) return `${renderBrainModeSwitch()}${empty('Centro operacional indisponível', 'Atualize o Console para recompilar este read model.')}`;
   const views = {
@@ -1391,7 +1414,7 @@ function renderAnatomy() {
     architecture: renderBrainArchitecture,
     updates: renderBrainUpdates,
   };
-  return `${renderBrainModeSwitch(anatomy)}${(views[state.brain.mode] || renderBrainOverview)(anatomy)}`;
+  return `${state.brain.mode === 'overview' ? renderBrainHumanSummary(anatomy) : ''}${renderBrainModeSwitch(anatomy)}${(views[state.brain.mode] || renderBrainOverview)(anatomy)}`;
 }
 
 function openBrainRun(runId) {
@@ -1514,7 +1537,9 @@ function renderToday() {
   const laterDecisions = queue?.available ? queue.open.slice(5) : [];
   const priorityRoutines = routines.slice(0, 4);
   const laterRoutines = routines.slice(4);
+  const hermesReady = state.model.hermes?.activation?.phase === 'ready';
   return `<div class="section-heading"><div><p class="eyebrow">AGORA</p><h2>Mesa de operação</h2></div><p>Primeiro o que pede julgamento; depois o que já está pronto para trabalhar.</p></div>
+    ${!hermesReady ? '<div class="hermes-today-card"><div><p class="micro">COLEGA NO BOLSO</p><h3>Leve este cérebro para o Telegram</h3><p>Autorize o Codex, conecte seu bot e confirme sua conta. O Cockpit cuida da instalação e da segurança.</p></div><button class="action primary" data-view="hermes">Começar ativação →</button></div>' : ''}
     ${queue?.available ? `<div class="today-block"><div class="subheading"><h3>🔨 Decidir agora</h3><span>${queue.open_count} abertas · ${queue.decided_total} decididas</span></div><div class="decision-list" role="list">${decisionRows || '<p class="muted">Fila vazia — nada espera seu martelo.</p>'}</div>${laterDecisions.length ? `<details class="today-more"><summary>Ver mais ${laterDecisions.length} decisões</summary><div class="decision-list" role="list">${laterDecisions.map((item, index) => decisionRow(item, index + 5)).join('')}</div></details>` : ''}<div class="boundary-note"><b>Uma fila, um juiz</b>O veredito acontece na mesa de martelo; o Console mostra a verdade, não a substitui.</div></div>` : ''}
     ${pending.length ? `<div class="today-block"><p class="micro">OUTPUTS PARA JULGAR</p>${judgmentList(pending)}</div>` : ''}
     <div class="today-block"><div class="subheading"><h3>Trabalhar agora</h3><span>${routines.length} rotinas no radar</span></div><div class="routine-list">${priorityRoutines.length ? priorityRoutines.map(routineCard).join('') : empty('Nenhuma rotina pede atenção', 'Rotinas ativas e prontas aparecem aqui.')}</div>${laterRoutines.length ? `<details class="today-more"><summary>Ver mais ${laterRoutines.length} rotinas</summary><div class="routine-list">${laterRoutines.map(routineCard).join('')}</div></details>` : ''}</div>`;
@@ -1534,6 +1559,13 @@ function canvasRefOptions() {
     return allCanvasExecutions().map((execution) => `<option value="${escapeHtml(execution.selector_ref)}"${state.canvas.ref === execution.selector_ref ? ' selected' : ''}>${escapeHtml(execution.label)} · ${escapeHtml(execution.mode ? label(execution.mode) : 'Run')} · ${fmtDate(execution.completed_at)}</option>`).join('');
   }
   return '';
+}
+
+function defaultCanvasSystemRef() {
+  const systems = visibleSystems();
+  return systems.find((item) => item.migration_stage === 'active')?.system_id
+    || systems[0]?.system_id
+    || null;
 }
 
 // Execuções de um sistema, prontas pro seletor do Canvas
@@ -1643,25 +1675,25 @@ function renderCanvas() {
           <button data-canvas-scope="run" class="${state.canvas.scope === 'run' ? 'active' : ''}">Execução</button>
         </div>
         ${hasRef ? `<label class="canvas-select-label"><span>${state.canvas.scope === 'system' ? 'Sistema' : 'Execução real'}</span><select id="canvas-ref">${canvasRefOptions()}</select></label>` : ''}
-        ${state.canvas.scope === 'run' ? '<button class="canvas-tool replay" data-canvas-replay disabled aria-describedby="replay-availability">▶ Reproduzir trace</button><span id="replay-availability" class="replay-availability">Confirmando eventos registrados…</span>' : ''}
+        ${state.canvas.scope === 'run' ? '<button class="canvas-tool replay" data-canvas-replay disabled aria-describedby="replay-availability">▶ Rever etapas registradas</button><span id="replay-availability" class="replay-availability">Confirmando eventos registrados…</span>' : ''}
         <button class="canvas-tool" data-canvas-fit>Mapa inteiro</button>
         <button class="canvas-tool ${state.canvas.editable ? 'active' : ''}" data-canvas-edit>${state.canvas.editable ? 'Bloquear' : 'Reorganizar'}</button>
         <button class="canvas-tool primary" data-canvas-save disabled>Salvar</button>
       </div>
-      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>Fontes são casas de verdade. Etapas são contrato. Artefatos são os objetos que realmente atravessaram uma execução.</p></aside>
+      <aside id="canvas-inspector" class="canvas-inspector"><p class="micro">DETALHES DO OBJETO</p><h3>Selecione um nó</h3><p>Selecione um ponto para ver o que foi previsto e o que realmente aconteceu. Informações sem registro aparecem como não observadas.</p></aside>
     </div>
     ${cockpitSystem ? systemCockpit(cockpitSystem) : ''}
     <details class="canvas-accessible"><summary>Ver equivalente em lista</summary><div id="canvas-list"></div></details>
-    <div class="boundary-note"><b>Layout ≠ arquitetura</b>Reorganizar salva apenas coordenadas privadas nesta máquina. Criar ou remover Fonte, Sistema, gate ou aresta continua exigindo mudança de contrato.</div>
+    <div class="boundary-note"><b>Reorganizar o mapa</b>Mover os pontos altera apenas a posição nesta máquina. Não muda o trabalho nem suas fontes.</div>
   </div>`;
 }
 
 function renderJudgments() {
   const pending = visibleJudgments().filter((item) => item.judgment.status === 'pending');
   const decided = visibleJudgments().filter((item) => item.judgment.status !== 'pending');
-  return `<div class="section-heading"><div><p class="eyebrow">MARTELO HUMANO</p><h2>Caixa de Julgamento</h2></div><p>Abra o output privado, decida e deixe rastro. Nenhum botão desta tela executa ação externa.</p></div>
-    <div class="judgment-section"><div class="subheading"><h3>Pendentes</h3><span>${pending.length}</span></div>${pending.length ? judgmentList(pending) : empty('Nenhum output pendente', 'O próximo run concluído aparecerá aqui para julgamento.')}</div>
-    <div class="judgment-section"><div class="subheading"><h3>Histórico</h3><span>${decided.length}</span></div>${decided.length ? judgmentList(decided) : '<p class="muted">Nenhum julgamento registrado ainda.</p>'}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">SUA REVISÃO</p><h2>Entregas para revisar</h2></div><p>Leia o resultado sugerido pela IA, confira as fontes e decida se pode ser usado ou precisa de ajuste.</p></div>
+    <div class="judgment-section"><div class="subheading"><h3>Esperando por você</h3><span>${pending.length}</span></div>${pending.length ? judgmentList(pending) : empty('Nenhuma entrega pendente', 'A próxima entrega concluída aparecerá aqui para revisão.')}</div>
+    <div class="judgment-section"><div class="subheading"><h3>Já revisadas</h3><span>${decided.length}</span></div>${decided.length ? judgmentList(decided) : '<p class="muted">Nenhuma revisão registrada ainda.</p>'}</div>`;
 }
 
 function renderAreas() {
@@ -1837,25 +1869,18 @@ function systemCard(system) {
   const operational = systemOperational(system);
   const preflight = systemPreflight(system);
   const businessFunction = systemBusinessFunction(system);
-  const publisher = systemPublisher(system);
   const tagline = system.experience?.presentation?.tagline || null;
   return `<article class="system-launcher-card" data-kind="system" data-system-category="${escapeHtml(businessFunction)}">
     <div class="system-card-head">
       ${systemIdentity(system)}
-      <div class="system-card-title"><p class="micro">${escapeHtml(businessFunctionName(businessFunction))} · v${escapeHtml(system.version)}</p><h3>${escapeHtml(system.name)}</h3></div>
+      <div class="system-card-title"><p class="micro">${escapeHtml(businessFunctionName(businessFunction))}</p><h3>${escapeHtml(system.name)}</h3></div>
       ${badge(system.migration_stage, active ? 'good' : configured ? 'neutral' : 'warn', stageLabel)}
     </div>
     ${tagline ? `<p class="system-tagline">${escapeHtml(tagline)}</p>` : ''}
     <p class="system-result">${escapeHtml(system.result)}</p>
-    <div class="system-owner"><span class="system-owner-avatar" aria-hidden="true">${escapeHtml((publisher?.display_name || operationalOwnerLabel(system.operational_owner)).slice(0, 1))}</span><span><small>${publisher ? 'Publicado por' : 'Dono operacional'}</small><b>${escapeHtml(publisher?.display_name || operationalOwnerLabel(system.operational_owner))}</b></span></div>
-    <div class="system-health" data-readiness="${preflight.status}">${badge(preflight.status, preflight.tone, preflight.label)}<span>${operational.pendingJudgments ? `${operational.pendingJudgments} para julgar` : 'Sem julgamento pendente'}</span></div>
-    <div class="system-compact-stats">
-      <span><b>${operational.lastRun ? fmtDate(operational.lastRun.completed_at, false) : 'Nunca'}</b><small>Último Run</small></span>
-      <span><b>${operational.records.length}</b><small>Runs</small></span>
-      <span><b>${system.source_refs.length}</b><small>Fontes</small></span>
-    </div>
+    <div class="system-health" data-readiness="${preflight.status}">${badge(preflight.status, preflight.tone, preflight.label)}<span>${operational.pendingJudgments ? `${operational.pendingJudgments} ${operational.pendingJudgments === 1 ? 'entrega para revisar' : 'entregas para revisar'}` : 'Nenhuma entrega pendente'}</span></div>
     <div class="system-compact-actions">
-      <button type="button" data-open-system="${escapeHtml(system.system_id)}">Ver Sistema</button>
+      <button type="button" data-open-system="${escapeHtml(system.system_id)}">Ver trabalho</button>
       ${systemLaunchAction(system)}
     </div>
   </article>`;
@@ -1863,7 +1888,7 @@ function systemCard(system) {
 
 function renderSystems() {
   const available = visibleSystems();
-  if (!available.length) return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Sistemas</h2></div></div>${empty('Nenhum Sistema nesta área', 'O Console não cria verdade editorial: ele espera System Contracts reais.')}`;
+  if (!available.length) return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Meus trabalhos</h2></div></div>${empty('Nenhum trabalho nesta área', 'Escolha outra área ou comece um trabalho real com o agente.')}`;
   const query = state.systems.query.trim().toLocaleLowerCase('pt-BR');
   const systems = available.filter((system) => {
     const categoryMatch = state.systems.category === 'all' || systemBusinessFunction(system) === state.systems.category;
@@ -1884,18 +1909,14 @@ function renderSystems() {
     return `<button type="button" class="system-filter${state.systems.stage === stage ? ' active' : ''}" data-system-stage="${stage}"${count ? '' : ' disabled'}>${copy} <b>${count}</b></button>`;
   }).join('');
   const scopeSummary = state.operatingAreaFilter
-    ? `${available.length} de ${state.model.systems.length} Sistemas na área ${operatingAreaName(state.operatingAreaFilter)}`
-    : `${available.length} Sistemas neste Cérebro`;
+    ? `${available.length} de ${state.model.systems.length} trabalhos na área ${operatingAreaName(state.operatingAreaFilter)}`
+    : `${available.length} trabalhos neste Cérebro`;
   const visibleSummary = systems.length === available.length ? scopeSummary : `${systems.length} visíveis · ${scopeSummary}`;
-  const lifecycle = ['active', 'configured', 'mapped'].map((stage) => {
-    const count = available.filter((system) => system.migration_stage === stage).length;
-    const name = { active: 'ativos', configured: 'configurados', mapped: 'mapeados' }[stage];
-    return `${count} ${name}`;
-  }).join(' · ');
-  return `<div class="section-heading"><div><p class="eyebrow">LAUNCHER</p><h2>Meus Sistemas</h2></div><p>Conheça o Sistema antes de abrir sua aplicação. Contratos, contexto, Runs e confiança continuam no Cockpit.</p></div>
-    <div class="systems-launcher-toolbar"><label><span>Buscar Sistema</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome, resultado, publisher ou responsável" autocomplete="off"></label><div class="systems-filter-stack"><div><span class="micro">ESTÁGIO</span><div class="systems-filter-row" aria-label="Filtrar por estágio">${stageButtons}</div></div><div><span class="micro">FUNÇÃO</span><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div></div></div>
-    <div class="systems-results"><span>${escapeHtml(visibleSummary)}</span><small>${escapeHtml(lifecycle)} · identidade publicada pelo Experience Manifest; catálogo público entra na Society.</small></div>
-    <div class="systems-market-grid">${systems.map(systemCard).join('') || empty('Nenhum Sistema encontrado', 'Limpe a busca ou escolha outra função empresarial.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">RESULTADOS</p><h2>Meus trabalhos</h2></div><p>Escolha pelo que você quer produzir. Abra um trabalho para conferir fontes e limites.</p></div>
+    <div class="systems-launcher-toolbar"><label><span>Buscar trabalho</span><input type="search" data-system-search value="${escapeHtml(state.systems.query)}" placeholder="Nome ou resultado esperado" autocomplete="off"></label></div>
+    ${detailDisclosure(`<div class="systems-filter-stack"><div><span class="micro">ESTÁGIO</span><div class="systems-filter-row" aria-label="Filtrar por estágio">${stageButtons}</div></div><div><span class="micro">ÁREA DE NEGÓCIO</span><div class="systems-filter-row" aria-label="Filtrar por função empresarial">${categoryButtons}</div></div></div>`, { label: 'Filtrar trabalhos', open: state.systems.category !== 'all' || state.systems.stage !== 'all' })}
+    <div class="systems-results"><span>${escapeHtml(visibleSummary)}</span></div>
+    <div class="systems-market-grid">${systems.map(systemCard).join('') || empty('Nenhum trabalho encontrado', 'Limpe a busca ou escolha outra área.')}</div>`;
 }
 
 const SKILL_ACRONYMS = new Set(['ads', 'cub', 'gtm', 'icp', 'ui', 'ux', 'vsl']);
@@ -2027,7 +2048,7 @@ async function loadSkills() {
 }
 
 function renderSources() {
-  return `<div class="section-heading"><div><p class="eyebrow">CASAS DE VERDADE</p><h2>Fontes</h2></div><p>Mapear não é conectar. A garantia mostrada depende de quem realmente possui a custódia.</p></div><div class="object-grid">${visibleSources().map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}" role="button" tabindex="0"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Custódia: ${escapeHtml(label(source.custody))} · PII: ${escapeHtml(label(source.pii))}</p><div class="ref-list">${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join('')}</div></article>`).join('') || empty('Nenhuma Fonte contratada', 'Fontes aparecem sem abrir ou copiar o conteúdo original.')}</div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">INFORMAÇÕES DISPONÍVEIS</p><h2>Minhas fontes</h2></div><p>Uma fonte cadastrada não significa que já foi conectada ou usada.</p></div><div class="object-grid">${visibleSources().map((source) => `<article class="object-card" data-kind="source" data-open-source="${escapeHtml(source.source_id)}" role="button" tabindex="0"><div class="object-card-top">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}</div><p class="micro">${escapeHtml(source.type)}</p><h3>${escapeHtml(source.name)}</h3><p>Fonte cadastrada. Abra para ver quais trabalhos a declaram e como o acesso é controlado.</p><button type="button" class="table-action" data-open-source="${escapeHtml(source.source_id)}">Ver fonte →</button></article>`).join('') || empty('Nenhuma fonte cadastrada', 'Você pode começar com uma pequena amostra real, sem conectar ferramentas.')}</div>`;
 }
 
 function experimentProgress(experiment) {
@@ -2258,9 +2279,9 @@ function runsKpis(visible) {
 function renderRuns() {
   if (!state.runs.data) {
     void loadRuns();
-    return '<div class="loading"><i></i><span>Unificando recibos e ledger de runs…</span></div>';
+    return '<div class="loading"><i></i><span>Preparando o histórico de trabalhos…</span></div>';
   }
-  if (state.runs.data.error) return empty('Execuções indisponíveis', label(state.runs.data.error));
+  if (state.runs.data.error) return empty('Histórico indisponível', friendlyFailure(state.runs.data.error, 'Atualize a página para tentar carregar o histórico novamente.'));
   const total = runsEntries().filter((entry) => inActiveOperatingArea(entry.operating_area)).length;
   const visible = runsVisibleEntries();
   const issues = (state.runs.data.issues || []).map((issue) => `<div class="experiment-gap">${escapeHtml(label(issue.reason_code))} · <code>${escapeHtml(issue.ref)}</code></div>`).join('');
@@ -2277,11 +2298,11 @@ function renderRuns() {
     <td>${runsChainCell(entry)}</td>
     <td>${runsTraceBadge(entry)}<button class="table-action" data-canvas-jump-run="${escapeHtml(entry.selector_ref)}">trace →</button></td>
   </tr>`).join('');
-  return `<div class="section-heading"><div><p class="eyebrow">RASTRO</p><h2>Execuções</h2></div><p>Recibos de rotina e Run Records do ledger na mesma linha do tempo. Tudo reference-only ${prov('observado')} — o conteúdo continua privado.</p></div>
-    ${issues}
-    ${runsKpis(visible)}
-    ${runsFilterBar(visible.length, total)}
-    <div class="table-wrap runs-table"><table><thead><tr>
+  const recent = visible.slice(0, 12).map((entry) => `<article class="work-history-item"><div><span class="meta">${fmtDate(entry.when)}</span><h3>${escapeHtml(entry.system_name)}</h3><p>${escapeHtml(label(entry.status))}${entry.decision ? ` · Decisão: ${escapeHtml(label(entry.decision))}` : ''}</p><small>${entry.context ? `${entry.context.sources} fonte(s) registradas${entry.context.gaps || entry.context.conflicts ? ' · há lacunas para conferir' : ''}` : 'As fontes usadas não foram registradas neste trabalho.'}</small></div><div class="work-history-actions">${entry.receipt_id ? `<button type="button" class="table-action" data-open-judgment="${escapeHtml(entry.receipt_id)}">Ver entrega →</button>` : ''}<button type="button" class="table-action" data-canvas-jump-run="${escapeHtml(entry.selector_ref)}">Ver como foi feito →</button></div></article>`).join('');
+  return `<div class="section-heading"><div><p class="eyebrow">HISTÓRICO</p><h2>Trabalhos realizados</h2></div><p>Abra uma entrega para conferir o resultado. O rastro técnico fica disponível em cada trabalho.</p></div>
+    <div class="work-history">${recent || empty('Nenhum trabalho registrado ainda', 'Quando um trabalho terminar, ele aparecerá aqui com seu resultado e estado.')}</div>
+    ${visible.length > 12 ? `<p class="muted">Mostrando os 12 trabalhos mais recentes de ${visible.length}.</p>` : ''}
+    ${detailDisclosure(`${issues}${runsKpis(visible)}${runsFilterBar(visible.length, total)}<div class="table-wrap runs-table"><table><thead><tr>
       <th data-runs-sort="when">Quando${sortMark('when')}</th>
       <th data-runs-sort="system">Sistema${sortMark('system')}</th>
       <th>Rotina / experimento</th>
@@ -2292,8 +2313,7 @@ function renderRuns() {
       <th data-runs-sort="decision">Decisão${sortMark('decision')}</th>
       <th>Cadeia</th>
       <th>Trace</th>
-    </tr></thead><tbody>${rows || `<tr><td colspan="10">${total ? 'Nenhuma execução passa nos filtros atuais.' : 'Nenhuma execução registrada ainda — recibo ou Run Record aparecem aqui.'}</td></tr>`}</tbody></table></div>
-    ${runsCompareSection(visible)}`;
+    </tr></thead><tbody>${rows || `<tr><td colspan="10">${total ? 'Nenhuma execução passa nos filtros atuais.' : 'Nenhuma execução registrada ainda — recibo ou Run Record aparecem aqui.'}</td></tr>`}</tbody></table></div>${runsCompareSection(visible)}`, { label: 'Filtrar, comparar e ver registros técnicos', open: Object.values(state.runs.filters).some(Boolean) })}`;
 }
 
 function renderGovernance() {
@@ -2308,7 +2328,43 @@ function renderGovernance() {
 
 function renderHealth() {
   const rows = state.model.routines.map((routine) => ({ name: routine.name, reason: routine.health_reason_code, binding: routine.binding.auth_status }));
-  return `<div class="section-heading"><div><p class="eyebrow">READBACK</p><h2>Saúde operacional</h2></div><p>Estado derivado de arquivos canônicos, nunca de um painel editorial paralelo.</p></div><div class="health-list">${rows.map((row) => `<article><span class="health-dot ${tone(row.reason)}"></span><div><h3>${escapeHtml(row.name)}</h3><p>${escapeHtml(label(row.reason))}</p></div><code>${escapeHtml(row.binding)}</code></article>`).join('')}${state.model.issues.map((issue) => `<article><span class="health-dot bad"></span><div><h3>${escapeHtml(label(issue.reason_code))}</h3><p>${escapeHtml(issue.ref)}</p></div></article>`).join('')}</div><div class="cache-note"><strong>Índice reconstruível</strong><p>Este V0 não mantém banco nem cache persistente. Cada atualização recompila contratos, bindings, estado e recibos locais.</p></div>`;
+  return `<div class="section-heading"><div><p class="eyebrow">CUIDADOS</p><h2>O que precisa de atenção</h2></div><p>Os avisos abaixo vêm do estado observado nesta instalação.</p></div><div class="health-list">${rows.map((row) => `<article><span class="health-dot ${tone(row.reason)}"></span><div><h3>${escapeHtml(row.name)}</h3><p>${escapeHtml(label(row.reason))}</p>${detailDisclosure(`<code>${escapeHtml(row.reason)}</code> · <code>${escapeHtml(row.binding)}</code>`, { label: 'Ver diagnóstico' })}</div></article>`).join('')}${state.model.issues.map((issue) => `<article><span class="health-dot bad"></span><div><h3>${escapeHtml(friendlyFailure(issue.reason_code, 'Um registro precisa ser conferido.'))}</h3>${detailDisclosure(`<code>${escapeHtml(issue.reason_code)}</code> · <code>${escapeHtml(issue.ref)}</code>`, { label: 'Ver diagnóstico' })}</div></article>`).join('')}</div>`;
+}
+
+function renderHermes() {
+  const hermes = state.model.hermes;
+  const activation = hermes.activation || { phase: 'prepare', action: { status: 'idle', progress: 0 }, bot: {} };
+  const action = activation.action || {};
+  const locked = state.model.demo ? 'disabled' : '';
+  const busy = ['running', 'awaiting-confirmation'].includes(action.status);
+  const preparing = action.status === 'running' && ['prepare', 'codex-login'].includes(action.kind);
+  const identifying = activation.phase === 'identify-owner' && action.kind === 'telegram-owner';
+  const finalizing = activation.phase === 'finalizing';
+  const brainReady = hermes.installed && hermes.project_bound && hermes.skills_trusted && hermes.codex_authenticated;
+  const telegramReady = hermes.telegram.token_configured && hermes.telegram.allowlist_configured && hermes.telegram.allow_all_disabled;
+  const ready = activation.phase === 'ready' && brainReady && telegramReady && hermes.gateway.running;
+  const botUsername = activation.bot?.username;
+  const progress = action.status === 'running' ? `<div class="activation-progress"><div><span>${Math.max(1, action.progress || 1)}%</span><b>${action.kind === 'codex-login' ? 'Aguardando autorização…' : finalizing ? 'Ligando seu colega…' : 'Preparando com segurança…'}</b></div><div class="progress-track"><i style="width:${Math.max(1, action.progress || 1)}%"></i></div>${finalizing ? '' : `<button class="text-action" data-activation-action="cancel" data-action-id="${escapeHtml(action.id)}">Cancelar</button>`}</div>` : '';
+  const oauth = action.kind === 'codex-login' && (action.verification_url || action.user_code) ? `<div class="oauth-card"><p class="micro">AUTORIZAÇÃO OPENAI</p><h4>Confirme no navegador</h4>${action.user_code ? `<strong>${escapeHtml(action.user_code)}</strong><p>Copie este código se a página pedir.</p>` : '<p>Gerando seu código seguro…</p>'}${action.verification_url ? `<a class="action primary" href="${escapeHtml(action.verification_url)}" target="_blank" rel="noreferrer">Abrir autorização →</a>` : ''}</div>` : '';
+  const prepareAction = !hermes.installed || !hermes.project_bound || !hermes.skills_trusted
+    ? `<button class="action primary activation-cta" data-activation-action="prepare" ${locked || busy ? 'disabled' : ''}>Preparar meu Cérebro →</button>`
+    : !hermes.codex_authenticated
+      ? `<button class="action primary activation-cta" data-activation-action="codex" ${locked || busy ? 'disabled' : ''}>Autorizar o agente →</button>`
+      : '<div class="step-done-copy">Cérebro preparado e agente autorizado.</div>';
+  const botForm = brainReady && !identifying && !finalizing && !ready ? `<div class="botfather-guide"><a href="https://t.me/BotFather" target="_blank" rel="noreferrer">Abrir @BotFather ↗</a><ol><li>Envie <code>/newbot</code></li><li>Escolha nome e username</li><li>Copie o token recebido</li></ol></div><form id="telegram-activation-form" class="telegram-form telegram-single" autocomplete="off"><label>Token do BotFather<input id="telegram-token" type="password" autocomplete="off" data-1p-ignore="true" spellcheck="false" maxlength="256" placeholder="Cole o token aqui" required></label><div class="form-actions"><button class="action primary activation-cta" type="submit" ${locked || busy ? 'disabled' : ''}>Conectar meu bot →</button></div></form><p class="fine-print">O token sai deste campo imediatamente e fica somente no arquivo secreto local do Hermes.</p>` : '';
+  const identifyBody = identifying ? `<div class="identify-owner"><p class="micro">IDENTIFICAR VOCÊ</p>${activation.bot?.owner_candidate_display ? `<h4>Esta conta é você?</h4><strong>${escapeHtml(activation.bot.owner_candidate_display)}</strong><div class="owner-actions"><button class="action primary" data-activation-action="owner-confirm" data-action-id="${escapeHtml(action.id)}">Sou eu</button><button class="action" data-activation-action="owner-reject" data-action-id="${escapeHtml(action.id)}">Não sou eu</button></div>` : botUsername ? `<h4>Envie <code>/start</code> para @${escapeHtml(botUsername)}</h4><p>O Cockpit identifica a próxima conta privada. Nenhum ID precisa ser copiado.</p><a class="action primary" href="https://t.me/${escapeHtml(botUsername)}" target="_blank" rel="noreferrer">Abrir meu bot →</a><button class="text-action" data-activation-action="cancel" data-action-id="${escapeHtml(action.id)}">Cancelar busca</button>` : `<h4>Validando seu bot…</h4><p>Espere o nome do bot aparecer antes de enviar <code>/start</code>.</p>${progress}`}</div>` : '';
+  const errorBox = action.status === 'error' ? `<div class="activation-error"><b>${escapeHtml(friendlyFailure(action.error_code, 'Não foi possível concluir esta etapa.'))}</b><p>Nenhuma configuração incompleta foi mantida. Tente novamente; o código do erro está nos detalhes técnicos.</p>${detailDisclosure(`<code>${escapeHtml(action.error_code)}</code>`, { label: 'Ver diagnóstico' })}</div>` : '';
+  const steps = [
+    { title: 'Preparar seu Cérebro', done: brainReady, current: !brainReady || preparing, body: `${!brainReady ? '<p>O Cockpit prepara a conexão com o agente e abre a autorização necessária.</p>' : ''}${prepareAction}${preparing ? progress : ''}${oauth}` },
+    { title: 'Conectar o Telegram', done: telegramReady, current: brainReady && !ready, body: `${!telegramReady ? '<p>Crie um bot, cole o código secreto e envie /start na conversa privada. O acesso ficará restrito à sua conta.</p>' : '<div class="step-done-copy">Bot conectado; só a sua conta pode conversar.</div>'}${botForm}${identifyBody}${finalizing ? progress : ''}` },
+    { title: 'Começar a conversar', done: ready, current: ready, body: ready ? `<div class="ready-callout"><span class="status-orb online"></span><div><h4>Seu cérebro está no Telegram</h4><p>Conexão ativa e acesso restrito à sua conta.</p></div>${botUsername ? `<a class="action primary" href="https://t.me/${escapeHtml(botUsername)}" target="_blank" rel="noreferrer">Abrir conversa →</a>` : ''}</div>` : '<p>Depois da sua confirmação, o Cockpit liga o serviço e faz o diagnóstico automaticamente.</p>' },
+  ];
+  const advanced = `<details class="advanced-setup"><summary>Detalhes técnicos</summary><div class="advanced-grid"><article><b>Hermes</b><span>${escapeHtml(hermes.version || 'Não instalado')}</span></article><article><b>Provider</b><span>${escapeHtml(hermes.provider_label || 'Pendente')}</span></article><article><b>Cérebro</b><span>${brainReady ? 'Conectado' : 'Pendente'}</span></article><article><b>Gateway</b><span>${hermes.gateway.running ? 'Ativo' : 'Parado'}</span></article></div><div class="gateway-actions"><button class="action" data-hermes-action="doctor" ${locked || !hermes.installed ? 'disabled' : ''}>Rodar diagnóstico</button><button class="action" data-hermes-action="gateway-restart" ${locked || !hermes.gateway.installed ? 'disabled' : ''}>Reiniciar gateway</button>${telegramReady ? `<button class="action warn" data-hermes-action="disconnect" ${locked}>Trocar conexão</button>` : ''}</div><p class="fine-print">Providers alternativos e manutenção manual continuam disponíveis no Hermes, fora do caminho principal.</p></details>`;
+  return `<div class="section-heading hermes-heading"><div><p class="eyebrow">COLEGA NO BOLSO</p><h2>Leve seu cérebro para o Telegram</h2></div><p>Três gestos seus. Instalação, segurança e diagnóstico ficam com o Cockpit.</p></div>
+    ${state.model.demo ? '<div class="boundary-note"><b>Fluxo de aula</b>Esta é a experiência completa em demonstração. Nenhuma credencial ou serviço real é alterado.</div>' : ''}
+    ${errorBox}
+    <div class="activation-journey">${steps.map((step, index) => `<article class="journey-step ${step.done ? 'complete' : ''} ${step.current ? 'current' : ''}"><div class="journey-marker"><span>${step.done ? '✓' : index + 1}</span><i></i></div><div class="journey-content"><div class="step-heading"><div><p class="micro">${index === 0 ? 'PREPARAR O AGENTE' : index === 1 ? 'CONECTAR SUA CONVERSA' : 'PRONTO'}</p><h3>${escapeHtml(step.title)}</h3></div>${badge(step.done ? 'completed' : step.current ? 'running' : 'pending', step.done ? 'good' : step.current ? 'warn' : 'neutral')}</div>${step.body}</div></article>`).join('')}</div>
+    ${advanced}`;
 }
 
 function renderSociety() {
@@ -2316,7 +2372,7 @@ function renderSociety() {
   if (!catalog) {
     if (state.society.error) return empty('Society indisponível', 'O catálogo local não pôde ser compilado. Atualize o Cockpit para tentar novamente.');
     if (!state.society.loading) void loadSociety();
-    return '<div class="loading"><i></i><span>Compilando o catálogo local da Society…</span></div>';
+    return '<div class="loading"><i></i><span>Preparando os trabalhos disponíveis…</span></div>';
   }
   if (state.society.selected) {
     const selected = catalog.systems.find((system) => system.system_id === state.society.selected);
@@ -2778,7 +2834,7 @@ async function rollbackCase() {
   }
 }
 
-const renderers = { activation: renderActivation, compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, skills: renderSkills, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, society: renderSociety };
+const renderers = { activation: renderActivation, compatibility: renderCompatibility, today: renderToday, anatomy: renderAnatomy, system: renderSystemWorkspace, canvas: renderCanvas, areas: renderAreas, systems: renderSystems, skills: renderSkills, sources: renderSources, experiments: renderExperiments, routines: renderRoutines, judgments: renderJudgments, cases: renderCases, runs: renderRuns, governance: renderGovernance, health: renderHealth, hermes: renderHermes, society: renderSociety };
 const titles = {
   activation: ['Primeira Missão', 'Ative o Cérebro pelo uso, começando com um trabalho real.'],
   compatibility: ['Compatibilidade do protocolo', 'Migração e aderência ao protocolo — não é um placar de saúde do cérebro.'],
@@ -2797,6 +2853,7 @@ const titles = {
   runs: ['Execuções', 'Todas as execuções — recibos de rotina e Run Records do ledger, com contexto, eval, decisão e trace.'],
   governance: ['Governança', 'Quem pode acessar o quê e qual controle existe de verdade.'],
   health: ['Saúde', 'Conflitos e degradações derivados do estado canônico.'],
+  hermes: ['Telegram', 'Três gestos para levar seu cérebro ao Telegram com acesso restrito.'],
   society: ['Society', 'A rede distribui capacidade; o contexto da empresa não circula.'],
 };
 
@@ -2808,6 +2865,7 @@ const viewGroups = {
   system: 'Sistemas', systems: 'Sistemas',
   canvas: 'Estrutura', areas: 'Estrutura', sources: 'Estrutura', experiments: 'Estrutura',
   compatibility: 'Confiança', governance: 'Confiança', health: 'Confiança',
+  hermes: 'Ativação',
   society: 'Rede',
 };
 
@@ -2874,20 +2932,29 @@ function tabstrip() {
 
 function render() {
   if (!state.model) return;
-  let [title, subtitle] = titles[state.view];
+  let [title, subtitle] = viewLanguage[state.view] || titles[state.view];
   if (state.view === 'system' && state.workspace?.data) title = state.workspace.data.system.name;
   document.body.dataset.currentView = state.view;
-  $('#eyebrow').textContent = `company-brain // ${(viewGroups[state.view] || 'Operação').toLowerCase()}`;
+  $('#eyebrow').textContent = state.view === 'activation' ? 'PRIMEIRO PASSO' : state.view === 'today' ? 'SEU DIA' : 'SEU CÉREBRO';
   $('#page-title').textContent = title;
   $('#page-subtitle').textContent = subtitle;
   renderAreaSwitcher();
-  const hidesSummary = ['activation', 'canvas', 'system', 'systems', 'skills', 'society'].includes(state.view) || state.view === 'anatomy';
-  $('#summary').innerHTML = hidesSummary ? '' : summaryCards();
+  const currentWork = state.view === 'system' && state.workspace?.data ? {
+    name: state.workspace.data.system.name,
+    status: label(state.workspace.data.system.migration_stage),
+    records: state.workspace.data.records.length,
+    pending: state.workspace.data.judgments.filter((item) => item.judgment.status === 'pending').length,
+  } : null;
+  $('#journey').innerHTML = renderJourneyCue(state.view, { ...state.model, current_work: currentWork });
+  $('#summary').innerHTML = state.view === 'today'
+    ? `<details class="summary-disclosure"><summary>Ver números do Cérebro</summary><div class="summary-disclosure-grid">${summaryCards()}</div></details>`
+    : '';
+  $('#demo-banner').hidden = !state.model.demo;
   if (replay.playing) stopTraceReplay(false);
   if (state.canvas.controller) { state.canvas.controller.destroy(); state.canvas.controller = null; }
   if (state.canvas.stopParticles) { state.canvas.stopParticles(); state.canvas.stopParticles = null; }
   $('#content').innerHTML = tabstrip() + renderers[state.view]();
-  $('#updated-at').textContent = `Estado local · ${fmtDate(state.model.generated_at)}`;
+  $('#updated-at').textContent = `Atualizado ${fmtDate(state.model.generated_at)}`;
   document.querySelectorAll('[data-count]').forEach((element) => {
     const value = state.model.counts[element.dataset.count] ?? 0;
     element.textContent = value;
@@ -2897,6 +2964,8 @@ function render() {
     const views = (element.dataset.views || element.dataset.view).split(',');
     element.classList.toggle('active', views.includes(state.view));
   });
+  const advancedNav = $('[data-nav-advanced]');
+  if (advancedNav) advancedNav.open = ['skills', 'canvas', 'areas', 'sources', 'experiments', 'compatibility', 'governance', 'health'].includes(state.view);
   if (state.view === 'anatomy') {
     const strip = $('.brain-mode-switch');
     const activeMode = strip?.querySelector('button.active');
@@ -2906,6 +2975,7 @@ function render() {
   }
   ensureVisibleSystemInterfaceHealth();
   if (state.view === 'canvas') void mountCanvasView();
+  scheduleActivationPoll();
 }
 
 function canvasEndpoint() {
@@ -3103,17 +3173,18 @@ function openSourceDrawer(sourceId) {
   const grants = state.model.routines.flatMap((routine) => routine.access
     .filter((access) => access.source_ref === source.source_id)
     .map((access) => ({ routine, access })));
-  showDrawerShell(`<div class="drawer-head"><p class="micro">FONTE · ${escapeHtml(source.type || 'casa de verdade')}</p><h2>${escapeHtml(source.name)}</h2>
-      <div class="judgment-badges">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}${badge(source.assurance, source.assurance === 'runtime-enforced' ? 'good' : 'neutral')}</div></div>
-    <div class="drawer-section"><h3>Contrato</h3><dl>
+  showDrawerShell(`<div class="drawer-head"><p class="micro">INFORMAÇÃO CADASTRADA</p><h2>${escapeHtml(source.name)}</h2>
+      <div class="judgment-badges">${badge(source.status, source.status === 'active' ? 'good' : 'neutral')}</div></div>
+    <section class="drawer-section"><h3>O que sabemos</h3><p>Esta fonte está cadastrada. Isso, por si só, não comprova uma conexão ativa nem uso em uma resposta.</p><p>${systems.length} ${systems.length === 1 ? 'trabalho declara' : 'trabalhos declaram'} esta fonte.</p></section>
+    ${detailDisclosure(`<div class="drawer-section"><h3>Contrato e limites de acesso</h3><dl>
       <div><dt>Custódia</dt><dd>${escapeHtml(label(source.custody))}</dd></div>
       <div><dt>PII</dt><dd>${escapeHtml(label(source.pii))}</dd></div>
       <div><dt>Modos</dt><dd>${source.modes.map((mode) => `<code>${escapeHtml(mode)}</code>`).join(' ')}</dd></div>
       <div><dt>Ref</dt><dd><code>${escapeHtml(source.source_id)}</code></dd></div>
-    </dl></div>
+    </dl></div>`, { label: 'Ver como o acesso funciona' })}
     <div class="drawer-section"><h3>Sistemas que usam · ${systems.length}</h3><div class="node-links">${systems.map((system) => entityLink('data-open-system', system.system_id, system.name, label(system.migration_stage), 'system')).join('') || '<p class="muted">Nenhum sistema declara esta fonte.</p>'}</div></div>
-    ${grants.length ? `<div class="drawer-section"><h3>Acessos concedidos · ${grants.length}</h3><div class="node-links">${grants.map(({ routine, access }) => entityLink('data-open-routine', routine.routine_id, routine.name, `${label(access.assurance)} · ${label(access.revocation_effect)}`, 'routine')).join('')}</div></div>` : ''}
-    <div class="drawer-section"><button class="action primary" data-focus-brain-node="source:${escapeHtml(source.source_id)}">Ver no mandala →</button></div>`);
+    ${grants.length ? detailDisclosure(`<div class="drawer-section"><h3>Acessos concedidos · ${grants.length}</h3><div class="node-links">${grants.map(({ routine, access }) => entityLink('data-open-routine', routine.routine_id, routine.name, `${label(access.assurance)} · ${label(access.revocation_effect)}`, 'routine')).join('')}</div></div>`, { label: 'Ver acessos concedidos' }) : ''}
+    <div class="drawer-section"><button class="action" data-focus-brain-node="source:${escapeHtml(source.source_id)}">Ver no mapa →</button></div>`);
 }
 
 /* Replay do Execution Trace — reproduz o run evento a evento sobre o mapa.
@@ -3130,14 +3201,14 @@ function syncTraceReplayAvailability(graph) {
   if (!button) return;
   const replayEvents = traceReplayEvents(graph).length;
   button.disabled = replayEvents === 0;
-  button.textContent = '▶ Reproduzir trace';
+  button.textContent = '▶ Rever etapas registradas';
   button.title = replayEvents
-    ? `Reproduzir ${replayEvents} eventos observados deste trace`
-    : 'Run anterior à instrumentação detalhada — resultado preservado, replay visual indisponível';
+    ? `Rever ${replayEvents} etapas registradas deste trabalho`
+    : 'Este trabalho não registrou etapas suficientes para uma reprodução visual';
   if (status) {
     status.textContent = replayEvents
       ? `${replayEvents} eventos registrados`
-      : 'Resultado preservado · replay visual indisponível neste Run';
+      : 'Resultado preservado; não há etapas registradas para rever';
     status.classList.toggle('unavailable', replayEvents === 0);
   }
 }
@@ -3147,7 +3218,7 @@ function stopTraceReplay(restore = true) {
   replay.playing = false;
   $('#replay-ticker')?.remove();
   const button = $('[data-canvas-replay]');
-  if (button) button.textContent = '▶ Reproduzir trace';
+  if (button) button.textContent = '▶ Rever etapas registradas';
   if (!restore) return;
   for (const element of document.querySelectorAll('#operational-canvas .brain-node')) {
     if (element.dataset.replayClass) {
@@ -3219,7 +3290,7 @@ function cycleCanvasRef(step) {
 
 async function mountCanvasView() {
   startParticles();
-  if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id;
+  if (state.canvas.scope === 'system' && !state.canvas.ref) state.canvas.ref = defaultCanvasSystemRef();
   if (state.canvas.scope === 'run' && !state.canvas.ref) state.canvas.ref = allCanvasExecutions()[0]?.selector_ref;
   const container = $('#operational-canvas');
   if (!container || (state.canvas.scope !== 'brain' && !state.canvas.ref)) {
@@ -3347,11 +3418,9 @@ function openDrawer(routineId) {
   const access = routine.access.map((item) => `<div class="access-item"><div><strong>${escapeHtml(item.source_ref)}</strong><span>${escapeHtml(item.action)} · ${escapeHtml(item.requested_mode)}</span></div>${badge(item.assurance, item.assurance === 'runtime-enforced' ? 'good' : 'neutral')}<small>${escapeHtml(label(item.revocation_effect))}</small></div>`).join('') || '<p class="muted">Sem Access Grants declarados.</p>';
   const receipts = routine.receipts.map((receipt) => `<div class="receipt-item"><span class="timeline-dot ${tone(receipt.status)}"></span><div><strong>${escapeHtml(label(receipt.status))} · ${escapeHtml(receipt.trigger)}</strong><span>${fmtDate(receipt.completed_at)} · ${escapeHtml(receipt.reason_code)}</span><code>${escapeHtml(receipt.receipt_ref)}</code>${receipt.output_ref ? `<code>output: ${escapeHtml(receipt.output_ref)}</code>` : ''}</div></div>`).join('') || '<p class="muted">Nenhuma execução registrada.</p>';
   const migration = routine.migration ? `<div class="migration-box ${routine.migration.status === 'awaiting-legacy-pause' ? 'attention' : ''}"><p class="micro">MIGRAÇÃO DE AGENDA</p><strong>${escapeHtml(label(routine.migration.status))}</strong><p>${escapeHtml(routine.migration.source.schedule_summary)}</p><small>Fonte: ${escapeHtml(routine.migration.source.kind)} · o Console não pausa esse fornecedor sozinho.</small></div>` : '';
-  $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">ROTINA · v${escapeHtml(routine.version)}</p><h2>${escapeHtml(routine.name)}</h2>${badge(routine.health_reason_code)}</div>${migration}
-    <section class="drawer-section"><h3>Contrato operacional</h3><dl><div><dt>Agenda</dt><dd>${escapeHtml(routine.schedule)}</dd></div>${routine.preparation ? `<div><dt>Preparação</dt><dd>${escapeHtml(routine.preparation.executable || 'binding ausente')} → <code>${escapeHtml(routine.preparation.output_ref)}</code></dd></div>` : ''}<div><dt>Executor</dt><dd>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</dd></div><div><dt>Modelo</dt><dd>Solicitado, não verificado pelo provider</dd></div><div><dt>Permissão</dt><dd>${escapeHtml(routine.permission_mode)}</dd></div><div><dt>Prompt ref.</dt><dd><code>${escapeHtml(routine.prompt_ref)}</code></dd></div><div><dt>Destino</dt><dd><code>${escapeHtml(routine.destination.kind)}:${escapeHtml(routine.destination.ref)}</code></dd></div></dl></section>
-    <section class="drawer-section"><h3>Contexto e garantia</h3><p class="section-help">A interface mostra referências e a garantia real. Ela não abre o conteúdo da Fonte.</p>${access}</section>
-    <section class="drawer-section"><h3>Fronteira do provider</h3><div class="boundary-note"><b>${routine.receipts.some((receipt) => receipt.content_shared_with_provider) ? 'Já houve envio ao provider' : 'Nenhum envio registrado'}</b>O conteúdo necessário passa pelo ${escapeHtml(routine.binding.adapter)}, nunca pela INEVITA. Prompt e output não entram no recibo.</div></section>
-    <section class="drawer-section"><h3>Recibos recentes</h3><div class="timeline">${receipts}</div></section>
+  $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">TRABALHO PROGRAMADO</p><h2>${escapeHtml(routine.name)}</h2>${badge(routine.health_reason_code)}</div>${migration}
+    <section class="drawer-section"><h3>O que acontece</h3><p>Este trabalho ${routine.trigger === 'schedule' ? `está previsto para ${escapeHtml(routine.schedule)}` : 'começa quando você pedir'}. ${routine.receipts.length ? `Já foi realizado ${routine.receipts.length} ${routine.receipts.length === 1 ? 'vez' : 'vezes'}.` : 'Ainda não há uma execução registrada.'}</p></section>
+    ${detailDisclosure(`<section class="drawer-section"><h3>Configuração</h3><dl><div><dt>Agenda</dt><dd>${escapeHtml(routine.schedule)}</dd></div>${routine.preparation ? `<div><dt>Preparação</dt><dd>${escapeHtml(routine.preparation.executable || 'binding ausente')} → <code>${escapeHtml(routine.preparation.output_ref)}</code></dd></div>` : ''}<div><dt>Executor</dt><dd>${escapeHtml(routine.binding.adapter)} · ${escapeHtml(routine.binding.requested_model)}</dd></div><div><dt>Modelo</dt><dd>Solicitado, não verificado pelo provider</dd></div><div><dt>Permissão</dt><dd>${escapeHtml(routine.permission_mode)}</dd></div><div><dt>Prompt ref.</dt><dd><code>${escapeHtml(routine.prompt_ref)}</code></dd></div><div><dt>Destino</dt><dd><code>${escapeHtml(routine.destination.kind)}:${escapeHtml(routine.destination.ref)}</code></dd></div></dl></section><section class="drawer-section"><h3>Fontes e limites</h3><p class="section-help">A interface mostra referências e a garantia real. Ela não abre o conteúdo da Fonte.</p>${access}</section><section class="drawer-section"><h3>Fronteira do agente</h3><div class="boundary-note"><b>${routine.receipts.some((receipt) => receipt.content_shared_with_provider) ? 'Já houve envio ao agente escolhido' : 'Nenhum envio registrado'}</b>O conteúdo necessário passa pelo ${escapeHtml(routine.binding.adapter)}, nunca pela INEVITA. Prompt e output não entram no recibo.</div></section><section class="drawer-section"><h3>Registros recentes</h3><div class="timeline">${receipts}</div></section>`, { label: 'Ver como foi configurado' })}
     <div class="drawer-actions">${drawerActions(routine)}</div>`;
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
@@ -3415,6 +3484,13 @@ function correctionSection(detail) {
   if (!correction) return '';
   const learning = correction.learning_candidate;
   return `<section class="drawer-section"><h3>Linhas de correção</h3>
+    <div class="correction-proof" aria-label="Estado comprovado da correção">
+      <span>${badge('recorded', 'good', 'Correção registrada')}<small>há Judgment Receipt</small></span>
+      <b>→</b>
+      <span>${badge(correction.status === 'completed' ? 'applied' : correction.status, correction.status === 'completed' ? 'good' : 'warn', correction.status === 'completed' ? 'Aplicada em novo Run' : label(correction.status))}<small>${escapeHtml(correction.role === 'candidate' ? 'este é o resultado corrigido' : 'há um resultado corrigido ligado')}</small></span>
+      <b>→</b>
+      <span>${detail.judgment?.summary?.status === 'approved' || detail.judgment?.summary?.verdict === 'approved' ? badge('approved', 'good', 'Resultado aprovado') : badge('pending', 'warn', 'Aguardando julgamento')}<small>aprovação é independente da reexecução</small></span>
+    </div>
     <div class="correction-lineage"><div><span>Baseline</span><code>${escapeHtml(correction.baseline_receipt_ref)}</code></div><b>→</b><div><span>Novo Run</span><code>${escapeHtml(correction.resulting_receipt_ref)}</code></div></div>
     <p class="section-help">O recibo aponta para o julgamento que originou a correção; não copia a nota nem os outputs.</p>
     ${learning ? `<div class="learning-candidate"><div>${badge('candidate', 'neutral')}<strong>${learning.occurrences}/${learning.promotion_threshold}</strong></div><p>Ainda exige casos comparáveis, replay e novo martelo para mudar o Sistema.</p><code>${escapeHtml(learning.candidate_ref)}</code></div>` : ''}
@@ -3465,11 +3541,15 @@ function judgmentZones(detail) {
 
 function contextMarkup(context) {
   const snapshot = context.context_snapshot;
+  const sourceNames = snapshot.accesses.map((access) => {
+    const source = state.model?.sources?.find((item) => item.source_id === access.source_ref.id);
+    return `<li><strong>${escapeHtml(source?.name || access.source_ref.id)}</strong><span>${access.selected_refs.length} ${access.selected_refs.length === 1 ? 'referência selecionada' : 'referências selecionadas'}</span></li>`;
+  }).join('');
   const accesses = snapshot.accesses.map((access) => `<article class="context-access"><div class="object-card-top">${badge(access.assurance, access.assurance === 'runtime-enforced' ? 'good' : 'neutral')}<code>${escapeHtml(access.source_ref.role)}</code></div><h3>${escapeHtml(access.source_ref.id)}</h3><dl><div><dt>Seleção</dt><dd>${escapeHtml(access.query)}</dd></div><div><dt>Janela</dt><dd>${escapeHtml(access.window)}</dd></div><div><dt>Frescor</dt><dd>${escapeHtml(access.freshness_marker || 'não informado')}</dd></div></dl><div class="ref-list">${access.selected_refs.map((ref) => `<code>${escapeHtml(ref)}</code>`).join('')}</div></article>`).join('');
   const gaps = snapshot.gaps.length
     ? `<div class="context-gaps"><p class="micro">LACUNAS</p>${snapshot.gaps.map((gap) => `<code>${escapeHtml(gap.source_role)} · ${escapeHtml(gap.reason_code)}</code>`).join('')}</div>`
     : '<p class="good-note">Nenhuma lacuna de Fonte registrada.</p>';
-  return `<div class="context-summary"><span><b>${snapshot.accesses.length}</b> fontes selecionadas</span><span><b>${snapshot.gaps.length}</b> lacunas</span><span><b>v${escapeHtml(snapshot.retrieval_version)}</b> retrieval</span></div><div class="context-grid">${accesses}</div>${gaps}<div class="boundary-note"><b>Snapshot reference-only</b>O ledger guarda hash, ponteiros, filtros, janela, frescor e garantia. A seleção é auditada; somente uma garantia runtime-enforced provaria bloqueio preventivo. O artefato privado não foi aberto nesta tela.</div>`;
+  return `<div class="context-human-summary"><p>${snapshot.accesses.length ? `${snapshot.accesses.length} ${snapshot.accesses.length === 1 ? 'fonte foi selecionada' : 'fontes foram selecionadas'} para este trabalho.` : 'Nenhuma fonte selecionada foi registrada neste trabalho.'} ${snapshot.gaps.length ? `${snapshot.gaps.length} ${snapshot.gaps.length === 1 ? 'lacuna precisa' : 'lacunas precisam'} de atenção.` : 'Nenhuma lacuna de fonte foi registrada.'}</p><ul>${sourceNames}</ul></div>${detailDisclosure(`<div class="context-summary"><span><b>${snapshot.accesses.length}</b> fontes selecionadas</span><span><b>${snapshot.gaps.length}</b> lacunas</span><span><b>v${escapeHtml(snapshot.retrieval_version)}</b> retrieval</span></div><div class="context-grid">${accesses}</div>${gaps}<div class="boundary-note"><b>Snapshot reference-only</b>O ledger guarda hash, ponteiros, filtros, janela, frescor e garantia. A seleção é auditada; somente uma garantia runtime-enforced provaria bloqueio preventivo. O artefato privado não foi aberto nesta tela.</div>`)}`;
 }
 
 async function loadContext(receiptId, slot) {
@@ -3486,7 +3566,7 @@ async function openContextDrawer(receiptId) {
   state.selectedRoutine = null;
   state.selectedJudgment = receiptId;
   state.selectedExperiment = null;
-  $('#drawer-content').innerHTML = '<div class="drawer-head"><p class="eyebrow">RUN RECORD V2</p><h2>Contexto selecionado</h2></div><div id="context-slot"><p class="muted">Lendo referências locais…</p></div>';
+  $('#drawer-content').innerHTML = '<div class="drawer-head"><p class="eyebrow">ORIGEM DA ENTREGA</p><h2>Informações usadas</h2></div><div id="context-slot"><p class="muted">Conferindo as fontes registradas…</p></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
   await loadContext(receiptId, $('#context-slot'));
@@ -3496,25 +3576,28 @@ async function openJudgment(receiptId) {
   state.selectedRoutine = null;
   state.selectedJudgment = receiptId;
   state.selectedExperiment = null;
-  $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo output privado local…</span></div>';
+  $('#drawer-content').innerHTML = '<div class="loading"><i></i><span>Abrindo a entrega…</span></div>';
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
   try {
     const detail = await getJson(`/api/runs/${receiptId}/output`);
     const current = detail.judgment.summary;
-    $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">OUTPUT PRIVADO</p><h2>${escapeHtml(detail.receipt.routine_id)}</h2>${badge(current.status === 'pending' ? 'pending' : current.verdict)}</div>
+    $('#drawer-content').innerHTML = `<div class="drawer-head"><p class="eyebrow">RASCUNHO DA IA · LEITURA PRIVADA</p><h2>${escapeHtml(state.model.routines.find((item) => item.routine_id === detail.receipt.routine_id)?.name || detail.receipt.routine_id)}</h2>${badge(current.status === 'pending' ? 'pending' : current.verdict)}</div>
       <div class="boundary-note"><b>Leitura local explícita</b>Este conteúdo não entrou no recibo, no read model ou na INEVITA. Abrir não executou modelo.</div>
-      <section class="drawer-section"><div class="output-heading"><h3>Resultado</h3><span>${detail.output.bytes} bytes</span></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
-      ${detail.context_available ? `<section class="drawer-section"><div class="output-heading"><h3>Contexto selecionado</h3><button class="table-action" data-load-context="${escapeHtml(receiptId)}">Abrir Run Record V2 →</button></div><div id="context-slot"></div></section>` : ''}
+      <div class="proof-split${detail.context_available ? '' : ' output-only'}">
+        <section class="drawer-section proof-result"><div class="output-heading"><h3>Resultado para revisar</h3></div><pre class="private-output">${escapeHtml(detail.output.content)}</pre></section>
+        ${detail.context_available ? `<section class="drawer-section proof-origin"><div class="output-heading"><h3>Origens usadas</h3></div><div id="context-slot"><p class="muted">Conferindo as fontes registradas…</p></div></section>` : '<section class="drawer-section proof-origin"><h3>Origens usadas</h3><p>Este trabalho não registrou as fontes usadas. Revise o resultado com cuidado.</p></section>'}
+      </div>
       ${correctionSection(detail)}
       <section class="drawer-section"><h3>Seu julgamento</h3><p class="section-help">A nota fica privada. Pedir ajuste, rejeitar ou propor ação exige explicar por quê.</p>${verdictGuide()}<textarea id="judgment-note" maxlength="2000" placeholder="O que está certo, o que precisa mudar ou qual ação deveria ser considerada?"></textarea></section>
-      <section class="drawer-section"><h3>Histórico imutável</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section>
+      ${detailDisclosure(`<section class="drawer-section"><h3>Histórico de decisões</h3><div class="timeline">${judgmentHistory(detail.judgment.history)}</div></section><p>Arquivo de saída: ${escapeHtml(detail.output.bytes)} bytes.</p>`, { label: 'Ver registros desta entrega' })}
       <div class="boundary-note action-boundary"><b>Propor não é executar</b>“Propor ação” registra intenção local. Não cria task, não envia mensagem, não publica e não altera Fonte.</div>
       ${judgmentZones(detail)}`;
     state.rerunPending = Boolean(detail.correction_actions?.can_rerun_with_correction);
+    if (detail.context_available) await loadContext(receiptId, $('#context-slot'));
   } catch (error) {
-    $('#drawer-content').innerHTML = empty('Output indisponível', label(error.message));
-    toast(label(error.message), 'bad');
+    $('#drawer-content').innerHTML = empty('Entrega indisponível', friendlyFailure(error.message, 'Atualize a página e tente abrir esta entrega novamente.'));
+    toast(friendlyFailure(error.message), 'bad');
   }
 }
 
@@ -3694,6 +3777,116 @@ async function performAction(action) {
   }
 }
 
+async function performHermesAction(action) {
+  if (state.busy || state.model.demo) return;
+  const routes = {
+    bind: '/api/integrations/hermes/project/bind',
+    disconnect: '/api/integrations/hermes/telegram/disconnect',
+    doctor: '/api/integrations/hermes/doctor',
+    'gateway-install': '/api/integrations/hermes/gateway/install',
+    'gateway-start': '/api/integrations/hermes/gateway/start',
+    'gateway-stop': '/api/integrations/hermes/gateway/stop',
+    'gateway-restart': '/api/integrations/hermes/gateway/restart',
+  };
+  if (!routes[action]) return;
+  const messages = {
+    bind: 'Confiar neste repositório e torná-lo o diretório de trabalho do Hermes?',
+    disconnect: 'Remover o token e a allowlist do Telegram? A conexão atual só será trocada com esta confirmação.',
+    doctor: 'Rodar o diagnóstico local do Hermes agora?',
+    'gateway-install': 'Instalar o gateway como serviço do seu usuário e iniciá-lo agora?',
+    'gateway-start': 'Iniciar o gateway do Hermes?',
+    'gateway-stop': 'Parar o gateway do Hermes?',
+    'gateway-restart': 'Reiniciar o gateway para aplicar a configuração atual?',
+  };
+  if (!window.confirm(messages[action])) return;
+  state.busy = true;
+  document.querySelectorAll('[data-hermes-action], #telegram-activation-form button, #telegram-activation-form input').forEach((element) => { element.disabled = true; });
+  try {
+    const result = await mutate(routes[action], {});
+    toast(action === 'doctor' ? `Diagnóstico: ${label(result.status)}.` : 'Configuração do Hermes atualizada.');
+    await loadModel();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  } finally {
+    state.busy = false;
+  }
+}
+
+function scheduleActivationPoll(delay = 800) {
+  clearTimeout(state.activationTimer);
+  const status = state.model?.hermes?.activation?.action?.status;
+  const identityLoading = state.model?.hermes?.activation?.bot?.identity_loading;
+  if (status !== 'running' && !identityLoading) return;
+  state.activationTimer = setTimeout(pollActivation, delay);
+}
+
+async function pollActivation() {
+  try {
+    const activation = await getJson('/api/integrations/hermes/activation');
+    if (!state.model?.hermes) return;
+    state.model.hermes.activation = activation;
+    if (state.view === 'hermes') render();
+    if (activation.action.status === 'running' || activation.bot?.identity_loading) scheduleActivationPoll(900);
+    else await loadModel();
+  } catch (error) {
+    toast(label(error.message), 'bad');
+  }
+}
+
+async function performActivationAction(actionName, actionId = '') {
+  if (state.busy || state.model.demo) return;
+  const routes = {
+    prepare: '/api/integrations/hermes/activation/prepare/start',
+    codex: '/api/integrations/hermes/activation/codex/start',
+    'owner-confirm': '/api/integrations/hermes/activation/owner/confirm',
+    'owner-reject': '/api/integrations/hermes/activation/owner/reject',
+    cancel: '/api/integrations/hermes/activation/cancel',
+  };
+  if (!routes[actionName]) return;
+  if (actionName === 'prepare' && !window.confirm('Preparar o Hermes nesta máquina? O Cockpit reutiliza versões compatíveis ou instala somente o pacote oficial verificado.')) return;
+  state.busy = true;
+  document.querySelectorAll('[data-activation-action], #telegram-activation-form input, #telegram-activation-form button').forEach((element) => { element.disabled = true; });
+  try {
+    const result = await mutate(routes[actionName], actionId ? { action_id: actionId } : {});
+    state.model.hermes.activation = result;
+    render();
+    if (actionName === 'owner-confirm') toast('Confirmado. Ligando seu colega no Telegram…');
+    else if (actionName === 'owner-reject') toast('Conta descartada. Envie /start pela conta certa.');
+    scheduleActivationPoll(250);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+    await loadModel();
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function connectTelegram(form) {
+  if (state.busy || state.model.demo) return;
+  const token = form.querySelector('#telegram-token')?.value.trim() || '';
+  if (!token) {
+    toast('Cole o token recebido do BotFather.', 'bad');
+    return;
+  }
+  const replacing = state.model.hermes.telegram.token_configured;
+  if (replacing && !window.confirm('Trocar o bot conectado? A configuração atual será preservada se a nova conexão falhar.')) return;
+  form.reset();
+  state.busy = true;
+  form.querySelectorAll('button, input').forEach((element) => { element.disabled = true; });
+  try {
+    const result = await mutate('/api/integrations/hermes/activation/telegram/start', { token });
+    state.model.hermes.activation = result;
+    render();
+    toast('Validando o bot com o Telegram…');
+    scheduleActivationPoll(250);
+  } catch (error) {
+    toast(label(error.message), 'bad');
+    await loadModel();
+  } finally {
+    state.busy = false;
+  }
+}
+
 async function loadModel() {
   const [model, decisions] = await Promise.all([
     getJson('/api/console'),
@@ -3795,6 +3988,13 @@ document.addEventListener('change', (event) => {
 });
 
 document.addEventListener('click', (event) => {
+  const hermesAction = event.target.closest('[data-hermes-action]');
+  if (hermesAction) { void performHermesAction(hermesAction.dataset.hermesAction); return; }
+  const activationAction = event.target.closest('[data-activation-action]');
+  if (activationAction) {
+    void performActivationAction(activationAction.dataset.activationAction, activationAction.dataset.actionId || '');
+    return;
+  }
   const caseOpen = event.target.closest('[data-case-open]');
   if (caseOpen) { void openCase(caseOpen.dataset.caseOpen); return; }
   const caseVerdict = event.target.closest('[data-case-verdict]');
@@ -3873,7 +4073,7 @@ document.addEventListener('click', (event) => {
   const brainRun = event.target.closest('[data-open-brain-run]');
   if (brainRun) { openBrainRun(brainRun.dataset.openBrainRun); return; }
   const nav = event.target.closest('[data-view]');
-  if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); return; }
+  if (nav) { state.view = nav.dataset.view; closeDrawer(); render(); window.scrollTo(0, 0); return; }
   const areaPill = event.target.closest('[data-operating-area-filter]');
   if (areaPill) {
     closeDrawer();
@@ -3889,7 +4089,7 @@ document.addEventListener('click', (event) => {
   if (canvasScope) {
     state.canvas.scope = canvasScope.dataset.canvasScope;
     state.canvas.ref = state.canvas.scope === 'system'
-      ? state.model.systems.find((item) => item.migration_stage === 'active')?.system_id || state.model.systems[0]?.system_id || null
+      ? defaultCanvasSystemRef()
       : state.canvas.scope === 'run' ? allCanvasExecutions()[0]?.selector_ref || null : null;
     state.canvas.positions = null;
     render();
@@ -4024,6 +4224,12 @@ document.addEventListener('click', (event) => {
   }
   const action = event.target.closest('[data-routine-action]');
   if (action) performAction(action.dataset.routineAction);
+});
+document.addEventListener('submit', (event) => {
+  if (event.target.matches('#telegram-activation-form')) {
+    event.preventDefault();
+    void connectTelegram(event.target);
+  }
 });
 document.addEventListener('change', (event) => {
   if (event.target.id === 'ws-cmp-a' || event.target.id === 'ws-cmp-b') {

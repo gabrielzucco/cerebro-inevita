@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Protótipo · Cérebro INEVITA</title>
+  <style>
+    :root { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #26352d; background: #f6f5f0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; line-height: 1.55; }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 3px solid #557a5c; outline-offset: 3px; }
+    .shell { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+    aside { padding: 28px 20px; background: #eef1e9; border-right: 1px solid #dce2d8; }
+    .brand { display: block; font-size: 20px; letter-spacing: -.03em; margin-bottom: 4px; }
+    .aside-help { margin: 0 0 32px; color: #64736b; font-size: 13px; }
+    nav { display: grid; gap: 4px; }
+    nav button { border: 0; background: none; padding: 10px 12px; text-align: left; border-radius: 10px; color: #34463b; }
+    nav button[aria-current="page"] { background: #dce8db; font-weight: 700; }
+    main { width: min(100%, 1080px); padding: 36px clamp(20px, 5vw, 72px); }
+    .top { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+    .demo { color: #6a726c; font-size: 12px; }
+    .switch { border: 1px solid #bacbbd; background: white; border-radius: 999px; padding: 7px 12px; }
+    .eyebrow { color: #52725c; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-top: 32px; }
+    h1 { font-size: clamp(30px, 4vw, 46px); line-height: 1.12; letter-spacing: -.04em; margin: 8px 0 12px; }
+    h2 { font-size: 21px; letter-spacing: -.02em; margin: 0 0 8px; }
+    .lead { font-size: 17px; color: #5e6c63; max-width: 65ch; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 18px; margin-top: 28px; }
+    .card { border: 1px solid #dce2d8; background: #fff; border-radius: 18px; padding: 24px; box-shadow: 0 5px 25px #27342808; }
+    .card + .card { margin-top: 16px; }
+    .grid .card + .card { margin: 0; }
+    .card p { color: #66736a; margin: 6px 0 16px; }
+    .meta { color: #68816d; font-size: 13px; font-weight: 700; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+    .primary, .secondary { border-radius: 10px; padding: 10px 15px; font-weight: 700; }
+    .primary { border: 1px solid #376c4e; background: #376c4e; color: white; }
+    .secondary { border: 1px solid #c4d2c5; background: white; color: #315b42; }
+    .quiet { background: transparent; border: 0; color: #34634b; padding: 6px 0; font-weight: 650; }
+    .steps { display: grid; gap: 10px; list-style: none; padding: 0; }
+    .steps li { padding: 12px 15px; background: #f4f7f2; border-radius: 10px; }
+    .detail { margin-top: 14px; padding: 16px; background: #f4f7f2; border-radius: 10px; }
+    .detail[hidden] { display: none; }
+    code { font-size: 12px; overflow-wrap: anywhere; }
+    .note { border-left: 3px solid #c59d48; padding-left: 12px; }
+    @media (max-width: 760px) { .shell { display: block; } aside { border-right: 0; padding: 16px; } nav { display: flex; overflow-x: auto; } nav button { white-space: nowrap; } main { padding: 18px; } .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside><strong class="brand">Cérebro INEVITA</strong><p class="aside-help">Acompanhe o trabalho e decida o que vem depois.</p><nav aria-label="Jornadas do protótipo">
+      <button data-page="start">Começar</button><button data-page="today">Hoje</button><button data-page="system">Meus trabalhos</button><button data-page="result">Entrega</button><button data-page="trust">Confiança</button><button data-page="telegram">Conversar</button>
+    </nav></aside>
+    <main><div class="top"><span class="demo">Protótipo · dados fictícios</span><button id="edition" class="switch" type="button">Ver como equipe INEVITA</button></div><div id="view" aria-live="polite"></div></main>
+  </div>
+  <script>
+    let page = 'start'; let internal = false;
+    const view = document.querySelector('#view');
+    const pages = {
+      start: ['Seu primeiro trabalho', 'Comece com uma tarefa que você já precisa fazer. Uma pequena amostra real basta para a primeira resposta.', `<div class="grid"><section class="card"><span class="meta">PASSO ATUAL</span><h2>Escolha um trabalho real</h2><p>Exemplo: “o que devo responder a este cliente?”. Você conversa com o Cérebro no agente que já usa.</p><div class="actions"><button class="primary" data-page="today">Entendi, continuar</button><button class="secondary" data-detail="start">Como funciona</button></div><div class="detail" id="detail-start" hidden>A conversa vem antes da organização. Nada é conectado ou enviado à INEVITA quando você abre esta tela.</div></section><section class="card"><h2>O que vai ficar pronto</h2><p>Uma resposta útil, com a origem da informação. Depois, o Cérebro tenta reutilizar o contexto que você aprovou.</p></section></div>`],
+      today: ['O que pede sua atenção hoje', 'Comece pela entrega pendente. Rotinas e números ficam disponíveis para consulta.', `<div class="grid"><section class="card"><span class="meta">1 ENTREGA PARA REVISAR</span><h2>Resumo da conversa com cliente</h2><p>A IA preparou um rascunho. Sua aprovação decide se ele pode ser usado.</p><button class="primary" data-page="result">Revisar entrega</button></section><section class="card"><h2>Também disponível</h2><p>Um trabalho pronto para começar. Nenhuma rotina precisa de correção agora.</p><button class="secondary" data-page="system">Ver meus trabalhos</button></section></div>${internal ? '<section class="card"><h2>Operação da equipe</h2><p>2 sistemas observados · 1 aguarda autorização. Planejado e ativo aparecem separados.</p></section>' : ''}`],
+      system: ['Meus trabalhos', 'Escolha pelo resultado que deseja, mesmo sem conhecer como o Sistema funciona por dentro.', `<section class="card"><span class="meta">PRONTO PARA USAR</span><h2>Preparar resumo de uma reunião</h2><p>Usa a transcrição que você escolher e entrega decisões e próximos passos para revisar.</p><div class="actions"><button class="primary" data-page="result">Ver exemplo de entrega</button><button class="secondary" data-detail="system">Ver como foi configurado</button></div><div class="detail" id="detail-system" hidden>Detalhes técnicos do exemplo: fonte declarada, contrato, executor e permissões. A ação de abrir esta área não inicia execução.</div></section>`],
+      result: ['Uma entrega pronta para você revisar', 'Este texto é um rascunho da IA. Confira a origem e decida o que fazer com ele.', `<div class="grid"><section class="card"><span class="meta">RASCUNHO DA IA · AINDA NÃO APROVADO</span><h2>Resumo da conversa com cliente</h2><p>O cliente pediu uma proposta até sexta-feira. Ficou pendente confirmar o prazo de implantação.</p><div class="actions"><button class="primary" type="button" data-feedback="Aprovação simulada. Nenhuma decisão foi registrada.">Aprovar rascunho</button><button class="secondary" type="button" data-feedback="Pedido de ajuste simulado. Nenhuma execução foi iniciada.">Pedir ajuste</button></div></section><section class="card"><h2>De onde veio</h2><p>Uma transcrição foi selecionada para esta entrega. O prazo de implantação não apareceu nela.</p><button class="quiet" data-detail="result">Ver como foi feito →</button><div class="detail" id="detail-result" hidden><strong>Informação observada</strong><p>Transcrição selecionada · trecho 00:12:40. O prazo de implantação ficou sem evidência.</p><strong>Rastro técnico</strong><p><code>Run Record · Context Snapshot · trace</code> — disponíveis só se existirem no registro real.</p></div></section></div><p id="feedback" role="status"></p>`],
+      trust: ['Entenda o que precisa de cuidado', 'Mostramos o efeito do problema e o próximo passo antes do código de diagnóstico.', `<section class="card"><span class="meta">PRECISA DE ATENÇÃO</span><h2>Uma fonte não está disponível agora</h2><p>O Cérebro pode trabalhar com outras fontes, mas esta entrega não terá os dados mais recentes dessa fonte.</p><button class="primary" data-page="system">Ver trabalhos afetados</button><div><button class="quiet" data-detail="trust">Ver diagnóstico →</button><div class="detail" id="detail-trust" hidden>Código e referência técnica do exemplo: <code>source-unavailable</code>. Nenhum dado foi enviado para investigar.</div></div></section>`],
+      telegram: ['Converse com seu Cérebro no Telegram', 'O acesso fica restrito à conta que você confirmar. A conexão acontece em três passos.', `<section class="card"><ol class="steps"><li><strong>1. Preparar a conversa</strong><br>Autorize o agente no navegador.</li><li><strong>2. Conectar seu bot</strong><br>Crie o bot e cole o token no campo protegido.</li><li><strong>3. Confirmar que é você</strong><br>Envie /start e confirme sua conta.</li></ol><button class="secondary" data-detail="telegram">Ver detalhes de segurança</button><div class="detail" id="detail-telegram" hidden>O token fica no arquivo secreto local. A lista de contas autorizadas continua fechada; abrir esta tela não inicia a conexão.</div></section>`],
+    };
+    function render() { const [title, lead, body] = pages[page]; view.innerHTML = `<p class="eyebrow">${internal ? 'Equipe INEVITA' : 'Meu Cérebro'}</p><h1>${title}</h1><p class="lead">${lead}</p>${body}`; document.querySelectorAll('[data-page]').forEach(button => button.setAttribute('aria-current', button.dataset.page === page ? 'page' : 'false')); document.querySelector('#edition').textContent = internal ? 'Ver como membro' : 'Ver como equipe INEVITA'; }
+    document.addEventListener('click', event => { const target = event.target.closest('button'); if (!target) return; if (target.id === 'edition') { internal = !internal; render(); return; } if (target.dataset.page) { page = target.dataset.page; render(); return; } if (target.dataset.detail) { const panel = document.querySelector(`#detail-${target.dataset.detail}`); panel.hidden = !panel.hidden; target.setAttribute('aria-expanded', String(!panel.hidden)); return; } if (target.dataset.feedback) document.querySelector('#feedback').textContent = target.dataset.feedback; });
+    render();
+  </script>
+</body>
+</html>

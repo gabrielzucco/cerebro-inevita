@@ -31,7 +31,7 @@ const RUNNERS = [
       cpSync(join(SOURCE, '.claude', 'scripts', 'update.sh'), join(dir, '.claude', 'scripts', 'update.sh'));
     },
     rodar: (dir) => execFileSync('bash', [join(dir, '.claude', 'scripts', 'update.sh')], {
-      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_TELEMETRY: 'off' },
+      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_UPDATE_BASE_DIR: dir, CEREBRO_TELEMETRY: 'off' },
       stdio: 'pipe',
     }),
   },
@@ -42,7 +42,7 @@ const RUNNERS = [
       cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(dir, 'scripts', 'update.mjs'));
     },
     rodar: (dir) => execFileSync(process.execPath, [join(dir, 'scripts', 'update.mjs')], {
-      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_TELEMETRY: 'off' },
+      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_UPDATE_BASE_DIR: dir, CEREBRO_TELEMETRY: 'off' },
       stdio: 'pipe',
     }),
   },
@@ -115,6 +115,34 @@ try {
     }
     console.log(`  ✓ ${runner.nome}: ${protectedFiles.length} sentinelas preservadas, seeds instalados, motor atualizado`);
   }
+
+  const conflict = join(sandbox, 'conflict-preflight');
+  const baseline = join(sandbox, 'conflict-baseline');
+  mkdirSync(join(conflict, 'scripts'), { recursive: true });
+  mkdirSync(join(conflict, '.cerebro'), { recursive: true });
+  mkdirSync(join(baseline, '.cerebro'), { recursive: true });
+  writeFileSync(join(conflict, 'VERSION'), '1.8.0\n');
+  writeFileSync(join(conflict, '.cerebro', 'source'), 'REPO=teste/teste\nBRANCH=main\n');
+  cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(conflict, 'scripts', 'update.mjs'));
+  writeFileSync(join(conflict, 'CLAUDE.md'), 'ALTERAÇÃO-DO-DONO\n');
+  writeFileSync(join(baseline, 'CLAUDE.md'), 'BASELINE-ANTIGO\n');
+  writeFileSync(join(baseline, 'VERSION'), '1.8.0\n');
+  writeFileSync(join(baseline, '.cerebro', 'motor.manifest'), 'CLAUDE.md\n');
+  let rejected = null;
+  try {
+    execFileSync(process.execPath, [join(conflict, 'scripts', 'update.mjs')], {
+      env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_UPDATE_BASE_DIR: baseline, CEREBRO_TELEMETRY: 'off' },
+      stdio: 'pipe',
+    });
+  } catch (error) { rejected = error; }
+  if (!rejected || !String(rejected.stderr).includes('Atualização cancelada')) {
+    throw new Error('update.mjs não sinalizou conflito local');
+  }
+  if (readFileSync(join(conflict, 'CLAUDE.md'), 'utf8') !== 'ALTERAÇÃO-DO-DONO\n'
+      || readFileSync(join(conflict, 'VERSION'), 'utf8') !== '1.8.0\n') {
+    throw new Error('preflight de conflito alterou a instalação');
+  }
+  console.log('  ✓ conflito local cancela tudo antes da primeira alteração');
 
   // Compatibilidade de primeira passagem: um atualizador antigo copia os scripts
   // novos, mas só executa o código novo quando chama ping.sh no final.

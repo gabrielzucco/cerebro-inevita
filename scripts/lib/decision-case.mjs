@@ -138,6 +138,12 @@ function insideRealDirectory(parent, child) {
   return Boolean(rel) && !rel.startsWith('..') && !rel.startsWith(sep);
 }
 
+// Referências persistidas e expostas pela API fazem parte do protocolo, então usam
+// separadores POSIX em qualquer sistema. Caminhos usados pelo filesystem continuam nativos.
+function contractPath(root, path) {
+  return relative(resolve(root), path).replaceAll('\\', '/');
+}
+
 function privateDirectory(root, configured, fallback, label) {
   const brain = resolve(root);
   const runtime = resolve(root, '.cerebro', 'runtime');
@@ -218,7 +224,7 @@ export function readDecisionQueue(root) {
     .sort((left, right) => right.age_days - left.age_days || left.key.localeCompare(right.key));
   return {
     available: true,
-    path: relative(resolve(root), path),
+    path: contractPath(root, path),
     digest: digestOf(readFileSync(path)),
     open,
     decided_total: Array.isArray(data.historico) ? data.historico.length : 0,
@@ -247,7 +253,7 @@ function fileEvidence(root, path, ref, kind, provenance, summary, displayPath = 
     ref,
     kind,
     provenance,
-    path: relative(resolve(root), displayPath),
+    path: contractPath(root, displayPath),
     digest: digestOf(readFileSync(path)),
     bytes: details.size,
     summary,
@@ -305,7 +311,7 @@ function resolveEvidence(root, ref, { inferredRefs = new Set() } = {}) {
         ref,
         kind: 'run-record',
         provenance: inferred ? 'inferred' : 'observed',
-        path: relative(resolve(root), resolve(root, layout(root).runLedger || join('.cerebro', 'runtime', 'ledger', 'runs.jsonl'))),
+        path: contractPath(root, resolve(root, layout(root).runLedger || join('.cerebro', 'runtime', 'ledger', 'runs.jsonl'))),
         digest: digestOf(serialized),
         bytes: serialized.length,
         summary: `Run Record ${record.mode || 'run'} · ${record.status || 'sem status'}`,
@@ -673,7 +679,7 @@ function planFor(root, caseId, input, decidedAt) {
     theme,
     actor_ref: actorRef,
     decided_at: decidedAt.toISOString(),
-    target_path: relative(resolve(root), targetPath),
+    target_path: contractPath(root, targetPath),
     content_digest: contentDigest,
     evidence: evidence.map((entry) => ({ ref: entry.ref, provenance: entry.provenance, digest: entry.digest })),
   }));
@@ -691,7 +697,7 @@ function planFor(root, caseId, input, decidedAt) {
     decision_text_chars: decisionText.length,
     title_digest: digestOf(title),
     evidence,
-    target_path: relative(resolve(root), targetPath),
+    target_path: contractPath(root, targetPath),
     absolute_target: targetPath,
     content,
     content_digest: contentDigest,
@@ -763,7 +769,7 @@ export function prepareDecisionCase(root, caseId) {
   const state = decisionCaseState(root, caseId);
   let notesHouse = null;
   let houseReady = true;
-  try { notesHouse = relative(resolve(root), decisionNotesDirectory(root)); } catch { houseReady = false; }
+  try { notesHouse = contractPath(root, decisionNotesDirectory(root)); } catch { houseReady = false; }
   return {
     case_id: caseId,
     case_ref: `decision-case:${caseId}`,
