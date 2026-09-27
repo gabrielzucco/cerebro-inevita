@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # test-pilot-1380 monta a base 1.36.1 a partir do histórico (git archive).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -46,6 +49,9 @@ jobs:
       PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          # test-pilot-1380 monta a base 1.36.1 a partir do histórico (git archive).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -70,6 +76,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # test-pilot-1380 monta a base 1.36.1 a partir do histórico (git archive).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
