@@ -149,6 +149,10 @@ export function planUpdate(root, source, tag, { baseline = null } = {}) {
 export function applyPlan(root, plan, { approvePlan, write = atomicWrite } = {}) {
   if (plan.conflicts.length) throw new Error(`update-conflicts: ${plan.conflicts.join(', ')}`);
   if (approvePlan && approvePlan !== plan.digest) throw new Error('plan-changed: preview again');
+  const mutations = plan.entries.filter(entry => entry.action !== 'unchanged');
+  if (mutations.length && bytesAt(root, 'VERSION') !== null && approvePlan !== plan.digest) {
+    throw new Error('preview-approval-required: use --approve-plan <plan-hash>');
+  }
   const lock = safePath(root, LOCK);
   mkdirSync(dirname(lock), { recursive: true });
   writeFileSync(lock, String(process.pid), { flag: 'wx', mode: 0o600 });
@@ -159,7 +163,6 @@ export function applyPlan(root, plan, { approvePlan, write = atomicWrite } = {})
       const current = bytesAt(root, entry.path);
       if ((current === null ? null : hash(current)) !== entry.beforeHash) throw new Error('destination-changed: preview again');
     }
-    const mutations = plan.entries.filter(entry => entry.action !== 'unchanged');
     if (!mutations.length) return null;
     backup = safePath(root, `${BACKUPS}/${randomUUID()}`);
     mkdirSync(backup, { recursive: true, mode: 0o700 });

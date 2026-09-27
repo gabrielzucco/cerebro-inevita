@@ -85,6 +85,8 @@ test('recibo distingue update oficial de modificação local; reexecução é id
   const { source, brain, baseline } = fixture(t);
   write(brain, 'scripts/runtime.mjs', 'motor antigo');
   let plan = planUpdate(brain, source, tag, { baseline });
+  assert.deepEqual(plan.conflicts, []);
+  assert.throws(() => applyPlan(brain, plan), /preview-approval-required/);
   applyPlan(brain, plan, { approvePlan: plan.digest });
   const before = snapshot(brain);
   plan = planUpdate(brain, source, tag);
@@ -96,7 +98,7 @@ test('recibo distingue update oficial de modificação local; reexecução é id
   assert.deepEqual(plan.conflicts, []);
   write(brain, 'scripts/runtime.mjs', 'mudança local');
   assert(planUpdate(brain, source, tag).conflicts.includes('scripts/runtime.mjs'));
-  assert.throws(() => applyPlan(brain, plan), /destination-changed/);
+  assert.throws(() => applyPlan(brain, plan, { approvePlan: plan.digest }), /destination-changed/);
 });
 test('aprovação vencida bloqueia mudanças no pacote e destino antes da escrita', t => {
   const { source, brain, baseline } = fixture(t);
