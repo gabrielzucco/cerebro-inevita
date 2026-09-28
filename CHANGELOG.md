@@ -2,6 +2,11 @@
 
 ## v1.38.0 — 2026-09-27 · Candidato unificado para piloto, sem publicação
 
+- `/society` envia a credencial privada da instalação, como o ping, sem imprimi-la.
+  O servidor confere o vínculo e a Society ativa em cada chamada. Sem credencial válida,
+  o membro recebe orientação para atualizar e vincular pela plataforma. Links novos
+  expiram em 5 minutos; o acervo já baixado permanece local.
+
 - Uma linha para o membro no canal oficial `gabrielzucco/cerebro-inevita`: Cockpit com
   Hermes/Telegram, redesenho de 23/09, instalação e migração com prévia.
 - Para 1.34.2: entram o Cockpit, a Central de Atualizações, os fluxos de trabalho e o
