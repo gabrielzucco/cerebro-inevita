@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, realpathSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -490,6 +490,6 @@ async function main() {
   console.log(`Próximo passo: mapeie as Fontes com node scripts/system-source-binding.mjs plan ${state.system_id || slug}; só depois rode o primeiro caso real.`);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { await main(); } catch (error) { console.error(`✗ ${error instanceof Error ? error.message : 'installation_failed'}`); process.exitCode = 1; }
 }

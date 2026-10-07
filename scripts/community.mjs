@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync, realpathSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCommunityClient } from './lib/community-client.mjs';
@@ -52,7 +53,7 @@ export async function runCommunityCommand({ args, root, client }) {
   if (command === 'contribution') return client.getContribution({ contribution_id: option('id') });
   communityAssert(false, 'usage: community.mjs list|show|install|prepare|review|approve|send|contributions|contribution');
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(process.env.CEREBRO_INSTALL_ROOT || dirname(fileURLToPath(import.meta.url)), process.env.CEREBRO_INSTALL_ROOT ? '.' : '..');
   try {
     const args = process.argv.slice(2);

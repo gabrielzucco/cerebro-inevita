@@ -15,7 +15,7 @@ const grant = 'g'.repeat(43); const credential = 'c'.repeat(43);
 const envelope = { schema_version: 2, slug: 'funil-e-crescimento', system_id: 'sistema-funil-inevita', version: '0.2.0-rc.1', title: 'Funil', entrypoint: 'COMECE-AQUI.md', first_task: 'Revisar contexto', files: { 'COMECE-AQUI.md': encodeCommunityFile(Buffer.from('# entrada')), 'bin.zip': encodeCommunityFile(Buffer.from([0, 255, 22])) }, contracts: funilContracts('0.2.0-rc.1') };
 const hash = hashCommunityPackage(envelope);
 const write = (root, path, value) => { mkdirSync(dirname(join(root, path)), { recursive: true }); writeFileSync(join(root, path), value); };
-function brain() { const root = mkdtempSync(join(tmpdir(), 'community-install-')); write(root, 'COMECE-AQUI.md', '# Brain'); write(root, 'VERSION', '1.38.0'); return root; }
+function brain() { const root = mkdtempSync(join(tmpdir(), 'community-install-')); write(root, 'COMECE-AQUI.md', '# Brain'); write(root, 'VERSION', '1.39.0'); return root; }
 function cli(root, args, endpoint) {
   return new Promise((resolveRun, reject) => {
     const child = spawn(process.execPath, [join(source, 'scripts/install-system.mjs'), ...args], { env: { ...process.env, CEREBRO_INSTALL_ROOT: root, CEREBRO_DISTRIBUTION_URL: endpoint || '', CEREBRO_COMMUNITY_ALLOW_LOCALHOST: '1', CEREBRO_TELEMETRY: 'off' }, stdio: ['ignore', 'pipe', 'pipe'] });

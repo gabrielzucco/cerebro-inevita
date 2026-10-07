@@ -52,24 +52,24 @@ Drive. Essas fontes podem ser consideradas mesmo sem arquivos locais.
 
 ### Versão fixa para instalar e atualizar
 
-Escolha uma tag publicada, como `v1.38.0`, em Releases. **Esta versão é candidata local ao piloto;
+Escolha uma tag publicada em Releases. **A versão `v1.39.0` é candidata local ao piloto;
 o exemplo só ficará disponível após a publicação aprovada.** O canal oficial é
 `gabrielzucco/cerebro-inevita`. Para piloto sem publicação, veja
-[`docs/releases/1.38.0.md`](docs/releases/1.38.0.md). Não use `main` ou `latest` como
+[`docs/releases/1.39.0.md`](docs/releases/1.39.0.md). Não use `main` ou `latest` como
 fonte de instalação. O `VERSION` de um checkout não prova que a release está publicada.
 
 Para obter o pacote e o atualizador seguro, clone a tag escolhida em uma **pasta nova**:
 
 ```bash
-git clone --branch v1.38.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.38.0
+git clone --branch v1.39.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.39.0
 ```
 
 A pasta clonada já pode ser usada como Cérebro após a sua escolha explícita. Se preferir uma
 instalação gerenciada em outra pasta, o instalador copia apenas motor e seeds do pacote:
 
 ```bash
-node pacote-1.38.0/scripts/install.mjs --tag v1.38.0 --destination /caminho/novo-cerebro
-node pacote-1.38.0/scripts/install.mjs --tag v1.38.0 --destination /caminho/novo-cerebro --apply
+node pacote-1.39.0/scripts/install.mjs --tag v1.39.0 --destination /caminho/novo-cerebro
+node pacote-1.39.0/scripts/install.mjs --tag v1.39.0 --destination /caminho/novo-cerebro --apply
 ```
 
 O primeiro comando mostra a prévia. Execute o segundo apenas depois de aprová-la. Destino
@@ -80,7 +80,7 @@ Node.js 20+ é necessário para esses scripts; sem runtime, o agente pode orient
 O script antigo pode apagar personalizações antes de receber a correção; não o execute.
 
 ```bash
-node pacote-1.38.0/scripts/update.mjs --tag v1.38.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
+node pacote-1.39.0/scripts/update.mjs --tag v1.39.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
 ```
 
 A prévia lista conflitos e seu `plan_hash`. `--baseline-dir` fornece a cópia íntegra da versão

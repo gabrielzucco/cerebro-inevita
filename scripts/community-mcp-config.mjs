@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { lstatSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, realpathSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +11,7 @@ export function communityMcpConfiguration({ root, node = process.execPath }) {
   return { mcpServers: { 'inevita-comunidade': { command: node, args: [script, `--root=${target}`] } } };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const args = process.argv.slice(2);
     if (args.length !== 1 || !args[0].startsWith('--root=') || !args[0].slice(7)) throw new Error('root-required');

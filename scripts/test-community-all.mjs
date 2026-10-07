@@ -6,9 +6,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const optionalFunil = process.argv.filter((arg) => arg.startsWith('--funil='));
-const suites = ['test-community-package.mjs', 'test-community-install.mjs', 'test-community-mcp.mjs', 'test-install-system.mjs', 'test-install-system-grant.mjs'];
+const suites = ['test-community-package.mjs', 'test-community-install.mjs', 'test-community-mcp.mjs', 'test-community-release.mjs', 'test-community-release-staging.mjs', 'test-install-system.mjs', 'test-install-system-grant.mjs'];
 for (const suite of suites) {
-  const run = spawnSync(process.execPath, [resolve(root, 'scripts', suite), ...(suite === 'test-community-package.mjs' ? optionalFunil : [])], { cwd: root, stdio: 'inherit', env: { ...process.env, CEREBRO_TELEMETRY: 'off' } });
+  const run = spawnSync(process.execPath, [resolve(root, 'scripts', suite), ...(['test-community-package.mjs', 'test-community-release-staging.mjs'].includes(suite) ? optionalFunil : [])], { cwd: root, stdio: 'inherit', env: { ...process.env, CEREBRO_TELEMETRY: 'off' } });
   if (run.status !== 0) process.exit(run.status || 1);
 }
 console.log('✓ community-all: V2, CLI, MCP e compatibilidade schema1');

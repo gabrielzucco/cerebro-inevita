@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { COMMUNITY_TOOLS, createCommunityToolHandler } from './lib/community-mcp.mjs';
@@ -24,7 +25,7 @@ export async function main(argv = process.argv.slice(2)) {
     handle: createMcpSession({ tools: COMMUNITY_TOOLS, callTool }) });
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(() => {
     process.stderr.write('O MCP da comunidade não iniciou ou a conexão foi encerrada. Confira o caminho do Cérebro e a configuração.\n');
     process.exitCode = 1;

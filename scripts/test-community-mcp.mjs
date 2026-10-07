@@ -1,6 +1,8 @@
+// deno-lint-ignore-file require-await
+// Service fakes preserve the asynchronous interface while resolving immediately.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -26,7 +28,7 @@ async function ready(callTool = async () => ({ content: [] })) {
 }
 async function framed(chunks, options = {}) {
   let output = '';
-  const stream = new Writable({ write(chunk, encoding, callback) { output += chunk; callback(); } });
+  const stream = new Writable({ write(chunk, _encoding, callback) { output += chunk; callback(); } });
   const handle = createMcpSession({ tools: COMMUNITY_TOOLS, callTool: async () => ({ content: [] }) });
   await serveMcpStdio({ input: Readable.from(chunks), output: stream, handle, ...options });
   return output.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
@@ -180,6 +182,25 @@ test('configuration is generated without secrets or writes and CLI never accepts
   assert.deepEqual(communityMetadata({ install_credential: 'x', grant_token: 'y', package: { files: {} }, actor: 'private', status: 'submitted' }), { status: 'submitted' });
 });
 
+test('MCP and config entrypoints run through a symlinked parent directory', () => {
+  const temp = mkdtempSync(join(tmpdir(), 'mcp cli alias '));
+  const alias = join(temp, 'brain');
+  symlinkSync(ROOT, alias, 'junction');
+  try {
+    const frames = [initialize, initialized, { jsonrpc: '2.0', id: 2, method: 'tools/list' }];
+    const protocol = spawnSync(process.execPath, [join(alias, 'scripts/community-mcp.mjs'), `--root=${ROOT}`], {
+      encoding: 'utf8', timeout: 10000, input: frames.map(frame => JSON.stringify(frame)).join('\n') + '\n',
+    });
+    assert.equal(protocol.status, 0, protocol.stderr);
+    const rows = protocol.stdout.trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(rows.length, 2);
+    assert.equal(rows[1].result.tools.length, 10);
+    const configured = spawnSync(process.execPath, [join(alias, 'scripts/community-mcp-config.mjs'), `--root=${ROOT}`], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(configured.status, 0, configured.stderr);
+    assert.equal(JSON.parse(configured.stdout).mcpServers['inevita-comunidade'].args[0], join(realpathSync(ROOT), 'scripts/community-mcp.mjs'));
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
+
 test('real stdio client uses installation service identity and rechecks access after revocation', { timeout: 10000 }, async () => {
   const root = mkdtempSync(join(tmpdir(), 'mcp comunidade rede '));
   const credential = 'x'.repeat(43), id = 'a69783b0-5c33-4995-b638-492dd20c02a5';
@@ -240,7 +261,7 @@ test('real stdio client uses installation service identity and rechecks access a
 test('MCP uses real contribution services: selected change, local review, exact approval and separate send', { timeout: 10000 }, async () => {
   const root = mkdtempSync(join(tmpdir(), 'mcp contribuição '));
   const write = (relative, content) => { mkdirSync(dirname(join(root, relative)), { recursive: true }); writeFileSync(join(root, relative), content); };
-  write('COMECE-AQUI.md', '# Cérebro sintético'); write('VERSION', '1.38.0');
+  write('COMECE-AQUI.md', '# Cérebro sintético'); write('VERSION', '1.39.0');
   write('.cerebro/id', 'a69783b0-5c33-4995-b638-492dd20c02a5'); write('.cerebro/install-credential', 'x'.repeat(43));
   const packet = { schema_version: 2, slug: 'funil-e-crescimento', system_id: 'sistema-funil-inevita',
     version: '0.2.0-rc.1', title: 'Funil de teste sintético', entrypoint: 'COMECE-AQUI.md', first_task: 'Conferir a oferta',

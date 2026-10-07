@@ -13,7 +13,7 @@ const temp = mkdtempSync(join(tmpdir(), 'community-cs1-'));
 const write = (root, path, content) => { mkdirSync(dirname(join(root, path)), { recursive: true }); writeFileSync(join(root, path), content); };
 function brain(name) {
   const root = join(temp, name); mkdirSync(root);
-  write(root, 'COMECE-AQUI.md', '# Brain'); write(root, 'VERSION', '1.38.0');
+  write(root, 'COMECE-AQUI.md', '# Brain'); write(root, 'VERSION', '1.39.0');
   write(root, '.cerebro/id', '3f2504e0-4f89-41d3-9a0c-0305e82c3301'); write(root, '.cerebro/install-credential', 'a'.repeat(43));
   return root;
 }
@@ -38,6 +38,10 @@ try {
   invalid((p) => { for (let i = 0; i < 513; i++) p.files[`extra-${i}`] = p.files['COMECE-AQUI.md']; }, /count/);
   invalid((p) => { for (let i = 0; i < 4; i++) p.files[`large-${i}`] = encodeCommunityFile(Buffer.alloc(1048576)); }, /large/);
   invalid((p) => { p.install_credential = 'secret'; }, /fields/); checks++;
+  write(a, 'VERSION', '1.38.0');
+  const oldClient = snapshot(a);
+  assert.throws(() => installCommunityPackage({ root: a, package: bundle, confirm: true }), /brain_version_incompatible/);
+  assert.deepEqual(snapshot(a), oldClient); write(a, 'VERSION', '1.39.0'); checks++;
   const before = snapshot(a);
   assert.equal(installCommunityPackage({ root: a, package: bundle }).status, 'preview');
   assert.deepEqual(snapshot(a), before); checks++;
