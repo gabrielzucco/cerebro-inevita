@@ -1,7 +1,8 @@
 import { readCommunityFile, communityAssert, communityHash, hashCommunityPackage, validateCommunityPackage, COMMUNITY_LIMITS, COMMUNITY_SHA_RE } from './community-package.mjs';
+import { MEMBER_SURFACE_ACTION_SCHEMAS, validateMemberSurfaceRequest } from './community-member-surface.mjs';
 
 export const DEFAULT_COMMUNITY_ENDPOINT = 'https://inevitasociety.com/supabase/functions/v1/cerebro-system-distribution';
-const ACTIONS = new Set(['list_releases', 'get_release', 'issue_grant', 'redeem_grant', 'installation_receipt', 'submit_contribution', 'list_contributions', 'get_contribution', 'review_contribution', 'publish_contribution']);
+const ACTIONS = new Set(['list_releases', 'get_release', 'issue_grant', 'redeem_grant', 'installation_receipt', 'submit_contribution', 'list_contributions', 'get_contribution', 'review_contribution', 'publish_contribution', ...Object.keys(MEMBER_SURFACE_ACTION_SCHEMAS)]);
 const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 export function readCommunityIdentity(root) {
   let install_id, install_credential;
@@ -38,6 +39,7 @@ export function createCommunityClient({ root, endpoint = DEFAULT_COMMUNITY_ENDPO
   const url = checkedUrl(endpoint, allowLocalhost);
   async function request(action, payload = {}) {
     communityAssert(ACTIONS.has(action), 'invalid_community_action');
+    validateMemberSurfaceRequest(action, payload);
     const identity = readCommunityIdentity(root);
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -94,5 +96,11 @@ export function createCommunityClient({ root, endpoint = DEFAULT_COMMUNITY_ENDPO
     getContribution: (args) => request('get_contribution', args),
     reviewContribution: (args) => request('review_contribution', args),
     publishContribution: (args) => request('publish_contribution', args),
+    searchLibrary: (args = {}) => request('search_library', args),
+    getLibraryItem: (args) => request('get_library_item', args),
+    getMyProfile: () => request('get_my_profile'),
+    previewProfileUpdate: (args) => request('preview_profile_update', args),
+    updateMyProfile: (args) => request('update_my_profile', args),
+    publishMyProfile: (args) => request('publish_my_profile', args),
   };
 }

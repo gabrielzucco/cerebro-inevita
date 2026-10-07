@@ -1,5 +1,6 @@
 import { isAbsolute, resolve } from 'node:path';
 import { matchesSchema } from './community-mcp-protocol.mjs';
+import { MEMBER_SURFACE_TOOLS, memberSurfaceAction, memberSurfaceArguments, projectMemberSurfaceResult, validateMemberSurfaceRequest } from './community-member-surface.mjs';
 
 const text = (maxLength, extra = {}) => ({ type: 'string', minLength: 1, maxLength, ...extra });
 const slug = text(64, { pattern: '^[a-z0-9][a-z0-9-]{0,63}$' });
@@ -22,6 +23,7 @@ export const COMMUNITY_TOOLS = Object.freeze([
   tool('enviar_contribuicao', 'Enviar candidato autorizado', 'Envia o candidato aprovado pelo dono para a fila privada de revisão da comunidade. É uma decisão separada de preparar e autorizar. Exige novo pedido explícito de envio e o mesmo hash; não publica no catálogo.', schema({ candidate_id: identifier, package_sha256: hash, confirmar: confirm }), false),
   tool('minhas_contribuicoes', 'Acompanhar contribuições', 'Consulta as contribuições que a plataforma autoriza esta instalação a consultar. O estado é consultado agora; candidato enviado não significa publicado.', schema()),
   tool('status_contribuicao', 'Ver estado da contribuição', 'Consulta o estado de uma contribuição autorizada, sem trazer o pacote bruto. Revisão e publicação são feitas pelo revisor autorizado na plataforma, nunca por esta ferramenta.', schema({ contribution_id: identifier })),
+  ...MEMBER_SURFACE_TOOLS,
 ]);
 
 // Select metadata instead of serializing arbitrary service payloads. In particular,
@@ -62,6 +64,7 @@ export async function loadCommunityServices({ root, endpoint, allowLocalhost = f
     approve: args => contribution.approveContribution({ root, ...args }),
     send: args => contribution.sendContribution({ root, client, ...args }),
     contributions: () => client.listContributions(), contribution: id => client.getContribution({ contribution_id: id }),
+    memberSurface: (action, args) => client.request(action, args),
   };
 }
 
@@ -79,6 +82,15 @@ const ERRORS = new Map([
   ['installation_credentials_invalid', 'O vínculo desta instalação precisa ser recuperado pela sua conta na plataforma.'],
   ['sensitive_content_requires_redaction', 'Um dos arquivos selecionados pode conter informação privada. Remova esse conteúdo antes de preparar a contribuição.'],
   ['private_selection_refused', 'Esta seleção contém uma pasta privada. Selecione somente a melhoria do método que deseja compartilhar.'],
+  ['profile_revision_conflict', 'Seu perfil mudou desde a leitura. Consulte o perfil atual, prepare outra prévia e confirme as mudanças novamente.'],
+  ['profile_preview_mismatch', 'As mudanças não correspondem à prévia aprovada. Prepare outra prévia e confirme o conteúdo exato antes de salvar.'],
+  ['profile_not_found', 'Seu perfil ainda não foi criado. Abra a área de perfil na plataforma para iniciá-lo e depois consulte novamente pela IA.'],
+  ['profile_incomplete', 'Ainda faltam campos para publicar. Consulte seu perfil para conferir as pendências; adicione a foto pela plataforma.'],
+  ['invalid_profile_changes', 'As mudanças do perfil contêm campos ou valores inválidos. Confira a prévia e ajuste somente os campos permitidos.'],
+  ['profile_confirmation_required', 'O dono precisa aprovar esta ação sobre o perfil antes de continuar.'],
+  ['invalid_profile_revision', 'Consulte o perfil atual e use a revisão devolvida para preparar e aprovar a mudança.'],
+  ['library_item_not_found', 'Esta aula ou encontro não está disponível para sua conta agora. Consulte o acervo atual na plataforma.'],
+  ['invalid_member_surface_arguments', 'Confira os campos do perfil, os links e a confirmação da ação. Nenhuma mudança foi enviada.'],
 ]);
 
 export function createCommunityToolHandler({ root, endpoint, allowLocalhost = false, services, serviceLoader = loadCommunityServices }) {
@@ -92,7 +104,13 @@ export function createCommunityToolHandler({ root, endpoint, allowLocalhost = fa
     try {
       loaded ||= await serviceLoader({ root: brainRoot, endpoint, allowLocalhost });
       let result;
-      if (name === 'listar_sistemas_comunidade') result = await loaded.list();
+      const surfaceAction = memberSurfaceAction(name);
+      if (surfaceAction) {
+        const fields = memberSurfaceArguments(args);
+        validateMemberSurfaceRequest(surfaceAction, fields);
+        result = await loaded.memberSurface(surfaceAction, fields);
+      }
+      else if (name === 'listar_sistemas_comunidade') result = await loaded.list();
       else if (name === 'detalhar_sistema_comunidade') result = await loaded.details(args.slug);
       else if (name === 'planejar_instalacao_sistema') result = await loaded.install({ slug: args.slug, confirm: false });
       else if (name === 'instalar_sistema_comunidade') result = await loaded.install({ slug: args.slug, expectedSha256: args.package_sha256, confirm: true });
@@ -102,7 +120,7 @@ export function createCommunityToolHandler({ root, endpoint, allowLocalhost = fa
       else if (name === 'enviar_contribuicao') result = await loaded.send({ candidateId: args.candidate_id, packageSha256: args.package_sha256, confirm: true });
       else if (name === 'minhas_contribuicoes') result = await loaded.contributions();
       else result = await loaded.contribution(args.contribution_id);
-      const metadata = communityMetadata(result);
+      const metadata = surfaceAction ? projectMemberSurfaceResult(surfaceAction, result) : communityMetadata(result);
       const data = metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : { items: metadata };
       return { content: [{ type: 'text', text: JSON.stringify(data) }], structuredContent: data, isError: false };
     } catch (error) {
