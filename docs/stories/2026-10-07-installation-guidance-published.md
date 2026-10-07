@@ -36,6 +36,7 @@ para o MCP. Isso pode interromper quem começa hoje ou atualiza uma instalação
 - comunidade/inevita/atualizacoes/feed.v1.json
 - docs/releases/1.39.1.md
 - scripts/test-community-release.mjs
+- scripts/test-cockpit-first-mission.mjs
 
 ## Limites e evidência
 Base: main oficial 774cbfa32721f83bb72cd72b550fc9af3557f95d, tag v1.39.0.
@@ -78,3 +79,17 @@ completo Hermes/Telegram continua pendente.
   aberto e anexado. CI do PR, merge, CI integrado e publicação ficam com a coordenação.
 - Antes de liberar, aguardar os três jobs do CI e conferir o artefato público
   v1.39.1. Nenhum merge, tag ou publicação foi feito neste corte de preparação.
+
+## Correção do gate completo do CI
+O CI encontrou uma expectativa histórica do teaser presa ao comunicado 1.36.
+Escopo do PR ampliado explicitamente para 18 arquivos. Nova Mesa limitada a este
+registro e ao teste da Primeira Missão, sem alteração de código operacional.
+O teste usa uma cópia isolada das libs e feeds sintéticos antigo/novo, nas duas
+ordens, para verificar a seleção do comunicado sem depender do texto publicado.
+Mesa 20261007-175803-976902a0, dois arquivos permitidos.
+- [x] Teste dirigido com feed controlado e sintaxe.
+- [x] Todos os 77 scripts/test-*.mjs passaram, além do validate-product: 78/78,
+  zero falhas, Node 26.8.1, 21,6 segundos. Logs agregados e recibo JSON guardados
+  no diretório de trabalho member-1391-full-suite, fora do pacote distribuído.
+- [x] Correção e resultado registrados juntos para commit e push únicos; o CI
+  remoto final em Node 20/Linux/Windows/macOS continua obrigatório antes da release.
