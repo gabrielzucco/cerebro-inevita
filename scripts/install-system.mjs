@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { validateCapabilityContract, validateSystemContract } from './lib/system-protocol.mjs';
 import { validateExperienceManifest } from './lib/experience-manifest.mjs';
 import { validateReleaseManifest } from './lib/release-manifest.mjs';
+import { createCommunityClient } from './lib/community-client.mjs';
+import { installCommunityPackage, installCommunityRelease, validateCommunityPackage, verifyInstalledCommunityPackage, safeCommunityPath, recordCommunityInstallationReceipt } from './lib/community-package.mjs';
 import { summarizeSystemSourceBindings } from './lib/system-source-binding.mjs';
 
 const SOURCE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,6 +25,7 @@ const memberIdArg = option('member-id').trim().toLowerCase();
 const grantToken = option('grant').trim();
 const expectedSha256 = option('sha256').trim().toLowerCase();
 const runtime = option('runtime').trim().toLowerCase();
+const packagePath = option('package').trim();
 const distributionUrl = option('distribution-url').trim()
   || process.env.CEREBRO_DISTRIBUTION_URL
   || DEFAULT_DISTRIBUTION_URL;
@@ -39,10 +42,7 @@ const TEMPLATE_FILES = [
   ['experimento.template.md', 'experimento.md'],
 ];
 
-function fail(message) {
-  console.error(`✗ ${message}`);
-  process.exit(1);
-}
+function fail(message) { throw new Error(message); }
 
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -137,6 +137,12 @@ function validatePackageProtocol(files, legacyManifest) {
 }
 
 async function postDistribution(action, payload, timeoutMs = 12_000) {
+  if (existsSync(join(TARGET_ROOT, '.cerebro', 'install-credential'))) {
+    try {
+      const client = createCommunityClient({ root: TARGET_ROOT, endpoint: distributionUrl, allowLocalhost: process.env.CEREBRO_COMMUNITY_ALLOW_LOCALHOST === '1' });
+      return { ok: true, status: 200, body: await client.request(action, payload) };
+    } catch (error) { return { ok: false, status: error.status || 0, body: { error: error.code || 'distribution_error' } }; }
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -144,25 +150,27 @@ async function postDistribution(action, payload, timeoutMs = 12_000) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...payload }),
+      redirect: 'error',
       signal: controller.signal,
     });
     const body = await response.json().catch(() => ({}));
+    if (!response.ok && !/^[a-z][a-z0-9_]{0,63}$/.test(body.error || '')) body.error = 'distribution_error';
     return { ok: response.ok, status: response.status, body };
   } catch (error) {
     return {
       ok: false,
       status: 0,
-      body: { error: error instanceof Error ? error.message : 'network_error' },
+      body: { error: 'network_error' },
     };
   } finally {
     clearTimeout(timeout);
   }
 }
 
-function validateRemotePackage(responseBody) {
+function validateRemotePackage(responseBody, requestedSlug = slug, requestedHash = expectedSha256) {
   const bundle = responseBody?.package;
   const serverHash = String(responseBody?.package_sha256 || '').toLowerCase();
-  if (!bundle || bundle.schema_version !== 1 || bundle.slug !== slug || !SLUG_RE.test(bundle.system_id || '')) {
+  if (!bundle || bundle.schema_version !== 1 || bundle.slug !== requestedSlug || !SLUG_RE.test(bundle.system_id || '')) {
     fail('o Registry devolveu um pacote incompatível com o Sistema solicitado');
   }
   if (!bundle.files || typeof bundle.files !== 'object' || Array.isArray(bundle.files)) {
@@ -180,7 +188,7 @@ function validateRemotePackage(responseBody) {
   if (!SHA256_RE.test(serverHash) || calculated !== serverHash) {
     fail('checksum do pacote não confere; nenhum arquivo foi alterado');
   }
-  if (expectedSha256 && (!SHA256_RE.test(expectedSha256) || expectedSha256 !== calculated)) {
+  if (requestedHash && (!SHA256_RE.test(requestedHash) || requestedHash !== calculated)) {
     fail('o pacote não confere com a versão autorizada pela plataforma; nenhum arquivo foi alterado');
   }
   const manifest = JSON.parse(bundle.files['manifest.json']);
@@ -238,31 +246,31 @@ function loadLocalPackage() {
   };
 }
 
-function writePackage({ bundle, manifest, release, contract, files, packageSha256 }) {
-  const targetVersion = readFileSync(join(TARGET_ROOT, 'VERSION'), 'utf8').trim();
+function writePackage({ bundle, manifest, release, contract, files, packageSha256 }, root = TARGET_ROOT, requestedSlug = slug, memberId = memberIdArg, distributionAuthorized = false) {
+  const targetVersion = readFileSync(join(root, 'VERSION'), 'utf8').trim();
   const minimumBrain = String(release?.compatibility.minimum_brain_version || manifest.release?.minimum_brain_version || '').trim();
   if (minimumBrain && !atLeast(targetVersion, minimumBrain)) {
     fail(`este pacote exige Cérebro >= ${minimumBrain}; o destino está em ${targetVersion}. Atualize antes de instalar.`);
   }
 
-  const memberIdPath = join(TARGET_ROOT, '.cerebro', 'member-id');
+  const memberIdPath = join(root, '.cerebro', 'member-id');
   const existingMemberId = existsSync(memberIdPath)
     ? readFileSync(memberIdPath, 'utf8').trim().toLowerCase()
     : '';
-  if (memberIdArg && UUID_RE.test(existingMemberId) && existingMemberId !== memberIdArg) {
+  if (memberId && UUID_RE.test(existingMemberId) && existingMemberId !== memberId) {
     fail('este Cérebro já pertence a outro member-id — não reatribua uma instalação; comissione a partir de base limpa');
   }
   const gated = (release?.publication.access_mode || manifest.validation?.access_mode) === 'approved-participants'
     || (!release && manifest.validation?.access_mode === 'approved_participants');
-  if (gated && !UUID_RE.test(memberIdArg || existingMemberId)) {
+  if (gated && !distributionAuthorized && !UUID_RE.test(memberId || existingMemberId)) {
     fail('pacote de acesso restrito exige a costura do participante: rode com --member-id=<uuid> (ou grave .cerebro/member-id antes)');
   }
-  if (memberIdArg && existingMemberId !== memberIdArg) {
+  if (memberId && existingMemberId !== memberId) {
     mkdirSync(dirname(memberIdPath), { recursive: true });
-    writeFileSync(memberIdPath, `${memberIdArg}\n`, { mode: 0o600 });
+    writeFileSync(memberIdPath, `${memberId}\n`, { mode: 0o600 });
   }
 
-  const target = join(TARGET_ROOT, 'sistemas', 'outros-instalados', slug);
+  const target = safeCommunityPath(root, `sistemas/outros-instalados/${requestedSlug}`);
   mkdirSync(target, { recursive: true });
   for (const file of PACKAGE_FILES) writeFileSync(join(target, file), files[file]);
   for (const file of OPTIONAL_PACKAGE_FILES) {
@@ -277,20 +285,20 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
     writeFileSync(join(target, 'recibo-evals.template.md'), files['recibo-evals.template.md']);
   }
 
-  const skillName = String(manifest.skill?.name || slug).trim().toLowerCase();
+  const skillName = String(manifest.skill?.name || requestedSlug).trim().toLowerCase();
   if (typeof files['skill/SKILL.md'] === 'string' && SLUG_RE.test(skillName)) {
     for (const agent of ['.claude', '.agents']) {
-      const skillTarget = join(TARGET_ROOT, agent, 'skills', skillName);
+      const skillTarget = join(root, agent, 'skills', skillName);
       mkdirSync(skillTarget, { recursive: true });
       writeFileSync(join(skillTarget, 'SKILL.md'), files['skill/SKILL.md']);
     }
   }
 
-  const catalogPath = join(TARGET_ROOT, 'sistemas', 'outros-instalados', '_CATALOGO.md');
+  const catalogPath = join(root, 'sistemas', 'outros-instalados', '_CATALOGO.md');
   mkdirSync(dirname(catalogPath), { recursive: true });
-  const start = `<!-- system:${slug}:start -->`;
-  const end = `<!-- system:${slug}:end -->`;
-  const entry = `${start}\n- [${contract?.name || manifest.name || slug}](${slug}/manifest.md) · pacote adicionado · \`operar ${slug}\`\n${end}`;
+  const start = `<!-- system:${requestedSlug}:start -->`;
+  const end = `<!-- system:${requestedSlug}:end -->`;
+  const entry = `${start}\n- [${contract?.name || manifest.name || requestedSlug}](${requestedSlug}/manifest.md) · pacote adicionado · \`operar ${requestedSlug}\`\n${end}`;
   let catalog = existsSync(catalogPath)
     ? readFileSync(catalogPath, 'utf8')
     : '# Sistemas adicionados\n\nA configuração e o feedback continuam privados neste Cérebro.\n';
@@ -298,9 +306,9 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
   catalog = pattern.test(catalog) ? catalog.replace(pattern, entry) : `${catalog.trim()}\n\n${entry}\n`;
   writeFileSync(catalogPath, catalog.endsWith('\n') ? catalog : `${catalog}\n`);
 
-  const stateDir = join(TARGET_ROOT, '.cerebro', 'sistemas');
+  const stateDir = join(root, '.cerebro', 'sistemas');
   mkdirSync(stateDir, { recursive: true });
-  const statePath = join(stateDir, `${slug}.json`);
+  const statePath = join(stateDir, `${requestedSlug}.json`);
   const hadState = existsSync(statePath);
   const previous = hadState ? readJson(statePath, 'estado local do sistema') : {};
   const sameRelease = previous.package_version === bundle.version
@@ -313,7 +321,7 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
   }
   const sourceRequirements = Array.isArray(contract?.sources) ? contract.sources : [];
   const sourceBindings = contract
-    ? summarizeSystemSourceBindings(TARGET_ROOT, contract)
+    ? summarizeSystemSourceBindings(root, contract)
     : sameRelease && previous.source_bindings ? previous.source_bindings : {
       total_roles: sourceRequirements.length,
       required_roles: sourceRequirements.filter((source) => source.required === true).length,
@@ -322,7 +330,7 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
     };
   writeFileSync(statePath, `${JSON.stringify({
     ...(sameRelease ? previous : {}),
-    slug,
+    slug: requestedSlug,
     system_id: bundle.system_id,
     package_version: bundle.version,
     package_sha256: packageSha256,
@@ -338,12 +346,12 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
     updated_at: new Date().toISOString(),
   }, null, 2)}\n`, { mode: 0o600 });
 
-  const receiptDir = join(TARGET_ROOT, 'operacao', 'execucoes');
+  const receiptDir = join(root, 'operacao', 'execucoes');
   mkdirSync(receiptDir, { recursive: true });
   const now = new Date();
   const stamp = now.toISOString().replace(/[:.]/g, '-');
-  writeFileSync(join(receiptDir, `${stamp}-pacote-${slug}.md`), [
-    `# Pacote adicionado — ${slug}`,
+  writeFileSync(join(receiptDir, `${stamp}-pacote-${requestedSlug}.md`), [
+    `# Pacote adicionado — ${requestedSlug}`,
     '',
     `- quando: ${now.toISOString()}`,
     `- system-id: ${bundle.system_id}`,
@@ -358,6 +366,18 @@ function writePackage({ bundle, manifest, release, contract, files, packageSha25
   ].join('\n'));
 
   return { hadState, statePath };
+}
+
+// Shared adapter for legacy schema-1 packages; CLI and community transports use the
+// same validation/writer. Importing this module does not execute the CLI.
+export function installLegacyCommunityPackage({ root, package: bundle, expectedSha256, confirm = false, distributionAuthorized = false }) {
+  if (typeof confirm !== 'boolean') fail('invalid_confirmation');
+  if (!SLUG_RE.test(bundle?.slug || '')) fail('invalid_slug');
+  const data = validateRemotePackage({ package: bundle, package_sha256: sha256(stableStringify(bundle)) }, bundle.slug, expectedSha256);
+  const plan = { status: 'preview', schema_version: 1, slug: bundle.slug, system_id: bundle.system_id, version: bundle.version, package_sha256: data.packageSha256, writes: false };
+  if (!confirm) return plan;
+  writePackage(data, root, bundle.slug, '', distributionAuthorized);
+  return { ...plan, status: 'installed', writes: true };
 }
 
 async function main() {
@@ -375,10 +395,21 @@ async function main() {
     process.exit(2);
   }
   ensureBrain();
-  const installId = ensureInstallId();
-
+  const client = () => createCommunityClient({ root: TARGET_ROOT, endpoint: distributionUrl, allowLocalhost: process.env.CEREBRO_COMMUNITY_ALLOW_LOCALHOST === '1' });
+  if (packagePath) {
+    const bundle = readJson(resolve(packagePath), 'envelope local');
+    if (bundle.slug !== slug) fail('slug do envelope divergente');
+    const result = installCommunityPackage({ root: TARGET_ROOT, package: bundle, expectedSha256, confirm: !dryRun });
+    console.log(JSON.stringify(result));
+    return;
+  }
+  if (process.argv.includes('--community')) {
+    console.log(JSON.stringify(await installCommunityRelease({ root: TARGET_ROOT, slug, client: client(), expectedSha256, confirm: !dryRun, runtime: runtime || 'codex' })));
+    return;
+  }
   if (dryRun && grantToken) fail('--dry-run não resgata grant remoto; gere uma nova autorização quando for instalar');
 
+  const installId = dryRun ? null : ensureInstallId();
   let packageData;
   let receiptOnly = false;
   if (grantToken) {
@@ -387,13 +418,22 @@ async function main() {
       install_id: installId,
     });
     if (redeemed.ok) {
-      packageData = validateRemotePackage(redeemed.body);
+      if (redeemed.body?.package?.schema_version === 2 || redeemed.body?.artifact) {
+        const response = await client().resolvePackage(redeemed.body);
+        const bundle = response.package;
+        if (bundle.slug !== slug) fail('slug do envelope divergente');
+        const checked = validateCommunityPackage(bundle);
+        packageData = { bundle, v2: true, packageSha256: checked.packageSha256 };
+      } else {
+        packageData = validateRemotePackage(redeemed.body);
+      }
     } else if (redeemed.status === 409) {
       const statePath = join(TARGET_ROOT, '.cerebro', 'sistemas', `${slug}.json`);
       const state = existsSync(statePath) ? readJson(statePath, 'estado local do sistema') : null;
       if (!state || state.slug !== slug || (expectedSha256 && state.package_sha256 !== expectedSha256)) {
         fail('esta autorização já foi usada ou revogada; gere uma nova na plataforma');
       }
+      if (state.package_schema_version === 2) verifyInstalledCommunityPackage({ root: TARGET_ROOT, slug, expectedSha256 });
       receiptOnly = true;
     } else {
       fail(`não foi possível resgatar o pacote (${redeemed.body?.error || `HTTP ${redeemed.status}`})`);
@@ -407,7 +447,9 @@ async function main() {
     return;
   }
 
-  const installResult = packageData ? writePackage(packageData) : { hadState: true };
+  const installResult = packageData?.v2
+    ? { hadState: installCommunityPackage({ root: TARGET_ROOT, package: packageData.bundle, expectedSha256, confirm: true }).already_installed }
+    : packageData ? writePackage(packageData) : { hadState: true };
   const state = readJson(join(TARGET_ROOT, '.cerebro', 'sistemas', `${slug}.json`), 'estado local do sistema');
 
   if (grantToken) {
@@ -423,6 +465,7 @@ async function main() {
       }
       fail(`pacote instalado localmente, mas o recibo não fechou (${receipt.body?.error || `HTTP ${receipt.status}`}). Repita o mesmo comando antes de 30 minutos.`);
     }
+    if (state.package_schema_version === 2) recordCommunityInstallationReceipt({ root: TARGET_ROOT, slug });
   }
 
   if (!installResult.hadState && !receiptOnly) {
@@ -447,4 +490,6 @@ async function main() {
   console.log(`Próximo passo: mapeie as Fontes com node scripts/system-source-binding.mjs plan ${state.system_id || slug}; só depois rode o primeiro caso real.`);
 }
 
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try { await main(); } catch (error) { console.error(`✗ ${error instanceof Error ? error.message : 'installation_failed'}`); process.exitCode = 1; }
+}

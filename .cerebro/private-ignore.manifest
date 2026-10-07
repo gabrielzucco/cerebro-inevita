@@ -44,3 +44,9 @@ comunidade/minhas-contribuicoes/enviadas/*
 .cerebro/update-state.json
 .cerebro/update-backups/
 .cerebro/update.lock
+
+# CS1: complete private workspace and staged community installs stay local.
+sistemas/outros-instalados/*/workspace/
+sistemas/outros-instalados/*/releases/
+sistemas/outros-instalados/.community-stage-*/
+sistemas/outros-instalados/.*.install.lock
