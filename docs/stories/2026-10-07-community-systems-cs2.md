@@ -1,6 +1,6 @@
 # Story CS2 — Integração e liberação dos sistemas da comunidade
 
-Status: candidata local preparada; integração remota pendente. Pedido de Gabriel: “próximo”, após entrega local CS1.
+Status: candidata preparada e PR aberto; liberação aguarda CI final e piloto real. Pedido de Gabriel: “próximo”, após entrega local CS1.
 
 ## Resultado
 
@@ -13,9 +13,10 @@ Integrar o código já verificado à linha apropriada de cada repositório, prep
 - [x] Preparar integração/release de cliente sem arrastar candidata não aprovada.
 - [x] Capturar runtime vigente e produzir pacote mínimo compatível, quando acessível.
 - [x] Executar checks aplicáveis ao delta e revisar rollout.
-- [ ] Abrir/atualizar PRs com diffs e dependências explícitas.
-- [ ] Liberar e validar produção dentro da autorização; se faltar autoridade/aceite externo, deixar candidato concreto e registrar a dependência exata.
-- [ ] Registrar hashes, arquivos e estado final, sem segredos ou PII.
+- [x] Abrir/atualizar PRs com diffs e dependências explícitas.
+- [x] Preparar candidato concreto e registrar a dependência exata quando faltar aceite externo de liberação.
+- [ ] Liberar e validar produção após os aceites de piloto e do SHA final.
+- [x] Registrar hashes, arquivos e estado final, sem segredos ou PII.
 
 ## Sequência
 
@@ -67,8 +68,10 @@ Servidor preparado offline contra baseline vivo: sete alterações permitidas, 2
 
 O pacote original entra como proposta privada. A pessoa autora confirma seu hash; outra pessoa curadora revisa antes de publicar. Duas instalações da mesma pessoa não são revisão independente. A aprovação de conteúdo não é comprovação de resultado real.
 
-## Integração remota em 07 de outubro
+## Integração e artefato
 
-CS1 e CS2 fixadas em commits 6a3321c e 788addc. O GitHub recusou três tentativas de push com Internal Server Error; a criação do PR também devolveu erro interno. A branch remota e o PR do membro ainda não estão confirmados. O PR da plataforma #298 existe; CI do a4c9f5 passou, mas a rodada de 39c38df2 encerrou sem jobs e o pedido de rerun recebeu HTTP500. Isso não representa falha de teste executado nem validação do SHA final.
+[PR #13](https://github.com/gabrielzucco/cerebro-inevita/pull/13) aberto em draft e empilhado sobre #12. [Plataforma #298](https://github.com/inevita-society/kosmos-score/pull/298) em draft. Houve erros internos temporários no GitHub; a branch do membro foi recebida e o PR confirmado depois. A rodada anterior da plataforma encerrou sem iniciar jobs; CI dos SHAs finais continua gate separado.
 
-A revisão independente encontrou um estado local enganoso: existência de approval.json/submission.json era tomada como status válido. Leitura corrigida para conferir candidato, hash, resumo/consentimento e recibo; envio já recusava consentimento copiado. Testes dirigidos cobrem registro de outro candidato, malformado, hash divergente e recibo sem aprovação. O recibo externo desta entrega registra o resultado final dos testes e do artefato extraído do commit.
+Artefato do código a4f0132 verificado: 604 arquivos extraídos conferidos byte a byte, seis grupos de aceite e 17 execuções CLI/MCP em caminhos com espaços, acentos e alias. Instalação nova, atualização, staging e Funil integral passaram, sem tentativa de rede. O recibo externo da mesa registra o hash do arquivo distribuído; uma atualização apenas documental pode gerar outro tar sem alterar os fontes executáveis.
+
+A revisão independente corrigiu um estado local enganoso: existência de approval.json/submission.json era tomada como status válido. Leitura agora confere candidato, hash, resumo/consentimento, identificador e data do recibo; envio já recusava consentimento copiado. Cinco testes de staging com o Funil real, 13 MCP, 18 checks de pacote, lint e sintaxe dirigidos passaram após a correção. Ensaio integrado foi repetido e passou. Nenhum achado aberto no delta CS2 revisado.
