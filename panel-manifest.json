@@ -1,0 +1,380 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-07T21:27:23.280Z",
+  "minimum_node": 20,
+  "member_data_included": false,
+  "operator_adapters_included": false,
+  "requires_explicit_root": true,
+  "backend_inputs": [
+    "company-brain-console/scripts/lib/json-schema-runtime.mjs",
+    "company-brain-console/scripts/lib/catalog-protocol.mjs",
+    "company-brain-console/painel/portable/profile.mjs",
+    "company-brain-console/scripts/lib/catalog-read-model.mjs",
+    "company-brain-console/scripts/lib/execution-context.mjs",
+    "company-brain-console/scripts/lib/context-consumption-policy.mjs",
+    "company-brain-console/scripts/lib/privacy-disclosure.mjs",
+    "company-brain-console/scripts/lib/company-brain-protocol-v2.mjs",
+    "company-brain-console/scripts/lib/system-vocabulary.mjs",
+    "company-brain-console/scripts/lib/system-protocol.mjs",
+    "company-brain-console/scripts/lib/canvas-layout-runtime.mjs",
+    "company-brain-console/scripts/lib/access-runtime.mjs",
+    "company-brain-console/scripts/lib/system-source-binding.mjs",
+    "company-brain-console/scripts/lib/source-read-runtime.mjs",
+    "company-brain-console/scripts/lib/provider-context-receipt.mjs",
+    "company-brain-console/scripts/lib/routine-output-verification.mjs",
+    "company-brain-console/scripts/lib/routine-protocol.mjs",
+    "company-brain-console/scripts/lib/context-contracts.mjs",
+    "company-brain-console/scripts/lib/decision-case.mjs",
+    "company-brain-console/scripts/lib/decision-runtime.mjs",
+    "company-brain-console/scripts/lib/judgment-protocol.mjs",
+    "company-brain-console/scripts/lib/context-input-receipt.mjs",
+    "company-brain-console/scripts/lib/context-baseline.mjs",
+    "company-brain-console/scripts/lib/platform-context-adapter.mjs",
+    "company-brain-console/scripts/lib/meetings-context-adapter.mjs",
+    "company-brain-console/scripts/lib/meeting-receipt-context.mjs",
+    "company-brain-console/scripts/lib/meeting-derived-context.mjs",
+    "company-brain-console/scripts/lib/group-context-adapter.mjs",
+    "company-brain-console/scripts/lib/context-history-retention.mjs",
+    "company-brain-console/scripts/lib/context-input-ledger.mjs",
+    "company-brain-console/scripts/lib/context-freshness.mjs",
+    "company-brain-console/scripts/lib/brain-context-read-model.mjs",
+    "company-brain-console/scripts/lib/context-consumption-observation.mjs",
+    "company-brain-console/scripts/lib/context-snapshot-runtime.mjs",
+    "company-brain-console/scripts/lib/eval-calls-gates.mjs",
+    "company-brain-console/scripts/lib/evaluation-runtime.mjs",
+    "company-brain-console/scripts/lib/execution-trace-runtime.mjs",
+    "company-brain-console/scripts/lib/model-executors.mjs",
+    "company-brain-console/scripts/lib/routine-runtime.mjs",
+    "company-brain-console/scripts/lib/correction-loop.mjs",
+    "company-brain-console/scripts/lib/experiment-protocol.mjs",
+    "company-brain-console/scripts/lib/compatibility-diagnostic.mjs",
+    "company-brain-console/scripts/lib/system-taxonomy.mjs",
+    "company-brain-console/scripts/lib/system-runtime-binding.mjs",
+    "company-brain-console/scripts/lib/experience-manifest.mjs",
+    "company-brain-console/scripts/lib/skill-read-model.mjs",
+    "company-brain-console/scripts/lib/workflow-definition.mjs",
+    "company-brain-console/scripts/lib/console-read-model.mjs",
+    "company-brain-console/scripts/lib/handoff-protocol.mjs",
+    "company-brain-console/scripts/lib/graph-read-model.mjs",
+    "company-brain-console/scripts/lib/company-map-spec.mjs",
+    "company-brain-console/scripts/lib/painel-evidence.mjs",
+    "company-brain-console/scripts/lib/painel-inbox-events.mjs",
+    "company-brain-console/scripts/lib/painel-inbox.mjs",
+    "company-brain-console/painel/portable/updates.mjs",
+    "company-brain-console/painel/portable/metrics-overview.mjs",
+    "company-brain-console/painel/portable/installed-contracts.mjs",
+    "company-brain-console/painel/portable/server.mjs"
+  ],
+  "files": [
+    {
+      "path": "console/painel/server/server.mjs",
+      "bytes": 656404,
+      "sha256": "8485534129250a895c0bd4cde44191e348ee7cf1ec5c7424dc9d7a08fe2d62df"
+    },
+    {
+      "path": "console/painel/web/assets/Mapa-B_taXncx.js",
+      "bytes": 221806,
+      "sha256": "d0572020831b66552cce50cc844cd4306f7af468343c6b9d961ee529c934840c"
+    },
+    {
+      "path": "console/painel/web/assets/Mapa-BnuhLJ6X.css",
+      "bytes": 15869,
+      "sha256": "1243b61a71923367ce620fb944427c80c9b03e863e18374fcf4f74d6d06f63fc"
+    },
+    {
+      "path": "console/painel/web/assets/dm-sans-latin-ext-wght-normal-BOFOeGcA.woff2",
+      "bytes": 18228,
+      "sha256": "a5d38fe99f930275684999b462c7123faa063d9e44e73b4b241723d884aa0f49"
+    },
+    {
+      "path": "console/painel/web/assets/dm-sans-latin-wght-normal-Xz1IZZA0.woff2",
+      "bytes": 36932,
+      "sha256": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543"
+    },
+    {
+      "path": "console/painel/web/assets/index-C8iIrUqQ.js",
+      "bytes": 636091,
+      "sha256": "003e8cef869550ec6e72f137310c427f877b13f2eb785276bd1fc861afcb7d7b"
+    },
+    {
+      "path": "console/painel/web/assets/index-Cf0y9cE1.css",
+      "bytes": 53729,
+      "sha256": "d27c34287d70e2abd9fd904abf4f88335ad60f867b0771828b06a7e89c214d34"
+    },
+    {
+      "path": "console/painel/web/index.html",
+      "bytes": 907,
+      "sha256": "163fc94f7c192ce6a9e842dc7fd2a2a62ba3e55221f42977197982cd130bce3e"
+    },
+    {
+      "path": "console/painel/web/source-icons/fathom.svg",
+      "bytes": 932,
+      "sha256": "65a5071da1280cad3da96595cb40c0726709d1373f6aca2bfb8a9e67dd8323b2"
+    },
+    {
+      "path": "console/painel/web/source-icons/railway.svg",
+      "bytes": 773,
+      "sha256": "1e386a6d03360dd84cd858bc69b3ac9452afc212846a197f7a890898439a7f1d"
+    },
+    {
+      "path": "console/painel/web/source-icons/whatsapp.svg",
+      "bytes": 1216,
+      "sha256": "8fb209a53a61618c3483594b3e070481a35575d6aaecbe00a6fe386670c8fb1c"
+    },
+    {
+      "path": "console/protocol/access-grant.schema.json",
+      "bytes": 2718,
+      "sha256": "95348f88f7aceb69589f1490bf5579c31dc896f2aca3ffc981fe1d2b4373e8f7"
+    },
+    {
+      "path": "console/protocol/access-receipt.schema.json",
+      "bytes": 2547,
+      "sha256": "8e7d2acfa409663ad5054456eddf5d1ca035559e3d3aa7d8e8185382e5a5c059"
+    },
+    {
+      "path": "console/protocol/agent-contract.schema.json",
+      "bytes": 4100,
+      "sha256": "f487a97f326f86047c59cd1787669aa3e156769f870275f7fa14ab8ceedebf6c"
+    },
+    {
+      "path": "console/protocol/area-contract.schema.json",
+      "bytes": 3977,
+      "sha256": "75856f508c9c7fa75797c67abd3c0adb49b61507ea3fd84d3595bc66c0dc19c0"
+    },
+    {
+      "path": "console/protocol/artifact-contract.schema.json",
+      "bytes": 5062,
+      "sha256": "18aaedfc4dedc95a42f8459f1e758e553edcfcfe37c7b9b7fe6b80efa7f52d7f"
+    },
+    {
+      "path": "console/protocol/artifacts/creative-brief.schema.json",
+      "bytes": 2268,
+      "sha256": "b8d365dc837663309067efd131dc4459f72290082c2d1a644ed21971507728b6"
+    },
+    {
+      "path": "console/protocol/artifacts/funnel-reading.schema.json",
+      "bytes": 2650,
+      "sha256": "df13bf2c5483c57e8e0eed1c9a2ff7c0c587815a73855ae5889cc8825ae29346"
+    },
+    {
+      "path": "console/protocol/brain-manifest.schema.json",
+      "bytes": 2896,
+      "sha256": "4602e7de23442b8ddc84ddab303053e3f4f8f39f0bc9d45126300089a439676a"
+    },
+    {
+      "path": "console/protocol/capability-contract.schema.json",
+      "bytes": 2351,
+      "sha256": "7466662ee83cb13f33edeeebb588de4e5e0b750ea87cdb03e710c281a3ab99bc"
+    },
+    {
+      "path": "console/protocol/collector-binding.schema.json",
+      "bytes": 2307,
+      "sha256": "59944efd3b8953bf1b28e6fdd3a6a4ec06caa98bb1de1fe21f2a3dbcf12d1863"
+    },
+    {
+      "path": "console/protocol/context/binding.private.v1.schema.json",
+      "bytes": 3182,
+      "sha256": "b9edc347158f8d2b5958fa7fe808b76c163fa2e5716fcda599b731720a6814fa"
+    },
+    {
+      "path": "console/protocol/context/record.v1.schema.json",
+      "bytes": 46242,
+      "sha256": "a0210df860653bb043665cd074ee83b352239b5e013c6ceb0ee5a7fdce27f97e"
+    },
+    {
+      "path": "console/protocol/correction-run-receipt.schema.json",
+      "bytes": 2984,
+      "sha256": "c670d8ee996efab45218ef007a25111f45047fbd16570b515b92f1b03d3424a9"
+    },
+    {
+      "path": "console/protocol/decision-case-receipt.schema.json",
+      "bytes": 5827,
+      "sha256": "8a6944669e748123afa08473d5c4c10f592a1855abc9d36dfcca4d8d3d43e029"
+    },
+    {
+      "path": "console/protocol/decision-runtime-binding.schema.json",
+      "bytes": 1322,
+      "sha256": "1a511b5c323f9d833553580046f3f86ccfbf7f6321cfe51d3791105e57dcdcb3"
+    },
+    {
+      "path": "console/protocol/execution-context.schema.json",
+      "bytes": 2378,
+      "sha256": "14ee2d99be146239d048e748fca9903597c38bcde6bda763d34ecbd35a5601f9"
+    },
+    {
+      "path": "console/protocol/execution-trace-event.schema.json",
+      "bytes": 4007,
+      "sha256": "1425484ad4298d1cfb342737fd4276d9183c636598a1a2ff8ef92a447c1dc465"
+    },
+    {
+      "path": "console/protocol/executor-binding.schema.json",
+      "bytes": 2477,
+      "sha256": "0d4fcc64ed56cd76301c96c635e64216d3f2aa9fbe668e1219ffdc74249c95be"
+    },
+    {
+      "path": "console/protocol/experience-manifest.schema.json",
+      "bytes": 2067,
+      "sha256": "74a7e5c4959af3e4bd63c8d1b5b251f3c5dfd0329c453e129868b92662ec17fb"
+    },
+    {
+      "path": "console/protocol/experiment-contract.schema.json",
+      "bytes": 5253,
+      "sha256": "bd3825e24c507ba383c109b1e322a036191893b2ed1427332b5acd8904a631df"
+    },
+    {
+      "path": "console/protocol/experiment-state.schema.json",
+      "bytes": 4197,
+      "sha256": "69bbad5d297b587716bd53324a1a46e3892150ea7ca00922ca9c2d4d31d9385a"
+    },
+    {
+      "path": "console/protocol/handoff-contract.schema.json",
+      "bytes": 3749,
+      "sha256": "67eca743ef1c1af1490ca7364468254922c78e7335be7db80c6c21e8cfd80901"
+    },
+    {
+      "path": "console/protocol/handoff-receipt.schema.json",
+      "bytes": 3795,
+      "sha256": "34843ec634c378ec479a04a5d09eba3f0ee9b27fdb3a0aa7e920a7fa2093a7ce"
+    },
+    {
+      "path": "console/protocol/journey-contract.schema.json",
+      "bytes": 6864,
+      "sha256": "f0e878b010673b3a6be672b156b6840732778830646b1f9b21598daa15bdfa1a"
+    },
+    {
+      "path": "console/protocol/judgment-receipt.schema.json",
+      "bytes": 2621,
+      "sha256": "c37c75602e3474aafc59a141497e138a3934d6d832c8afec18d732ec0e07eab8"
+    },
+    {
+      "path": "console/protocol/learning-candidate.schema.json",
+      "bytes": 2774,
+      "sha256": "1fa79a421d93dd606d48822a84b18abf06b4aee0d006b799fb8089d82b7abce9"
+    },
+    {
+      "path": "console/protocol/operational-knowledge-candidate.schema.json",
+      "bytes": 1922,
+      "sha256": "a3e506913b60a8879a2c68eb5ee4754899fd5cfaba4bc06ca6f73f94ad138282"
+    },
+    {
+      "path": "console/protocol/package-contract.schema.json",
+      "bytes": 4557,
+      "sha256": "b1a680b508b27dae5352b49145d20d5fc833e159e6495261be9d835557252baa"
+    },
+    {
+      "path": "console/protocol/provider-context.schema.json",
+      "bytes": 4774,
+      "sha256": "e5accacbf484cfa96dbaea3a02717121adb14fcc6dc2ab74182809698bc08e65"
+    },
+    {
+      "path": "console/protocol/release-manifest.schema.json",
+      "bytes": 3232,
+      "sha256": "8828c403bd94ac9e4ab8447e3c2b3d1e2df00a8c0dd89d70e8be7cfcf7a8a267"
+    },
+    {
+      "path": "console/protocol/retrieval-provider-contract.schema.json",
+      "bytes": 3169,
+      "sha256": "099b9670ad3988efdb7fcabf6a280101b1b64cb604061470237a5175f9525918"
+    },
+    {
+      "path": "console/protocol/routine-contract.schema.json",
+      "bytes": 9309,
+      "sha256": "2cf11ee04deca271a40142cdfa7240a491718b74d34637be51e661b6e740bf29"
+    },
+    {
+      "path": "console/protocol/routine-migration.schema.json",
+      "bytes": 3268,
+      "sha256": "41abf1bbd310830210b29d4c1387c1e30a178813d0252a4187ebd870df58f1be"
+    },
+    {
+      "path": "console/protocol/routine-run-receipt.schema.json",
+      "bytes": 11404,
+      "sha256": "e718f35dace15ecca7d6fbf93ef9666bb1b144f4fbe40c2f098980aff6c479ff"
+    },
+    {
+      "path": "console/protocol/run-record-v2.schema.json",
+      "bytes": 9040,
+      "sha256": "9dd4d0f9dda83209782c98983c076c3dea689572195db59ae23948632bac4115"
+    },
+    {
+      "path": "console/protocol/run-record.schema.json",
+      "bytes": 3011,
+      "sha256": "1fb90e8584e72ef89bec4b60fefab7614f6987bb80fc7b94ed98a4f86e898fcc"
+    },
+    {
+      "path": "console/protocol/source-contract.schema.json",
+      "bytes": 4449,
+      "sha256": "0d286b2a3fcd1431995a049491e766bceed4b2a64064e6c71b4c8fd4567fd500"
+    },
+    {
+      "path": "console/protocol/source-preparation.schema.json",
+      "bytes": 2946,
+      "sha256": "f674035dbf428317a0805b093849e0ec0b81eaa9de5d648c3078f12f2b24b309"
+    },
+    {
+      "path": "console/protocol/source-read-receipt.schema.json",
+      "bytes": 3023,
+      "sha256": "3a7e0e9c7ffbfb848ad61506c836f2952301f10f663ce21bd06fce3a50ead577"
+    },
+    {
+      "path": "console/protocol/system-contract-v2.schema.json",
+      "bytes": 10581,
+      "sha256": "0d052cf20fdf0bdf8e4f9244fec0480f8b4a51be00f52c371b83f023df8c2880"
+    },
+    {
+      "path": "console/protocol/system-contract.schema.json",
+      "bytes": 5053,
+      "sha256": "21121ad06dbc219030972b990fdbd83307e7d42d052abc50bd7861a553de423a"
+    },
+    {
+      "path": "console/protocol/system-organization.schema.json",
+      "bytes": 3364,
+      "sha256": "89d6b001def1e597bffaa271fc31eb62b31f4671eaf43d9dbc37b5bea297d706"
+    },
+    {
+      "path": "console/protocol/system-runtime-binding.schema.json",
+      "bytes": 2652,
+      "sha256": "7be8b5e56e62cefc9825cfe4616564dd0b5e4bab2ca1bcd9d86d4c1755e61a3f"
+    },
+    {
+      "path": "console/protocol/system-source-binding-v2.schema.json",
+      "bytes": 2170,
+      "sha256": "9283959b22eae45799cdbcdaa8d30b92c1c7781140566fe1591124c2bd7da5b3"
+    },
+    {
+      "path": "console/protocol/system-source-binding.schema.json",
+      "bytes": 2238,
+      "sha256": "36651c59daeb264958f8348328d06ebaae25823419c603f508c9f97c94d29a29"
+    },
+    {
+      "path": "console/protocol/work-receipt.schema.json",
+      "bytes": 6741,
+      "sha256": "5952d981e5c565edb051ca546604209746e4c2dd277e03f6956662df56eb7bd0"
+    },
+    {
+      "path": "console/protocol/workflow-contract.schema.json",
+      "bytes": 9073,
+      "sha256": "56449bc28c01d1032b89fb6ba988a998e405764132ce79692aecd6ebaf545268"
+    },
+    {
+      "path": "console/protocol/workflow-definition.schema.json",
+      "bytes": 5507,
+      "sha256": "0089a03f22767977bc39653cc2360430236239e4fdad7f1e5a1bf9b475d34313"
+    },
+    {
+      "path": "console/protocol/workflow-import.schema.json",
+      "bytes": 1555,
+      "sha256": "433f1496ef19e12e968063e5eddf86d8bf2683725952184b8f40c04bbf5f1212"
+    },
+    {
+      "path": "console/protocol/workflow-pointer.schema.json",
+      "bytes": 992,
+      "sha256": "2f0c1542231998017d6bed258120faf5b042c20295e16705d134976108c24a55"
+    },
+    {
+      "path": "scripts/painel.mjs",
+      "bytes": 1789,
+      "sha256": "4b1035e4d898b78ab174a3b94d4e9e81c98158d656fb8a84be25ea88d8460820"
+    }
+  ]
+}

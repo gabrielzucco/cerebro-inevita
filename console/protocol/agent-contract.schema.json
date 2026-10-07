@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/agent-contract-v1.json",
+  "title": "INEVITA Agent Contract V1",
+  "description": "Agente: executor com identidade própria, dono humano e mandato. O mandato diz se o agente age em nome de alguém ou de forma autônoma, em quais workflows e sistemas, e se pode ação externa. Credencial entra só por referência; memória do executor é separada do vault e do pacote. Reference-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "agent_id", "name", "version", "status", "identity", "mandate",
+    "model_policy", "memory", "package_refs", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "agent_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "version": { "$ref": "#/$defs/version" },
+    "status": { "enum": ["proposed", "active", "paused", "retired"] },
+    "identity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "principal_ref", "credential_ref", "executor_binding_ref", "placement"],
+      "properties": {
+        "kind": { "const": "agent" },
+        "principal_ref": { "$ref": "#/$defs/ref" },
+        "credential_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+        "executor_binding_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "placement": { "enum": ["host-gabriel-local", "vps", "github-actions", "railway", "external"] }
+      }
+    },
+    "mandate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "on_behalf_of_ref", "workflow_refs", "system_refs", "external_actions", "approval_required"],
+      "properties": {
+        "mode": { "enum": ["on-behalf-of", "autonomous"] },
+        "on_behalf_of_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "workflow_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "system_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "external_actions": { "type": "boolean" },
+        "approval_required": { "type": "boolean" }
+      }
+    },
+    "model_policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requested_model", "reasoning_effort"],
+      "properties": {
+        "requested_model": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+        "reasoning_effort": { "oneOf": [{ "type": "null" }, { "enum": ["low", "medium", "high", "xhigh", "max"] }] }
+      }
+    },
+    "memory": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "store_ref", "versioned", "consolidation"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "store_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+        "versioned": { "type": "boolean" },
+        "consolidation": { "enum": ["none", "periodic", "per-work"] }
+      }
+    },
+    "package_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "privacy": {
+      "description": "O contrato do agente nunca carrega credencial nem memória; o que o agente compartilha com o provedor é declarado no recibo de cada trabalho, não aqui.",
+      "type": "object", "additionalProperties": false,
+      "required": ["credential_in_contract", "memory_content_in_contract"],
+      "properties": {
+        "credential_in_contract": { "const": false },
+        "memory_content_in_contract": { "const": false }
+      }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

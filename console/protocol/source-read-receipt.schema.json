@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "receipt_id",
+    "run_ref",
+    "system_ref",
+    "source_ref",
+    "action",
+    "role",
+    "layer",
+    "partition",
+    "version",
+    "selection_digest",
+    "mode",
+    "phase",
+    "occurred_at",
+    "decision",
+    "would_deny",
+    "blocked",
+    "reason_code",
+    "grant_ref",
+    "binding_ref",
+    "authority_digest",
+    "content_digest",
+    "bytes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "run_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "system_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "source_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "action": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "layer": {
+      "enum": [
+        "raw",
+        "organized",
+        "distilled",
+        "period_summary",
+        "atoms",
+        "projection",
+        "profile",
+        "index",
+        null
+      ]
+    },
+    "partition": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "selection_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "mode": {
+      "enum": [
+        "observe",
+        "enforce"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "read",
+        "preflight",
+        "before-provider"
+      ]
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "allowed",
+        "denied"
+      ]
+    },
+    "would_deny": {
+      "type": "boolean"
+    },
+    "blocked": {
+      "type": "boolean"
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "grant_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "binding_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "authority_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "content_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "bytes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reference-only execution context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observed_at",
+    "items"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_ref",
+          "layer",
+          "partition",
+          "version",
+          "digest",
+          "window",
+          "receipt_ref"
+        ],
+        "properties": {
+          "source_ref": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "layer": {
+            "enum": [
+              "raw",
+              "organized",
+              "distilled",
+              "period_summary",
+              "atoms",
+              "projection",
+              "profile",
+              "index"
+            ]
+          },
+          "partition": {
+            "type": "string",
+            "pattern": "^(?!all$|whole-source$|source$)[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+              }
+            ]
+          },
+          "digest": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "window": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "until"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "until": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "receipt_ref": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        }
+      }
+    }
+  }
+}

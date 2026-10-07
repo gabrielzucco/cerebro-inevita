@@ -13,13 +13,14 @@ fallback de branch ou o atualizador antigo para fazer a primeira passagem segura
    Se o updater instalado não tem prévia/`--tag`, obtenha o pacote de uma **tag fixa** em pasta
    temporária e execute o script novo com `--root` apontando para a instalação. Nunca atualize
    primeiro pelo script destrutivo legado para “ganhar” a versão segura.
-2. Escolha a tag publicada e confira o changelog. Para o patch documental `v1.39.1`, verifique
-   a existência da release em `gabrielzucco/cerebro-inevita`, sua tag e seu commit antes de usar
-   o pacote. Se ainda não estiver publicada, a `v1.39.0` já está disponível; substitua a tag e
-   use o pacote correspondente. Use Node.js 20+ já disponível para o planejador.
+2. Escolha a tag publicada e confira o changelog. Para o novo painel `v1.40.0`,
+   verifique a existência da release em `gabrielzucco/cerebro-inevita`, sua tag e seu
+   commit antes de usar o pacote. Se ainda não estiver publicada, preserve a
+   instalação atual; a `v1.39.1` tem o Cockpit anterior, não o novo painel. Nunca
+   substitua a release por main/latest. Use Node.js 20+ já disponível.
 3. Execute a prévia, sem `--apply`:
    ```bash
-   CEREBRO_UPDATE_SOURCE_DIR=/caminho/pacote node /caminho/pacote/scripts/update.mjs --tag v1.39.1 --root /caminho/cerebro --baseline-dir /caminho/pacote-da-versao-instalada
+   CEREBRO_UPDATE_SOURCE_DIR=/caminho/pacote node /caminho/pacote/scripts/update.mjs --tag v1.40.0 --root /caminho/cerebro --baseline-dir /caminho/pacote-da-versao-instalada
    ```
    Mostre os arquivos que mudarão, conflitos, tag e `plan_hash`. Sem recibo anterior, use o
    baseline íntegro da versão instalada; arquivos diferentes dele são conflitos. Preserve a dúvida;
@@ -35,7 +36,15 @@ fallback de branch ou o atualizador antigo para fazer a primeira passagem segura
 6. Se aparecer `RUNTIME_LEGADO`, o arquivo privado de runtime precisa de migração separada antes
    de gravar estado no cockpit. Leia `scripts/post-update.mjs`, apresente os caminhos e peça
    aprovação antes de executá-lo. O updater não executa código pós-update ou ping automaticamente.
-7. Retome `comecar` no ponto existente. A atualização inclui o assistente e o cliente MCP, mas
+7. Para abrir o novo painel após atualizar para 1.40.0, execute o `scripts/painel.mjs`
+   da instalação efetiva do motor com `--root` absoluto para a pasta de dados escolhida.
+   O motor pode estar em `.cerebro/engine`; não confunda seu caminho com a raiz dos dados.
+   Use `--no-open` para conferir HTTP em `127.0.0.1` antes de abrir; porta ocupada pede
+   outra com `--port`. O Cockpit anterior continua em `scripts/cockpit.mjs` para
+   Telegram/Hermes, demonstração e ações ainda não migradas.
+   Em acervo artesanal sem VERSION na raiz, o aviso pode não identificar a versão.
+   Confira VERSION no motor efetivo; não escreva no acervo nem troque a raiz de dados.
+8. Retome `comecar` no ponto existente. A atualização inclui o assistente e o cliente MCP, mas
    não cria uma credencial de instalação nem configura o servidor no cliente de IA. Se o dono
    quiser usar a comunidade, confira o vínculo seguro e siga `docs/guides/community-mcp.md`,
    preservando as demais configurações e o acesso vigente à Society.

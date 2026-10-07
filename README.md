@@ -28,22 +28,22 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 
 ## Comece em 2 minutos
 
-Confira primeiro a [release oficial v1.39.1](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.1),
-sua tag e seu commit. Se ela ainda não estiver publicada, use a
-[v1.39.0 disponível](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0)
-e substitua a tag no comando; ela já inclui o assistente de implantação e o MCP.
+Confira primeiro a [release oficial v1.40.0](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.40.0),
+sua tag e seu commit. Se ela ainda não estiver publicada, continue com a
+[v1.39.1 publicada](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.1):
+ela tem o assistente e o Cockpit anterior, mas não o novo painel. Não use `main` como substituto.
 
 ```bash
-git clone --branch v1.39.1 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
+git clone --branch v1.40.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
 
-Use uma tag publicada do canal oficial `gabrielzucco/cerebro-inevita`. O conteúdo
-e os limites deste patch documental estão em [`docs/releases/1.39.1.md`](docs/releases/1.39.1.md).
+Use uma tag publicada do canal oficial `gabrielzucco/cerebro-inevita`.
+Veja as [novidades e limites da 1.40.0](docs/releases/1.40.0.md).
 Se já existe um Cérebro, escolha usar o existente, instalar em pasta nova ou planejar a migração;
 o agente não reutiliza a pasta por conta própria. Veja [instalação e atualização segura](COMECE-AQUI.md).
 
-Requisito: **Node.js 20+** (só a stdlib — o motor não tem nenhuma dependência externa,
-não existe `npm install`). Funciona em macOS, Linux e Windows.
+Requisito: **Node.js 20+**. O painel e suas dependências já vêm empacotados;
+você não precisa rodar `npm install` nem fazer build. Funciona em macOS, Linux e Windows.
 
 Abre a pasta no teu agente e diz **"quero começar"**:
 
@@ -75,28 +75,27 @@ O trabalho local pode começar antes desse vínculo.
 - **Transformar uma call em trabalho** — decisões, pendências com dono, contexto que volta na próxima.
 - **Criar com a minha voz** — a peça nasce do teu contexto, tu ajusta em vez de reescrever.
 
-## Console local (opcional)
+## Painel local
 
-Na primeira abertura, o cockpit mostra a **Primeira Missão** até o Cérebro provar reutilização do
-contexto. Depois de T4, a home vira `Hoje`: `Cérebro` mostra memória, recuperação, aprendizado,
-saúde e o recibo de ativação; `Sistemas` mostra apenas resultados de negócio plugados nessa base.
-`Cérebro → Atualizações` é o canal permanente para versão instalada, novidades públicas da
-INEVITA e releases. A Primeira Missão mostra só a novidade mais recente e aponta para essa central.
-Tudo deriva dos contratos e recibos locais, sem criar outro banco nem enviar teu contexto para a
-INEVITA:
+Depois de instalar ou atualizar, abra o painel apontando para a pasta do seu Cérebro:
 
 ```bash
-node scripts/console-server.mjs
+node scripts/painel.mjs --root "/caminho/do/seu-cerebro"
 ```
 
-Abre `http://127.0.0.1:4782`. Navegar não chama modelo. `Rodar agora`, ativar, pausar ou retomar
-exigem confirmação; uma agenda importada continua bloqueada até a agenda antiga ser pausada. A
-Caixa de Julgamento abre um output somente por gesto explícito e registra aprovar, pedir ajuste,
-rejeitar ou propor uma ação. Um ajuste pode autorizar um novo Run, comparar baseline × resultado e
-criar um candidato de aprendizado `1/3`; nada disso altera o motor ou executa ação externa. Runs
-governados por System Contract V2 também mostram o Context Snapshot: fontes e recortes selecionados,
-janela, frescor, lacunas e nível de garantia, sempre por referência. A Governança pode revogar um
-Access Grant para Runs futuros sem prometer apagar artefatos ou recibos já consumidos.
+Ele abre no navegador em `http://127.0.0.1:4810`. Use `--no-open` para conferir o
+endereço antes de abrir, ou `--port 4910` se a porta estiver ocupada. Execute o
+script da instalação efetiva; se o motor estiver em `.cerebro/engine`, use esse
+caminho para o script e mantenha `--root` na pasta dos seus dados.
+
+O painel mostra seus arquivos, sistemas instalados, avisos e métricas locais com
+fonte, período e histórico. Sem uma leitura registrada, indica a lacuna. Não conecta
+as fontes da INEVITA nem instala um serviço remoto. A busca do assistente é local,
+pelo título; análises e execução continuam no seu agente de IA.
+
+Para Telegram/Hermes, demonstração e operações ainda não migradas, o Cockpit
+anterior continua disponível: `node scripts/cockpit.mjs --root "/caminho/do/seu-cerebro"`.
+Veja [como abrir e o que cada interface oferece](COCKPIT.md).
 
 ## O que vem dentro
 

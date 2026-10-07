@@ -4,6 +4,20 @@
   "generated_at": "2026-10-07",
   "entries": [
     {
+      "update_id": "painel-local-v1-40",
+      "kind": "product-update",
+      "title": "Seu Cérebro no painel local",
+      "summary": "Abra seus arquivos, sistemas e métricas na pasta escolhida. Confira a release oficial 1.40.0 antes de instalar ou atualizar.",
+      "published_at": "2026-10-07",
+      "release_version": "1.40.0",
+      "highlights": [
+        "O painel já vem pronto, sem instalação de dependências.",
+        "Sistemas antigos continuam visíveis pelos contratos locais.",
+        "Métricas usam suas fontes e mostram quando falta leitura.",
+        "O Cockpit anterior continua acessível para Telegram e funções não migradas."
+      ]
+    },
+    {
       "update_id": "orientacao-instalacao-v1-39-1",
       "kind": "product-update",
       "title": "Começar ou continuar com seu Cérebro",
