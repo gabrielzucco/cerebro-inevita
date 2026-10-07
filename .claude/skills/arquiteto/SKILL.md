@@ -32,6 +32,11 @@ Leia primeiro, quando existirem:
 - `conexoes/configuradas/fontes.json`, sem abrir as fontes;
 - `sistemas/_CATALOGO.md` e `sistemas/outros-instalados/_CATALOGO.md`.
 
+Reaproveite o diagnóstico de implantação, os contratos de fontes e os candidatos da comunidade
+trazidos por `comecar`. O registro em `operacao/decisoes-pendentes/onboarding.md`, quando existir,
+é um ponto de retomada; confirme o estado pelos contratos e recibos referenciados. Não refaça
+migração, registro ou perguntas já respondidas para começar o Architect.
+
 Não faça a pessoa repetir o que o Cérebro já sabe. Se T4 existe, prossiga para o primeiro Sistema
 de negócio. Se a pessoa invocou esta skill diretamente antes de T4, prossiga com o diagnóstico e a
 proposta, mas marque a recomendação como `proposed` e ofereça `/comecar` como o único próximo passo
@@ -75,13 +80,26 @@ Monte no máximo três oportunidades. Para cada uma, declare:
 - esforço e prontidão sem falsa precisão;
 - fontes que já existem e as que faltam;
 - julgamento necessário;
-- sistema instalado aplicável ou pipeline manual mínimo;
+- sistema instalado aplicável, pacote da comunidade cuja disponibilidade foi consultada ou
+  pipeline manual mínimo;
 - `reason_codes` curtos em kebab-case e uma explicação legível.
 
 Ordene por prioridade ordinal `1, 2, 3`. Use `ranking.method = human-proposed-v0` e
 `ranking.status = proposed`. Não use fórmula secreta, score de 0–100 ou autoridade de benchmark.
 
-## 5. Recomendar o primeiro sistema
+## 5. Conferir a oferta disponível e recomendar o primeiro sistema
+
+Quando o resultado estiver claro, aproveite a consulta recente trazida por `comecar` ou consulte
+`listar_sistemas_comunidade` e `detalhar_sistema_comunidade` pelo MCP. Sem MCP conectado, o CLI
+equivalente é `node scripts/community.mjs list` e `node scripts/community.mjs show --slug=SLUG`,
+conforme `docs/guides/community-systems.md`, se o runtime e o vínculo já estiverem disponíveis.
+Não copie credenciais nem vincule a instalação silenciosamente para fazer a consulta.
+
+Compare resultado, fontes exigidas, versão mínima, primeiro trabalho e maturidade com a operação
+observada. Diferencie **instalado localmente**, **publicado e acessível agora**, **piloto que exige
+acesso/implantação assistida** e **não verificado**. Catálogo estático, checkout ou pacote no
+repositório não provam publicação. Sem acesso remoto, use os sistemas locais e mantenha a lacuna;
+não anuncie que o catálogo está vazio nem interrompa o diagnóstico.
 
 Escolha uma oportunidade e escreva um System Brief:
 
@@ -92,10 +110,15 @@ Escolha uma oportunidade e escreva um System Brief:
 - gate humano;
 - métrica definida antes da execução;
 - fontes necessárias;
-- sistema instalado, quando existir.
+- sistema instalado ou release consultada, quando houver, com a evidência de disponibilidade.
 
-Se nenhum sistema instalado servir, diga isso e entregue o brief. Um brief não é um sistema em
-produção. Antes de T4, o brief permanece proposta e não é instalado. System Packs, laboratórios,
+Se um pacote acessível servir, proponha sua instalação pelo fluxo oficial: prévia, versão/hash
+revisados, aprovação e instalação; depois confira o primeiro trabalho e as fontes. Reutilize a
+autorização já dada para aquele plano exato, sem inferir aprovação de versão diferente. A consulta
+ao catálogo não instala o pacote. Se houver apenas um piloto assistido, explicite o passo de acesso.
+Quando nenhum sistema confirmado servir, entregue o brief e proponha `sistematizar` para o trabalho
+próprio observado. Um brief não é um sistema em produção. Antes de T4, qualquer recomendação
+permanece proposta e não é instalada. System Packs, laboratórios,
 releases e instalação assistida podem vir da Society; conexão customizada, legado, SLA e implantação
 profunda são trabalho premium. Não limite o diagnóstico aberto para simular exclusividade.
 

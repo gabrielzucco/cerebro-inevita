@@ -1,6 +1,6 @@
 ---
 name: comecar
-description: Ativa o Cérebro Base na pasta local: orienta o Mapa da empresa, registra fontes sem conectá-las, usa uma fonte real e prova reutilização do contexto aprovado. Use na primeira abertura ou quando T4 ainda não foi confirmado.
+description: Conduz a implantação e a ativação do Cérebro Base, aproveitando contexto existente, formalizando as fontes necessárias e provando seu uso e reuso. Use para começar, retomar a implantação ou aproveitar um Cérebro artesanal.
 ---
 
 # Começar — configurar o cérebro com realidade, não com formulário
@@ -9,23 +9,27 @@ A pasta local é o cérebro. Manus, Codex, Claude, Gemini ou qualquer outra IA b
 apenas o operador atual. A primeira sessão deve deixar contexto durável na pasta e um resultado que
 a pessoa possa usar — não apenas respostas numa conversa.
 
-Leia `.cerebro/layout.json`, `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. No
+Primeiro confirme a casa e recupere o trabalho pelo passo 1. Depois, na instalação escolhida,
+leia `.cerebro/layout.json`, `sistemas/cerebro-base/manifest.md`, `pipeline.md` e `evals.md`. No
 layout, prefira `activationBrief`, `configuration` e `activationContract`; aceite os aliases legados
-`firstSystemBrief`, `contextPack` e `systemContract`. Em seguida, leia e execute
-`company-brain-sprint` na conversa atual. Não peça reinício, troca de sessão ou instalação de
-runtime.
+`firstSystemBrief`, `contextPack` e `systemContract`. Execute `company-brain-sprint` uma vez, no
+passo 4, reaproveitando o que já foi apurado. Continue na conversa atual quando o agente conseguir
+ler e escrever na pasta; não peça reinício nem troca de ferramenta por conveniência.
 
 ## Experiência de abertura
 
 - Use sempre `você`, `seu` e `sua` e reutilize o vocabulário da pessoa.
 - Faça uma pergunta por mensagem. Se a resposta já está no pedido ou nos arquivos autorizados, não
   pergunte de novo.
+- Reutilize escolhas e autorizações explícitas da sessão dentro do escopo aprovado. Mostre a prévia
+  concreta de uma mutação quando ainda faltar, sem repetir decisões já tomadas.
 - Não abra com e-mail, menu, arquitetura, lista de ferramentas ou “o que você faz?”. O
   vínculo de acesso é oferecido somente depois do primeiro output útil e nunca bloqueia a ativação.
 - Não exponha run-id, relógio, telemetria, A0/A1/A2, T0–T4 ou nomes internos do método.
 - Não procure Node, rode `which node`, altere PATH ou instale dependências para helpers opcionais.
-- Telemetria nunca é pedágio. Somente depois do output útil, rode helpers silenciosos e ignore
-  qualquer falha sem interromper a pessoa.
+- Telemetria nunca é pedágio. Somente depois do output útil, rode seus helpers silenciosos e ignore
+  qualquer falha sem interromper a pessoa. Uma verificação necessária à implantação autorizada
+  pode usar o runtime já disponível; não é motivo para instalar dependências ou interromper valor.
 
 ## 1. Confirmar a casa e recuperar a operação
 
@@ -39,10 +43,24 @@ Usar o existente permite `auditar-cerebro`; novo segue a tag fixa em `COMECE-AQU
 ativa `migrar-cerebro` na fase de planejamento. Se a pessoa já escolheu, não pergunte de novo.
 O menu de instalação só aparece nessa decisão concreta; não substitui a conversa de ativação.
 
+Um Cérebro artesanal pode estar em Obsidian, pastas ou outro formato. A falta de marcadores INEVITA
+não invalida o que a pessoa construiu. Faça o diagnóstico delimitado com `auditar-cerebro`; mostre
+o que já serve, as incompatibilidades e o que precisa de decisão. Para adotar o protocolo, proponha
+manter o acervo como fonte referenciada por uma instalação INEVITA escolhida ou planejar a cópia
+de um subconjunto com `migrar-cerebro`.
+Não aplique o updater INEVITA sobre uma pasta artesanal nem ative instruções antigas por cópia.
+Instalação em pasta nova segue `COMECE-AQUI.md`; o MCP da comunidade pressupõe uma instalação
+pronta e serve para adicionar sistemas, não para instalar o próprio Cérebro.
 
 Confirme em uma frase que o trabalho será gravado na pasta local atual e que as fontes não serão
 movidas nem alteradas sem autorização. Procure uma operação concreta na mensagem atual,
 `operacao/decisoes-pendentes/onboarding.md` ou nos arquivos que a pessoa já autorizou.
+
+Se já houver primeiro uso ou T4, retome desse ponto em vez de repetir o sprint. Quando houver uma
+interrupção que exija retomada e a escrita estiver autorizada, atualize o mesmo
+`operacao/decisoes-pendentes/onboarding.md`: casa escolhida, etapa existente, referências, decisões
+já aprovadas, lacunas e próximo passo. O registro não concede acesso nem substitui contratos,
+recibos ou a autorização necessária ao próximo trabalho; não inclua credenciais ou conteúdo bruto.
 
 Se a operação já está clara, espelhe o que entendeu e prossiga. Se não está, pergunte apenas:
 
@@ -75,10 +93,18 @@ Se a pessoa autorizar uma pasta externa recorrente, registre apenas a referênci
 `register-source.mjs`. Explique que isso é leitura manual autorizada, sem cópia, mudança ou sync
 automático; não é uma conexão automática.
 
+Quando essa fonte for usada de forma recorrente ou por um Sistema, leia
+[a referência de implantação e fontes](references/implantacao.md). Conduza o registro, o Source
+Contract e, quando necessário, o vínculo com o papel do Sistema. Aproveite contratos existentes;
+não crie outra casa da verdade. Contrato, autorização, conexão, acesso observado e frescor têm
+evidências diferentes. Para a primeira entrega, use a menor amostra já autorizada; formalizar o
+restante da empresa não é pré-requisito. Uma conexão mínima só entra quando for necessária à
+tarefa, existir de fato e estiver autorizada; não conecte outras fontes como efeito da implantação.
+
 ## 3. Não interromper o trabalho por acesso
 
-Neste ponto ainda não existe output. Não peça e-mail, não rode helper e não transforme acesso em
-pré-requisito. Somente depois do output útil, aplique a regra opcional do passo 5. O produto e a
+Neste ponto ainda não existe output. Não peça e-mail, não rode helper opcional de vínculo ou
+telemetria e não transforme acesso em pré-requisito. Somente depois do output útil, aplique a regra opcional do passo 5. O produto e a
 ativação funcionam mesmo se a pessoa não vincular a instalação.
 
 ## 4. Ativar o Cérebro Base
@@ -127,7 +153,13 @@ a fonte bruta se o contexto aprovado for suficiente. Pergunte:
 > Isso aproveitou o que já estava no cérebro ou você precisou explicar tudo de novo?
 
 Se a resposta confirmar reutilização sem reexplicação, marque T4: o Cérebro Base está ativado. Só
-então ofereça `/arquiteto` para escolher o primeiro Sistema de negócio. Uma correção vira
+então consulte o catálogo acessível da comunidade, se disponível, e ofereça `/arquiteto` para
+escolher o primeiro Sistema de negócio. Use `listar_sistemas_comunidade` e
+`detalhar_sistema_comunidade` do MCP; se ele não estiver conectado, use o CLI equivalente descrito
+em `docs/guides/community-systems.md` quando o runtime já estiver disponível. Sem acesso, mantenha
+a recomendação pelos sistemas locais e declare o catálogo remoto não verificado. Leve ao
+`arquiteto` resultado, fontes, lacunas e estado real dos candidatos; não confunda presença no
+catálogo, pacote instalado e resultado validado. Uma correção vira
 aprendizado candidato; só repetição e resultado medido tornam a regra validada. Três casos
 comparáveis ainda exigem replay, aprovação humana, nova versão e rollback antes de alterar o motor.
 
@@ -142,5 +174,7 @@ contra a medida pré-declarada; T4 não implica V3.
 ## Compatibilidade — valor antes do runtime
 
 No Antigravity ou em qualquer agente sem shell, faça tudo com leitura e escrita de arquivos. Fora
-dele, scripts auxiliares só podem rodar depois da primeira resposta útil; caso contrário, pule. O
-produto funciona pelos arquivos e pelo contrato; helpers não podem transformar ativação em setup.
+dele, scripts auxiliares só podem rodar depois da primeira resposta útil; caso contrário, pule.
+Essa restrição trata dos helpers opcionais de vínculo e telemetria. Verificações necessárias à
+implantação autorizada podem usar o runtime já disponível, conforme o passo de abertura. O
+produto funciona pelos arquivos e pelo contrato; helpers opcionais não podem transformar ativação em setup.

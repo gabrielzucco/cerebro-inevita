@@ -1,5 +1,23 @@
 # Mudanças do cérebro INEVITA
 
+## v1.39.0 — 2026-10-07 · Candidata CS2, sem publicação
+
+- Sistemas da comunidade: catálogo, pacote completo V2, instalação, candidato de
+  contribuição, autorização do hash e envio são etapas distintas. MCP stdio e CLI
+  usam os mesmos serviços; a plataforma continua autoridade de acesso e revisão.
+- O instalador de sistemas envia a credencial existente, preserva o schema1 de
+  Calls e confere arquivos binários, caminhos, limites e hashes antes de instalar V2.
+- Bundle, contratos e workspace privado têm casas separadas. Preview não escreve;
+  customização do wrapper bloqueia com conflito; falhas síncronas têm rollback.
+  Lock interrompido exige inspeção, sem recuperação automática por exclusão.
+- O updater oficial passa a entregar os três guias da comunidade. A preparação do
+  envelope original preserva seu hash e continua separada de aprovação e envio. O wrapper do
+  Funil exige cliente 1.39.0; seus 99 arquivos originais não são alterados.
+- A candidata depende da base 1.38.0 do PR #12. Checks locais não substituem os
+  gates humanos herdados, autorização de tag/release ou revisão de contribuição
+  por outra identidade. Nenhuma prova real de mercado é adicionada.
+- Notas e ensaio de atualização: `docs/releases/1.39.0.md`.
+
 ## v1.38.0 — 2026-09-27 · Candidato unificado para piloto, sem publicação
 
 - `/society` envia a credencial privada da instalação, como o ping, sem imprimi-la.

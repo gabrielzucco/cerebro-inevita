@@ -13,11 +13,11 @@ fallback de branch ou o atualizador antigo para fazer a primeira passagem segura
    Se o updater instalado não tem prévia/`--tag`, obtenha o pacote de uma **tag fixa** em pasta
    temporária e execute o script novo com `--root` apontando para a instalação. Nunca atualize
    primeiro pelo script destrutivo legado para “ganhar” a versão segura.
-2. Escolha a tag publicada e confira o changelog. `v1.38.0` é candidato local e só funcionará
+2. Escolha a tag publicada e confira o changelog. `v1.39.0` é candidato local e só funcionará
    no canal oficial depois da publicação aprovada; para piloto offline use o pacote local.
 3. Execute a prévia, sem `--apply`:
    ```bash
-   CEREBRO_UPDATE_SOURCE_DIR=/caminho/pacote node /caminho/pacote/scripts/update.mjs --tag v1.38.0 --root /caminho/cerebro --baseline-dir /caminho/pacote-da-versao-instalada
+   CEREBRO_UPDATE_SOURCE_DIR=/caminho/pacote node /caminho/pacote/scripts/update.mjs --tag v1.39.0 --root /caminho/cerebro --baseline-dir /caminho/pacote-da-versao-instalada
    ```
    Mostre os arquivos que mudarão, conflitos, tag e `plan_hash`. Sem recibo anterior, use o
    baseline íntegro da versão instalada; arquivos diferentes dele são conflitos. Preserve a dúvida;

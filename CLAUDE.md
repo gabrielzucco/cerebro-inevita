@@ -75,13 +75,20 @@ elos: [[conceito-a]] · [[conceito-b]]
   sistemas, rotinas, dependências e próximos passos com evidência.
 - **Instalar/reinstalar com Cérebro existente?** Ofereça usar o existente, novo em pasta nova ou
   migrar. `/migrar-cerebro` planeja primeiro e pede aprovação antes de qualquer cópia.
+- **Já tem um Cérebro artesanal?** `/comecar` coordena o diagnóstico com `/auditar-cerebro`, o uso
+  do acervo como fonte ou a migração escolhida, os contratos necessários e a primeira entrega.
+  Preserve o que já foi autorizado e o ponto de retomada em `operacao/decisoes-pendentes/onboarding.md`
+  quando a escrita estiver aprovada; não crie outro fluxo ou estado. A falta de marcadores INEVITA
+  é diferença de formato, não defeito. O MCP instala Sistemas em um Cérebro pronto; não faz o bootstrap.
 - **Começou agora?** Rode `/comecar` e ative o **Cérebro Base**: orientar amplo e raso, registrar
   fontes sem conectá-las, usar uma fonte real e reutilizar o contexto aprovado numa segunda tarefa.
   Não imponha o `/teste`.
 - **Quer saber onde aplicar o Cérebro ou qual Sistema de negócio construir primeiro?** —
   `/arquiteto`: organiza o declarado, observa a menor fonte útil, mostra V0→V3 e propõe um ranking
   para o dono confirmar. O caminho normal começa depois de T4 do Cérebro Base; invocação direta
-  pode diagnosticar e propor antes disso, mas não finge que o Sistema já foi instalado.
+  pode diagnosticar e propor antes disso, mas não finge que o Sistema já foi instalado. Consulte
+  também o catálogo atual pelo MCP da comunidade ou CLI disponível; diferencie instalado, release
+  acessível, piloto assistido e disponibilidade não verificada antes de recomendar.
 - **Quer transformar o trabalho recomendado em Sistema?** — `/sistematizar`: parte do resultado
   confirmado, observa um caso real, instala o pacote proprietário local sem conectar fontes e
   deixa o primeiro run manual pronto. Antes de T4, só propõe; sem evidência e aprovação, não grava.
@@ -101,6 +108,10 @@ elos: [[conceito-a]] · [[conceito-b]]
 - **Comece simples, aprofunde depois.** Entregue valor com o mínimo e **ofereça** o próximo nível — aditivo, nunca refaz.
 - **Registrar fonte ≠ conectar fonte.** O Mapa da empresa pode apontar casa, finalidade, owner e
   lacuna sem abrir conteúdo. Conexão recorrente só nasce dentro de um Sistema depois de uso provado.
+  `/comecar` prepara Source Contracts quando necessários, preservando fonte e contrato canônicos.
+  Autorização, vínculo ao papel do Sistema, conector, acesso observado e frescor precisam de
+  evidências próprias; credenciais nunca entram nas notas. Uma amostra mínima já autorizada pode
+  gerar o primeiro valor enquanto as demais fontes permanecem como lacunas.
 - **Saiu versão nova (`ATUALIZACAO_DISPONIVEL`)?** Ofereça `/atualizar` — o contexto dela não é tocado.
 - **Antes de operar:** recupere até três caminhos aprovados comparáveis; falha e conversa não viram procedimento.
 - **Depois de operar:** um run aprovado pode virar procedimento candidato; três casos comparáveis

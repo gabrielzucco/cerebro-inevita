@@ -5,7 +5,8 @@
   "scripts": {
     "build:console": "esbuild console/canvas.js --bundle --minify --format=esm --target=es2022 --outfile=console/canvas.bundle.js",
     "diagnose": "node scripts/compatibility-diagnostic.mjs --root=.",
-    "test": "node scripts/validate-product.mjs"
+    "test": "node scripts/validate-product.mjs && node scripts/test-community-all.mjs",
+    "test:community": "node scripts/test-community-all.mjs"
   },
   "dependencies": {
     "@antv/g6": "5.1.1",

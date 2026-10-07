@@ -75,3 +75,11 @@ comunidade/inevita/sistemas-disponiveis/briefing-comercial-inteligente
 comunidade/inevita/atualizacoes/_LEIA.md
 comunidade/inevita/atualizacoes/feed.v1.json
 conhecimento
+
+# Guias operacionais CS1/CS2 distribuídos com o cliente.
+docs/guides/community-mcp.md
+docs/guides/community-systems.md
+docs/guides/community-release.md
+docs/guides/implantacao-assistida.md
+docs/releases/1.38.0.md
+docs/releases/1.39.0.md

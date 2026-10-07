@@ -50,26 +50,36 @@ O agente nunca decide sozinho qual é o “real” ou “de teste”. Pedido de 
 reaproveitar ou limpar a pasta encontrada. Nenhuma escolha conecta automaticamente CRM, banco ou
 Drive. Essas fontes podem ser consideradas mesmo sem arquivos locais.
 
+O mesmo agente acompanha o caminho escolhido: diagnostica o que já existe, conduz a implantação,
+prepara as fontes necessárias e segue até a primeira entrega e seu reuso. A orientação faz parte
+de `comecar`; não é outro Sistema para instalar. Se a conversa precisar ser retomada, ele conserva
+o ponto de parada no `operacao/decisoes-pendentes/onboarding.md`, quando essa escrita estiver
+autorizada, e reutiliza suas decisões em vez de começar a entrevista outra vez.
+
+O MCP da comunidade entra depois que o Cérebro existe e está vinculado: permite consultar e
+instalar sistemas dentro dele. A instalação inicial usa o pacote versionado abaixo. A configuração
+do MCP não instala nem migra o Cérebro e não concede uma assinatura.
+
 ### Versão fixa para instalar e atualizar
 
-Escolha uma tag publicada, como `v1.38.0`, em Releases. **Esta versão é candidata local ao piloto;
+Escolha uma tag publicada em Releases. **A versão `v1.39.0` é candidata local ao piloto;
 o exemplo só ficará disponível após a publicação aprovada.** O canal oficial é
 `gabrielzucco/cerebro-inevita`. Para piloto sem publicação, veja
-[`docs/releases/1.38.0.md`](docs/releases/1.38.0.md). Não use `main` ou `latest` como
+[`docs/releases/1.39.0.md`](docs/releases/1.39.0.md). Não use `main` ou `latest` como
 fonte de instalação. O `VERSION` de um checkout não prova que a release está publicada.
 
 Para obter o pacote e o atualizador seguro, clone a tag escolhida em uma **pasta nova**:
 
 ```bash
-git clone --branch v1.38.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.38.0
+git clone --branch v1.39.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.39.0
 ```
 
 A pasta clonada já pode ser usada como Cérebro após a sua escolha explícita. Se preferir uma
 instalação gerenciada em outra pasta, o instalador copia apenas motor e seeds do pacote:
 
 ```bash
-node pacote-1.38.0/scripts/install.mjs --tag v1.38.0 --destination /caminho/novo-cerebro
-node pacote-1.38.0/scripts/install.mjs --tag v1.38.0 --destination /caminho/novo-cerebro --apply
+node pacote-1.39.0/scripts/install.mjs --tag v1.39.0 --destination /caminho/novo-cerebro
+node pacote-1.39.0/scripts/install.mjs --tag v1.39.0 --destination /caminho/novo-cerebro --apply
 ```
 
 O primeiro comando mostra a prévia. Execute o segundo apenas depois de aprová-la. Destino
@@ -80,7 +90,7 @@ Node.js 20+ é necessário para esses scripts; sem runtime, o agente pode orient
 O script antigo pode apagar personalizações antes de receber a correção; não o execute.
 
 ```bash
-node pacote-1.38.0/scripts/update.mjs --tag v1.38.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
+node pacote-1.39.0/scripts/update.mjs --tag v1.39.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
 ```
 
 A prévia lista conflitos e seu `plan_hash`. `--baseline-dir` fornece a cópia íntegra da versão
@@ -104,15 +114,28 @@ Uma instalação do Cérebro INEVITA tem `COMECE-AQUI.md`, `VERSION` e `.cerebro
 os sistemas e o contexto acumulado trabalham juntos. Se houver mais de uma instalação, você escolhe
 qual quer abrir ou pode pedir uma nova e limpa.
 
-Obsidian, repositório de código, pasta de reuniões, documentos e outros espaços de trabalho são
-fontes do seu negócio — não são “outro Cérebro”. Eles não precisam ser migrados para funcionar. O
-agente pode fazer uma descoberta limitada olhando apenas nomes de pastas e marcadores técnicos,
-mostrar o que parece relevante e pedir sua autorização antes de abrir qualquer conteúdo.
+Você pode ter construído um Cérebro próprio em Obsidian, pastas ou outro formato. A ausência dos
+marcadores INEVITA não invalida esse trabalho. O agente examina a estrutura autorizada e mostra o
+que pode ser aproveitado, o que difere do protocolo e o que precisa de decisão. Repositórios,
+reuniões e documentos também podem ser apenas fontes; o uso real distingue os casos.
+
+Esse acervo não precisa ser movido para começar a funcionar: pode continuar na origem, referenciado
+pelo Cérebro INEVITA escolhido. Se você preferir migrar conteúdo, o agente apresenta o mapa de
+cópia antes de executá-lo em uma instalação separada, com proveniência. Ele não aplica o atualizador
+do motor sobre uma pasta artesanal. A descoberta inicial olha nomes e marcadores; conteúdo só é
+aberto dentro do escopo autorizado.
 
 Quando você aprova uma fonte local recorrente, o Cérebro guarda apenas uma referência privada ao
 caminho original. A fonte continua onde está, como fonte de verdade: sem cópia, mudança ou sync automático.
 A primeira experiência começa por uma amostra pequena; conexão contínua só existe quando houver um
 conector real e consentimento específico.
+
+Quando uma fonte precisar de uso recorrente, o agente prepara seu contrato: finalidade, casa da
+verdade, responsável, acesso, sensibilidade, retenção e quem pode usá-la. Reaproveita contratos
+existentes e registra o que ainda não foi confirmado. Para um Sistema, liga a fonte ao papel que ela
+cumpre no trabalho. Ter o contrato não prova conexão, acesso atual ou informação atualizada;
+esses pontos são conferidos separadamente. A primeira entrega usa a menor fonte necessária e
+autorizada, sem esperar o mapeamento completo da empresa.
 
 ## Não usa nenhum agente pago?
 

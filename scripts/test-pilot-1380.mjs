@@ -9,7 +9,9 @@ import { applyPlan, extrairTarGz, hash, planUpdate } from './update.mjs';
 import { installPackage } from './install.mjs';
 
 const product = resolve(import.meta.dirname, '..');
-const tag = 'v1.38.0';
+// Keep the historical 1.36.1 baseline; exercise the current candidate, not a stale tag.
+const targetVersion = readFileSync(join(product, 'VERSION'), 'utf8').trim();
+const tag = `v${targetVersion}`;
 const baseCommit = '12a3395917b72f8ca88b65c2fc14e8156288d252';
 const sandbox = mkdtempSync(join(tmpdir(), 'inevita-pilot-1380-'));
 function digestTree(root) {
@@ -29,8 +31,8 @@ function digestTree(root) {
 try {
   const fresh = join(sandbox, 'fresh');
   assert.equal(installPackage(fresh, product, tag).status, 'preview');
-  assert.equal(installPackage(fresh, product, tag, { apply: true }).version, '1.38.0');
-  console.log('PASS fresh-install: 1.38.0');
+  assert.equal(installPackage(fresh, product, tag, { apply: true }).version, targetVersion);
+  console.log(`PASS fresh-install: ${targetVersion}`);
 
   const baseline = join(sandbox, 'baseline-1361');
   mkdirSync(baseline);
@@ -71,7 +73,7 @@ try {
 
   plan = planUpdate(member, product, tag, { baseline });
   applyPlan(member, plan, { approvePlan: plan.digest });
-  assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), '1.38.0');
+  assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), targetVersion);
   assert.equal(readFileSync(join(member, '.agents/skills/minha-skill/SKILL.md'), 'utf8'), 'skill própria\n');
   assert(readFileSync(join(member, 'CLAUDE.md'), 'utf8').includes('REGRA LOCAL DO MEMBRO\n'));
   const afterUpdate = digestTree(member);
@@ -79,7 +81,7 @@ try {
   assert.deepEqual(plan.conflicts, []);
   assert.equal(applyPlan(member, plan), null);
   assert.deepEqual(digestTree(member), afterUpdate);
-  console.log('PASS update-1361: contexto preservado, 1.38.0; reexecução idempotente');
+  console.log(`PASS update-1361: contexto preservado, ${targetVersion}; reexecução idempotente`);
 } finally {
   rmSync(sandbox, { recursive: true, force: true });
 }
