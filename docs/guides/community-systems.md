@@ -1,8 +1,8 @@
 # Sistemas da comunidade: operação local
 
-Esta é a **candidata local CS2**, cliente Cérebro 1.39.0, que incorpora CS1. Este guia não declara o backend liberado em produção, um sistema publicado nem uma contribuição humana aprovada. Os testes usam instalações e identidades sintéticas; aprovação técnica, instalação e contribuição representam **zero ciclos reais e zero prova de mercado**.
+Este guia descreve os comandos do cliente, disponíveis desde a [release oficial v1.39.0](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0) e mantidos no patch documental 1.39.1. Para usar pela conversa, comece pelo [guia do MCP](community-mcp.md). A disponibilidade de cada sistema e a permissão de acesso são consultadas na plataforma; a publicação do cliente não aprova uma contribuição nem comprova ciclos reais de uso de um sistema.
 
-O cliente precisa de Node.js 18 ou mais recente. O Funil usa Python 3.9 ou mais recente para o próprio método; a instalação não executa Python, scripts ou skills do pacote. Os comandos remotos abaixo só devem ser usados com um ambiente autorizado e compatível. Não foram executados contra produção nesta entrega.
+O cliente precisa de Node.js 20 ou mais recente, vínculo válido da instalação e acesso vigente à Society para as operações remotas. O Funil usa Python 3.9 ou mais recente para o próprio método; a instalação não executa Python, scripts ou skills do pacote. Os comandos remotos abaixo devem usar o serviço de distribuição compatível da plataforma.
 
 ## Compatibilidade e ordem de atualização
 
@@ -10,9 +10,9 @@ Atualize o **cliente do membro antes de exigir o novo contrato no backend**. O c
 
 Conserve `.cerebro/id`, `.cerebro/install-credential` e o contexto privado durante a atualização pelo processo oficial. Não gere outra identidade para contornar um erro de acesso. A credencial permanece local e não deve ser copiada para argumentos, chat, configuração MCP ou logs.
 
-Na liberação, coordene cliente e backend de distribuição: identidade de instalação existente, ações de catálogo/grant/recibo/contribuição e envelope V2. Mantenha suporte ao envelope schema1 de Calls. O acesso é decidido pela plataforma em cada ação; um `member_id` informado pelo cliente não concede autoridade. Não há uma tag de produção nova autorizada por este guia.
+Cliente e backend de distribuição precisam compartilhar o contrato de identidade da instalação, catálogo/grant/recibo/contribuição e envelope V2. O cliente mantém suporte ao envelope schema1 de Calls. O acesso é decidido pela plataforma em cada ação; um `member_id` informado pelo cliente não concede autoridade. E-mail cadastrado, sozinho, não substitui a credencial da instalação.
 
-O wrapper exige cliente 1.39.0: a base 1.38.0 do PR #12 não possui o transporte V2 nem envia a credencial pelo instalador de sistemas. A liberação desta candidata continua dependente da revisão e dos gates daquele PR; não há aprovação por arrasto.
+O wrapper exige cliente 1.39.0: a base 1.38.0 não possui o transporte V2 nem envia a credencial pelo instalador de sistemas. Quem tem uma instalação anterior deve seguir a [atualização segura](../../COMECE-AQUI.md) antes de usar estes comandos. Quem tem um acervo artesanal começa pela [implantação assistida](implantacao-assistida.md), preservando a origem como referência ou aprovando uma cópia para outra pasta.
 
 O wrapper atual do Funil usa `funil-e-crescimento`, system ID `sistema-funil-inevita`, canal `pilot` e visibilidade `validation-lab`. O acesso `public` no contrato de release significa o público autorizado da comunidade; o manifesto legado usa `society_members`. Ambos os contadores de prova real começam em zero. O produto founding `funil-vivo` não é substituído por inferência.
 

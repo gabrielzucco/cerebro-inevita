@@ -1,6 +1,18 @@
 # Mudanças do cérebro INEVITA
 
-## v1.39.0 — 2026-10-07 · Candidata CS2, sem publicação
+## v1.39.1 — 2026-10-07 · Orientação de instalação e atualização
+
+- O assistente já incluído desde 1.39.0 distingue instalação nova, atualização
+  INEVITA e adoção de acervo artesanal por referência ou cópia aprovada.
+- Guias e skills corrigem o estado da release 1.39.0, publicada, e usam Node.js 20+.
+- Cadastro do e-mail, vínculo seguro, configuração do MCP e primeiro resultado
+  passam a ter orientações distintas. O agente confirma somente o que foi verificado.
+- Patch documental: sem alteração do instalador, ativação, telemetria, sistemas
+  incluídos. Mantém o Cockpit já distribuído; não inclui o novo painel local em
+  desenvolvimento. Notas e verificação de publicação:
+  `docs/releases/1.39.1.md`.
+
+## v1.39.0 — 2026-10-07 · Sistemas, acervo e perfil
 
 - Sistemas da comunidade: catálogo, pacote completo V2, instalação, candidato de
   contribuição, autorização do hash e envio são etapas distintas. MCP stdio e CLI
@@ -13,9 +25,9 @@
 - O updater oficial passa a entregar os três guias da comunidade. A preparação do
   envelope original preserva seu hash e continua separada de aprovação e envio. O wrapper do
   Funil exige cliente 1.39.0; seus 99 arquivos originais não são alterados.
-- A candidata depende da base 1.38.0 do PR #12. Checks locais não substituem os
-  gates humanos herdados, autorização de tag/release ou revisão de contribuição
-  por outra identidade. Nenhuma prova real de mercado é adicionada.
+- A release publicada integra a base 1.38.0 do PR #12 e a evolução do PR #13.
+  A publicação autorizada não substitui o piloto humano Hermes/Telegram pendente
+  nem a revisão de contribuição por outra identidade. Nenhuma prova real de mercado é adicionada.
 - Notas e ensaio de atualização: `docs/releases/1.39.0.md`.
 
 ## v1.38.0 — 2026-09-27 · Candidato unificado para piloto, sem publicação

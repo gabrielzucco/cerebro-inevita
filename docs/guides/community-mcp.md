@@ -2,11 +2,15 @@
 
 O MCP da comunidade conecta a IA aos sistemas, ao acervo publicado e ao seu próprio perfil. Você pode pedir: “Encontre o sistema de funil”, “Busque aulas sobre pesquisa de público” ou “Prepare uma atualização do meu perfil”. Instalações, mudanças no perfil e publicação dependem da sua aprovação. Os seus arquivos continuam no seu computador.
 
-Use o cliente da release oficial `v1.39.0` e o serviço de distribuição compatível na plataforma. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
+Use o cliente de uma release oficial `v1.39.0` ou posterior e o serviço de distribuição compatível na plataforma. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
 
 ## Conectar
 
-Você precisa de Node.js 18 ou mais recente e de uma instalação do Cérebro vinculada à sua conta. O cliente usa o vínculo existente, guardado em `.cerebro/id` e `.cerebro/install-credential`. Não copie a credencial para o chat ou para os argumentos das ferramentas.
+Comece com o Cérebro instalado ou atualizado pela [implantação assistida](implantacao-assistida.md). O assistente `comecar` já vem na versão publicada; o MCP é a conexão seguinte com a comunidade.
+
+Você precisa de Node.js 20 ou mais recente e de uma instalação do Cérebro vinculada à sua conta. O cliente usa o vínculo existente, guardado em `.cerebro/id` e `.cerebro/install-credential`. Confirme a presença desses arquivos e o resultado da ativação, sem exibir seu conteúdo. Não copie a credencial para o chat ou para os argumentos das ferramentas.
+
+Informar o e-mail, clonar o repositório ou gerar a configuração abaixo não cria essa credencial. Use a instrução de ativação da sua conta na plataforma. Se ela retornar `activation_local_only`, o vínculo remoto ainda não foi confirmado; preserve sua preferência de privacidade e resolva o vínculo com o suporte da plataforma antes de usar o MCP.
 
 Na pasta do Cérebro, gere a configuração:
 
@@ -95,7 +99,7 @@ Este preparo aceita até 32 arquivos de texto UTF-8, 64 KiB por arquivo e 128 Ki
 
 ## Se algo não funcionar
 
-- **Instalação sem vínculo:** abra o Cérebro pela sua conta na plataforma e recupere a ativação. Não envie a credencial à IA.
+- **Instalação sem vínculo:** recupere a instrução de ativação pela sua conta na plataforma e confira o resultado. Se continuar apenas local, peça suporte para o vínculo; não altere a preferência de telemetria como atalho. O trabalho local continua disponível. Não envie a credencial à IA.
 - **Acesso negado:** confira seu acesso atual na plataforma. Uma listagem anterior não garante autorização para baixar agora.
 - **Perfil mudou:** leia a versão atual e prepare outra prévia. Aprove somente o conteúdo que acabou de conferir.
 - **Perfil incompleto:** consulte as pendências. A foto é adicionada pela plataforma.

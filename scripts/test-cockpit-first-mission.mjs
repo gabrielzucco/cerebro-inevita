@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { activationState, buildConsoleReadModel } from './lib/console-read-model.mjs';
 
 const root = resolve(process.cwd());
@@ -64,8 +65,33 @@ try {
   assert.equal(model.counts.systems, model.systems.length);
   assert(!model.areas.some((area) => area.system_refs.includes('cerebro-base')));
   assert.equal(model.communication.available, true);
-  assert.equal(model.communication.latest.update_id, 'central-atualizacoes-v1-36');
   assert.equal(model.communication.privacy.company_context_sent, false);
+
+  // O modelo consulta o feed do próprio motor. Uma cópia isolada permite variar
+  // os comunicados sem reescrever o produto nem fixar a release atual no teste.
+  const isolatedProduct = join(fixture, 'motor');
+  cpSync(join(root, 'scripts', 'lib'), join(isolatedProduct, 'scripts', 'lib'), { recursive: true });
+  const { buildConsoleReadModel: isolatedModel } = await import(pathToFileURL(join(isolatedProduct, 'scripts', 'lib', 'console-read-model.mjs')).href);
+  const feedDir = join(isolatedProduct, 'comunidade', 'inevita', 'atualizacoes');
+  mkdirSync(feedDir, { recursive: true });
+  const older = {
+    update_id: 'comunicado-antigo', kind: 'product-update', title: 'Comunicado anterior',
+    summary: 'Comunicado público usado somente nesta fixture de teste.',
+    published_at: '2026-09-01', release_version: '1.0.0', highlights: [],
+  };
+  const newer = { ...older, update_id: 'comunicado-novo', published_at: '2026-09-03', release_version: '1.0.1' };
+  const feed = { protocol_version: 1, channel_id: 'inevita-product-updates', generated_at: '2026-09-03', entries: [older] };
+  writeFileSync(join(feedDir, 'feed.v1.json'), JSON.stringify(feed));
+  assert.equal(isolatedModel(isolatedProduct).communication.latest.update_id, older.update_id);
+  for (const entries of [[newer, older], [older, newer]]) {
+    feed.entries = entries;
+    writeFileSync(join(feedDir, 'feed.v1.json'), JSON.stringify(feed));
+    const updatedCommunication = isolatedModel(isolatedProduct).communication;
+    assert.equal(updatedCommunication.available, true);
+    assert.equal(updatedCommunication.latest.update_id, newer.update_id);
+    assert.equal(updatedCommunication.entries.length, 2);
+    assert.equal(updatedCommunication.privacy.company_context_sent, false);
+  }
 
   const app = readFileSync(join(root, 'console', 'app.js'), 'utf8');
   assert.match(app, /activation\.complete \? 'today' : 'activation'/);

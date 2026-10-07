@@ -1,8 +1,22 @@
 {
   "protocol_version": 1,
   "channel_id": "inevita-product-updates",
-  "generated_at": "2026-09-03",
+  "generated_at": "2026-10-07",
   "entries": [
+    {
+      "update_id": "orientacao-instalacao-v1-39-1",
+      "kind": "product-update",
+      "title": "Começar ou continuar com seu Cérebro",
+      "summary": "As orientações deste pacote distinguem instalação nova, atualização INEVITA e aproveitamento de um Cérebro artesanal. Confira a release oficial antes de baixar ou atualizar.",
+      "published_at": "2026-10-07",
+      "release_version": "1.39.1",
+      "highlights": [
+        "O assistente já incluído conduz o primeiro trabalho e sua retomada.",
+        "O acervo pode continuar na origem ou ter uma cópia aprovada.",
+        "E-mail cadastrado não substitui o vínculo seguro para o MCP.",
+        "Mantém o Cockpit já distribuído; não inclui o novo painel local em desenvolvimento."
+      ]
+    },
     {
       "update_id": "central-atualizacoes-v1-36",
       "kind": "product-update",

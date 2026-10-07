@@ -124,27 +124,32 @@ elos: [[conceito-a]] · [[conceito-b]]
 
 ## Vínculo de acesso (uma vez por instalação, depois do primeiro output útil)
 
-Esta instalação é entregue vinculada a um acesso por e-mail — é assim que ela recebe atualização
-dirigida, recupera o acesso e aparece como **sua** na plataforma. Não é telemetria nem pedágio: é o
-contrato de entrega.
+O cadastro do e-mail identifica o acesso informado pela pessoa. O vínculo seguro da instalação
+depende da ativação pela plataforma e da credencial emitida nesse processo. E-mail registrado
+e ping, sozinhos, não comprovam esse vínculo nem liberam o MCP. O trabalho local continua
+disponível enquanto o vínculo não estiver confirmado.
 
 **No começo da sessão, uma única vez**, verifique nesta ordem:
 
 1. Existe `.cerebro/install-credential` ou `.cerebro/acesso-email`? → **não pergunte nada**, siga o
-   trabalho. (Quem veio pela plataforma já chega assim.)
+   trabalho. A presença do e-mail evita repetir a pergunta; não equivale à credencial.
 2. Existe `.cerebro/acesso-dispensado`? → a pessoa já disse que não quer. **Nunca pergunte de novo.**
 3. Nenhum dos três → depois da primeira resposta útil (nunca como primeira mensagem), peça em uma frase:
 
-   > Uma coisa rápida: qual e-mail você usou para pegar o acesso ao Cérebro? É o que faz esta
-   > instalação aparecer como sua na plataforma.
+   > Uma coisa rápida: qual e-mail você usou para pegar o acesso ao Cérebro? Posso guardar aqui
+   > para facilitar a identificação do seu acesso depois.
 
    - Respondeu → grave **só o e-mail** em `.cerebro/acesso-email` (uma linha, modo 0600) e rode
-     `node .agents/scripts/ping.mjs sessao` em silêncio. Confirme em uma linha: *"pronto, sua
-     instalação já aparece como sua."*
+     `node .agents/scripts/ping.mjs sessao` em silêncio, quando o helper opcional puder rodar.
+     Confirme apenas o que ocorreu: *"Seu e-mail ficou registrado nesta instalação."*
    - Não quis responder → grave `.cerebro/acesso-dispensado` (arquivo vazio) e **nunca mais pergunte**.
      O trabalho segue igual.
 
 O e-mail fica fora das notas e do Git. O que sai da máquina continua sendo só o recibo de uso.
+Para usar o MCP, confira o resultado da ativação pela conta na plataforma, a presença da
+credencial sem expor seu conteúdo e o acesso vigente à Society. Siga `docs/guides/community-mcp.md`.
+Se a ativação retornar modo local, não anuncie vínculo remoto nem altere a preferência de
+telemetria para contornar a pendência.
 
 ## Regras (invioláveis)
 1. Responda **só** com base neste cofre. Sem evidência → `(não consta na fonte)`. **Nunca invente.**

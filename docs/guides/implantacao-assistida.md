@@ -1,21 +1,29 @@
 # Preparar meu Cérebro
 
-Este percurso acompanha a pessoa desde a escolha da pasta até o primeiro trabalho usando os
-dados do negócio. Está preparado na candidata 1.39, ainda sujeito ao piloto e à publicação.
+O assistente de implantação já está incluído na [release oficial v1.39.0](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0).
+Ele acompanha a pessoa desde a escolha da pasta até o primeiro trabalho usando os dados do negócio.
 A plataforma entrega a instrução ao agente local. O MCP da comunidade entra depois, para consultar
 e instalar sistemas, quando estiver configurado e o acesso permitir.
 
 ## Escolher de onde começar
 
 - **Começar do zero:** o agente confirma uma pasta nova e uma versão publicada do Cérebro.
-- **Já tenho um Cérebro:** pode ser uma instalação INEVITA, um cofre de Obsidian ou uma estrutura
-  própria. O agente verifica a estrutura autorizada antes de propor qualquer mudança.
+- **Já uso o Cérebro INEVITA:** o agente confere a versão instalada e prepara a atualização oficial,
+  com prévia, preservação do contexto e aprovação antes de aplicar. Depois, retoma `comecar`.
+- **Tenho um Cérebro artesanal:** o agente verifica somente a estrutura autorizada, seja um cofre
+  de Obsidian ou outra organização. O acervo pode continuar onde está, como referência, ou ter
+  uma parte copiada para uma instalação INEVITA separada, depois de um plano aprovado.
 - **Continuar a implantação:** o agente recupera a escolha, as evidências e a próxima tarefa,
   sem tratar uma interrupção como motivo para reinstalar.
 
 No agente, basta dizer “prepare meu Cérebro” ou “continue de onde parei”. Ele segue
-`COMECE-AQUI.md` e a skill `comecar` na conversa atual. Versões anteriores podem não conter todo
-esse acompanhamento; confira a versão instalada antes de usar instruções da candidata.
+`COMECE-AQUI.md` e a skill `comecar` na conversa atual. Quem usa uma versão INEVITA anterior
+deve seguir o caminho seguro de atualização de [COMECE-AQUI.md](../../COMECE-AQUI.md), usando
+o planejador da versão publicada e a base da versão instalada. Não execute o updater antigo
+nem aplique a atualização sobre uma pasta artesanal.
+
+Os comandos de instalação, atualização e MCP deste percurso usam Node.js 20 ou mais recente.
+O assistente pode começar a conversa e o trabalho local antes de configurar serviços externos.
 
 ## Aproveitar o que já existe
 
@@ -26,6 +34,17 @@ está duplicado, o que exige revisão e onde será guardado. A origem permanece 
 Instruções e agentes antigos são examinados separadamente do conteúdo do negócio. Um documento
 encontrado não pode substituir automaticamente as regras do protocolo. CRM, banco e Drive entram
 como fontes externas; a migração de arquivos não conecta esses serviços.
+
+## Vincular a conta e conectar a comunidade
+
+Depois de instalar ou atualizar, o agente confere o resultado da ativação pela sua conta na
+plataforma. Informar um e-mail, clonar o repositório ou instalar os arquivos não comprova o vínculo
+seguro necessário ao MCP. A credencial de instalação fica local e não deve ser colada na conversa.
+
+Com o vínculo confirmado e acesso vigente à Society, siga [Conectar o MCP](community-mcp.md#conectar).
+O gerador prepara a configuração para o cliente de IA; a conexão precisa ser adicionada nesse
+cliente. Essa etapa não substitui a primeira entrega do Cérebro nem a configuração das fontes de
+cada sistema. Sem o vínculo, o trabalho local continua disponível.
 
 ## Preparar somente as fontes necessárias
 

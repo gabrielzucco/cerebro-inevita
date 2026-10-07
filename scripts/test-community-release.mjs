@@ -13,11 +13,11 @@ const version = readFileSync(join(product, 'VERSION'), 'utf8').trim();
 const tag = `v${version}`;
 const sandbox = mkdtempSync(join(tmpdir(), 'community-release-'));
 const guides = ['docs/guides/community-mcp.md', 'docs/guides/community-systems.md', 'docs/guides/community-release.md', 'docs/guides/implantacao-assistida.md'];
-const releaseNotes = ['docs/releases/1.38.0.md', 'docs/releases/1.39.0.md'];
+const releaseNotes = ['docs/releases/1.38.0.md', 'docs/releases/1.39.0.md', 'docs/releases/1.39.1.md'];
 const preparationReferences = ['.agents/skills/comecar/references/implantacao.md', '.claude/skills/comecar/references/implantacao.md'];
 const distributedDocs = [...guides, ...releaseNotes, ...preparationReferences];
 try {
-  assert.equal(version, '1.39.0');
+  assert.equal(version, '1.39.1');
   const fresh = join(sandbox, 'fresh');
   assert.equal(installPackage(fresh, product, tag).written, false);
   assert.equal(existsSync(fresh), false);
@@ -25,34 +25,45 @@ try {
   for (const path of distributedDocs) assert.deepEqual(readFileSync(join(fresh, path)), readFileSync(join(product, path)));
   const help = execFileSync(process.execPath, [join(fresh, 'scripts/community.mjs'), '--help'], { encoding: 'utf8' });
   assert.match(help, /--sha256/);
-  const baseline = join(sandbox, 'baseline-1380'); mkdirSync(baseline);
-  const archive = execFileSync('git', ['archive', 'ff1d40e003f548ed050f727f1f64eff411d122e0'], { cwd: product, maxBuffer: 100 * 1024 * 1024 });
-  extrairTarGz(gzipSync(archive), baseline);
-  assert.equal(readFileSync(join(baseline, 'VERSION'), 'utf8').trim(), '1.38.0');
-  const member = join(sandbox, 'member'); cpSync(baseline, member, { recursive: true });
-  const sentinels = {
-    'meu-negocio/oferta.md': 'PRIVATE_OFFER', '.cerebro/install-credential': 'PRIVATE_CREDENTIAL',
-    '.cerebro/id': 'LOCAL_ID', '.cerebro/sistemas/custom.json': '{"private":true}',
-    'sistemas/outros-instalados/funil-e-crescimento/workspace/contexto/empresa.md': 'PRIVATE_WORKSPACE',
-    'comunidade/minhas-contribuicoes/propostas/local/package.json': '{"private":true}',
-    '.agents/skills/minha-skill/SKILL.md': 'MY_SKILL',
-  };
-  for (const [path, value] of Object.entries(sentinels)) { mkdirSync(dirname(join(member, path)), { recursive: true }); writeFileSync(join(member, path), value); }
-  const claude = `${readFileSync(join(member, 'CLAUDE.md'), 'utf8')}\nREGRA PRIVADA DO DONO\n`; writeFileSync(join(member, 'CLAUDE.md'), claude);
-  const sourceBefore = hash(readFileSync(join(member, '.cerebro/source')));
-  const plan = planUpdate(member, product, tag, { baseline });
-  assert.deepEqual(plan.conflicts, []);
-  for (const path of guides) assert(plan.entries.some((entry) => entry.path === path && entry.action === 'create'));
-  assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), '1.38.0');
-  applyPlan(member, plan, { approvePlan: plan.digest });
-  assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), version);
-  for (const [path, value] of Object.entries(sentinels)) assert.equal(readFileSync(join(member, path), 'utf8'), value);
-  // O bloco gerenciado recebe a nova orientação; a regra privada permanece byte a byte.
-  const updatedClaude = readFileSync(join(member, 'CLAUDE.md'), 'utf8');
-  assert.equal(updatedClaude, `${readFileSync(join(product, 'CLAUDE.md'), 'utf8')}\nREGRA PRIVADA DO DONO\n`);
-  assert.notEqual(updatedClaude, claude, 'a atualização precisa instalar o bloco gerenciado novo');
-  assert.equal(hash(readFileSync(join(member, '.cerebro/source'))), sourceBefore);
-  for (const path of distributedDocs) assert.deepEqual(readFileSync(join(member, path)), readFileSync(join(product, path)));
-  const replay = planUpdate(member, product, tag); assert.deepEqual(replay.conflicts, []); assert.equal(applyPlan(member, replay), null);
-  console.log(JSON.stringify({ status: 'passed', version, installed_guides: guides.length, installed_release_notes: releaseNotes.length, private_sentinels_preserved: Object.keys(sentinels).length, local_claude_preserved: true, channel_unchanged: true, idempotent: true }));
+  const receipts = [];
+  for (const [baselineVersion, baselineCommit] of [
+    ['1.38.0', 'ff1d40e003f548ed050f727f1f64eff411d122e0'],
+    ['1.39.0', '774cbfa32721f83bb72cd72b550fc9af3557f95d'],
+  ]) {
+    const baseline = join(sandbox, `baseline-${baselineVersion}`); mkdirSync(baseline);
+    const archive = execFileSync('git', ['archive', baselineCommit], { cwd: product, maxBuffer: 100 * 1024 * 1024 });
+    extrairTarGz(gzipSync(archive), baseline);
+    assert.equal(readFileSync(join(baseline, 'VERSION'), 'utf8').trim(), baselineVersion);
+    const member = join(sandbox, `member-${baselineVersion}`); cpSync(baseline, member, { recursive: true });
+    const sentinels = {
+      'meu-negocio/oferta.md': 'PRIVATE_OFFER', '.cerebro/install-credential': 'PRIVATE_CREDENTIAL',
+      '.cerebro/id': 'LOCAL_ID', '.cerebro/sistemas/custom.json': '{"private":true}',
+      'sistemas/outros-instalados/funil-e-crescimento/workspace/contexto/empresa.md': 'PRIVATE_WORKSPACE',
+      'comunidade/minhas-contribuicoes/propostas/local/package.json': '{"private":true}',
+      '.agents/skills/minha-skill/SKILL.md': 'MY_SKILL',
+    };
+    for (const [path, value] of Object.entries(sentinels)) { mkdirSync(dirname(join(member, path)), { recursive: true }); writeFileSync(join(member, path), value); }
+    const claude = `${readFileSync(join(member, 'CLAUDE.md'), 'utf8')}\nREGRA PRIVADA DO DONO\n`; writeFileSync(join(member, 'CLAUDE.md'), claude);
+    const sourceBefore = hash(readFileSync(join(member, '.cerebro/source')));
+    const plan = planUpdate(member, product, tag, { baseline });
+    assert.deepEqual(plan.conflicts, []);
+    for (const path of guides) {
+      const expected = !existsSync(join(baseline, path)) ? 'create'
+        : readFileSync(join(baseline, path)).equals(readFileSync(join(product, path))) ? 'unchanged' : 'replace';
+      assert(plan.entries.some((entry) => entry.path === path && entry.action === expected), `guia omitido: ${path}`);
+    }
+    assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), baselineVersion);
+    applyPlan(member, plan, { approvePlan: plan.digest });
+    assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), version);
+    for (const [path, value] of Object.entries(sentinels)) assert.equal(readFileSync(join(member, path), 'utf8'), value);
+    // O bloco gerenciado recebe a nova orientação; a regra privada permanece byte a byte.
+    const updatedClaude = readFileSync(join(member, 'CLAUDE.md'), 'utf8');
+    assert.equal(updatedClaude, `${readFileSync(join(product, 'CLAUDE.md'), 'utf8')}\nREGRA PRIVADA DO DONO\n`);
+    assert.notEqual(updatedClaude, claude, 'a atualização precisa instalar o bloco gerenciado novo');
+    assert.equal(hash(readFileSync(join(member, '.cerebro/source'))), sourceBefore);
+    for (const path of distributedDocs) assert.deepEqual(readFileSync(join(member, path)), readFileSync(join(product, path)));
+    const replay = planUpdate(member, product, tag); assert.deepEqual(replay.conflicts, []); assert.equal(applyPlan(member, replay), null);
+    receipts.push({ baseline: baselineVersion, private_sentinels_preserved: Object.keys(sentinels).length, local_claude_preserved: true, channel_unchanged: true, idempotent: true });
+  }
+  console.log(JSON.stringify({ status: 'passed', version, installed_guides: guides.length, installed_release_notes: releaseNotes.length, upgrades: receipts }));
 } finally { rmSync(sandbox, { recursive: true, force: true }); }
