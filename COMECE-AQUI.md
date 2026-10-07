@@ -18,12 +18,14 @@ de slash é um atalho, não um requisito.
 | Hermes | `.agents/skills/` | “quero começar” no CLI ou Telegram |
 | outro agente local | `.agents/skills/` | ler `comecar/SKILL.md` |
 
-### O acesso é vinculado (e-mail ou credencial)
+### Cadastro do e-mail e vínculo da instalação
 
-O Cérebro é entregue ligado a um acesso por e-mail. Quem instala pela instrução da plataforma já
-chega vinculado (credencial em `.cerebro/`). Quem clonou esta pasta direto, sem instrução, informa
-o e-mail do acesso quando a skill `comecar` oferecer isso, somente depois do primeiro output útil.
-Recusar não bloqueia a ativação: o agente registra a preferência e segue. Ainda sem acesso?
+Quem instala pela instrução da plataforma passa pela ativação do vínculo com a conta. O agente
+confere o resultado antes de anunciar a conexão. Quem clonou esta pasta direto pode começar o
+trabalho local e informar o e-mail quando `comecar` oferecer isso, depois do primeiro output útil.
+O e-mail cadastrado não substitui a credencial de instalação exigida pelo MCP. Para usar a
+comunidade, recupere a instrução de ativação pela sua conta na plataforma.
+Recusar o vínculo não bloqueia o trabalho local: o agente registra a preferência e segue. Ainda sem acesso?
 Cadastre-se em https://lp.inevitasociety.com/cerebro. Seu conteúdo continua local; o vínculo só liga
 a instalação à pessoa.
 
@@ -56,30 +58,39 @@ de `comecar`; não é outro Sistema para instalar. Se a conversa precisar ser re
 o ponto de parada no `operacao/decisoes-pendentes/onboarding.md`, quando essa escrita estiver
 autorizada, e reutiliza suas decisões em vez de começar a entrevista outra vez.
 
-O MCP da comunidade entra depois que o Cérebro existe e está vinculado: permite consultar e
-instalar sistemas dentro dele. A instalação inicial usa o pacote versionado abaixo. A configuração
-do MCP não instala nem migra o Cérebro e não concede uma assinatura.
+O assistente `comecar` já vem no pacote: diga “prepare meu Cérebro” ou “continue de onde parei”.
+Ele conduz as decisões na conversa, sem exigir outro Sistema para começar.
+
+O MCP da comunidade entra depois que o Cérebro existe e o vínculo seguro foi confirmado.
+Com Society vigente, permite consultar e instalar sistemas dentro dele. Siga o
+[guia de conexão](docs/guides/community-mcp.md) para adicionar a configuração ao seu cliente de IA.
+A instalação inicial usa o pacote versionado abaixo. Configurar o MCP não instala nem migra
+o Cérebro, não concede assinatura e não comprova o primeiro resultado de um Sistema.
 
 ### Versão fixa para instalar e atualizar
 
-Escolha uma tag publicada em Releases. **A versão `v1.39.0` é candidata local ao piloto;
-o exemplo só ficará disponível após a publicação aprovada.** O canal oficial é
-`gabrielzucco/cerebro-inevita`. Para piloto sem publicação, veja
-[`docs/releases/1.39.0.md`](docs/releases/1.39.0.md). Não use `main` ou `latest` como
-fonte de instalação. O `VERSION` de um checkout não prova que a release está publicada.
+O canal oficial é `gabrielzucco/cerebro-inevita`. O patch documental destas orientações
+é `v1.39.1`: confira sua [release oficial](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.1),
+tag, commit e [notas da versão](docs/releases/1.39.1.md) antes de executar os exemplos abaixo.
+Se ainda não estiver publicada, use a
+[release v1.39.0](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0)
+já publicada e substitua tag e nome da pasta nos comandos; ela já inclui o assistente
+de implantação. Para outra versão, escolha sua tag publicada explicitamente.
+Não use `main` ou `latest` como fonte de instalação; o `VERSION` de um checkout,
+sozinho, não comprova publicação.
 
 Para obter o pacote e o atualizador seguro, clone a tag escolhida em uma **pasta nova**:
 
 ```bash
-git clone --branch v1.39.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.39.0
+git clone --branch v1.39.1 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.39.1
 ```
 
 A pasta clonada já pode ser usada como Cérebro após a sua escolha explícita. Se preferir uma
 instalação gerenciada em outra pasta, o instalador copia apenas motor e seeds do pacote:
 
 ```bash
-node pacote-1.39.0/scripts/install.mjs --tag v1.39.0 --destination /caminho/novo-cerebro
-node pacote-1.39.0/scripts/install.mjs --tag v1.39.0 --destination /caminho/novo-cerebro --apply
+node pacote-1.39.1/scripts/install.mjs --tag v1.39.1 --destination /caminho/novo-cerebro
+node pacote-1.39.1/scripts/install.mjs --tag v1.39.1 --destination /caminho/novo-cerebro --apply
 ```
 
 O primeiro comando mostra a prévia. Execute o segundo apenas depois de aprová-la. Destino
@@ -90,7 +101,7 @@ Node.js 20+ é necessário para esses scripts; sem runtime, o agente pode orient
 O script antigo pode apagar personalizações antes de receber a correção; não o execute.
 
 ```bash
-node pacote-1.39.0/scripts/update.mjs --tag v1.39.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
+node pacote-1.39.1/scripts/update.mjs --tag v1.39.1 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
 ```
 
 A prévia lista conflitos e seu `plan_hash`. `--baseline-dir` fornece a cópia íntegra da versão

@@ -28,14 +28,17 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 
 ## Comece em 2 minutos
 
+Confira primeiro a [release oficial v1.39.1](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.1),
+sua tag e seu commit. Se ela ainda não estiver publicada, use a
+[v1.39.0 disponível](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0)
+e substitua a tag no comando; ela já inclui o assistente de implantação e o MCP.
+
 ```bash
-git clone --branch v1.39.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
+git clone --branch v1.39.1 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
 
-Use a tag `v1.39.0` do canal oficial `gabrielzucco/cerebro-inevita` e confira a
-[release correspondente](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0).
-O conteúdo, os limites e os comandos de instalação estão em
-[`docs/releases/1.39.0.md`](docs/releases/1.39.0.md).
+Use uma tag publicada do canal oficial `gabrielzucco/cerebro-inevita`. O conteúdo
+e os limites deste patch documental estão em [`docs/releases/1.39.1.md`](docs/releases/1.39.1.md).
 Se já existe um Cérebro, escolha usar o existente, instalar em pasta nova ou planejar a migração;
 o agente não reutiliza a pasta por conta própria. Veja [instalação e atualização segura](COMECE-AQUI.md).
 
@@ -54,6 +57,16 @@ Abre a pasta no teu agente e diz **"quero começar"**:
 
 O agente conduz o resto: primeira vitória em minutos, teu negócio dentro em seguida.
 Guia completo em [`COMECE-AQUI.md`](COMECE-AQUI.md) · método em [`METODO.md`](METODO.md).
+
+O assistente de implantação já vem incluído. Para começar do zero, escolha uma pasta nova.
+Para uma instalação INEVITA antiga, peça a atualização segura com prévia, preservando seu contexto.
+Para um Cérebro artesanal, o agente pode manter o acervo como fonte no lugar original ou planejar
+a cópia do conteúdo que você aprovar para uma instalação separada. Veja o
+[percurso de implantação](docs/guides/implantacao-assistida.md).
+
+Depois de instalar ou atualizar, membros Society podem confirmar o vínculo da conta e
+[conectar o MCP ao cliente de IA](docs/guides/community-mcp.md) para consultar e instalar sistemas.
+O trabalho local pode começar antes desse vínculo.
 
 ## Primeiras vitórias (escolhe uma)
 

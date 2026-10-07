@@ -43,6 +43,11 @@ Usar o existente permite `auditar-cerebro`; novo segue a tag fixa em `COMECE-AQU
 ativa `migrar-cerebro` na fase de planejamento. Se a pessoa já escolheu, não pergunte de novo.
 O menu de instalação só aparece nessa decisão concreta; não substitui a conversa de ativação.
 
+O assistente já está incluído na release oficial `v1.39.0`. Se a pasta escolhida for uma
+instalação INEVITA anterior, siga `atualizar` com o planejador seguro da versão nova e a prévia
+aprovada; preserve identidade, credencial, contexto e personalizações. Não reinstale para
+obter estas instruções. Uma pasta artesanal segue o diagnóstico abaixo, sem receber o updater.
+
 Um Cérebro artesanal pode estar em Obsidian, pastas ou outro formato. A falta de marcadores INEVITA
 não invalida o que a pessoa construiu. Faça o diagnóstico delimitado com `auditar-cerebro`; mostre
 o que já serve, as incompatibilidades e o que precisa de decisão. Para adotar o protocolo, proponha
@@ -139,12 +144,19 @@ Agora, e só agora, confira `.cerebro/install-credential`, `.cerebro/acesso-emai
 `.cerebro/acesso-dispensado`. Se a instalação já estiver vinculada ou a pessoa já tiver recusado,
 não pergunte nada. Se nenhum existir, ofereça uma única vez:
 
-> Uma coisa rápida: qual e-mail você usou para pegar o acesso ao Cérebro? É o que faz esta
-> instalação aparecer como sua na plataforma.
+> Uma coisa rápida: qual e-mail você usou para pegar o acesso ao Cérebro? Posso guardar aqui
+> para facilitar a identificação do seu acesso depois.
 
 Se responder, grave apenas o e-mail em `.cerebro/acesso-email`, uma linha e modo 0600. Se não
 quiser, grave `.cerebro/acesso-dispensado`, nunca mais pergunte e continue. O e-mail fica fora das
 notas e do Git; telemetria continua opcional e nunca carrega conteúdo.
+
+Esse cadastro por e-mail não comprova o vínculo seguro necessário ao MCP. Quando a pessoa quiser
+usar a comunidade, confira o resultado da ativação pela plataforma e a presença da credencial
+sem expor seu conteúdo. Instalação local e geração da configuração MCP não criam essa credencial.
+Siga `docs/guides/community-mcp.md` para conectar o cliente de IA e verificar o acesso Society.
+Se a ativação informar modo local, mantenha esse estado explícito; não altere uma preferência de
+telemetria nem anuncie conexão remota para contornar a pendência.
 
 Grave a correção nas palavras da pessoa. Quando aprovado, atualize `operacao/_HOJE.md` e o recibo.
 Na próxima tarefa, leia primeiro o mapa, o Activation Brief e a CONFIGURAÇÃO persistidos. Não releia
