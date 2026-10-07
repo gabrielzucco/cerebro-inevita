@@ -12,9 +12,10 @@ const product = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const version = readFileSync(join(product, 'VERSION'), 'utf8').trim();
 const tag = `v${version}`;
 const sandbox = mkdtempSync(join(tmpdir(), 'community-release-'));
-const guides = ['docs/guides/community-mcp.md', 'docs/guides/community-systems.md', 'docs/guides/community-release.md'];
+const guides = ['docs/guides/community-mcp.md', 'docs/guides/community-systems.md', 'docs/guides/community-release.md', 'docs/guides/implantacao-assistida.md'];
 const releaseNotes = ['docs/releases/1.38.0.md', 'docs/releases/1.39.0.md'];
-const distributedDocs = [...guides, ...releaseNotes];
+const preparationReferences = ['.agents/skills/comecar/references/implantacao.md', '.claude/skills/comecar/references/implantacao.md'];
+const distributedDocs = [...guides, ...releaseNotes, ...preparationReferences];
 try {
   assert.equal(version, '1.39.0');
   const fresh = join(sandbox, 'fresh');
@@ -46,7 +47,10 @@ try {
   applyPlan(member, plan, { approvePlan: plan.digest });
   assert.equal(readFileSync(join(member, 'VERSION'), 'utf8').trim(), version);
   for (const [path, value] of Object.entries(sentinels)) assert.equal(readFileSync(join(member, path), 'utf8'), value);
-  assert.equal(readFileSync(join(member, 'CLAUDE.md'), 'utf8'), claude);
+  // O bloco gerenciado recebe a nova orientação; a regra privada permanece byte a byte.
+  const updatedClaude = readFileSync(join(member, 'CLAUDE.md'), 'utf8');
+  assert.equal(updatedClaude, `${readFileSync(join(product, 'CLAUDE.md'), 'utf8')}\nREGRA PRIVADA DO DONO\n`);
+  assert.notEqual(updatedClaude, claude, 'a atualização precisa instalar o bloco gerenciado novo');
   assert.equal(hash(readFileSync(join(member, '.cerebro/source'))), sourceBefore);
   for (const path of distributedDocs) assert.deepEqual(readFileSync(join(member, path)), readFileSync(join(product, path)));
   const replay = planUpdate(member, product, tag); assert.deepEqual(replay.conflicts, []); assert.equal(applyPlan(member, replay), null);
