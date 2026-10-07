@@ -71,12 +71,13 @@ function grant(grantId, sourceRef) {
   };
 }
 
-async function request(base, path, { method = 'GET', cookie = '', csrf = '', body = null } = {}) {
+async function request(base, path, { method = 'GET', cookie = '', csrf = '', body = null, origin = base } = {}) {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
       ...(cookie ? { Cookie: cookie } : {}),
       ...(csrf ? { 'X-Cerebro-CSRF': csrf } : {}),
+      ...(method !== 'GET' ? { Origin: origin } : {}),
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -284,13 +285,16 @@ try {
         : 'CORRECTED_PRIVATE_OUTPUT_NOT_IN_READ_MODEL\n');
       return { status: 0, stdout: '{"type":"done"}\n', stderr: '' };
     },
+    hermesRunner: (_command, args) => args[0] === '--version'
+      ? { status: null, stdout: '', stderr: '', error: { code: 'ENOENT' } }
+      : { status: 1, stdout: '', stderr: '', error: null },
   });
   await new Promise((resolveListen) => instance.server.listen(0, '127.0.0.1', resolveListen));
   const base = `http://127.0.0.1:${instance.server.address().port}`;
 
   const page = await request(base, '/');
   assert.equal(page.status, 200);
-  assert(page.value.includes('Company Brain'));
+  assert(page.value.includes('Cérebro INEVITA'));
   assert(page.value.includes('data-view="compatibility"'));
   const appBundle = await request(base, '/app.js');
   assert.equal(appBundle.status, 200);
@@ -306,7 +310,7 @@ try {
   const skillsCatalog = await request(base, '/api/skills', { cookie });
   assert.equal(skillsCatalog.status, 200);
   assert.equal(skillsCatalog.value.counts.company, 0);
-  assert.equal(skillsCatalog.value.counts.engine, 18);
+  assert.equal(skillsCatalog.value.counts.engine, 21, 'inclui a skill de transcrição preservada neste fork e as skills de auditoria e migração');
   assert.equal(skillsCatalog.value.privacy.skill_body_exposed, false);
   const societyCatalog = await request(base, '/api/society', { cookie });
   assert.equal(societyCatalog.status, 200);
@@ -395,6 +399,12 @@ try {
     method: 'POST', cookie, body: { confirm: true },
   });
   assert.equal(missingCsrf.status, 403);
+  assert.equal(calls.length, 0);
+  const invalidOrigin = await request(base, '/api/routines/funil-diario-cerebro/run', {
+    method: 'POST', cookie, csrf: 'fixed-csrf-token', origin: 'https://attacker.example', body: { confirm: true },
+  });
+  assert.equal(invalidOrigin.status, 403);
+  assert.equal(invalidOrigin.value.reason_code, 'origin-invalid');
   assert.equal(calls.length, 0);
   const missingConfirm = await request(base, '/api/routines/funil-diario-cerebro/run', {
     method: 'POST', cookie, csrf: 'fixed-csrf-token', body: { confirm: false },

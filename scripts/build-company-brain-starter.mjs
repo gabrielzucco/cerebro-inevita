@@ -30,7 +30,10 @@ writeFileSync(join(output, 'VERSION'), `${version}\n`);
 
 rmSync(zipPath, { force: true });
 mkdirSync(dirname(zipPath), { recursive: true });
-const zipped = spawnSync('zip', ['-qr', zipPath, 'company-brain-starter-en'], {
+const archive = process.platform === 'win32'
+  ? { command: 'tar.exe', args: ['-a', '-c', '-f', zipPath, 'company-brain-starter-en'] }
+  : { command: 'zip', args: ['-qr', zipPath, 'company-brain-starter-en'] };
+const zipped = spawnSync(archive.command, archive.args, {
   cwd: dirname(output),
   encoding: 'utf8',
 });

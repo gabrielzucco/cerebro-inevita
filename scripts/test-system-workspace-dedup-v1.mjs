@@ -12,8 +12,8 @@ const story = read('docs/stories/2026-08-27-system-workspace-dedup-v1.md');
 const tabs = app.match(/const WS_TABS = \[([\s\S]*?)\n\];/)?.[1] || '';
 assert.equal((tabs.match(/\['/g) || []).length, 6, 'workspace deve expor seis superfícies');
 for (const [id, label] of [
-  ['overview', 'Sobre'], ['how', 'Como funciona'], ['runs', 'Execuções'],
-  ['experiments', 'Experimentos'], ['learning', 'Aprendizado'], ['config', 'Configuração'],
+  ['overview', 'Sobre'], ['how', 'Como funciona'], ['runs', 'Trabalhos feitos'],
+  ['experiments', 'Testes'], ['learning', 'Aprendizado'], ['config', 'Detalhes técnicos'],
 ]) {
   assert.match(tabs, new RegExp(`\\['${id}', '${label}'\\]`), `superfície ausente: ${label}`);
 }
@@ -30,7 +30,7 @@ assert.match(app, /function wsJudgmentForRun\(ws, record\)/, 'Execuções deve l
 assert.match(app, /ws\.judgments\.find\(\(item\) => item\.run_id === record\.run_id\)/, 'ligação deve usar o run_id canônico');
 assert.match(app, /data-open-judgment=/, 'Execuções deve reutilizar o drawer constitucional de julgamento');
 assert.match(app, /data-view="judgments"/, 'Execuções deve abrir a fila global');
-assert.match(app, /Uma fila constitucional/, 'autoridade da fila única deve estar explícita');
+assert.match(app, /Revisão humana/, 'autoridade da fila única deve estar explícita');
 assert.doesNotMatch(app, /function wsJudgment\(ws\)/, 'não pode existir uma Caixa de Julgamento local');
 
 assert.match(app, /experiments: wsExperiments/, 'Experimentos devem ser projetados por Sistema');

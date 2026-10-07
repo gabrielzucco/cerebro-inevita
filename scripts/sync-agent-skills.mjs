@@ -8,9 +8,15 @@ const SOURCE = join(ROOT, '.claude', 'skills');
 const TARGET = join(ROOT, '.agents', 'skills');
 const checkOnly = process.argv.includes('--check');
 
+// Artefatos de execução não são parte da skill: skill em Python gera __pycache__ ao
+// rodar, e sem esta exclusão o simples ato de rodar os testes faz .claude e .agents
+// divergirem — quebrando a validação por um arquivo que nem vai pro Git.
+const IGNORAR = new Set(['__pycache__', '.DS_Store', '.pytest_cache']);
+
 function files(root, base = root) {
   if (!existsSync(root)) return [];
   return readdirSync(root).flatMap((name) => {
+    if (IGNORAR.has(name) || name.endsWith('.pyc')) return [];
     const path = join(root, name);
     return statSync(path).isDirectory() ? files(path, base) : [path.slice(base.length + 1)];
   }).sort();

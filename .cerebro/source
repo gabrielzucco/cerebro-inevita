@@ -1,4 +1,4 @@
-# De onde o /atualizar baixa o motor do cérebro.
-# AJUSTE estes dois valores depois de criar o repositório no GitHub.
+# Repositório público do motor. A tag é sempre explícita no comando; sem fallback.
 REPO=gabrielzucco/cerebro-inevita
+# Compatibilidade do check-version.sh legado; install/update não usam este branch.
 BRANCH=main

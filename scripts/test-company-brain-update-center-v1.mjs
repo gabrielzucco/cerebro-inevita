@@ -93,26 +93,12 @@ try {
   write(join(managedBrain, 'scripts', 'update.mjs'), '// fixture\n');
   const managedCenter = buildBrainUpdateCenter(managedBrain, { engineRoot: managedBrain });
   assert.equal(managedCenter.installation.update_management, 'managed-release');
-  assert.equal(managedCenter.motor.can_apply, true);
+  assert.equal(managedCenter.motor.can_apply, false);
 
-  let runnerCalled = false;
-  const applied = await applyManagedBrainUpdate(managedBrain, {
+  await assert.rejects(() => applyManagedBrainUpdate(managedBrain, {
     status: 'update-available', tag: 'v1.33.0', latest_version: '1.33.0', current_version: '1.32.0',
-  }, {
-    engineRoot: managedBrain,
-    runner: async (executable, args, options) => {
-      runnerCalled = true;
-      assert.equal(executable, process.execPath);
-      assert.equal(args[0], join(managedBrain, 'scripts', 'update.mjs'));
-      assert.equal(options.cwd, managedBrain);
-      assert.equal(options.env.CEREBRO_UPDATE_REQUIRE_RELEASE, '1');
-      write(join(managedBrain, 'VERSION'), '1.33.0\n');
-    },
-  });
-  assert.equal(runnerCalled, true);
-  assert.equal(applied.installed_version, '1.33.0');
-  assert.equal(applied.restart_required, true);
-  assert.equal(applied.context_uploaded, false);
+  }), /manual-update-preview-required/);
+  assert.equal(readFileSync(join(managedBrain, 'VERSION'), 'utf8'), '1.32.0\n');
 
   assert.equal(compareReleaseVersions('1.33.0', 'v1.33.0'), 0);
   assert.equal(compareReleaseVersions('1.32.0', '1.33.0'), -1);
@@ -139,7 +125,7 @@ try {
   for (const endpoint of ['/api/update', '/api/update/check', '/api/update/apply']) {
     assert(server.includes(endpoint), `servidor sem endpoint: ${endpoint}`);
   }
-  assert(updater.includes("CEREBRO_UPDATE_REQUIRE_RELEASE === '1'"), 'Console precisa exigir release publicada');
+  assert(!updater.includes('/releases/latest'), 'aplicação nunca consulta latest novamente');
   for (const selector of ['.brain-mode-bar', '.brain-version-chip', '.brain-update-now', '.brain-news', '.brain-release-board', '.brain-update-grid', '.brain-update-boundary']) {
     assert(css.includes(selector), `estilo ausente: ${selector}`);
   }

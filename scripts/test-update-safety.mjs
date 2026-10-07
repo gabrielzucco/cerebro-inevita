@@ -29,8 +29,10 @@ const RUNNERS = [
     instalar: (dir) => {
       mkdirSync(join(dir, '.claude', 'scripts'), { recursive: true });
       cpSync(join(SOURCE, '.claude', 'scripts', 'update.sh'), join(dir, '.claude', 'scripts', 'update.sh'));
+      mkdirSync(join(dir, 'scripts'), { recursive: true });
+      cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(dir, 'scripts', 'update.mjs'));
     },
-    rodar: (dir) => execFileSync('bash', [join(dir, '.claude', 'scripts', 'update.sh')], {
+    rodar: (dir, args) => execFileSync('bash', [join(dir, '.claude', 'scripts', 'update.sh'), ...args], {
       env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_TELEMETRY: 'off' },
       stdio: 'pipe',
     }),
@@ -41,7 +43,7 @@ const RUNNERS = [
       mkdirSync(join(dir, 'scripts'), { recursive: true });
       cpSync(join(SOURCE, 'scripts', 'update.mjs'), join(dir, 'scripts', 'update.mjs'));
     },
-    rodar: (dir) => execFileSync(process.execPath, [join(dir, 'scripts', 'update.mjs')], {
+    rodar: (dir, args) => execFileSync(process.execPath, [join(dir, 'scripts', 'update.mjs'), ...args], {
       env: { ...process.env, CEREBRO_UPDATE_SOURCE_DIR: SOURCE, CEREBRO_TELEMETRY: 'off' },
       stdio: 'pipe',
     }),
@@ -62,13 +64,14 @@ try {
       writeFileSync(join(old, file), sentinel);
     }
 
-    runner.rodar(old);
+    const baseline = `${old}-baseline`;
+    cpSync(old, baseline, { recursive: true });
+    const args = ['--tag', `v${readFileSync(join(SOURCE, 'VERSION'), 'utf8').trim()}`, '--baseline-dir', baseline];
+    const preview = JSON.parse(runner.rodar(old, args).toString());
+    runner.rodar(old, [...args, '--apply', '--approve-plan', preview.plan_hash]);
 
-    if (!statSync(join(old, '.cerebro', 'runtime')).isDirectory()) {
-      throw new Error(`[${runner.nome}] runtime privado não virou diretório`);
-    }
-    if (readFileSync(join(old, '.cerebro', 'operator-runtime'), 'utf8').trim() !== 'codex') {
-      throw new Error(`[${runner.nome}] perdeu o marcador de runtime legado`);
+    if (readFileSync(join(old, '.cerebro', 'runtime'), 'utf8') !== 'codex\n') {
+      throw new Error('atualização alterou runtime privado fora do plano');
     }
 
     for (const file of protectedFiles) {

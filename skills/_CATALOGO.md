@@ -11,6 +11,7 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 | `prototipar` | monta o protótipo comercial e o de entrega, escolhe a frente e desenha o loop |
 | `operar` | escolhe um sistema, executa, avalia e deixa recibo |
 | `briefing-comercial` | adapta o briefing à operação e fecha a call com diff aprovado |
+| `transcrever` | vira gravação em texto com timestamp — bloco pra ler, palavra pra cortar vídeo |
 | `fonte` | decide o nível de refino de qualquer coisa que chega e trata só até onde o trabalho exige |
 | `call` | transforma uma transcrição em decisões, ações e memória |
 | `guardar` | transforma fonte real em átomo aprovado |
@@ -19,6 +20,9 @@ Esta pasta é a vista do motor. As instruções executáveis continuam em `.clau
 | `revisar` | verifica frescor |
 | `teste` | mede o cérebro inteiro com perguntas-canário |
 | `metodo` | explica e aplica Engenharia de Contexto |
+| `society` | sincroniza o acervo exclusivo de quem é membro pagante |
+| `auditar-cerebro` | diagnostica contexto, fontes, contratos e dependências em somente leitura |
+| `migrar-cerebro` | planeja, pede aprovação e copia conteúdo com proveniência preservando origem e motor |
 | `atualizar` | atualiza motor sem tocar no que é privado |
 | `society` | sincroniza o acervo exclusivo quando existe acesso de membro |
 

@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Company Brain Console</title>
-  <link rel="stylesheet" href="/styles.css?v=11">
+  <title>Meu Cérebro · INEVITA</title>
+  <link rel="stylesheet" href="/styles.css?v=14">
+  <link rel="stylesheet" href="/experience.css?v=1">
 </head>
 <body>
   <!-- Ícones (Lucide, ISC) usados pela nav, topbar e command palette. -->
-  <svg hidden aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <svg class="icon-definitions" hidden aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <g id="i-today"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></g>
       <g id="i-judgments"><path d="m14 13-8.5 8.5a2.12 2.12 0 0 1-3-3L11 10"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/></g>
@@ -23,6 +24,7 @@
       <g id="i-compatibility"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></g>
       <g id="i-governance"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/></g>
       <g id="i-health"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></g>
+      <g id="i-hermes"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3v-7a4 4 0 0 1-1-2.65V7a4 4 0 0 1 4-4h11a4 4 0 0 1 4 4z"/><path d="M7 9h10M7 13h6"/></g>
       <g id="i-society"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></g>
       <g id="i-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></g>
     </defs>
@@ -32,34 +34,41 @@
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div><strong>Company Brain</strong><small>Console local</small></div>
+        <div><strong>Cérebro INEVITA</strong><small>Seu espaço de trabalho</small></div>
       </div>
       <div id="area-switcher" aria-label="Contexto de área"></div>
       <nav id="navigation" aria-label="Navegação principal">
-        <button data-view="today"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-today"/></svg></span>Hoje <b data-count="attention">0</b></button>
-        <button data-view="anatomy"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/><path d="M12 7v3.5M6.4 15.4l3.6-3M17.6 15.4l-3.6-3M7 17h10"/></svg></span>Cérebro</button>
-        <button data-view="systems" data-views="systems,system"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-systems"/></svg></span>Sistemas <b data-count="systems">0</b></button>
-        <button data-view="skills"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-skills"/></svg></span>Skills <b data-count="skills">0</b></button>
-        <button data-view="canvas"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-canvas"/></svg></span>Canvas</button>
-        <button data-view="judgments" data-views="judgments,cases,routines,runs"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-judgments"/></svg></span>Julgamento <b data-count="judgments">0</b></button>
-        <button data-view="areas" data-views="areas,sources,experiments"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-areas"/></svg></span>Estrutura</button>
-        <button data-view="compatibility" data-views="compatibility,governance,health"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-compatibility"/></svg></span>Confiança</button>
-        <button data-view="society"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-society"/></svg></span>Society</button>
+        <p class="nav-group">Seu trabalho</p>
+        <button aria-label="Hoje" data-view="today"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-today"/></svg></span>Hoje <b data-count="attention">0</b></button>
+        <button aria-label="Cérebro" data-view="anatomy"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/><path d="M12 7v3.5M6.4 15.4l3.6-3M17.6 15.4l-3.6-3M7 17h10"/></svg></span>Cérebro</button>
+        <button aria-label="Meus trabalhos" data-view="systems" data-views="systems,system"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-systems"/></svg></span>Meus trabalhos <b data-count="systems">0</b></button>
+        <button aria-label="Entregas" data-view="judgments" data-views="judgments,cases,routines,runs"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-judgments"/></svg></span>Entregas <b data-count="judgments">0</b></button>
+        <button aria-label="Telegram" data-view="hermes"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-hermes"/></svg></span>Telegram</button>
+        <details class="nav-advanced" data-nav-advanced><summary aria-label="Explorar mais"><span class="nav-glyph" aria-hidden="true">⋯</span><span>Explorar mais</span><i>⌄</i></summary><div>
+          <button aria-label="Capacidades" data-view="skills"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-skills"/></svg></span>Capacidades <b data-count="skills">0</b></button>
+          <button aria-label="Canvas" data-view="canvas"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-canvas"/></svg></span>Como funciona</button>
+          <button aria-label="Estrutura" data-view="areas" data-views="areas,sources,experiments"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-areas"/></svg></span>Áreas e fontes</button>
+          <button aria-label="Confiança" data-view="compatibility" data-views="compatibility,governance,health"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-compatibility"/></svg></span>Confiança</button>
+        </div></details>
+        <p class="nav-group">Comunidade</p>
+        <button aria-label="Society" data-view="society"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-society"/></svg></span>Society</button>
       </nav>
       <button id="collapse-nav" class="collapse-nav" type="button" title="Encolher menu ( [ )"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></span><span>Encolher</span><kbd>[</kbd></button>
-      <button id="open-palette" class="nav-hint" type="button"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><use href="#i-search"/></svg></span><span>Buscar e navegar</span><kbd>⌘K</kbd></button>
+      <button aria-label="Buscar e navegar" id="open-palette" class="nav-hint" type="button"><span class="nav-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><use href="#i-search"/></svg></span><span>Buscar e navegar</span><kbd>⌘K</kbd></button>
       <div class="local-boundary"><i></i><div><strong>Somente nesta máquina</strong><span>Nenhum contexto vai à INEVITA</span></div></div>
-      <p class="sys-line" id="sys-line">localhost · file-only · reference-only</p>
+      <p class="sys-line" id="sys-line" hidden>Detalhes técnicos disponíveis em cada trabalho</p>
     </aside>
 
     <main>
+      <div id="demo-banner" class="demo-banner" hidden><strong>Demonstração da aula</strong><span>Dados controlados · credenciais e ações reais desabilitadas</span></div>
       <header class="topbar">
         <div><p class="eyebrow" id="eyebrow">OPERAÇÃO</p><h1 id="page-title">Hoje</h1><p id="page-subtitle">O que pede julgamento e o que já está pronto para trabalhar.</p></div>
-        <div class="top-actions"><span id="updated-at" class="updated-at">Lendo estado local…</span><button id="refresh" class="icon-button" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-routines"/></svg></button></div>
+        <div class="top-actions"><span id="updated-at" class="updated-at">Verificando seus trabalhos…</span><button id="refresh" class="icon-button" aria-label="Atualizar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><use href="#i-routines"/></svg></button></div>
       </header>
+      <div id="journey"></div>
       <section id="summary" class="summary-grid" aria-label="Resumo operacional"></section>
       <section id="content" class="content" aria-live="polite">
-        <div class="loading"><i></i><span>Compilando contratos e recibos locais…</span></div>
+        <div class="loading"><i></i><span>Preparando sua visão do Cérebro…</span></div>
       </section>
     </main>
   </div>
@@ -79,6 +88,6 @@
 
   <dialog id="confirm-dialog" class="confirm-dialog"></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=11"></script>
+  <script type="module" src="/app.js?v=14"></script>
 </body>
 </html>

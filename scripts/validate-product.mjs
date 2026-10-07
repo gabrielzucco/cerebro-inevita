@@ -37,7 +37,7 @@ import { validateCommunicationFeed } from './lib/communication-feed.mjs';
 const ROOT = resolve(process.cwd());
 const errors = [];
 const required = [
-  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md',
+  'METODO-SISTEMAS.md', 'METODO-EXPERIMENTOS.md', 'COCKPIT.md',
   'templates/experimento.md',
   'templates/sistema/manifest.md', 'templates/sistema/configuracao.md',
   'templates/sistema/pipeline.md', 'templates/sistema/rotinas.md',
@@ -314,9 +314,15 @@ if (existsSync(availablePackagesRoot)) {
     }
   }
 }
+// Artefatos de execução não são parte da skill: skill em Python gera __pycache__ ao
+// rodar, e sem esta exclusão o simples ato de rodar os testes faz .claude e .agents
+// divergirem — quebrando a validação por um arquivo que nem vai pro Git.
+const IGNORAR = new Set(['__pycache__', '.DS_Store', '.pytest_cache']);
+
 function files(root, base = root) {
   if (!existsSync(root)) return [];
   return readdirSync(root).flatMap((name) => {
+    if (IGNORAR.has(name) || name.endsWith('.pyc')) return [];
     const path = join(root, name);
     return statSync(path).isDirectory() ? files(path, base) : [path.slice(base.length + 1)];
   }).sort();
@@ -336,12 +342,12 @@ if (JSON.stringify(claudeFiles) !== JSON.stringify(agentFiles)) {
 
 for (const file of claudeFiles.filter((name) => name.endsWith('SKILL.md'))) {
   const content = readFileSync(join(ROOT, '.claude', 'skills', file), 'utf8');
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) {
     errors.push(`skill sem frontmatter: ${file}`);
     continue;
   }
-  const lines = match[1].split('\n').filter(Boolean);
+  const lines = match[1].split(/\r?\n/).filter(Boolean);
   const keys = lines.map((line) => line.split(':', 1)[0].trim());
   if (keys.join(',') !== 'name,description') errors.push(`frontmatter inválido em ${file}`);
   const name = lines.find((line) => line.startsWith('name:'))?.slice(5).trim() ?? '';

@@ -11,7 +11,7 @@ import { summarizeSystemSourceBindings } from './lib/system-source-binding.mjs';
 
 const SOURCE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET_ROOT = resolve(process.env.CEREBRO_INSTALL_ROOT || SOURCE_ROOT);
-const DEFAULT_DISTRIBUTION_URL = 'https://peegicizxybjgvuutegc.supabase.co/functions/v1/cerebro-system-distribution';
+const DEFAULT_DISTRIBUTION_URL = 'https://inevitasociety.com/supabase/functions/v1/cerebro-system-distribution';
 const slug = String(process.argv[2] || '').trim().toLowerCase();
 const confirmed = process.argv.includes('--confirm');
 const dryRun = process.argv.includes('--dry-run');

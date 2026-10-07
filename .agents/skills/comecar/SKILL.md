@@ -24,10 +24,21 @@ runtime.
   vínculo de acesso é oferecido somente depois do primeiro output útil e nunca bloqueia a ativação.
 - Não exponha run-id, relógio, telemetria, A0/A1/A2, T0–T4 ou nomes internos do método.
 - Não procure Node, rode `which node`, altere PATH ou instale dependências para helpers opcionais.
-- Telemetria nunca é pedágio. Só rode helpers silenciosos depois do primeiro output útil e ignore
+- Telemetria nunca é pedágio. Somente depois do output útil, rode helpers silenciosos e ignore
   qualquer falha sem interromper a pessoa.
 
 ## 1. Confirmar a casa e recuperar a operação
+
+Antes de iniciar ou retomar a ativação, se o pedido for instalar/reinstalar ou se encontrar um
+Cérebro existente sem escolha explícita, mostre três caminhos: **usar o existente**, **instalar
+novo em pasta nova** ou **migrar**. Isso vale mesmo quando há apenas uma instalação. Pergunte:
+“Você quer continuar neste Cérebro, criar um novo em outra pasta ou planejar a migração?”
+A escolha vem antes de gravação, telemetria ou sprint. Pedido explícito de “novo/limpo/reinstalar
+em outra pasta” escolhe o segundo caminho; nunca reutilize a pasta antiga por conveniência.
+Usar o existente permite `auditar-cerebro`; novo segue a tag fixa em `COMECE-AQUI.md`; migrar
+ativa `migrar-cerebro` na fase de planejamento. Se a pessoa já escolheu, não pergunte de novo.
+O menu de instalação só aparece nessa decisão concreta; não substitui a conversa de ativação.
+
 
 Confirme em uma frase que o trabalho será gravado na pasta local atual e que as fontes não serão
 movidas nem alteradas sem autorização. Procure uma operação concreta na mensagem atual,

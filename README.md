@@ -29,8 +29,14 @@ minutagem. A resposta deixa de ser genérica porque o contexto deixou de ser.
 ## Comece em 2 minutos
 
 ```bash
-git clone https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
+git clone --branch v1.38.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita meu-cerebro
 ```
+
+`v1.38.0` é candidato local ao piloto; este comando só ficará disponível após tag e release
+aprovadas no canal oficial `gabrielzucco/cerebro-inevita`. Para o piloto sem publicação,
+use o pacote e os comandos de [`docs/releases/1.38.0.md`](docs/releases/1.38.0.md).
+Se já existe um Cérebro, escolha usar o existente, instalar em pasta nova ou planejar a migração;
+o agente não reutiliza a pasta por conta própria. Veja [instalação e atualização segura](COMECE-AQUI.md).
 
 Requisito: **Node.js 20+** (só a stdlib — o motor não tem nenhuma dependência externa,
 não existe `npm install`). Funciona em macOS, Linux e Windows.

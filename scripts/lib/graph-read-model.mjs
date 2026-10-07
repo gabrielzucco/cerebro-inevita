@@ -49,15 +49,40 @@ function applyLayout(root, key, graph) {
   };
 }
 
-function systemContracts(root) {
+function systemContractPaths(root) {
+  const found = new Set();
   const directory = join(root, layout(root).systemContracts || '.cerebro/contracts/systems');
-  if (!existsSync(directory)) return [];
-  return readdirSync(directory).filter((name) => name.endsWith('.json')).sort().flatMap((name) => {
+  if (existsSync(directory)) {
+    for (const name of readdirSync(directory).filter((entry) => entry.endsWith('.json'))) {
+      found.add(join(directory, name));
+    }
+  }
+  const portfolio = join(root, 'sistemas');
+  if (existsSync(portfolio)) {
+    for (const entry of readdirSync(portfolio, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const path = join(portfolio, entry.name, 'contract.json');
+      if (existsSync(path)) found.add(path);
+    }
+  }
+  const activation = join(root, 'operacao', 'arquitetura', 'primeiro-sistema.json');
+  if (existsSync(activation)) found.add(activation);
+  return [...found].sort();
+}
+
+function systemContracts(root) {
+  const contracts = new Map();
+  for (const path of systemContractPaths(root)) {
     try {
-      const contract = readJson(join(directory, name), 'System Contract');
-      return validateSystemContract(contract).length ? [] : [contract];
-    } catch { return []; }
-  });
+      const contract = readJson(path, 'System Contract');
+      if (validateSystemContract(contract).length) continue;
+      const current = contracts.get(contract.system_id);
+      if (!current || String(current.version).localeCompare(String(contract.version), undefined, { numeric: true }) < 0) {
+        contracts.set(contract.system_id, contract);
+      }
+    } catch { /* contrato inválido não entra no grafo */ }
+  }
+  return [...contracts.values()];
 }
 
 function findSystem(root, ref) {
@@ -75,6 +100,7 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
   const model = buildConsoleReadModel(root, { now });
   const nodes = [];
   const edges = [];
+  const referencedSources = new Map();
   for (const area of model.areas) {
     nodes.push(graphNode(`area:${area.operating_area}`, 'area', area.name, 'declared', {
       system_count: area.system_refs.length,
@@ -94,11 +120,23 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
     edges.push(graphEdge(`edge:area:${system.operating_area}:${system.system_id}`,
       `area:${system.operating_area}`, systemId, 'contains'));
     for (const source of system.source_refs.filter((item) => item.source_id)) {
+      const current = referencedSources.get(source.source_id) || {
+        source_id: source.source_id,
+        required: false,
+        roles: new Set(),
+        system_refs: new Set(),
+      };
+      current.required ||= source.required === true;
+      current.roles.add(source.role);
+      current.system_refs.add(system.system_id);
+      referencedSources.set(source.source_id, current);
       edges.push(graphEdge(`edge:source:${source.source_id}:${system.system_id}`,
         `source:${source.source_id}`, systemId, source.role));
     }
   }
+  const declaredSourceIds = new Set();
   for (const source of model.sources) {
+    declaredSourceIds.add(source.source_id);
     nodes.push(graphNode(`source:${source.source_id}`, 'source', source.name,
       source.status === 'active' ? 'active' : 'declared', {
         ref: source.source_id,
@@ -106,6 +144,21 @@ export function buildBrainGraph(root, { now = new Date() } = {}) {
         assurance: source.assurance,
         custody: source.custody,
       }));
+  }
+  // Um Sistema pode declarar a Fonte antes de ela ser conectada neste Cérebro. Isso é
+  // uma lacuna operacional legítima, não motivo para entregar uma aresta órfã ao Canvas.
+  for (const source of referencedSources.values()) {
+    if (declaredSourceIds.has(source.source_id)) continue;
+    nodes.push(graphNode(`source:${source.source_id}`, 'source', readableRef(source.source_id), 'gap', {
+      ref: source.source_id,
+      type: null,
+      assurance: null,
+      custody: null,
+      required: source.required,
+      roles: [...source.roles].sort(),
+      system_refs: [...source.system_refs].sort(),
+      reason_code: 'source-contract-missing',
+    }));
   }
   for (const routine of model.routines) {
     nodes.push(graphNode(`routine:${routine.routine_id}`, 'routine', routine.name,

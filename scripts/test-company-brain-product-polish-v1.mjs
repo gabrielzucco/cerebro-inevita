@@ -28,8 +28,8 @@ assert.match(app, /data-system-stage/, 'launcher deve expor o filtro de estágio
 assert.match(app, /const weight = \{ active: 0, configured: 1, mapped: 2 \}/, 'Sistemas ativos devem vir primeiro');
 
 assert.match(app, /\['overview', 'Sobre'\]/, 'primeira aba do Sistema deve se apresentar como Sobre');
-assert(workspace.indexOf('Para que este sistema existe') < workspace.indexOf('${wsMetrics(ws)}'), 'promessa deve aparecer antes das métricas');
-assert.match(workspace, /EVIDÊNCIA OPERACIONAL/, 'métricas devem manter uma seção própria');
+assert(workspace.indexOf('O que este trabalho entrega') < workspace.indexOf('${wsMetrics(ws)}'), 'resultado esperado deve aparecer antes das métricas');
+assert.match(workspace, /Ver números e registros deste trabalho/, 'métricas devem continuar acessíveis no contexto do trabalho');
 
 assert.match(skills, /COMANDOS ESPECIALIZADOS/, 'Skills devem ser explicadas em linguagem de uso');
 assert.doesNotMatch(skills, /\.claude\/skills/, 'caminhos técnicos não devem aparecer na primeira camada');

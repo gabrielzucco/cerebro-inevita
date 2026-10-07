@@ -1,5 +1,53 @@
 # Mudanças do cérebro INEVITA
 
+## v1.38.0 — 2026-09-27 · Candidato unificado para piloto, sem publicação
+
+- `/society` envia a credencial privada da instalação, como o ping, sem imprimi-la.
+  O servidor confere o vínculo e a Society ativa em cada chamada. Sem credencial válida,
+  o membro recebe orientação para atualizar e vincular pela plataforma. Links novos
+  expiram em 5 minutos; o acervo já baixado permanece local.
+
+- Uma linha para o membro no canal oficial `gabrielzucco/cerebro-inevita`: Cockpit com
+  Hermes/Telegram, redesenho de 23/09, instalação e migração com prévia.
+- Para 1.34.2: entram o Cockpit, a Central de Atualizações, os fluxos de trabalho e o
+  atualizador seguro. Para 1.36.1: entram Hermes/Telegram, redesenho e instalação por tag.
+  Para 1.37.x: esta versão reúne as duas linhas e exige atualização pelo script deste pacote.
+- Atualização com tag e VERSION conferidos, baseline da versão antiga, plano com hash,
+  conflito que cancela antes da escrita, backup privado, rollback, lock, preservação de
+  skills próprias e do texto fora do bloco gerenciado do `CLAUDE.md`.
+- Telegram é condição de aceite do piloto real: confirmar autorização, identificação,
+  allowlist, diagnóstico e resposta com fonte, sem envio automático nesta candidata.
+- A 1.37.0 preparada em 26/09 e a 1.37.1 do fork ficam incorporadas nesta candidata;
+  nenhuma delas é release desta branch. Detalhes em `docs/releases/1.38.0.md`.
+
+## v1.37.1 — histórico do fork, incorporado à 1.38.0
+
+- Resultado e origem aparecem juntos no Cockpit; correção e aprovação têm estados distintos.
+- O preflight da atualização cancela quando encontra arquivo do motor alterado localmente.
+- O caminho Bash delega ao atualizador Node multiplataforma.
+
+## v1.37.0 — proposta anterior, substituída pela candidata 1.38.0
+
+Complemento local de 26/09/2026:
+
+- Canal da distribuição volta a ser `gabrielzucco/cerebro-inevita`; `migrate-platform` aponta
+  instalações do canal anterior (`vinicius-leveron/cerebro-inevita`) para ele.
+- Instalação e atualização exigem tag explícita e conferem a versão do pacote.
+- Atualizador mostra prévia/conflitos, preserva skills próprias e texto local do CLAUDE.md,
+  cria backup privado e restaura os arquivos do plano em falha recuperável.
+- Instalação encontrada oferece continuar, criar outra pasta ou planejar migração.
+- Skills `auditar-cerebro` (somente leitura) e `migrar-cerebro` (aprovação antes da cópia).
+- Migração de runtime privado passa a ser etapa separada; update não dispara pós-update/ping.
+- Atualizadores antigos precisam ser substituídos pelo uso do script seguro da tag em pasta
+  separada ANTES da primeira atualização. Notas e checklist em `docs/releases/1.37.0.md`.
+
+## v1.36.1 — 2026-09-06 · Endereço estável da plataforma
+
+- Ativação, telemetria, instalação de Sistemas e Society usam o proxy do domínio INEVITA.
+- Canal desta distribuição: `vinicius-leveron/cerebro-inevita`.
+- A skill de transcrição existente nesta cópia foi preservada.
+
+
 ## v1.36.0 — 2026-09-03 · “a INEVITA ganha uma voz dentro do Cérebro”
 
 - **Central permanente em `Cérebro → Atualizações`:** versão instalada, verificação do motor,
@@ -334,6 +382,25 @@
 - **Ordem explícita:** primeiro run manual e human gate; rotina quando o trabalho se repete; conexão
   de leitura quando a fonte prova valor; escrita/automação só depois da régua.
 
+## v1.21.0 — 2026-08-13 · "a gravação vira texto — o elo que faltava"
+
+- **Skill `/transcrever` nova:** áudio ou vídeo vira transcrição com timestamp, e é a
+  primeira vez que o cérebro consegue fazer isso sozinho. Até aqui `FONTES.md` mandava
+  "reunião → transcrição, e o minuto que sustenta cada uma" e `/call` pedia transcrição
+  pronta — mas **nenhuma skill produzia esse texto**. Quem tinha uma gravação parava ali.
+- **Uma chamada, duas granularidades.** Sai `<nome>.md` (blocos `[H:MM:SS]`, com
+  frontmatter, `pode-ir-comunidade: false`) pra você e a IA lerem, e `<nome>.words.json`
+  (timestamp de palavra) pra máquina. Transcrever duas vezes daria timestamps diferentes e
+  quebraria citação já feita — por isso as duas saem juntas.
+- **Arquivo longo passa.** Um podcast de 2h estoura o limite de upload da API. A skill fatia
+  sozinha, cortando no **silêncio** mais próximo do limite (não em ponto fixo, que parte
+  palavra ao meio) e somando o offset de cada fatia. Testado num arquivo real de 2h01: 2
+  fatias, corte em 1:44:36 num silêncio, cobertura sem buraco.
+- **`--doctor`** diz o que falta (ffmpeg, curl, chave) e o comando de instalação por sistema.
+- **16 testes** das duas regras que corrompem em silêncio: fatiamento que deixa buraco e
+  costura que soma offset errado. Rodam sem rede e sem mídia (`--teste`).
+- `skills/_CATALOGO.md` ganhou `transcrever` e também `society`, que tinha ficado de fora
+  quando entrou na v1.18.0.
 ## v1.20.0 — 2026-08-12 · “o método vira Sistema e o Sistema aprende por Experimentos”
 
 - **Método de Sistemas completo e público:** separa Cérebro, Sistema, pipeline, rotina, skill,

@@ -10,54 +10,68 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const DEST = join(ROOT, 'comunidade', 'society');
-const URL = 'https://peegicizxybjgvuutegc.supabase.co/functions/v1/cerebro-society-sync';
+const URL = 'https://inevitasociety.com/supabase/functions/v1/cerebro-society-sync';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function read(relative) {
-  try { return readFileSync(join(ROOT, relative), 'utf8').trim(); } catch { return ''; }
-}
-
-async function main() {
+export async function syncSociety({ root = ROOT, fetchImpl = fetch, log = console.log, ping = spawnSync } = {}) {
+  const DEST = join(root, 'comunidade', 'society');
+  const read = (relative) => {
+    try { return readFileSync(join(root, relative), 'utf8').trim(); } catch { return ''; }
+  };
+  const updateMessage = 'society: atualize o Cérebro para 1.38.0 ou superior e vincule esta instalação pela plataforma.';
   const installId = read('.cerebro/id').toLowerCase();
   if (!UUID_RE.test(installId)) {
-    console.log('society: esta instalação ainda não tem id — rode /comecar primeiro.');
+    log('society: esta instalação ainda não tem id — rode /comecar primeiro.');
+    return;
+  }
+
+  const installCredential = read('.cerebro/install-credential');
+  if (!/^[A-Za-z0-9_-]{43}$/.test(installCredential)) {
+    log(updateMessage);
     return;
   }
 
   let resp;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    const r = await fetch(URL, {
+    const r = await fetchImpl(URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ install_id: installId }),
+      body: JSON.stringify({ install_id: installId, install_credential: installCredential }),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
+    if (r.status === 401) {
+      log(updateMessage);
+      return;
+    }
+    if (!r.ok && r.status !== 403) throw new Error('sync_unavailable');
     resp = await r.json();
+    // An error status must never allow a download, regardless of its body.
+    if (r.status === 403) resp = { access: false, reason: 'entitlement' };
   } catch {
-    console.log('society: servidor indisponível agora — tenta de novo mais tarde.');
+    log('society: servidor indisponível agora — tenta de novo mais tarde.');
     return;
+  } finally {
+    clearTimeout(timeout);
   }
 
-  if (!resp?.access) {
+  if (resp?.access !== true) {
     if (resp?.reason === 'entitlement') {
-      console.log('society: não encontramos uma assinatura ativa da INEVITA Society pra este acesso.');
-      console.log('  Se você acabou de entrar, o pagamento pode levar alguns minutos pra refletir.');
-      console.log('  Ainda não é membro? O convite está no grupo — ou fala com a gente.');
+      log('society: não encontramos uma assinatura ativa da INEVITA Society pra este acesso.');
+      log('  Se você acabou de entrar, o pagamento pode levar alguns minutos pra refletir.');
+      log('  Ainda não é membro? O convite está no grupo — ou fala com a gente.');
+    } else if (resp?.reason === 'identity') {
+      log(updateMessage);
     } else {
-      console.log('society: teu acesso ainda não está vinculado como membro.');
-      console.log('  O vínculo forte é feito no comissionamento ou pela equipe — fala com a gente no grupo.');
-      console.log('  (Informar o e-mail no /comecar liga a telemetria, mas conteúdo pago exige o vínculo.)');
+      log('society: servidor indisponível agora. Tente de novo mais tarde.');
     }
     return;
   }
 
   const items = Array.isArray(resp.items) ? resp.items : [];
   if (!items.length) {
-    console.log('society: acesso OK — o acervo ainda não tem itens publicados.');
+    log('society: acesso OK — o acervo ainda não tem itens publicados.');
     return;
   }
 
@@ -68,7 +82,7 @@ async function main() {
     if (!rel || rel.startsWith('..') || rel.startsWith('/') || rel.includes('\\')) continue;
     let corpo;
     try {
-      const r = await fetch(String(item.url ?? ''), { signal: AbortSignal.timeout(15000) });
+      const r = await fetchImpl(String(item.url ?? ''), { signal: AbortSignal.timeout(15000) });
       if (!r.ok) continue;
       corpo = Buffer.from(await r.arrayBuffer());
     } catch { continue; }
@@ -79,14 +93,16 @@ async function main() {
     if (existia && existia.equals(corpo)) { iguais += 1; continue; }
     writeFileSync(alvo, corpo);
     if (existia) atualizados += 1; else novos += 1;
-    console.log(`  ${existia ? 'atualizado' : 'novo'}: comunidade/society/${rel}`);
+    log(`  ${existia ? 'atualizado' : 'novo'}: comunidade/society/${rel}`);
   }
-  console.log(`society: sincronizado — ${novos} novo(s) · ${atualizados} atualizado(s) · ${iguais} sem mudança.`);
+  log(`society: sincronizado — ${novos} novo(s) · ${atualizados} atualizado(s) · ${iguais} sem mudança.`);
 
   // Telemetria mínima do uso (mesmas regras do ping: nunca interrompe, opt-out respeitado).
-  spawnSync(process.execPath, [join(ROOT, '.agents', 'scripts', 'ping.mjs'), 'operou', 'society'], {
+  ping(process.execPath, [join(root, '.agents', 'scripts', 'ping.mjs'), 'operou', 'society'], {
     stdio: 'ignore', timeout: 5000,
   });
 }
 
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await syncSociety();
+}

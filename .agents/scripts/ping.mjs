@@ -26,7 +26,7 @@ const HUMAN_DECISIONS = new Set(['approved', 'changes_requested', 'rejected']);
 
 // Quem forka o motor não deve pingar na telemetria da INEVITA. O default é o
 // endpoint da casa; CEREBRO_API_URL redireciona para o teu.
-const ENDPOINT = (process.env.CEREBRO_API_URL || 'https://peegicizxybjgvuutegc.supabase.co/functions/v1').replace(/\/+$/, '');
+const ENDPOINT = (process.env.CEREBRO_API_URL || 'https://inevitasociety.com/supabase/functions/v1').replace(/\/+$/, '');
 
 function read(relative) {
   try {

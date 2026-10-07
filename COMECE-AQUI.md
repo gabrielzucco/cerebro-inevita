@@ -15,6 +15,7 @@ de slash é um atalho, não um requisito.
 | Codex | `.agents/skills/` | `$comecar` ou “quero começar” |
 | Gemini CLI | `.agents/skills/` | “quero começar” |
 | Antigravity | `.agents/skills/` | “quero começar meu cérebro” |
+| Hermes | `.agents/skills/` | “quero começar” no CLI ou Telegram |
 | outro agente local | `.agents/skills/` | ler `comecar/SKILL.md` |
 
 ### O acesso é vinculado (e-mail ou credencial)
@@ -36,9 +37,66 @@ trabalho. Só peça para abrir uma nova sessão quando o ambiente realmente não
 ou executar aqui. Antes disso, grave a primeira tarefa e o estágio em
 `operacao/decisoes-pendentes/onboarding.md`; a sessão seguinte retoma sem repetir perguntas.
 
-Quando houver mais de um Cérebro no computador, o agente mostra as opções e a pessoa escolhe. Ele
-nunca decide sozinho qual é o “real” ou “de teste”. “Novo e limpo” significa criar outra pasta sem
-alterar ou apagar nenhuma instalação existente.
+### Instalar, reinstalar ou continuar
+
+Ao encontrar um Cérebro existente, o agente oferece **três caminhos**, mesmo que só exista um:
+
+1. **Usar o existente:** você escolhe a pasta e pode pedir `auditar-cerebro` antes de continuar.
+2. **Instalar novo em pasta nova:** você escolhe outro destino; a instalação anterior fica intacta.
+3. **Migrar:** `migrar-cerebro` faz primeiro um plano de classificação e fontes; só copia depois
+   da sua aprovação, com proveniência, sem mover a origem ou alterar o motor.
+
+O agente nunca decide sozinho qual é o “real” ou “de teste”. Pedido de novo/limpo não autoriza
+reaproveitar ou limpar a pasta encontrada. Nenhuma escolha conecta automaticamente CRM, banco ou
+Drive. Essas fontes podem ser consideradas mesmo sem arquivos locais.
+
+### Versão fixa para instalar e atualizar
+
+Escolha uma tag publicada, como `v1.38.0`, em Releases. **Esta versão é candidata local ao piloto;
+o exemplo só ficará disponível após a publicação aprovada.** O canal oficial é
+`gabrielzucco/cerebro-inevita`. Para piloto sem publicação, veja
+[`docs/releases/1.38.0.md`](docs/releases/1.38.0.md). Não use `main` ou `latest` como
+fonte de instalação. O `VERSION` de um checkout não prova que a release está publicada.
+
+Para obter o pacote e o atualizador seguro, clone a tag escolhida em uma **pasta nova**:
+
+```bash
+git clone --branch v1.38.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.38.0
+```
+
+A pasta clonada já pode ser usada como Cérebro após a sua escolha explícita. Se preferir uma
+instalação gerenciada em outra pasta, o instalador copia apenas motor e seeds do pacote:
+
+```bash
+node pacote-1.38.0/scripts/install.mjs --tag v1.38.0 --destination /caminho/novo-cerebro
+node pacote-1.38.0/scripts/install.mjs --tag v1.38.0 --destination /caminho/novo-cerebro --apply
+```
+
+O primeiro comando mostra a prévia. Execute o segundo apenas depois de aprová-la. Destino
+existente devolve as três opções e não escreve. A versão do pacote precisa coincidir com a tag.
+Node.js 20+ é necessário para esses scripts; sem runtime, o agente pode orientar o plano.
+
+**Primeira atualização de uma instalação antiga:** use o script seguro da tag nova em separado.
+O script antigo pode apagar personalizações antes de receber a correção; não o execute.
+
+```bash
+node pacote-1.38.0/scripts/update.mjs --tag v1.38.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
+```
+
+A prévia lista conflitos e seu `plan_hash`. `--baseline-dir` fornece a cópia íntegra da versão
+instalada para distinguir arquivo oficial antigo de alteração local; é obrigatório na primeira
+atualização sem recibo `update-state.json`. Se houver conflito, nenhum arquivo é aplicado, mesmo
+com hash aprovado. Resolva o conflito e gere nova prévia. Sem conflitos, repita o comando com
+`--apply --approve-plan HASH_DA_PREVIA`. Se qualquer conteúdo mudar, revise uma nova prévia.
+O updater não consulta latest novamente e não recorre a main se o download da tag falhar.
+Arquivos fora do pacote permanecem, inclusive skills próprias. Texto fora do bloco
+`INEVITA:MANAGED` no `CLAUDE.md` é preservado; um arquivo legado sem bloco fica inteiro antes
+do bloco novo. Revise eventuais regras duplicadas sem descartá-las automaticamente.
+
+Backups ficam em `.cerebro/update-backups/`, privados e fora do Git. Arquivos retirados do pacote
+não são removidos automaticamente. A migração privada de runtime, se necessária, aparece como
+próximo passo separado; não roda nem envia telemetria durante a atualização. O Console só aplica
+atualizações sem conflitos; para revisar personalizações use `atualizar` e a prévia acima.
 
 ### Cérebro existente não é a mesma coisa que contexto existente
 
@@ -60,6 +118,17 @@ conector real e consentimento específico.
 
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não
 exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
+
+## Quer ver e conectar pelo Telegram?
+
+Abra o Cockpit local com `node scripts/cockpit.mjs`. É o mesmo núcleo visual do Console usado na
+operação da INEVITA, adaptado para funcionar inteiramente na sua máquina. **Hoje** mostra o que
+precisa de você. Em **Meus trabalhos**, escolha o resultado que quer produzir. Em **Entregas**, leia
+o rascunho, veja quais informações foram usadas e aprove ou peça ajuste. Os registros técnicos
+ficam em **Ver como foi feito**, dentro de cada resultado. A tela também leva o cérebro ao Telegram
+em três passos: preparar o agente, conectar o bot criado no BotFather e confirmar a conta que enviou
+`/start`. O Cockpit cuida da configuração e do diagnóstico. O guia completo está em
+[`COCKPIT.md`](COCKPIT.md).
 
 ## A primeira experiência
 

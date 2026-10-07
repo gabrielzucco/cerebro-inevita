@@ -17,3 +17,12 @@ comunidade/minhas-contribuicoes/_LEIA.md
 comunidade/minhas-contribuicoes/propostas/_LEIA.md
 comunidade/minhas-contribuicoes/aprovadas/_LEIA.md
 comunidade/minhas-contribuicoes/enviadas/_LEIA.md
+
+# Estrutura da instalação inicial, arquivo a arquivo; existentes nunca são sobrescritos.
+meu-negocio
+capturas
+privado
+README.md
+LICENSE
+LICENSE-CONTEUDO.md
+.cerebro/manifest.json

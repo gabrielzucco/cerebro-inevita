@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Protótipo estrutural · Cérebro INEVITA</title>
+  <style>
+    :root { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #24342d; background: #f7f8f4; font-synthesis: none; }
+    * { box-sizing: border-box; }
+    body { margin: 0; line-height: 1.5; }
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #466f58; outline-offset: 3px; }
+    .shell { display: grid; grid-template-columns: 226px minmax(0, 1fr); min-height: 100vh; }
+    aside { background: #eaf0e9; border-right: 1px solid #d4dfd3; padding: 28px 18px; }
+    .brand { font-size: 19px; letter-spacing: -.035em; }
+    .brand-note { color: #617568; font-size: 13px; margin: 4px 0 34px; }
+    nav { display: grid; gap: 4px; }
+    nav button { background: none; border: 0; text-align: left; padding: 10px 13px; border-radius: 10px; color: #344e3d; }
+    nav button[aria-current="page"] { background: #d3e3d2; font-weight: 750; }
+    .nav-label { color: #688071; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; padding: 21px 13px 5px; }
+    .aside-foot { color: #5b7162; font-size: 12px; margin-top: 42px; border-top: 1px solid #cbdacb; padding-top: 18px; }
+    main { width: min(100%, 1150px); padding: 28px clamp(18px, 4.2vw, 62px) 72px; }
+    .top { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .demo { color: #6c796e; font-size: 12px; }
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .controls label { font-size: 12px; color: #536a5b; }
+    select, .small-button { border: 1px solid #bdcfbd; background: white; color: #325840; border-radius: 10px; padding: 7px 10px; }
+    .eyebrow { margin: 36px 0 4px; font-size: 12px; font-weight: 750; color: #577562; letter-spacing: .09em; text-transform: uppercase; }
+    h1 { font-size: clamp(31px, 4.3vw, 48px); line-height: 1.1; letter-spacing: -.047em; margin: 0 0 11px; }
+    h2 { font-size: 22px; line-height: 1.25; letter-spacing: -.025em; margin: 0 0 9px; }
+    h3 { font-size: 17px; margin: 0 0 6px; }
+    p { margin: 0 0 12px; }
+    .lead { color: #607066; max-width: 69ch; font-size: 17px; margin-bottom: 26px; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(235px, 1fr); gap: 16px; }
+    .stack { display: grid; gap: 16px; }
+    .card { background: #fff; border: 1px solid #dbe4d8; border-radius: 17px; padding: 23px; box-shadow: 0 5px 22px #24422c08; min-width: 0; }
+    .card.soft { background: #f0f5ee; box-shadow: none; }
+    .card.warn { background: #fffaf0; border-color: #ead9b8; }
+    .card.bad { background: #fff8f4; border-color: #e8cfc4; }
+    .card p { color: #607066; }
+    .card p strong { color: #263b2d; }
+    .kicker { display: block; font-size: 11px; letter-spacing: .09em; font-weight: 800; color: #607d67; text-transform: uppercase; margin-bottom: 10px; }
+    .status { display: inline-block; border-radius: 100px; padding: 4px 9px; font-size: 12px; font-weight: 750; background: #e2ede1; color: #315b3d; }
+    .status.amber { background: #fff0cb; color: #7d561e; }
+    .status.red { background: #fce5df; color: #934f3a; }
+    .actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 18px; }
+    .primary, .secondary, .text-button { border-radius: 10px; padding: 10px 14px; font-weight: 750; }
+    .primary { color: #fff; background: #356747; border: 1px solid #356747; }
+    .secondary { color: #315e40; background: #fff; border: 1px solid #bbcfbd; }
+    .text-button { color: #315e40; background: none; border: 0; padding-left: 0; }
+    .rows { display: grid; gap: 0; }
+    .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-top: 1px solid #e6ebe4; padding: 15px 0; }
+    .row:first-child { border-top: 0; padding-top: 4px; }
+    .row small { display: block; color: #728075; margin-top: 4px; }
+    .row button { flex-shrink: 0; }
+    .steps { display: grid; gap: 13px; padding: 0; list-style: none; margin: 15px 0 0; }
+    .steps li { display: flex; gap: 12px; }
+    .step-number { flex: 0 0 27px; height: 27px; border-radius: 50%; background: #dce8d9; color: #315e40; text-align: center; font-weight: 750; }
+    .steps p { margin: 1px 0 0; }
+    .muted { color: #708075; }
+    .tag-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+    .tag { border: 1px solid #d7e3d4; border-radius: 100px; padding: 3px 9px; font-size: 12px; color: #48634e; }
+    .section-title { font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #5e7665; margin: 28px 0 12px; }
+    .timeline { border-left: 2px solid #d6e4d6; margin-left: 6px; padding-left: 19px; display: grid; gap: 18px; }
+    .timeline div { position: relative; }
+    .timeline div:before { content: ""; position: absolute; left: -26px; top: 6px; width: 11px; height: 11px; border-radius: 50%; background: #5b8a61; }
+    .timeline small { color: #6f7e72; }
+    details { margin-top: 14px; border-top: 1px solid #e1e9de; padding-top: 13px; }
+    summary { cursor: pointer; font-weight: 750; color: #315e40; }
+    details p { margin-top: 12px; }
+    code { font-size: 12px; overflow-wrap: anywhere; }
+    .notice { border-left: 3px solid #b88a3b; padding: 11px 13px; background: #fff8e9; color: #61553b; margin: 18px 0; }
+    .notice p { margin: 0; }
+    .full { grid-column: 1 / -1; }
+    dialog { border: 1px solid #c9d9c9; border-radius: 18px; padding: 25px; max-width: min(95vw, 460px); box-shadow: 0 20px 60px #1b39264a; }
+    dialog::backdrop { background: #182b20a8; }
+    #message { min-height: 20px; color: #315e40; font-weight: 700; margin-top: 16px; }
+    @media (max-width: 790px) { .shell { display: block; } aside { padding: 14px 16px; border-right: 0; border-bottom: 1px solid #d4dfd3; } .brand-note, .aside-foot, .nav-label { display: none; } nav { display: flex; overflow-x: auto; margin-top: 10px; } nav button { white-space: nowrap; } main { padding: 18px 16px 60px; } .grid { grid-template-columns: 1fr; } .row { display: block; } .row button { margin-top: 9px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside><strong class="brand">Cérebro INEVITA</strong><p class="brand-note">Seu trabalho, em um só lugar.</p><nav id="navigation" aria-label="Jornadas do protótipo"></nav><p class="aside-foot">Este protótipo não lê seus dados, inicia modelos ou aprova ações. Todos os exemplos são fictícios.</p></aside>
+    <main><div class="top"><span class="demo">Protótipo estrutural · dados fictícios</span><div class="controls"><label for="edition">Edição</label><select id="edition"><option value="member">Membro</option><option value="team">Equipe INEVITA</option></select><label for="scenario">Cenário</label><select id="scenario"><option value="existing">Com trabalhos</option><option value="new">Primeiro acesso</option><option value="failure">Falha parcial</option></select></div></div><div id="view" aria-live="polite"></div><p id="message" role="status"></p></main>
+  </div>
+  <dialog id="confirmation" aria-labelledby="confirmation-title"><h2 id="confirmation-title"></h2><p id="confirmation-body"></p><div class="actions"><button class="primary" id="confirm-action">Confirmar no protótipo</button><button class="secondary" id="cancel-action">Voltar</button></div></dialog>
+  <script>
+    const state = { page: 'today', edition: 'member', scenario: 'existing', review: 'pending', external: 'pending' };
+    const view = document.querySelector('#view');
+    const nav = document.querySelector('#navigation');
+    const dialog = document.querySelector('#confirmation');
+    const headings = {
+      today: ['Hoje', 'Veja primeiro o que precisa de você. O resto permanece fácil de encontrar.'],
+      start: ['Começar um trabalho', 'Escolha um resultado real. A execução acontece na conversa com o agente que você já usa.'],
+      prepare: ['Preparar o primeiro trabalho', 'Uma amostra pequena e a pergunta certa bastam para começar.'],
+      jobs: ['Trabalhos', 'Acompanhe tarefas reais, independentemente do canal em que começaram.'],
+      work: ['Resumo da conversa com cliente', 'Um trabalho, com andamento, entrega, origem e próxima decisão no mesmo lugar.'],
+      decisions: ['Para decidir', 'Revisar uma resposta e autorizar uma ação fora do Cérebro são decisões diferentes.'],
+      knowledge: ['Conhecimento', 'Veja o que foi registrado, conectado e realmente usado em uma resposta.'],
+      settings: ['Canais e ajustes', 'Conecte um canal ou atualize o Cérebro quando fizer sentido para você.'],
+      operation: ['Operação da equipe', 'Filas, sistemas e políticas ficam separados do trabalho do membro.'],
+    };
+    const button = (label, page, kind='secondary') => `<button type="button" class="${kind}" data-page="${page}">${label}</button>`;
+    const summary = (eyebrow, title, body, actions='') => `<section class="card"><span class="kicker">${eyebrow}</span><h2>${title}</h2><p>${body}</p>${actions ? `<div class="actions">${actions}</div>` : ''}</section>`;
+    const status = (label, tone='') => `<span class="status ${tone}">${label}</span>`;
+    const isNew = () => state.scenario === 'new';
+    const isFailure = () => state.scenario === 'failure';
+    const workStatus = () => isFailure() ? status('Concluído com limite', 'amber') : state.review === 'pending' ? status('Entrega para revisar', 'amber') : state.review === 'approved' ? status('Aprovado') : status('Ajuste solicitado', 'amber');
+    const today = () => isNew() ? `<div class="grid">${summary('Próximo passo', 'Comece com uma tarefa sua', 'Você ainda não tem trabalho registrado. Escolha algo que precisa resolver agora; nenhuma integração é necessária.', button('Começar trabalho', 'start', 'primary'))}${summary('O que você verá depois', 'Resultado e origem juntos', 'Quando houver um trabalho real, esta tela mostrará a entrega, o que foi usado e o próximo passo.')}</div>` : `<div class="grid">${summary('Precisa de você · 1', isFailure() ? 'Conferir uma fonte indisponível' : 'Revisar resumo de cliente', isFailure() ? 'A entrega ficou pronta com uma lacuna. Veja o que faltou antes de decidir.' : 'A IA preparou um rascunho. Sua decisão define se ele pode ser usado.', button('Abrir trabalho', 'work', 'primary'))}${summary('Em andamento', 'Nenhum trabalho executando agora', 'A última execução registrada terminou. Abrir esta página não inicia outra.', button('Ver trabalhos', 'jobs'))}<div class="full">${summary('Feito recentemente', 'Resumo da conversa com cliente', 'Transcrição selecionada · entrega para revisar. O histórico e a evidência estão no próprio trabalho.', button('Ver andamento e entrega', 'work'))}</div></div>`;
+    const start = () => `<div class="grid">${summary('Escolha pelo resultado', 'Resumir uma conversa', 'Transforma uma transcrição escolhida por você em decisões, dúvidas e próximos passos para revisar.', button('Preparar este trabalho', 'prepare', 'primary'))}${summary('Outra possibilidade', 'Entender por onde começar', 'Converse sobre seu objetivo sem conectar informações nem instalar um Sistema antes de haver uma necessidade concreta.', button('Preparar este trabalho', 'prepare'))}</div><p class="notice">Escolher uma opção apenas prepara a conversa. O trabalho só começa quando você envia a solicitação ao agente e há um registro real de execução.</p>`;
+    const prepare = () => `<div class="grid">${summary('O mínimo necessário', 'Traga uma transcrição e uma pergunta', 'Exemplo: “quais decisões saíram desta conversa e o que preciso confirmar?”. Você escolhe o material; a interface não abre seus arquivos sozinha.', `<button type="button" class="primary" data-action="copy">Copiar sugestão de mensagem</button>${button('Ver exemplo de retorno', 'work')}`)}${summary('Limite de acesso', 'Sem conexão automática', 'Registrar uma fonte não concede acesso contínuo. Nada desta tela é enviado à INEVITA. Ao voltar do agente, um trabalho só será mostrado se houver registro.')}</div><section class="card soft" style="margin-top:16px"><h3>Depois de conversar com o agente</h3><p>Volte a Hoje ou Trabalhos. Se o resultado ainda não estiver registrado, a interface deve dizer isso claramente, sem simular atividade.</p></section>`;
+    const jobs = () => isNew() ? summary('Nenhum trabalho registrado', 'Seu primeiro trabalho aparecerá aqui', 'Você pode começar por uma tarefa pequena. Abrir o catálogo não executa nada.', button('Começar trabalho', 'start', 'primary')) : `<div class="grid">${summary('Trabalho real · hoje', 'Resumo da conversa com cliente', `${isFailure() ? 'Terminou com uma fonte indisponível.' : 'Entrega aguardando sua revisão.'} Uma transcrição foi selecionada.`, `${workStatus()} ${button('Abrir trabalho', 'work', 'primary')}`)}${summary('Para iniciar outro', 'Escolha o resultado desejado', 'O catálogo apresenta o que o Cérebro pode preparar. Ele não é o histórico de tarefas.', button('Novo trabalho', 'start'))}</div><h2 class="section-title">Histórico</h2><div class="card rows"><div class="row"><div><strong>Resumo da conversa com cliente</strong><small>Iniciado no agente · registro de execução disponível</small></div>${button('Abrir', 'work')}</div><div class="row"><div><strong>Outros registros</strong><small>Quando não houver vínculo inequívoco, execuções antigas aparecem separadas, sem serem atribuídas a este trabalho.</small></div></div></div>`;
+    const work = () => isNew() ? `${summary('Exemplo fictício', 'Assim ficará um trabalho', 'Esta visualização é uma demonstração. Sua instalação ainda não registrou uma tarefa. Nenhum estado foi inferido.', button('Começar de verdade', 'start', 'primary'))}<div style="height:16px"></div>${workContent()}` : workContent();
+    const workContent = () => `<div class="grid"><section class="card"><span class="kicker">Trabalho · iniciado no agente</span><div>${workStatus()}</div><h2 style="margin-top:15px">O que aconteceu</h2><p>${isFailure() ? 'A transcrição foi processada, mas uma fonte complementar não estava disponível. O resumo abaixo pode estar incompleto.' : 'O Cérebro preparou um resumo com base na transcrição selecionada. Nenhuma ação externa foi executada.'}</p><div class="timeline"><div><strong>Material selecionado</strong><br><small>Transcrição da reunião, escolha observada no registro</small></div><div><strong>Entrega preparada</strong><br><small>Rascunho da IA; aguarda sua revisão</small></div>${state.review !== 'pending' ? `<div><strong>${state.review === 'approved' ? 'Você aprovou' : 'Você pediu ajuste'}</strong><br><small>Decisão simulada neste protótipo</small></div>` : ''}</div></section><section class="card ${isFailure() ? 'warn' : 'soft'}"><span class="kicker">O que fazer agora</span><h2>${isFailure() ? 'Confira a lacuna antes de decidir' : state.review === 'pending' ? 'Revise a entrega' : state.review === 'approved' ? 'Acompanhe o próximo uso' : 'Continue a correção no agente'}</h2><p>${isFailure() ? 'A fonte complementar não respondeu. O resumo usa apenas a transcrição.' : state.review === 'pending' ? 'Leia o rascunho, confira a origem e diga se pode ser usado.' : state.review === 'approved' ? 'A aprovação do rascunho não publica nem envia mensagens.' : 'Pedir ajuste não iniciou outra execução neste protótipo.'}</p>${state.review === 'pending' ? button('Ir à decisão', 'decisions', 'primary') : button('Ver todas as decisões', 'decisions')}</section></div><h2 class="section-title">Entrega</h2><div class="grid"><section class="card"><span class="kicker">Sugestão da IA · não é fato confirmado</span><h2>Resumo da conversa</h2><p>O cliente pediu uma proposta até sexta-feira. O prazo de implantação ainda precisa de confirmação.</p><div class="tag-row"><span class="tag">Rascunho local</span><span class="tag">Sem publicação</span></div>${state.review === 'pending' ? `<div class="actions">${button('Revisar e decidir', 'decisions', 'primary')}</div>` : ''}</section><section class="card"><span class="kicker">Informação observada</span><h2>Origem e limites</h2><p>Usou uma transcrição selecionada. O prazo de implantação não foi encontrado nela.${isFailure() ? ' Uma fonte complementar ficou indisponível.' : ''}</p><details><summary>Ver como foi feito</summary><p><strong>Contexto registrado:</strong> transcrição da reunião, trecho 00:12:40. <strong>Limite:</strong> prazo de implantação sem evidência.</p><p><strong>Rastro técnico:</strong> exibir recibo, IDs, contrato e trace somente quando presentes no registro real. Este exemplo não afirma que esses eventos existem.</p><code>exemplo: work-id → run-id → receipt-id → source-id</code></details></section></div>`;
+    const decisions = () => isNew() ? summary('Nada esperando por você', 'As decisões aparecerão aqui', 'Uma revisão de conteúdo e uma autorização externa terão consequências diferentes.', button('Começar trabalho', 'start', 'primary')) : `<div class="grid"><section class="card"><span class="kicker">Revisão de conteúdo</span><h2>Resumo da conversa com cliente</h2><p>Decidir se o rascunho pode ser usado. Isso não envia mensagens nem altera outras ferramentas.</p><div>${workStatus()}</div>${state.review === 'pending' ? `<div class="actions"><button class="primary" data-action="approve-review">Aprovar rascunho</button><button class="secondary" data-action="request-change">Pedir ajuste</button></div>` : `<div class="actions">${button('Ver trabalho', 'work')}</div>`}<details><summary>Ver fonte e limite</summary><p>Transcrição selecionada; prazo de implantação sem evidência.</p></details></section>${state.edition === 'team' ? `<section class="card warn"><span class="kicker">Autorização de ação externa</span><h2>Atualizar registro no CRM</h2><p>Proposta para escrever em outra ferramenta. Destino, campos, alcance e reversibilidade precisam ser conferidos antes de autorizar.</p>${state.external === 'pending' ? `<div class="actions"><button class="primary" data-action="approve-external">Revisar autorização</button><button class="secondary" data-action="reject-external">Rejeitar</button></div>` : status(state.external === 'approved' ? 'Autorização simulada' : 'Rejeição simulada') }<details><summary>Ver proposta e evidência</summary><p>Exemplo: atualizar somente o campo “próximo contato” de um registro. O protótipo não acessa CRM e não conhece uma proposta real.</p></details></section>` : summary('Ação externa', 'Nenhuma autorização pendente', 'Se um trabalho sugerir escrever fora do Cérebro, uma decisão separada mostrará o destino e o efeito antes de confirmar.')}</div>`;
+    const knowledge = () => `<div class="grid">${summary('Fonte usada neste exemplo', 'Transcrição da reunião', 'Foi selecionada e consta como usada na entrega de exemplo. A afirmação sobre o prazo de implantação continua sem evidência.', button('Ver trabalho relacionado', 'work'))}${summary('Fonte apenas registrada', 'CRM da empresa', 'O endereço da fonte é conhecido, mas este exemplo não demonstra conexão nem leitura do conteúdo. “Registrada” não significa “usada”.')}<section class="card warn full"><h2>Uma lacuna explícita</h2><p>O prazo de implantação precisa ser confirmado com uma pessoa. A IA pode sugerir uma pergunta; não pode preencher o fato ausente.</p></section></div>`;
+    const settings = () => `<div class="grid">${summary('Canal opcional', 'Telegram', 'Converse pelo celular com a conta que você confirmar. A conexão exige preparar o agente, vincular o bot e confirmar sua conta.', `<details><summary>Ver os três passos</summary><ol><li>Autorizar o agente.</li><li>Conectar seu bot com token protegido.</li><li>Confirmar sua conta no Telegram.</li></ol><p>Abrir esta lista não configura o bot.</p></details>`)}${summary('Manutenção', 'Atualizações', 'Mostrar o que muda, o que permanece no seu Cérebro e se há alguma incompatibilidade antes de oferecer aplicação.', `<details><summary>Ver exemplo de aviso</summary><p>Há uma versão de demonstração disponível. Seu conteúdo local permanece no mesmo lugar; aplicar requer confirmação.</p></details>`)}</div>`;
+    const operation = () => state.edition !== 'team' ? summary('Área da equipe', 'Disponível somente na edição interna', 'A navegação do membro permanece centrada em tarefas e resultados.', button('Voltar a Hoje', 'today')) : `<div class="grid">${summary('Fila operacional', '1 ação externa em revisão', 'Uma proposta para CRM depende de autorização explícita. Revisão de conteúdo continua na mesma área de decisões, mas com tipo e efeito distintos.', button('Abrir fila', 'decisions', 'primary'))}${summary('Sistemas observados', '1 ativo · 1 bloqueado', 'Ativo significa que existe operação observada. Bloqueado mostra impacto e responsável; planejado não é chamado de ativo.')}<section class="card full"><h2>Políticas e diagnósticos</h2><p>Previews, desafios, recibos, traces e códigos ficam acessíveis para operadores no contexto da ação. Papel somente leitura vê a proposta sem botão de aplicação.</p><details><summary>Ver detalhes técnicos de exemplo</summary><p>Informação técnica apenas ilustrativa; nenhum evento, grant ou permissão foi carregado.</p></details></section></div>`;
+    const pages = { today, start, prepare, jobs, work, decisions, knowledge, settings, operation };
+    function render() {
+      const links = [['today','Hoje'],['jobs','Trabalhos'],['decisions','Para decidir'],['knowledge','Conhecimento'],['settings','Canais e ajustes']];
+      if (state.edition === 'team') links.push(['operation','Operação']);
+      nav.innerHTML = `<span class="nav-label">Seu espaço</span>${links.map(([id,label]) => `<button type="button" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${label}</button>`).join('')}`;
+      const [title, lead] = headings[state.page];
+      view.innerHTML = `<p class="eyebrow">${state.edition === 'team' ? 'Equipe INEVITA' : 'Meu Cérebro'}</p><h1>${title}</h1><p class="lead">${lead}</p>${pages[state.page]()}`;
+      document.querySelector('#edition').value = state.edition;
+      document.querySelector('#scenario').value = state.scenario;
+    }
+    function navigate(page) { state.page = page; document.querySelector('#message').textContent = ''; render(); window.scrollTo(0,0); }
+    function confirm(title, body, kind) { document.querySelector('#confirmation-title').textContent = title; document.querySelector('#confirmation-body').textContent = body; dialog.dataset.kind = kind; dialog.showModal(); }
+    document.addEventListener('click', async event => {
+      const target = event.target.closest('button'); if (!target) return;
+      if (target.dataset.page) { navigate(target.dataset.page); return; }
+      if (target.id === 'cancel-action') { dialog.close(); return; }
+      if (target.id === 'confirm-action') { const kind = dialog.dataset.kind; dialog.close(); if (kind === 'approve-review') state.review='approved'; if (kind === 'request-change') state.review='changes'; if (kind === 'approve-external') state.external='approved'; if (kind === 'reject-external') state.external='rejected'; render(); document.querySelector('#message').textContent = 'Estado alterado só nesta demonstração. Nenhuma decisão real foi registrada.'; return; }
+      const action = target.dataset.action;
+      if (action === 'copy') { try { await navigator.clipboard.writeText('Preciso resumir uma conversa com cliente. Vou escolher a transcrição. Liste decisões, dúvidas e próximos passos, citando a origem e marcando o que não consta.'); document.querySelector('#message').textContent = 'Mensagem copiada. Cole na conversa com seu agente; nenhum trabalho foi iniciado aqui.'; } catch { document.querySelector('#message').textContent = 'Não foi possível copiar neste navegador. Use a conversa com seu agente para começar.'; } return; }
+      if (action === 'approve-review') confirm('Aprovar este rascunho?', 'No produto real, isso registra seu julgamento. Não publica nem envia conteúdo para outra ferramenta. Aqui é apenas simulação.', action);
+      if (action === 'request-change') confirm('Pedir ajuste?', 'No produto real, o pedido deve registrar o que mudar. Uma nova execução, se disponível, exige um passo próprio. Aqui é apenas simulação.', action);
+      if (action === 'approve-external') confirm('Autorizar escrita no CRM?', 'Esta é uma decisão diferente da revisão do rascunho. O produto real deverá mostrar exatamente destino e campos. Este protótipo não executa nada.', action);
+      if (action === 'reject-external') confirm('Rejeitar ação proposta?', 'No produto real, a ação externa não será executada e a rejeição ficará registrada. Aqui é apenas simulação.', action);
+    });
+    document.querySelector('#edition').addEventListener('change', event => { state.edition = event.target.value; if (state.page === 'operation' && state.edition !== 'team') state.page='today'; document.querySelector('#message').textContent=''; render(); });
+    document.querySelector('#scenario').addEventListener('change', event => { state.scenario = event.target.value; state.review='pending'; state.external='pending'; state.page='today'; document.querySelector('#message').textContent=''; render(); });
+    render();
+  </script>
+</body>
+</html>
