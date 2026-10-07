@@ -28,7 +28,7 @@ export function authoringArguments(args) {
 const allowed = new Set(['status', 'ready', 'missing_questions', 'field', 'question', 'next_step', 'brief',
   ...Object.keys(AUTHORING_BRIEF_SCHEMA.properties), 'input', 'expected_output',
   'package_sha256', 'files', 'file_previews', 'source_files', 'path', 'bytes', 'sha256', 'content',
-  'source_fingerprint', 'permissions', 'privacy', 'scan', 'text_scan', 'human_review_required', 'pinned_archive_not_inspected', 'writes', 'network',
+  'source_fingerprint', 'permissions', 'privacy', 'scan', 'text_scan', 'human_review_required', 'pinned_archive_not_inspected', 'pinned_synthetic_fixture', 'writes', 'network',
   'content_untrusted', 'sent', 'published', 'connects_sources_automatically', 'writes_external_systems_automatically',
   'requires_source_by_source_consent', 'external_actions', 'read', 'write', 'human_approval_before_external_write',
   'schema_version', 'kind', 'candidate_id', 'system_id', 'summary', 'base_package_sha256', 'selected_paths',

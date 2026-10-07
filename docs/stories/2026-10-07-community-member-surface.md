@@ -108,3 +108,17 @@ do MCP, com percurso real até envio HTTP sintético, sem CLI manual. Nenhuma
 credencial, mensagem ou conta real foi usada. Os hashes dos arquivos ficaram
 inalterados durante a suíte. Recibos: `work/community-authoring-ci-glob.json`,
 `work/community-authoring-ci-glob.log` e `work/community-authoring-npm-test.log`.
+
+A verificação final acrescentou recusa de PDF ASCII e outras extensões binárias,
+e aplicou a mesma inspeção forte ao resumo do staging legado. O Funil real de 99
+arquivos passou 5/5 cenários: seu teste anti-PII contém apenas um contato fictício
+`example.invalid`. Esse arquivo é reconhecido exclusivamente pelo sistema, caminho
+e SHA exatos, sem isentar outros testes ou pacotes. O ZIP original já fixado por
+hash mantém sua indicação de conteúdo não inspecionado. Nenhum byte do kit foi
+alterado e a inspeção não é anunciada como garantia de ausência de dados privados.
+
+Revalidação dos guards finais: `npm test`, 77/77 scripts do glob do CI, nove
+checagens de sintaxe, validador e 5/5 cenários com o Funil real passaram. Os
+arquivos permaneceram iguais durante o glob. Recibos finais em
+`work/community-authoring-final-ci-glob.json`, `work/community-authoring-final-ci-glob.log`,
+`work/community-authoring-final-npm-test.log` e `work/community-authoring-funil-compatibility.log`.

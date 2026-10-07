@@ -136,6 +136,8 @@ test('source traversal, symlinks, private folders, credential filenames, binarie
     symlinkSync(join(f.root, 'sistemas/metricas/metodo.md'), join(f.root, 'sistemas/metricas/link.md'));
     symlinkSync(join(f.root, 'sistemas/metricas'), join(f.root, 'linked-folder'));
     for (const args of [{ ...f.args, sourceDir: '../outside' }, { ...f.args, sourceDir: '/tmp' }, { ...f.args, sourceDir: 'linked-folder' }, ...['../VERSION', 'link.md', '.env.local', 'privado/info.md', '.ssh/id_rsa', 'api-tokens.json', 'client.key'].map(path => ({ ...f.args, selectedPaths: [path] }))]) assert.throws(() => inspectOriginalSystemFiles(args), /unsafe_|private_selection_refused/);
+    writeFileSync(join(f.root, 'sistemas/metricas/text.pdf'), '%PDF-1.4\nASCII text pretending to be a PDF');
+    assert.throws(() => inspectOriginalSystemFiles({ ...f.args, selectedPaths: ['text.pdf'] }), /binary_content_not_supported/);
     writeFileSync(join(f.root, 'sistemas/metricas/template.xlsx'), Buffer.from([0x50,0x4b,0x03,0x04,0x00,0x80]));
     assert.throws(() => inspectOriginalSystemFiles({ ...f.args, selectedPaths: ['template.xlsx'] }), /binary_content_not_supported/);
     writeFileSync(join(f.root, 'sistemas/metricas/large.md'), 'x'.repeat(AUTHORING_LIMITS.fileBytes + 1));
@@ -164,12 +166,25 @@ test('legacy original-stage rescans all file bytes and contracts; archive names 
   try {
     const staged = stage(f); const original = getPreparedContribution({ root: f.root, candidateId: staged.candidate_id }).package;
     const path = join(f.root, 'original.json');
+    writeFileSync(path, JSON.stringify(original));
+    for (const summary of [`Bearer ${'s'.repeat(30)}`, `ghp_${'s'.repeat(30)}`, '+55 (48) 99999-1234']) {
+      const before = snapshot(f.root);
+      assert.throws(() => prepareReleaseContribution({ root: f.root, packageRef: 'original.json', summary, confirm: true }), /sensitive_content_requires_redaction/);
+      assert.deepEqual(snapshot(f.root), before);
+    }
+    const metadataPath = join(getPreparedContribution({ root: f.root, candidateId: staged.candidate_id }).directory, 'candidate.json');
+    const metadata = JSON.parse(readFileSync(metadataPath));
+    writeFileSync(metadataPath, JSON.stringify({ ...metadata, summary: `Bearer ${'s'.repeat(30)}` }));
+    assert.throws(() => reviewContributionCandidate({ root: f.root, candidateId: staged.candidate_id }), /sensitive_content_requires_redaction/);
+    writeFileSync(metadataPath, JSON.stringify(metadata));
     const tests = [
       bundle => { bundle.files['escondido.md'] = encodeCommunityFile(Buffer.from('cliente@example.com')); },
       bundle => { const value = JSON.parse(bundle.contracts['contract.json']); value.result.statement='cliente@example.com'; bundle.contracts['contract.json']=JSON.stringify(value); },
       bundle => { const value = JSON.parse(bundle.contracts['contract.json']); value.result.statement=JSON.stringify({api_key:'s'.repeat(24)}); bundle.contracts['contract.json']=JSON.stringify(value); },
+      bundle => { bundle.files['text.pdf'] = encodeCommunityFile(Buffer.from('%PDF-1.4 ASCII')); },
       bundle => { bundle.files['archive.zip'] = encodeCommunityFile(Buffer.from([0,1,2,3])); },
       bundle => { bundle.files['originais/KIT-COPY-COM-IA.zip'] = encodeCommunityFile(Buffer.from([0,1,2,3])); },
+      bundle => { bundle.files['tests/tracking.test.mjs'] = encodeCommunityFile(Buffer.from('cliente@example.com')); },
       bundle => { bundle.files['.env.production'] = encodeCommunityFile(Buffer.from('fake')); },
     ];
     for (const mutate of tests) {

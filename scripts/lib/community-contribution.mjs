@@ -46,16 +46,17 @@ export function inspectShareableCommunityText(bytes, depth = 0) {
   } else if (typeof parsed === 'string') inspectShareableCommunityText(Buffer.from(parsed), depth + 1);
   return text;
 }
-export function assertCommunityShareablePath(path) {
+export function assertCommunityShareablePath(path, { textOnly = false } = {}) {
   safeCommunityName(path);
   communityAssert(!path.split('/').some(part => /^(?:\.env(?:\..*)?|\.cerebro|\.git|\.ssh|\.aws|privado|private|capturas|contexto|meu-negocio|dados|workspace|credentials?|secrets?)(?:$)/i.test(part)
     || /(?:^|[-_.])(?:credentials?|secrets?|passwords?|tokens?)(?:[-_.]|$)/i.test(part)
     || /\.(?:pem|key|p12|pfx)$/i.test(part)), 'private_selection_refused');
+  if (textOnly) communityAssert(!/\.(?:zip|tar|gz|tgz|bz2|xz|7z|rar|pdf|xlsx?|xlsm|xlsb|docx?|pptx?|png|jpe?g|gif|webp|mp[34]|wav|ogg|exe|dll|so|dylib|wasm|bin|sqlite3?|db)$/i.test(path), 'binary_content_not_supported');
   return path;
 }
 function scanOriginalRelease(bundle) {
   for (const value of [bundle.title, bundle.first_task, ...Object.values(bundle.provenance || {}), ...Object.values(bundle.contracts)]) inspectShareableCommunityText(Buffer.from(value));
-  let pinnedArchive = false;
+  let pinnedArchive = false, pinnedSyntheticFixture = false;
   for (const [name, entry] of Object.entries(bundle.files)) {
     assertCommunityShareablePath(name);
     // Preserve the already-pinned original Turra kit, never accept arbitrary
@@ -64,9 +65,16 @@ function scanOriginalRelease(bundle) {
       && entry.sha256 === '0a7ad861597adea97c50e966d26cb6e999b762df932626f476d7796939826a33') {
       pinnedArchive = true; continue;
     }
+    // Manually reviewed immutable test: nome@example.invalid is deliberately
+    // refused by the tracker. This exact fixture contains no real contact.
+    if (bundle.system_id === 'sistema-funil-inevita' && name === 'tests/tracking.test.mjs'
+      && entry.sha256 === 'a033bde33f54a2aaaa7c5633f632edbe93f3eb1f53e46c391a32d03a0f64edda') {
+      pinnedSyntheticFixture = true; continue;
+    }
+    assertCommunityShareablePath(name, { textOnly: true });
     inspectShareableCommunityText(Buffer.from(entry.content, 'base64'));
   }
-  return { text_scan: 'passed', human_review_required: true, pinned_archive_not_inspected: pinnedArchive };
+  return { text_scan: 'passed', human_review_required: true, pinned_archive_not_inspected: pinnedArchive, pinned_synthetic_fixture: pinnedSyntheticFixture };
 }
 function loadBase({ root, basePackage, slug }) {
   if (slug) return verifyInstalledCommunityPackage({ root, slug }).package;
@@ -157,6 +165,7 @@ export function stageOriginalContribution({ root, bundle, summary, confirm = fal
   communityAssert(typeof confirm === 'boolean', 'invalid_confirmation');
   communityAssert(typeof summary === 'string' && summary.trim() && summary.length <= 2000
     && !obviousSensitive(summary), 'invalid_or_sensitive_summary');
+  inspectShareableCommunityText(Buffer.from(summary));
   const checked = validateCommunityPackage(bundle);
   requireSubmissionPolicy(checked);
   const privacy = scanOriginalRelease(bundle);
@@ -202,6 +211,7 @@ export function getPreparedContribution({ root, candidateId }) {
   if (metadata.kind === 'original-release') scanOriginalRelease(bundle);
   communityAssert(metadata.candidate_id === candidateId && metadata.package_sha256 === checked.packageSha256 && metadata.slug === bundle.slug && metadata.version === bundle.version, 'candidate_hash_mismatch');
   communityAssert(typeof metadata.summary === 'string' && metadata.summary.length <= 2000 && !obviousSensitive(metadata.summary), 'invalid_or_sensitive_summary');
+  inspectShareableCommunityText(Buffer.from(metadata.summary));
   return { metadata, package: bundle, directory: dir };
 }
 function readCandidateRecord(directory, name, errorCode) {

@@ -57,7 +57,7 @@ function readSelection({ root, sourceDir, selectedPaths, required = false }) {
   const files = []; let total = 0;
   // No directory listing, globs, links or implicit dependencies. Only these exact paths.
   for (const path of [...selectedPaths].sort()) {
-    assertCommunityShareablePath(path);
+    assertCommunityShareablePath(path, { textOnly: true });
     const bytes = readCommunityFile(source, path, AUTHORING_LIMITS.fileBytes);
     total += bytes.length; communityAssert(total <= AUTHORING_LIMITS.totalBytes, 'authoring_selection_too_large');
     const content = inspectShareableCommunityText(bytes);
