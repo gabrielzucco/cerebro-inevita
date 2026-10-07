@@ -15,7 +15,7 @@ para o MCP. Isso pode interromper quem começa hoje ou atualiza uma instalação
 - [x] Separar instalação, vínculo seguro, MCP configurado e primeiro uso do sistema.
 - [x] Regenerar espelhos pelo script do repo e conferir paridade.
 - [x] Validar produto, distribuição dos guias e preservação na instalação/atualização.
-- [ ] Revisão independente e PR preparado, sem merge, tag ou publicação.
+- [x] Revisão independente e PR preparado, sem merge, tag ou publicação.
 - [x] Preparar metadados 1.39.1 e ensaiar atualização das bases 1.38.0 e 1.39.0.
 
 ## File List
@@ -73,5 +73,8 @@ completo Hermes/Telegram continua pendente.
   26.8.1; CI usa Node 20 em Linux, Windows e macOS, descobrindo todos test-*.mjs.
 - package.json não define lint ou typecheck. Não há código operacional alterado.
 - npm test passou: validação do produto e suíte agregada da comunidade.
-- Revisão independente dos guias aprovada. Revisão de distribuição, CI do PR e
-  publicação ainda pendentes nesta etapa.
+- Revisões independentes dos guias e da distribuição aprovadas, além da revisão
+  da coordenação. PR [#14](https://github.com/gabrielzucco/cerebro-inevita/pull/14)
+  aberto e anexado. CI do PR, merge, CI integrado e publicação ficam com a coordenação.
+- Antes de liberar, aguardar os três jobs do CI e conferir o artefato público
+  v1.39.1. Nenhum merge, tag ou publicação foi feito neste corte de preparação.
