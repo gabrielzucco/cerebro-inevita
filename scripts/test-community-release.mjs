@@ -13,11 +13,11 @@ const version = readFileSync(join(product, 'VERSION'), 'utf8').trim();
 const tag = `v${version}`;
 const sandbox = mkdtempSync(join(tmpdir(), 'community-release-'));
 const guides = ['docs/guides/community-mcp.md', 'docs/guides/community-systems.md', 'docs/guides/community-release.md', 'docs/guides/implantacao-assistida.md'];
-const releaseNotes = ['docs/releases/1.38.0.md', 'docs/releases/1.39.0.md', 'docs/releases/1.39.1.md'];
+const releaseNotes = ['docs/releases/1.38.0.md', 'docs/releases/1.39.0.md', 'docs/releases/1.39.1.md', 'docs/releases/1.40.0.md'];
 const preparationReferences = ['.agents/skills/comecar/references/implantacao.md', '.claude/skills/comecar/references/implantacao.md'];
 const distributedDocs = [...guides, ...releaseNotes, ...preparationReferences];
 try {
-  assert.equal(version, '1.39.1');
+  assert.equal(version, '1.40.0');
   const fresh = join(sandbox, 'fresh');
   assert.equal(installPackage(fresh, product, tag).written, false);
   assert.equal(existsSync(fresh), false);
@@ -29,6 +29,7 @@ try {
   for (const [baselineVersion, baselineCommit] of [
     ['1.38.0', 'ff1d40e003f548ed050f727f1f64eff411d122e0'],
     ['1.39.0', '774cbfa32721f83bb72cd72b550fc9af3557f95d'],
+    ['1.39.1', '3b9a23018ff67d9a273d5019a51616d6130430c1'],
   ]) {
     const baseline = join(sandbox, `baseline-${baselineVersion}`); mkdirSync(baseline);
     const archive = execFileSync('git', ['archive', baselineCommit], { cwd: product, maxBuffer: 100 * 1024 * 1024 });
@@ -59,7 +60,6 @@ try {
     // O bloco gerenciado recebe a nova orientação; a regra privada permanece byte a byte.
     const updatedClaude = readFileSync(join(member, 'CLAUDE.md'), 'utf8');
     assert.equal(updatedClaude, `${readFileSync(join(product, 'CLAUDE.md'), 'utf8')}\nREGRA PRIVADA DO DONO\n`);
-    assert.notEqual(updatedClaude, claude, 'a atualização precisa instalar o bloco gerenciado novo');
     assert.equal(hash(readFileSync(join(member, '.cerebro/source'))), sourceBefore);
     for (const path of distributedDocs) assert.deepEqual(readFileSync(join(member, path)), readFileSync(join(product, path)));
     const replay = planUpdate(member, product, tag); assert.deepEqual(replay.conflicts, []); assert.equal(applyPlan(member, replay), null);

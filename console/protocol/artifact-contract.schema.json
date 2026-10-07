@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/artifact-contract-v1.json",
+  "title": "INEVITA Artifact Contract V1",
+  "description": "Artefato: o que a empresa produz, versiona e faz entrar e sair dos passos (oferta, lançamento, aula, anúncio, página, disparo, copy, corte, gravação) ou o que atravessa um handoff entre sistemas (lead qualificado, compra, oportunidade de expansão). Fonte é onde o dado nasce fora de nós; artefato é o que nós escrevemos. A entrada descreve a classe do artefato e onde as versões vivem; a instância (a oferta de outubro, a aula da edição 12) mora no seu registro. Experimento não é artefato: é trabalho de melhoria pré-registrado que muda uma versão de artefato ou um passo de uma variante. Reference-only: nunca carrega o conteúdo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "artifact_id", "version", "name", "status", "kind", "role", "area_ref", "system_ref",
+    "owner_ref", "parent_ref", "versioning", "validity", "produced_by", "consumed_by", "schema_ref",
+    "experiments", "legacy", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "artifact_id": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/version" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "status": { "enum": ["proposed", "confirmed", "active", "paused", "retired"] },
+    "kind": {
+      "enum": [
+        "oferta", "lancamento", "aula", "anuncio", "pagina", "disparo", "copy", "corte", "gravacao",
+        "lead-qualificado", "compra", "oportunidade-de-expansao"
+      ]
+    },
+    "role": { "enum": ["produced", "handoff"] },
+    "area_ref": { "$ref": "#/$defs/id" },
+    "system_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+    "owner_ref": { "$ref": "#/$defs/ref" },
+    "parent_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+    "versioning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["store", "ref", "version_key", "links_to_version_of"],
+      "properties": {
+        "store": { "enum": ["git", "registry", "drive", "meta", "vturb", "railway", "platform", "hubla", "clickup", "whatsapp", "manual"] },
+        "ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+        "version_key": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "links_to_version_of": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "validity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["windowed", "inherits_from_ref", "detail"],
+      "properties": {
+        "windowed": { "type": "boolean" },
+        "inherits_from_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "detail": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 240 }] }
+      }
+    },
+    "produced_by": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/step_ref" } },
+    "consumed_by": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/step_ref" } },
+    "schema_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+    "experiments": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pre_registered_only", "registry_ref", "contracts_ref"],
+      "properties": {
+        "pre_registered_only": { "const": true },
+        "registry_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+        "contracts_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] }
+      }
+    },
+    "legacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["registry_refs", "notes"],
+      "properties": {
+        "registry_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/local_ref" } },
+        "notes": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 400 } }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["content_in_catalog", "pii_in_catalog"],
+      "properties": {
+        "content_in_catalog": { "const": false },
+        "pii_in_catalog": { "const": false }
+      }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "step_ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workflow_ref", "step_ref"],
+      "properties": {
+        "workflow_ref": { "$ref": "#/$defs/id" },
+        "step_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] }
+      }
+    }
+  }
+}

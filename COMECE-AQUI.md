@@ -69,28 +69,27 @@ o Cérebro, não concede assinatura e não comprova o primeiro resultado de um S
 
 ### Versão fixa para instalar e atualizar
 
-O canal oficial é `gabrielzucco/cerebro-inevita`. O patch documental destas orientações
-é `v1.39.1`: confira sua [release oficial](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.1),
-tag, commit e [notas da versão](docs/releases/1.39.1.md) antes de executar os exemplos abaixo.
-Se ainda não estiver publicada, use a
-[release v1.39.0](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.0)
-já publicada e substitua tag e nome da pasta nos comandos; ela já inclui o assistente
-de implantação. Para outra versão, escolha sua tag publicada explicitamente.
+O canal oficial é `gabrielzucco/cerebro-inevita`. A versão do novo painel é
+`v1.40.0`: confira sua [release oficial](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.40.0),
+tag, commit e [notas da versão](docs/releases/1.40.0.md) antes de executar os exemplos.
+Se ela ainda não estiver publicada, continue com a [v1.39.1 publicada](https://github.com/gabrielzucco/cerebro-inevita/releases/tag/v1.39.1)
+e seu Cockpit anterior. O novo painel exige 1.40.0; não o anuncie como disponível
+na 1.39.1. Para outra versão, escolha sua tag publicada explicitamente.
 Não use `main` ou `latest` como fonte de instalação; o `VERSION` de um checkout,
 sozinho, não comprova publicação.
 
 Para obter o pacote e o atualizador seguro, clone a tag escolhida em uma **pasta nova**:
 
 ```bash
-git clone --branch v1.39.1 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.39.1
+git clone --branch v1.40.0 --single-branch --depth 1 https://github.com/gabrielzucco/cerebro-inevita pacote-1.40.0
 ```
 
 A pasta clonada já pode ser usada como Cérebro após a sua escolha explícita. Se preferir uma
 instalação gerenciada em outra pasta, o instalador copia apenas motor e seeds do pacote:
 
 ```bash
-node pacote-1.39.1/scripts/install.mjs --tag v1.39.1 --destination /caminho/novo-cerebro
-node pacote-1.39.1/scripts/install.mjs --tag v1.39.1 --destination /caminho/novo-cerebro --apply
+node pacote-1.40.0/scripts/install.mjs --tag v1.40.0 --destination /caminho/novo-cerebro
+node pacote-1.40.0/scripts/install.mjs --tag v1.40.0 --destination /caminho/novo-cerebro --apply
 ```
 
 O primeiro comando mostra a prévia. Execute o segundo apenas depois de aprová-la. Destino
@@ -101,7 +100,7 @@ Node.js 20+ é necessário para esses scripts; sem runtime, o agente pode orient
 O script antigo pode apagar personalizações antes de receber a correção; não o execute.
 
 ```bash
-node pacote-1.39.1/scripts/update.mjs --tag v1.39.1 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
+node pacote-1.40.0/scripts/update.mjs --tag v1.40.0 --root /caminho/cerebro-existente --baseline-dir /caminho/pacote-da-versao-instalada
 ```
 
 A prévia lista conflitos e seu `plan_hash`. `--baseline-dir` fornece a cópia íntegra da versão
@@ -153,9 +152,28 @@ autorizada, sem esperar o mapeamento completo da empresa.
 Comece pelo Google Antigravity ou Gemini CLI. Claude Code e Codex também funcionam. O cérebro não
 exige uma assinatura específica e o Cérebro Base opera com arquivos locais.
 
+## Abra seu painel
+
+Depois de instalar ou atualizar, com Node.js 20+:
+
+```bash
+node scripts/painel.mjs --root "/caminho/do/seu-cerebro"
+```
+
+Use a pasta de dados que você escolheu, em caminho absoluto. O script fica na
+instalação efetiva do motor; em uma adoção com `.cerebro/engine`, execute o script
+dali e mantenha `--root` apontando para os seus dados. O navegador abre em
+`http://127.0.0.1:4810`. Para conferir o endereço antes de abrir, acrescente
+`--no-open`; com a porta ocupada, escolha outra com `--port 4910`.
+
+O painel lê arquivos, contratos, avisos e métricas locais. Sistemas antigos aparecem
+pelos contratos existentes, sem inventar áreas ou relações. Métricas precisam de
+fontes e leituras próprias; instalar o painel não conecta bancos nem traz números
+da operação INEVITA. [Cobertura e limites](COCKPIT.md).
+
 ## Quer ver e conectar pelo Telegram?
 
-Abra o Cockpit local com `node scripts/cockpit.mjs`. É o mesmo núcleo visual do Console usado na
+O Cockpit anterior continua acessível com `node scripts/cockpit.mjs --root "/caminho/do/seu-cerebro"`. É o núcleo visual do Console usado na
 operação da INEVITA, adaptado para funcionar inteiramente na sua máquina. **Hoje** mostra o que
 precisa de você. Em **Meus trabalhos**, escolha o resultado que quer produzir. Em **Entregas**, leia
 o rascunho, veja quais informações foram usadas e aprove ou peça ajuste. Os registros técnicos
@@ -166,7 +184,7 @@ em três passos: preparar o agente, conectar o bot criado no BotFather e confirm
 
 ## A primeira experiência
 
-No cockpit opcional, esta etapa aparece como **Primeira Missão**. É um estado transitório: antes
+No Cockpit anterior, esta etapa aparece como **Primeira Missão**. É um estado transitório: antes
 de T4 orienta o próximo passo; depois de T4 desaparece da navegação e deixa seu recibo em
 `Cérebro`. `Cérebro Base` é a infraestrutura nativa de contexto, não um Sistema de negócio.
 A novidade mais recente pode aparecer ali em um cartão compacto; a comunicação completa e o

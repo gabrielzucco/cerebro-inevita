@@ -1,5 +1,18 @@
 # Mudanças do cérebro INEVITA
 
+## v1.40.0 — 2026-10-07 · Seu Cérebro no painel local
+
+- Nova entrada `scripts/painel.mjs --root /caminho/do/cerebro`, com abertura do
+  navegador e opção `--no-open`. Interface e servidor já vêm empacotados para Node 20+.
+- Arquivos, sistemas instalados, avisos e métricas da pasta escolhida. Contratos
+  anteriores ao catálogo continuam legíveis, sem inventar relações ou execuções.
+- Métricas usam fontes próprias, com período, definição, histórico e lacunas explícitas.
+  O pacote não leva dados, credenciais nem adaptadores privados da operação INEVITA.
+- Cockpit anterior preservado para Telegram/Hermes, demonstração e funções não migradas.
+  Instalador, updater, ativação, telemetria, sistemas e as 20 ferramentas MCP não mudam.
+- Tag e publicação precisam ser verificadas antes do download. Limites e ensaio:
+  `docs/releases/1.40.0.md`.
+
 ## v1.39.1 — 2026-10-07 · Orientação de instalação e atualização
 
 - O assistente já incluído desde 1.39.0 distingue instalação nova, atualização

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/workflow-pointer-v1.json",
+  "title": "Workflow Projection Pointer V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "import_ref", "id", "version", "semantic_sha256",
+    "byte_sha256", "manifest_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "import_ref": {
+      "type": "string",
+      "pattern": "^\\.cerebro/workflows/imports/[a-z0-9][a-z0-9_-]{0,127}/[A-Za-z0-9][A-Za-z0-9._-]{0,63}/[a-f0-9]{64}/[a-f0-9]{64}/import\\.json$"
+    },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "semantic_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "byte_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

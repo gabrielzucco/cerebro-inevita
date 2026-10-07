@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Cérebro · Painel</title>
+    <script>
+      // Modo antes da primeira pintura: escolha da pessoa (painel-theme) ou preferência do sistema.
+      (function () {
+        try {
+          var saved = localStorage.getItem('painel-theme');
+          var dark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (_) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-C8iIrUqQ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Cf0y9cE1.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

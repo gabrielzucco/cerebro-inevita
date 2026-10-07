@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/package-contract-v1.json",
+  "title": "INEVITA Package Contract V1",
+  "description": "Pacote: janela de leitura e verbos permitidos sobre o contexto preparado, concedida a um sujeito pelo dono da área. Nunca lê da fonte: as coleções apontam para camadas preparadas (nunca `raw`); só o workflow de preparo lê o bruto. `prefix` é o prefixo estável que identifica o pacote na porta e nos recibos. Reference-only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "package_id", "version", "name", "prefix", "status", "subject", "area_ref",
+    "grantor_ref", "collections", "verbs", "validity", "approval", "legacy", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "package_id": { "$ref": "#/$defs/id" },
+    "version": { "$ref": "#/$defs/version" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "prefix": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$" },
+    "status": { "enum": ["proposed", "active", "expired", "revoked"] },
+    "subject": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "ref"],
+      "properties": {
+        "type": { "enum": ["person", "agent", "system", "role"] },
+        "ref": { "$ref": "#/$defs/ref" }
+      }
+    },
+    "area_ref": { "$ref": "#/$defs/id" },
+    "grantor_ref": { "$ref": "#/$defs/ref" },
+    "collections": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/collection" } },
+    "verbs": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "enum": ["read", "search", "cite", "propose", "write-with-approval", "external-action"] }
+    },
+    "validity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["issued_at", "expires_at", "revoked_at"],
+      "properties": {
+        "issued_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] },
+        "expires_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] },
+        "revoked_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] }
+      }
+    },
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["approved_by", "approved_at"],
+      "properties": {
+        "approved_by": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "approved_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] }
+      }
+    },
+    "legacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["grant_refs", "notes"],
+      "properties": {
+        "grant_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/ref" } },
+        "notes": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 400 } }
+      }
+    },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reads_raw_source", "content_in_catalog"],
+      "properties": {
+        "reads_raw_source": { "const": false },
+        "content_in_catalog": { "const": false }
+      }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "date_time": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$" },
+    "collection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["collection_id", "area_ref", "type", "layer", "window", "source_refs", "filters"],
+      "properties": {
+        "collection_id": { "$ref": "#/$defs/id" },
+        "area_ref": { "$ref": "#/$defs/id" },
+        "type": {
+          "enum": [
+            "decisao", "fala", "destilado", "consolidado", "atomo", "ficha", "serie", "recibo",
+            "copy", "disparo", "conceito", "indice", "contrato"
+          ]
+        },
+        "layer": { "enum": ["organized", "distilled", "atoms", "consolidated", "index"] },
+        "window": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "source_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/ref" } },
+        "filters": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 160 } }
+      }
+    }
+  }
+}

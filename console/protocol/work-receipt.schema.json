@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/work-receipt-v1.json",
+  "title": "INEVITA Work Receipt V1",
+  "description": "Trabalho: uma execução de workflow ou ciclo, com estado por passo, quem trava, entregas e custo. Cada passo carrega trace e span no vocabulário OpenTelemetry (atributos `gen_ai.*` da convenção semântica de IA generativa). `label` é a etiqueta humana do trabalho (ex.: a safra). Reference-only: nunca carrega prompt, saída, payload ou erro cru.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "work_id", "workflow_ref", "workflow_version", "scope", "label", "trigger",
+    "status", "started_at", "completed_at", "steps", "cost", "handoff_refs", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "work_id": { "$ref": "#/$defs/ref" },
+    "workflow_ref": { "$ref": "#/$defs/id" },
+    "workflow_version": { "$ref": "#/$defs/version" },
+    "scope": { "enum": ["system", "area"] },
+    "label": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 120 }] },
+    "trigger": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "scheduled_for", "event_ref", "requester_ref"],
+      "properties": {
+        "type": { "enum": ["schedule", "event", "person"] },
+        "scheduled_for": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] },
+        "event_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+        "requester_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] }
+      }
+    },
+    "status": { "enum": ["queued", "running", "blocked", "completed", "failed", "cancelled"] },
+    "started_at": { "$ref": "#/$defs/date_time" },
+    "completed_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] },
+    "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } },
+    "cost": {
+      "type": "object", "additionalProperties": false,
+      "required": ["currency", "amount", "input_tokens", "output_tokens", "observed"],
+      "properties": {
+        "currency": { "oneOf": [{ "type": "null" }, { "enum": ["BRL", "USD"] }] },
+        "amount": { "oneOf": [{ "type": "null" }, { "type": "number" }] },
+        "input_tokens": { "oneOf": [{ "type": "null" }, { "type": "integer" }] },
+        "output_tokens": { "oneOf": [{ "type": "null" }, { "type": "integer" }] },
+        "observed": { "type": "boolean" }
+      }
+    },
+    "handoff_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/local_ref" } },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reference_only", "prompt_in_receipt", "output_in_receipt"],
+      "properties": {
+        "reference_only": { "const": true },
+        "prompt_in_receipt": { "const": false },
+        "output_in_receipt": { "const": false }
+      }
+    },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "date_time": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$" },
+    "trace_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "span_id": { "type": "string", "pattern": "^[a-f0-9]{16}$" },
+    "executor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": { "enum": ["person", "agent", "script", "service"] },
+        "ref": { "$ref": "#/$defs/ref" }
+      }
+    },
+    "gen_ai_attributes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gen_ai.operation.name"],
+      "properties": {
+        "gen_ai.operation.name": { "enum": ["chat", "invoke_agent", "execute_tool", "embeddings", "generate_content", "text_completion", "create_agent"] },
+        "gen_ai.provider.name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "gen_ai.request.model": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "gen_ai.response.model": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "gen_ai.usage.input_tokens": { "type": "integer" },
+        "gen_ai.usage.output_tokens": { "type": "integer" },
+        "gen_ai.agent.id": { "$ref": "#/$defs/id" },
+        "gen_ai.agent.name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "gen_ai.conversation.id": { "$ref": "#/$defs/ref" },
+        "gen_ai.tool.name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "gen_ai.tool.call.id": { "$ref": "#/$defs/ref" },
+        "error.type": { "type": "string", "minLength": 1, "maxLength": 120 }
+      }
+    },
+    "otel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["trace_id", "span_id", "parent_span_id", "attributes"],
+      "properties": {
+        "trace_id": { "$ref": "#/$defs/trace_id" },
+        "span_id": { "$ref": "#/$defs/span_id" },
+        "parent_span_id": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/span_id" }] },
+        "attributes": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/gen_ai_attributes" }] }
+      }
+    },
+    "step": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "step_id", "status", "executor", "package_ref", "started_at", "completed_at", "attempts",
+        "input_refs", "output_refs", "blocked_by", "otel"
+      ],
+      "properties": {
+        "step_id": { "$ref": "#/$defs/id" },
+        "status": { "enum": ["pending", "running", "blocked", "completed", "failed", "skipped"] },
+        "executor": { "$ref": "#/$defs/executor" },
+        "package_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "started_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] },
+        "completed_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/date_time" }] },
+        "attempts": { "type": "integer" },
+        "input_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/local_ref" } },
+        "output_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/local_ref" } },
+        "blocked_by": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 240 }] },
+        "otel": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/otel" }] }
+      }
+    }
+  }
+}

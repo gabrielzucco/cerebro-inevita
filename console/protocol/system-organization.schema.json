@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/system-organization-v1.json",
+  "title": "INEVITA System Organization V1",
+  "description": "Entrada de sistema no catálogo da empresa: a função de uma área, com cliente, resultado, medida e dono. Não executa; executa-se pelos workflows. O bloco `organization` é o mesmo que um System Contract V2 carrega em `extensions.organization`; o contrato completo (retrieval, pipeline, eval, learning) continua privado em `.cerebro/contracts/systems/` e é apontado por `contract_ref`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "system_id", "name", "status", "kind", "organization", "legacy",
+    "workflow_refs", "contract_ref"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "system_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "status": { "enum": ["proposed", "confirmed", "active", "needs_attention"] },
+    "kind": { "enum": ["system", "infrastructure"] },
+    "organization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "area_ref", "sub_area_ref", "client", "result", "measure", "owner_ref", "responsible_refs"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "area_ref": { "$ref": "#/$defs/id" },
+        "sub_area_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "client": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "result": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "measure": { "$ref": "#/$defs/measure" },
+        "owner_ref": { "$ref": "#/$defs/ref" },
+        "responsible_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/ref" } }
+      }
+    },
+    "legacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["system_refs", "notes"],
+      "properties": {
+        "system_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "notes": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 400 } }
+      }
+    },
+    "workflow_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "contract_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/local_ref" }] },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "measure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["statement", "unit", "window", "source_ref", "decided"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "unit": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 80 }] },
+        "window": { "oneOf": [{ "type": "null" }, { "enum": ["day", "week", "month", "quarter", "year", "cycle"] }] },
+        "source_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "decided": { "type": "boolean" }
+      }
+    }
+  }
+}

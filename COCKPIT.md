@@ -1,4 +1,53 @@
-# Cockpit INEVITA
+# Painel do Cérebro
+
+A entrada principal da versão 1.40.0 é o painel local. Com Node.js 20+,
+na instalação do motor, execute:
+
+```bash
+node scripts/painel.mjs --root "/caminho/do/seu-cerebro"
+node scripts/painel.mjs --root "/caminho/do/seu-cerebro" --no-open
+node scripts/painel.mjs --root "/caminho/do/seu-cerebro" --port 4910
+```
+
+A raiz dos dados é obrigatória. Em instalações adotadas, o motor pode estar em
+`.cerebro/engine`; execute o script desse motor com `--root` apontando para a pasta
+de dados escolhida. O navegador abre em `http://127.0.0.1:4810`. `--no-open` inicia o servidor e
+imprime o endereço, sem abrir o navegador. Se a porta estiver ocupada, o comando pede outra; não encerre
+um processo desconhecido para liberá-la. Encerre seu servidor com Ctrl+C.
+O pacote já contém interface, fontes visuais e servidor: não exige npm nem build.
+
+Em um acervo artesanal sem `VERSION` na raiz, a versão pode aparecer como não
+identificada, mesmo com o motor em `.cerebro/engine`. Confira a versão no motor
+efetivo com o assistente. Não crie `VERSION` no acervo nem troque a raiz dos dados
+para contornar esse aviso.
+
+## O que o novo painel mostra
+
+- Arquivos e notas do Cérebro, com leitura dentro da raiz escolhida.
+- Sistemas e seus contratos. Instalações anteriores sem catálogo de áreas têm
+  uma leitura compatível dos sistemas instalados e mostram os limites dessa cobertura.
+- Avisos, atividade e entregas registrados localmente. Ausência de recibo não vira execução.
+- Métricas com definição, unidade, fonte, período e histórico quando registrados.
+  Valor ausente não vira zero; meta ausente e atribuição não comprovada ficam explícitas.
+- Versão instalada e consulta pública à release oficial. Verificar versão não aplica atualização.
+
+As métricas vêm de `.cerebro/metrics/definitions.json` e dos registros em
+`.cerebro/metrics/snapshots/`, preparados com fontes próprias autorizadas. O agente
+pode ajudar a definir o indicador e registrar a leitura, com sua aprovação. A tela
+não conecta automaticamente CRM, Railway, Maximize ou fontes da operação INEVITA.
+
+A busca do assistente procura títulos locais; ela não é uma conversa gerada por
+modelo. Para analisar ou executar, continue no Codex, Claude ou no agente escolhido.
+A investigação prepara contexto para copiar à ferramenta; não abre nem executa
+outro agente automaticamente. O painel não inclui os adaptadores privados, as
+métricas reais ou as credenciais da empresa operadora.
+
+Telegram/Hermes, demonstração e as ações operacionais do Console ainda podem ser
+usados pelo Cockpit anterior, descrito abaixo. O novo painel não os substitui.
+
+---
+
+## Cockpit anterior
 
 O Cockpit é a superfície visual local do Cérebro INEVITA. Ele não cria um segundo banco e não
 substitui os arquivos: mostra o estado que já existe no cérebro e permite operar apenas ações

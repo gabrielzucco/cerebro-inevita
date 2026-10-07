@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/decision-runtime-binding-v1.json",
+  "title": "Decision Runtime Binding V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "binding_id", "authority_case_ref", "registry_id", "routine_ref",
+    "system_ref", "purpose", "target", "observed_at", "privacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "binding_id": { "$ref": "#/$defs/id" },
+    "authority_case_ref": { "type": "string", "pattern": "^decision-case:[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "registry_id": { "$ref": "#/$defs/local_ref" },
+    "routine_ref": { "$ref": "#/$defs/local_ref" },
+    "system_ref": { "$ref": "#/$defs/local_ref" },
+    "purpose": { "$ref": "#/$defs/local_ref" },
+    "target": { "$ref": "#/$defs/local_ref" },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "privacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decision_content_recorded"],
+      "properties": { "decision_content_recorded": { "const": false } }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "local_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,255}$" }
+  }
+}

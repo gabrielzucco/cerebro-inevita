@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/routine-run-receipt-v1.json",
+  "title": "INEVITA Routine Run Receipt V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "receipt_id", "run_id", "routine_ref", "routine_id",
+    "routine_version", "system_ref", "binding_ref", "adapter", "requested_model",
+    "model_observation", "trigger", "slot_key", "scheduled_for", "attempts", "status",
+    "reason_code", "started_at", "completed_at", "input_refs", "output_ref",
+    "access_receipt_refs", "content_shared_with_provider", "privacy"
+  ],
+  "properties": {
+    "provider_context": {"type":"object","additionalProperties":false,"required":["schema_version","mode","attempts","access_receipt_refs"],"properties":{"schema_version":{"const":1},"mode":{"enum":["observe","enforce"]},"attempts":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["attempt","boundary","coverage","unmediated_reads_possible","payload_digest","bytes","inputs","sources"],"properties":{"attempt":{"type":"integer","minimum":1},"boundary":{"const":"executor-dispatch"},"coverage":{"enum":["mediated","partial"]},"unmediated_reads_possible":{"type":"boolean"},"payload_digest":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},"bytes":{"type":"integer","minimum":0},"inputs":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["kind","ref_digest","digest","bytes"],"properties":{"kind":{"enum":["instructions","supplemental","decision"]},"ref_digest":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},"digest":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},"bytes":{"type":"integer","minimum":0}}}},"sources":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["source_ref","layer","partition","version","selection_digest","content_digest","bytes","grant_ref","access_receipt_ref"],"properties":{"source_ref":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},"layer":{"enum":["raw","organized","distilled","period_summary","atoms","projection","profile","index",null]},"partition":{"type":["string","null"],"pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},"version":{"type":["string","null"],"pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},"selection_digest":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},"content_digest":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},"bytes":{"type":"integer","minimum":0},"grant_ref":{"type":["string","null"],"pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},"access_receipt_ref":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"}}}}}}},"access_receipt_refs":{"type":"array","items":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"}}}},
+    "context_observation_ref": { "$ref": "#/$defs/local_ref" },
+    "execution_context": { "$ref": "#/$defs/execution_context" },
+    "protocol_version": { "const": 1 },
+    "receipt_id": { "$ref": "#/$defs/ref" },
+    "run_id": { "$ref": "#/$defs/ref" },
+    "routine_ref": { "$ref": "#/$defs/local_ref" },
+    "routine_id": { "$ref": "#/$defs/id" },
+    "routine_version": { "$ref": "#/$defs/version" },
+    "system_ref": { "$ref": "#/$defs/id" },
+    "binding_ref": { "$ref": "#/$defs/ref" },
+    "adapter": { "enum": ["codex-cli", "claude-code", "unresolved"] },
+    "requested_model": { "$ref": "#/$defs/local_ref" },
+    "model_observation": { "enum": ["requested-not-verified", "provider-reported"] },
+    "model_usage": {
+      "type": ["object", "null"],
+      "minProperties": 1,
+      "maxProperties": 16,
+      "propertyNames": { "pattern": "^claude-[a-z0-9][a-z0-9._-]{0,119}$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["outputTokens"],
+        "properties": {
+          "inputTokens": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "outputTokens": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "cacheReadInputTokens": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "cacheCreationInputTokens": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        }
+      }
+    },
+    "trigger": { "enum": ["manual", "schedule"] },
+    "slot_key": { "$ref": "#/$defs/ref" },
+    "scheduled_for": { "type": ["string", "null"], "format": "date-time" },
+    "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "status": { "enum": ["completed", "failed", "denied", "skipped"] },
+    "reason_code": { "$ref": "#/$defs/id" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "input_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" } },
+    "output_ref": { "type": ["string", "null"], "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" },
+    "output_digest": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+    "output_bytes": { "type": ["integer", "null"], "minimum": 0 },
+    "access_receipt_refs": { "type": "array", "items": { "$ref": "#/$defs/local_ref" } },
+    "decision_context": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": [
+            "attempt", "binding_ref", "authority_case_ref", "authority_receipt_ref",
+            "registry_ref", "decision_refs", "fingerprint", "gate"
+          ],
+          "properties": {
+            "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "binding_ref": { "$ref": "#/$defs/ref" },
+            "authority_case_ref": { "$ref": "#/$defs/local_ref" },
+            "authority_receipt_ref": { "$ref": "#/$defs/local_ref" },
+            "registry_ref": { "$ref": "#/$defs/local_ref" },
+            "decision_refs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/local_ref" } },
+            "fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "gate": { "enum": ["governing", "changed", "failed"] }
+          }
+        }
+      ]
+    },
+    "content_shared_with_provider": { "type": "boolean" },
+    "privacy": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": [
+            "content_shared_with_inevita", "prompt_recorded", "output_recorded", "raw_error_recorded"
+          ],
+          "properties": {
+            "content_shared_with_inevita": { "const": false },
+            "prompt_recorded": { "const": false },
+            "output_recorded": { "const": false },
+            "raw_error_recorded": { "const": false }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": [
+            "content_shared_with_vendor", "prompt_recorded", "output_recorded", "raw_error_recorded"
+          ],
+          "properties": {
+            "content_shared_with_vendor": { "const": false },
+            "prompt_recorded": { "const": false },
+            "output_recorded": { "const": false },
+            "raw_error_recorded": { "const": false }
+          }
+        }
+      ]
+    }
+  },
+  "dependentRequired": {
+    "output_digest": ["output_bytes"],
+    "output_bytes": ["output_digest"]
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["model_observation"],
+        "properties": { "model_observation": { "const": "provider-reported" } }
+      },
+      "then": {
+        "required": ["model_usage"],
+        "properties": { "model_usage": { "type": "object" } }
+      }
+    },
+    {
+      "if": {
+        "required": ["model_observation"],
+        "properties": { "model_observation": { "const": "requested-not-verified" } }
+      },
+      "then": { "properties": { "model_usage": { "const": null } } }
+    },
+    {
+      "if": {
+        "required": ["decision_context"],
+        "properties": {
+          "status": { "const": "completed" },
+          "decision_context": { "type": "object" }
+        }
+      },
+      "then": { "required": ["output_digest", "output_bytes"] }
+    }
+  ],
+  "$defs": {
+    "execution_context": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Reference-only execution context",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "observed_at",
+        "items"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_ref",
+              "layer",
+              "partition",
+              "version",
+              "digest",
+              "window",
+              "receipt_ref"
+            ],
+            "properties": {
+              "source_ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+              },
+              "layer": {
+                "enum": [
+                  "raw",
+                  "organized",
+                  "distilled",
+                  "period_summary",
+                  "atoms",
+                  "projection",
+                  "profile",
+                  "index"
+                ]
+              },
+              "partition": {
+                "type": "string",
+                "pattern": "^(?!all$|whole-source$|source$)[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+              },
+              "version": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+                  }
+                ]
+              },
+              "digest": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              },
+              "window": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from",
+                  "until"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "until": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              "receipt_ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][A-Za-z0-9.-]+)?$" },
+    "local_ref": { "type": "string", "pattern": "^(?!\\.?\\.?$)(?!\\.?\\?/)(?!.*\\/\\.\\.(?:\\/|$))[A-Za-z0-9.][A-Za-z0-9_./:-]{0,255}$" }
+  }
+}

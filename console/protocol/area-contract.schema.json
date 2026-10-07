@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/area-contract-v1.json",
+  "title": "INEVITA Area Contract V1",
+  "description": "Área: domínio com uma linguagem, uma medida de ponta a ponta e um líder. Contém sistemas e ciclos; pode ter sub-áreas quando duas linhas compartilham a gramática mas têm clientes diferentes. Reference-only: pessoas entram só como ref de founder, papel ou agente, nunca por nome de colaborador ou membro.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version", "area_id", "name", "status", "leader_ref", "measure", "sub_areas",
+    "system_refs", "cycle_refs", "workflow_refs", "decision_rule", "open_items", "legacy"
+  ],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "area_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "status": { "enum": ["proposed", "confirmed", "active"] },
+    "leader_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+    "measure": { "$ref": "#/$defs/measure" },
+    "sub_areas": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/sub_area" } },
+    "system_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "cycle_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "workflow_refs": {
+      "description": "Workflows da própria área que não são ciclo (ex.: gestão da semana), sem sistema dono.",
+      "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" }
+    },
+    "decision_rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cross_lane_decisions", "tie_break_ref", "single_name_on_measure"],
+      "properties": {
+        "cross_lane_decisions": { "enum": ["leader", "system-owners", "both-founders"] },
+        "tie_break_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "single_name_on_measure": { "const": true }
+      }
+    },
+    "open_items": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 240 } },
+    "legacy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["operating_area_refs", "business_function_refs"],
+      "properties": {
+        "operating_area_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "business_function_refs": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "notes": { "type": "string", "minLength": 1, "maxLength": 600 },
+    "extensions": { "type": "object" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$" },
+    "measure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["statement", "unit", "window", "source_ref", "decided"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "unit": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1, "maxLength": 80 }] },
+        "window": { "oneOf": [{ "type": "null" }, { "enum": ["day", "week", "month", "quarter", "year", "cycle"] }] },
+        "source_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "decided": { "type": "boolean" }
+      }
+    },
+    "sub_area": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sub_area_id", "name", "client", "owner_ref", "status"],
+      "properties": {
+        "sub_area_id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "client": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "owner_ref": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/ref" }] },
+        "status": { "enum": ["proposed", "confirmed", "active"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/workflow-definition-v1.json",
+  "title": "INEVITA Workflow Definition V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "version", "title", "owner_system", "result", "trigger", "steps", "closure", "handoffs", "consumers"],
+  "properties": {
+    "schema": { "const": "society-meeting-workflow-v1" },
+    "id": { "$ref": "#/$defs/token" },
+    "version": { "$ref": "#/$defs/version" },
+    "title": { "$ref": "#/$defs/title" },
+    "owner_system": { "$ref": "#/$defs/token" },
+    "result": { "$ref": "#/$defs/text" },
+    "trigger": {
+      "type": "object", "additionalProperties": false, "required": ["type"],
+      "properties": {
+        "type": { "$ref": "#/$defs/token" },
+        "source": { "$ref": "#/$defs/token" },
+        "events": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "executor": {
+      "type": "object", "additionalProperties": false, "required": ["kind"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/token" },
+        "project": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "service": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "steps": {
+      "type": "array", "minItems": 1, "maxItems": 128,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "title", "system", "mode", "implementation", "requires"],
+        "properties": {
+          "id": { "$ref": "#/$defs/token" }, "title": { "$ref": "#/$defs/title" },
+          "system": { "$ref": "#/$defs/token" },
+          "mode": { "enum": ["automatic", "assisted", "human", "manual"] },
+          "implementation": { "enum": ["executor", "human"] },
+          "requires": { "$ref": "#/$defs/tokenList" },
+          "handoff": { "$ref": "#/$defs/token" },
+          "optional": { "type": "boolean" }
+        }
+      }
+    },
+    "legacy_receipts": { "$ref": "#/$defs/stringList" },
+    "closure": {
+      "type": "object", "additionalProperties": false, "required": ["requires"],
+      "properties": { "requires": {
+        "type": "array", "minItems": 1, "maxItems": 128,
+        "items": {
+          "type": "object", "additionalProperties": false, "required": ["step", "accept", "label"],
+          "properties": {
+            "step": { "$ref": "#/$defs/token" },
+            "field": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,128}$" },
+            "accept": { "$ref": "#/$defs/stringList" }, "label": { "$ref": "#/$defs/title" }
+          }
+        }
+      } }
+    },
+    "handoffs": {
+      "type": "array", "maxItems": 128,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "artifact", "consumers"],
+        "properties": { "id": { "$ref": "#/$defs/token" }, "artifact": { "$ref": "#/$defs/text" }, "consumers": { "$ref": "#/$defs/tokenList" } }
+      }
+    },
+    "consumers": {
+      "type": "array", "maxItems": 128,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "title", "owner", "closure_condition"],
+        "properties": { "id": { "$ref": "#/$defs/token" }, "title": { "$ref": "#/$defs/title" }, "owner": { "$ref": "#/$defs/title" }, "closure_condition": { "type": "boolean" } }
+      }
+    },
+    "notice": { "$ref": "#/$defs/notice" },
+    "completeness": {
+      "type": "object", "additionalProperties": false, "required": ["state", "open"],
+      "properties": { "state": { "$ref": "#/$defs/token" }, "open": { "$ref": "#/$defs/stringList" } }
+    },
+    "supersedes": {
+      "type": "array", "maxItems": 64,
+      "items": { "type": "object", "additionalProperties": false, "required": ["ref", "state"], "properties": { "ref": { "$ref": "#/$defs/text" }, "state": { "$ref": "#/$defs/text" } } }
+    }
+  },
+  "$defs": {
+    "token": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "stringList": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/text" } },
+    "tokenList": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/token" } },
+    "notice": {
+      "type": "object", "additionalProperties": false,
+      "required": ["channel", "queue", "sender", "idempotency", "delivery", "delivery_gap", "closure_receipts", "summary", "on_failure", "resend"],
+      "properties": {
+        "channel": { "$ref": "#/$defs/token" }, "queue": { "$ref": "#/$defs/title" },
+        "sender": { "$ref": "#/$defs/text" }, "idempotency": { "$ref": "#/$defs/text" },
+        "delivery": { "$ref": "#/$defs/text" }, "delivery_gap": { "$ref": "#/$defs/text" },
+        "closure_receipts": { "$ref": "#/$defs/stringList" },
+        "summary": {
+          "type": "object", "additionalProperties": false,
+          "required": ["procedure", "automatic_generation", "requires_privacy_review", "on_failure"],
+          "properties": {
+            "procedure": { "$ref": "#/$defs/title" }, "automatic_generation": { "type": "boolean" },
+            "requires_privacy_review": { "type": "boolean" }, "on_failure": { "$ref": "#/$defs/title" }
+          }
+        },
+        "on_failure": { "$ref": "#/$defs/text" }, "resend": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

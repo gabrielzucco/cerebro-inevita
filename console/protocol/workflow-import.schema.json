@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inevita.ai/schemas/workflow-import-v1.json",
+  "title": "INEVITA Workflow Import V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "definition_file", "workflow", "origin"],
+  "properties": {
+    "protocol_version": { "const": 1 },
+    "definition_file": { "const": "definition.json" },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/token" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "path", "commit", "imported_at", "byte_sha256", "semantic_sha256"],
+      "properties": {
+        "repo": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$" },
+        "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,512}$" },
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "imported_at": { "type": "string", "format": "date-time" },
+        "byte_sha256": { "$ref": "#/$defs/sha256" },
+        "semantic_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  },
+  "$defs": {
+    "token": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,127}$" },
+    "version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
