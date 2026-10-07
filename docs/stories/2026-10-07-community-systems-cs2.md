@@ -1,6 +1,6 @@
 # Story CS2 — Integração e liberação dos sistemas da comunidade
 
-Status: em andamento. Pedido de Gabriel: “próximo”, após entrega local CS1.
+Status: candidata local preparada; integração remota pendente. Pedido de Gabriel: “próximo”, após entrega local CS1.
 
 ## Resultado
 
@@ -66,3 +66,9 @@ PR12 permanece dependência candidata com aceite de piloto/Telegram por Gabriel.
 Servidor preparado offline contra baseline vivo: sete alterações permitidas, 250 arquivos preservados, Calls intacto. Migração, deploy, tag e release não executados. Distribuir cliente compatível e coordenar a obrigatoriedade de credencial dos clientes antigos antes de expor V2. Novo canal oficial gabrielzucco/cerebro-inevita; atualização preserva canal local.
 
 O pacote original entra como proposta privada. A pessoa autora confirma seu hash; outra pessoa curadora revisa antes de publicar. Duas instalações da mesma pessoa não são revisão independente. A aprovação de conteúdo não é comprovação de resultado real.
+
+## Integração remota em 07 de outubro
+
+CS1 e CS2 fixadas em commits 6a3321c e 788addc. O GitHub recusou três tentativas de push com Internal Server Error; a criação do PR também devolveu erro interno. A branch remota e o PR do membro ainda não estão confirmados. O PR da plataforma #298 existe; CI do a4c9f5 passou, mas a rodada de 39c38df2 encerrou sem jobs e o pedido de rerun recebeu HTTP500. Isso não representa falha de teste executado nem validação do SHA final.
+
+A revisão independente encontrou um estado local enganoso: existência de approval.json/submission.json era tomada como status válido. Leitura corrigida para conferir candidato, hash, resumo/consentimento e recibo; envio já recusava consentimento copiado. Testes dirigidos cobrem registro de outro candidato, malformado, hash divergente e recibo sem aprovação. O recibo externo desta entrega registra o resultado final dos testes e do artefato extraído do commit.

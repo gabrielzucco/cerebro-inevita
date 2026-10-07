@@ -85,7 +85,62 @@ test('approval and send are separate; a new staging never inherits prior consent
     const copiedApproval = JSON.parse(readFileSync(join(dirname(join(f.root, staged.package_ref)), 'approval.json')));
     writeFileSync(join(dirname(join(f.root, second.package_ref)), 'approval.json'), JSON.stringify(copiedApproval));
     await assert.rejects(sendContribution({ ...secondConsent, client, confirm: true }), /approval_consent_invalid/);
+    assert.throws(() => reviewContributionCandidate({ root: f.root, candidateId: second.candidate_id }), /approval_consent_invalid/);
+    approveContribution({ ...secondConsent, confirm: true });
+    const copiedReceipt = readFileSync(join(dirname(join(f.root, staged.package_ref)), 'submission.json'));
+    writeFileSync(join(dirname(join(f.root, second.package_ref)), 'submission.json'), copiedReceipt);
+    assert.throws(() => reviewContributionCandidate({ root: f.root, candidateId: second.candidate_id }), /submission_record_mismatch/);
     assert.equal(sends, 1);
+  } finally { f.cleanup(); }
+});
+
+test('local review derives status only from valid exact approval and submission records without writes or network', async () => {
+  const f = fixture(); let sends = 0;
+  try {
+    const staged = prepareReleaseContribution({ ...f.args, confirm: true });
+    const consent = { root: f.root, candidateId: staged.candidate_id, packageSha256: staged.package_sha256 };
+    const review = () => reviewContributionCandidate({ root: f.root, candidateId: staged.candidate_id });
+    const directory = dirname(join(f.root, staged.package_ref));
+    const approvalPath = join(directory, 'approval.json'), receiptPath = join(directory, 'submission.json');
+    assert.equal(review().status, 'prepared');
+    approveContribution({ ...consent, confirm: true });
+    const approvalBytes = readFileSync(approvalPath), approval = JSON.parse(approvalBytes);
+    assert.equal(review().status, 'approved_for_submission');
+    for (const patch of [
+      { candidate_id: 'another-candidate' }, { package_sha256: '0'.repeat(64) },
+      { summary: 'Unreviewed summary' }, { consent: 'not-approved' }, { approved_at: 'invalid' },
+    ]) {
+      writeFileSync(approvalPath, JSON.stringify({ ...approval, ...patch }));
+      const before = snapshot(f.root);
+      assert.throws(review, /approval_/); assert.deepEqual(snapshot(f.root), before);
+    }
+    writeFileSync(approvalPath, '{PRIVATE_SENTINEL_INVALID_APPROVAL');
+    assert.throws(review, error => error.message === 'invalid_approval_record');
+    writeFileSync(approvalPath, approvalBytes);
+    const client = { submitContribution: async payload => { sends++;
+      return { contribution: { id: 'synthetic-remote', status: 'submitted', package_sha256: payload.package_sha256 } }; } };
+    await sendContribution({ ...consent, client, confirm: true });
+    const receiptBytes = readFileSync(receiptPath), receipt = JSON.parse(receiptBytes);
+    assert.equal(review().status, 'submitted');
+    for (const patch of [
+      { candidate_id: 'another-candidate' }, { package_sha256: '0'.repeat(64) },
+      { contribution: { ...receipt.contribution, package_sha256: '0'.repeat(64) } },
+      { contribution: { ...receipt.contribution, id: '' } }, { submitted_at: 'invalid' },
+    ]) {
+      writeFileSync(receiptPath, JSON.stringify({ ...receipt, ...patch }));
+      const before = snapshot(f.root);
+      assert.throws(review, /submission_/); assert.deepEqual(snapshot(f.root), before);
+    }
+    for (const invalid of ['{PRIVATE_SENTINEL_INVALID_RECEIPT', 'x'.repeat(16 * 1024 + 1)]) {
+      writeFileSync(receiptPath, invalid);
+      assert.throws(review, error => error.message === 'invalid_submission_record');
+    }
+    writeFileSync(receiptPath, receiptBytes); rmSync(approvalPath);
+    assert.throws(review, /submission_without_approval/);
+    writeFileSync(approvalPath, approvalBytes);
+    const before = snapshot(f.root);
+    assert.equal(review().status, 'submitted'); assert.equal(sends, 1);
+    assert.deepEqual(snapshot(f.root), before);
   } finally { f.cleanup(); }
 });
 

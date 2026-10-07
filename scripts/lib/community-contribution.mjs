@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
 import { COMMUNITY_LIMITS, COMMUNITY_SHA_RE, communityPrivacyIgnore, communityAssert, safeCommunityName, safeCommunityPath, readCommunityFile, encodeCommunityFile, validateCommunityPackage, hashCommunityPackage, stableStringify, verifyInstalledCommunityPackage } from './community-package.mjs';
 
@@ -149,11 +149,43 @@ export function getPreparedContribution({ root, candidateId }) {
   communityAssert(typeof metadata.summary === 'string' && metadata.summary.length <= 2000 && !obviousSensitive(metadata.summary), 'invalid_or_sensitive_summary');
   return { metadata, package: bundle, directory: dir };
 }
+function readCandidateRecord(directory, name, errorCode) {
+  try {
+    if (!existsSync(safeCommunityPath(directory, name))) return null;
+    const value = JSON.parse(readCommunityFile(directory, name, 16 * 1024));
+    communityAssert(value && typeof value === 'object' && !Array.isArray(value), errorCode);
+    return value;
+  } catch { throw new Error(errorCode); }
+}
+function readCandidateApproval(candidate, required = false) {
+  const approval = readCandidateRecord(candidate.directory, 'approval.json', 'invalid_approval_record');
+  if (!approval) {
+    communityAssert(!required, 'approval_required');
+    return null;
+  }
+  const { metadata } = candidate;
+  communityAssert(approval.candidate_id === metadata.candidate_id && approval.consent === 'explicit-approval-for-submission', 'approval_consent_invalid');
+  communityAssert(approval.package_sha256 === metadata.package_sha256 && approval.summary === metadata.summary, 'approval_hash_mismatch');
+  communityAssert(typeof approval.approved_at === 'string' && Number.isFinite(Date.parse(approval.approved_at)), 'invalid_approval_record');
+  return approval;
+}
+function readCandidateSubmission(candidate, approval) {
+  const receipt = readCandidateRecord(candidate.directory, 'submission.json', 'invalid_submission_record');
+  if (!receipt) return null;
+  const { metadata } = candidate;
+  communityAssert(receipt.candidate_id === metadata.candidate_id && receipt.package_sha256 === metadata.package_sha256
+    && receipt.contribution?.package_sha256 === metadata.package_sha256, 'submission_record_mismatch');
+  communityAssert(typeof receipt.contribution?.id === 'string' && receipt.contribution.id.trim().length > 0
+    && typeof receipt.submitted_at === 'string' && Number.isFinite(Date.parse(receipt.submitted_at)), 'invalid_submission_record');
+  communityAssert(approval, 'submission_without_approval');
+  return receipt;
+}
 export function reviewContributionCandidate({ root, candidateId }) {
-  const { metadata, package: bundle, directory } = getPreparedContribution({ root, candidateId });
-  const approved = safeCommunityPath(directory, 'approval.json');
-  const sent = safeCommunityPath(directory, 'submission.json');
-  return { ...metadata, status: existsSync(sent) ? 'submitted' : existsSync(approved) ? 'approved_for_submission' : 'prepared', files: Object.entries(bundle.files).map(([path, entry]) => ({ path, sha256: entry.sha256, bytes: entry.bytes })), contracts: Object.keys(bundle.contracts), package_ref: `${PREFIX}/${candidateId}/package.json`, risks: ['Revise o conteúdo completo do payload local; detecção automática não garante ausência de informação privada.', 'Aprovação local autoriza este hash para envio, não publicação nem validação de mercado.'], writes: false };
+  const candidate = getPreparedContribution({ root, candidateId });
+  const { metadata, package: bundle } = candidate;
+  const approved = readCandidateApproval(candidate);
+  const sent = readCandidateSubmission(candidate, approved);
+  return { ...metadata, status: sent ? 'submitted' : approved ? 'approved_for_submission' : 'prepared', files: Object.entries(bundle.files).map(([path, entry]) => ({ path, sha256: entry.sha256, bytes: entry.bytes })), contracts: Object.keys(bundle.contracts), package_ref: `${PREFIX}/${candidateId}/package.json`, risks: ['Revise o conteúdo completo do payload local; detecção automática não garante ausência de informação privada.', 'Aprovação local autoriza este hash para envio, não publicação nem validação de mercado.'], writes: false };
 }
 export function approveContribution({ root, candidateId, packageSha256, confirm = false }) {
   communityAssert(typeof confirm === 'boolean', 'invalid_confirmation');
@@ -168,11 +200,7 @@ export async function sendContribution({ root, candidateId, packageSha256, clien
   communityAssert(typeof confirm === 'boolean', 'invalid_confirmation');
   const candidate = getPreparedContribution({ root, candidateId });
   communityAssert(COMMUNITY_SHA_RE.test(packageSha256 || '') && candidate.metadata.package_sha256 === packageSha256, 'candidate_hash_mismatch');
-  const approvalPath = safeCommunityPath(candidate.directory, 'approval.json');
-  communityAssert(existsSync(approvalPath), 'approval_required');
-  const approval = JSON.parse(readFileSync(approvalPath));
-  communityAssert(approval.candidate_id === candidateId && approval.consent === 'explicit-approval-for-submission', 'approval_consent_invalid');
-  communityAssert(approval.package_sha256 === packageSha256 && approval.summary === candidate.metadata.summary, 'approval_hash_mismatch');
+  readCandidateApproval(candidate, true);
   if (!confirm) return { candidate_id: candidateId, package_sha256: packageSha256, status: 'send_preview', sent: false, writes: false };
   const response = await client.submitContribution({ package: candidate.package, package_sha256: packageSha256, idempotency_key: candidateId, summary: candidate.metadata.summary, share_confirmed: true });
   communityAssert(response.contribution?.package_sha256 === packageSha256, 'submission_hash_mismatch');
