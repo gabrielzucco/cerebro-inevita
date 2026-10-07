@@ -1,5 +1,10 @@
 # Preparar o pacote original da comunidade
 
+Para quem conversa com a IA, o caminho guiado está em [Compartilhar um sistema novo](community-mcp.md#compartilhar-um-sistema-novo).
+A IA entrevista o que falta, confere a seleção de arquivos e prepara a proposta pelo MCP.
+Você revisa e aprova o conteúdo; não precisa escrever o envelope JSON ou executar os comandos abaixo.
+Esta página também documenta a interface técnica para quem já possui um envelope V2 completo.
+
 Use este caminho para levar um envelope V2 completo à revisão, incluindo o Funil original de 99 arquivos. O comando mantém a versão, os arquivos, os contratos e o SHA-256 do envelope. O JSON salvo usa a serialização canônica do protocolo.
 
 Coloque o envelope revisável dentro do seu Cérebro. Informe seu caminho relativo e um resumo sem dados privados:

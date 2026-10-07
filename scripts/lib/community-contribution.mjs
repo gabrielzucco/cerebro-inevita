@@ -20,7 +20,53 @@ function selectedSource(root, sourceDir) {
   return safeCommunityPath(root, ref);
 }
 function obviousSensitive(text) {
-  return /-----BEGIN [A-Z ]*PRIVATE KEY-----|\b(?:sk-[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{30,}\.)|(?:install_credential|grant_token|api_key|password)\s*["']?\s*[:=]\s*["']?[A-Za-z0-9_-]{16,}|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/i.test(text);
+  return /-----BEGIN [A-Z ]*PRIVATE KEY-----|\b(?:sk-[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{30,}\.)|(?:install_credential|grant_token|api_key|password)\s*["']?\s*[:=]\s*["']?[A-Za-z0-9_-]{16,}|\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/i.test(text)
+    || (text.includes('@') && /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text));
+}
+// Public method text is reviewed before it becomes a candidate. Regex detection
+// is a backstop; it does not certify that every private fact has been removed.
+export function inspectShareableCommunityText(bytes, depth = 0) {
+  communityAssert(depth <= 16, 'nested_content_not_supported');
+  let text;
+  try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
+  catch { throw new Error('binary_content_not_supported'); }
+  communityAssert(!/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(text), 'binary_content_not_supported');
+  communityAssert(!obviousSensitive(text) && !/\b(?:ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[A-Z0-9]{16})\b|Bearer\s+[A-Za-z0-9._-]{16,}|\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|(?:\+55\s*\(?\d{2}\)?\s*|\(\d{2}\)\s*)\d{4,5}[- ]?\d{4}\b/i.test(text), 'sensitive_content_requires_redaction');
+  // Decode JSON string layers before inspecting values: escaping an API key
+  // inside a contract or example must not bypass the ordinary text backstop.
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { /* Ordinary source text. */ }
+  if (parsed && typeof parsed === 'object') {
+    communityAssert(!obviousSensitive(JSON.stringify(parsed)), 'sensitive_content_requires_redaction');
+    const inspect = value => {
+      if (typeof value === 'string') inspectShareableCommunityText(Buffer.from(value), depth + 1);
+      else if (value && typeof value === 'object') Object.values(value).forEach(inspect);
+    };
+    inspect(parsed);
+  } else if (typeof parsed === 'string') inspectShareableCommunityText(Buffer.from(parsed), depth + 1);
+  return text;
+}
+export function assertCommunityShareablePath(path) {
+  safeCommunityName(path);
+  communityAssert(!path.split('/').some(part => /^(?:\.env(?:\..*)?|\.cerebro|\.git|\.ssh|\.aws|privado|private|capturas|contexto|meu-negocio|dados|workspace|credentials?|secrets?)(?:$)/i.test(part)
+    || /(?:^|[-_.])(?:credentials?|secrets?|passwords?|tokens?)(?:[-_.]|$)/i.test(part)
+    || /\.(?:pem|key|p12|pfx)$/i.test(part)), 'private_selection_refused');
+  return path;
+}
+function scanOriginalRelease(bundle) {
+  for (const value of [bundle.title, bundle.first_task, ...Object.values(bundle.provenance || {}), ...Object.values(bundle.contracts)]) inspectShareableCommunityText(Buffer.from(value));
+  let pinnedArchive = false;
+  for (const [name, entry] of Object.entries(bundle.files)) {
+    assertCommunityShareablePath(name);
+    // Preserve the already-pinned original Turra kit, never accept arbitrary
+    // archives as if their contents had been inspected by this text scanner.
+    if (bundle.system_id === 'sistema-funil-inevita' && name === 'originais/KIT-COPY-COM-IA.zip'
+      && entry.sha256 === '0a7ad861597adea97c50e966d26cb6e999b762df932626f476d7796939826a33') {
+      pinnedArchive = true; continue;
+    }
+    inspectShareableCommunityText(Buffer.from(entry.content, 'base64'));
+  }
+  return { text_scan: 'passed', human_review_required: true, pinned_archive_not_inspected: pinnedArchive };
 }
 function loadBase({ root, basePackage, slug }) {
   if (slug) return verifyInstalledCommunityPackage({ root, slug }).package;
@@ -102,14 +148,22 @@ export function prepareReleaseContribution({ root, packageRef, summary, confirm 
     && !obviousSensitive(summary), 'invalid_or_sensitive_summary');
   const bytes = readCommunityFile(root, packageRef, COMMUNITY_LIMITS.jsonBytes);
   let bundle;
-  try { bundle = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+  try { bundle = JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes)); }
   catch { throw new Error('invalid_release_package_json'); }
+  return stageOriginalContribution({ root, bundle, summary, confirm });
+}
+// Shared original-authoring boundary: no installation or prewritten JSON needed.
+export function stageOriginalContribution({ root, bundle, summary, confirm = false }) {
+  communityAssert(typeof confirm === 'boolean', 'invalid_confirmation');
+  communityAssert(typeof summary === 'string' && summary.trim() && summary.length <= 2000
+    && !obviousSensitive(summary), 'invalid_or_sensitive_summary');
   const checked = validateCommunityPackage(bundle);
   requireSubmissionPolicy(checked);
+  const privacy = scanOriginalRelease(bundle);
   const metadata = { schema_version: 1, kind: 'original-release', candidate_id: randomUUID(), status: 'prepared',
     slug: bundle.slug, system_id: bundle.system_id, version: bundle.version, title: bundle.title,
     summary: summary.trim(), package_sha256: checked.packageSha256, base_package_sha256: null,
-    selected_paths: Object.keys(bundle.files).sort(), generated_paths: [], changes: [],
+    selected_paths: Object.keys(bundle.files).sort(), generated_paths: [], changes: [], privacy,
     file_count: checked.fileCount, total_bytes: checked.totalBytes, created_at: new Date().toISOString(), content_review_required: true };
   return stageCandidate({ root, bundle, metadata, confirm });
 }
@@ -145,6 +199,7 @@ export function getPreparedContribution({ root, candidateId }) {
   const bundle = JSON.parse(readCommunityFile(dir, 'package.json', COMMUNITY_LIMITS.jsonBytes));
   const checked = validateCommunityPackage(bundle);
   requireSubmissionPolicy(checked);
+  if (metadata.kind === 'original-release') scanOriginalRelease(bundle);
   communityAssert(metadata.candidate_id === candidateId && metadata.package_sha256 === checked.packageSha256 && metadata.slug === bundle.slug && metadata.version === bundle.version, 'candidate_hash_mismatch');
   communityAssert(typeof metadata.summary === 'string' && metadata.summary.length <= 2000 && !obviousSensitive(metadata.summary), 'invalid_or_sensitive_summary');
   return { metadata, package: bundle, directory: dir };

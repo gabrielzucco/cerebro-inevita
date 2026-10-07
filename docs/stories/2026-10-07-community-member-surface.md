@@ -50,3 +50,61 @@ Delegações: implementação backend, implementação cliente, auditoria indepe
 - Lint global continua em 519 erros/108 avisos e TypeScript da aplicação em 1.203 erros; comparação normalizada com o baseline não encontrou diagnósticos novos nem removidos. Não declarar esses dois gates verdes.
 
 Recibos externos da tarefa: work/community-surface-verification.json, work/community-member-surface-ci-glob.json, work/community-member-surface-final-checks.json e work/community-member-surface-crossrepo-receipt.json. Os commits e o estado final do CI remoto ficam no recibo em outputs/mcp-acervo-perfil. Dois PRs existentes permanecem candidatos: plataforma #298 e membro #13 (empilhado sobre #12; piloto da base pendente). Publicação exige coordenar as migrations e o backend com cliente compatível. Não houve deploy, merge, tag, release, acesso de produção, edição de perfil real nem mensagem enviada.
+
+## Liberação autorizada em 07/10/2026
+
+Gabriel pediu “suba pra ele usar”. O corte de publicação integra a base #12 por merge
+commit, retargeta #13 para main, exige CI do SHA integrado e publica a tag oficial
+v1.39.0. O piloto humano/Telegram permanece sem comprovação; a autorização de
+publicação não o marca concluído.
+
+- [x] Conferir CI do código 3bdb2d3 em Linux, Windows e macOS, Node 20.
+- [x] Baixar arquivo GitHub desse commit, conferir os 611 arquivos contra Git e
+  executar leitor, instalação nova, 16 ferramentas MCP e validador oficiais.
+- [x] Integrar #12 preservando o histórico; merge 1adf13f1a14d0bb5bc0a2820e5f4599cf22d5932.
+- [x] Atualizar instruções de release sem alegar validação humana.
+- [ ] Conferir CI do SHA final integrado, publicar tag/release e conferir download público.
+
+Arquivos deste complemento de liberação (File List): `README.md`,
+`docs/releases/1.39.0.md`, `docs/guides/community-mcp.md` e esta story.
+Recibo inicial do arquivo GitHub: `work/community-member-release-audit/receipt.json`.
+
+## Assistente para um sistema original
+
+Antes da tag, Gabriel esclareceu que a própria IA conectada pelo MCP deve ajudar
+Turra a entrevistar, preparar e enviar um sistema novo de métricas, sem pedir JSON
+ou comandos manuais. A release fica retida até esse percurso estar integrado e
+verificado. O envio continua uma proposta privada, com curadoria e instalação
+posteriores autorizadas separadamente.
+
+- [x] Entrevista orientada pelas lacunas, aproveitando o contexto confirmado.
+- [x] Inspeção somente dos arquivos explicitamente selecionados, com limites e checagem de privados.
+- [x] Prévia do pacote original e dos contratos gerados, com hash do conteúdo exato.
+- [x] Preparo confirmado desse hash e continuação por revisão, autorização e envio existentes.
+- [x] Testes de fluxo completo sem CLI manual, isolamento de dados e mudança entre prévia e preparo.
+- [x] Atualizar guias e validar localmente o conjunto completo.
+- [ ] Validar o SHA final no CI e retomar a publicação.
+
+File List deste corte: `scripts/lib/community-authoring.mjs`,
+`scripts/lib/community-authoring-tools.mjs`, `scripts/lib/community-contribution.mjs`,
+`scripts/lib/community-mcp.mjs`, `scripts/lib/community-mcp-protocol.mjs`,
+`scripts/test-community-authoring.mjs`, `scripts/test-community-authoring-mcp.mjs`,
+`scripts/test-community-all.mjs`, `scripts/test-community-mcp.mjs`,
+`docs/guides/community-mcp.md`, `docs/guides/community-release.md`,
+`docs/releases/1.39.0.md`, `README.md` e esta story. A lista será reconciliada com os
+nomes efetivamente implementados antes do commit.
+
+O MCP agora tem 20 ferramentas. A autoria aceita brief verbal ou até 32 arquivos
+UTF-8 explicitamente escolhidos, 64 KiB por arquivo e 128 KiB no total. A prévia
+inteira, incluindo quatro contratos, aparece uma vez em `structuredContent`, sem
+truncagem. O preparo refaz o pacote e exige o mesmo hash; não envia nem publica.
+Revisão técnica corrigiu limites entre brief e contrato, inspeção de segredos em
+JSON aninhado e resposta excessiva depois de persistir o candidato. O retorno do
+preparo é um recibo enxuto; a revisão integral acontece antes da escrita.
+
+Validação local final: 77/77 scripts do glob CI, nove checagens de sintaxe e
+validador canônico passaram. Inclui dez cenários da biblioteca de autoria e quatro
+do MCP, com percurso real até envio HTTP sintético, sem CLI manual. Nenhuma
+credencial, mensagem ou conta real foi usada. Os hashes dos arquivos ficaram
+inalterados durante a suíte. Recibos: `work/community-authoring-ci-glob.json`,
+`work/community-authoring-ci-glob.log` e `work/community-authoring-npm-test.log`.

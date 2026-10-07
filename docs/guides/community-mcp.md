@@ -2,7 +2,7 @@
 
 O MCP da comunidade conecta a IA aos sistemas, ao acervo publicado e ao seu próprio perfil. Você pode pedir: “Encontre o sistema de funil”, “Busque aulas sobre pesquisa de público” ou “Prepare uma atualização do meu perfil”. Instalações, mudanças no perfil e publicação dependem da sua aprovação. Os seus arquivos continuam no seu computador.
 
-Esta versão é uma candidata ainda não publicada. O serviço de distribuição precisa receber esta atualização e a instalação precisa ter acesso vigente à Society. A plataforma revalida esse acesso a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
+Use o cliente da release oficial `v1.39.0` e o serviço de distribuição compatível na plataforma. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
 
 ## Conectar
 
@@ -75,6 +75,24 @@ Compartilhe a melhoria do método. Propostas de clientes, conversas, dados do se
 
 Um revisor autorizado, diferente do autor, decide sobre a proposta na plataforma. A publicação é outra operação e usa o hash aprovado. O MCP do membro não oferece ferramenta para revisar ou publicar contribuições no catálogo.
 
+## Compartilhar um sistema novo
+
+Você não precisa preparar JSON nem executar comandos. Peça à IA:
+
+> Quero compartilhar meu sistema de métricas na comunidade. Aproveite o que já sabe dele, pergunte o que faltar e me ajude a preparar o pacote. Antes de enviar, mostre exatamente o que vai sair do meu computador.
+
+A IA acompanha o processo pela mesma conexão:
+
+1. Reaproveita as informações já confirmadas e pergunta somente o que falta para descrever o resultado, o primeiro trabalho, as fontes necessárias, os passos e o critério de pronto. Respostas e documentos são evidências; lacunas não viram fatos inventados.
+2. Se o método já estiver descrito na conversa, usa o que você confirmou. Quando houver documentos, combina com você a pasta e os arquivos do método que podem ser lidos e compartilhados. A seleção é explícita. Não varre o Cérebro inteiro, não copia dados de clientes e não conecta fontes automaticamente.
+3. Confere os arquivos selecionados e mostra o conteúdo que entrará no pacote. Conteúdo privado precisa ser retirado antes de continuar. Também apresenta as instruções e os contratos que serão gerados, os limites e o hash da prévia.
+4. Depois da sua aprovação, salva um candidato privado daquele pacote exato. Se os arquivos ou as respostas mudarem, precisa de uma nova prévia.
+5. Usa o mesmo caminho de revisão, autorização e envio descrito acima. Preparar não envia. Enviar leva a proposta para revisão; não instala o sistema para outros membros nem o publica automaticamente.
+
+O pacote começa em piloto, com zero ciclos verificados e sem acesso a fontes reais. Ser enviado com sucesso não comprova que funciona no negócio de outra pessoa. A comunidade decide a publicação, e cada destinatário decide a instalação e as conexões no próprio Cérebro.
+
+Este preparo aceita até 32 arquivos de texto UTF-8, 64 KiB por arquivo e 128 KiB no total. Planilhas, PDFs, arquivos compactados e outros binários precisam primeiro de uma versão compartilhável do método em texto, Markdown ou CSV, sem os dados privados. A IA pode ajudar a preparar essa versão usando as ferramentas disponíveis, com sua revisão; o MCP não executa nem converte os arquivos por conta própria.
+
 ## Se algo não funcionar
 
 - **Instalação sem vínculo:** abra o Cérebro pela sua conta na plataforma e recupere a ativação. Não envie a credencial à IA.
@@ -89,8 +107,8 @@ Um revisor autorizado, diferente do autor, decide sobre a proposta na plataforma
 
 O transporte segue o [stdio do MCP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports): uma mensagem JSON-RPC UTF-8 por linha. `stdout` contém somente protocolo; falha de inicialização usa `stderr` sem detalhes privados. O cliente envia `initialize` e depois `notifications/initialized`, conforme o [ciclo de conexão](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle).
 
-As dezesseis ferramentas expostas cobrem sistemas e contribuições, consulta do acervo e seu próprio perfil. As seis ferramentas novas são `buscar_acervo_comunidade`, `detalhar_item_acervo`, `meu_perfil_comunidade`, `preparar_atualizacao_perfil`, `salvar_meu_perfil` e `publicar_meu_perfil`. A plataforma revalida o acesso nas operações remotas. O processo não oferece leitura arbitrária de arquivos, shell, ferramentas empresariais nem publicação de curador. Publicar no feed, comentar, consultar outros membros, agenda e notificações ainda não fazem parte desta versão.
+As vinte ferramentas expostas cobrem sistemas e contribuições, consulta do acervo e seu próprio perfil. As seis ferramentas novas são `buscar_acervo_comunidade`, `detalhar_item_acervo`, `meu_perfil_comunidade`, `preparar_atualizacao_perfil`, `salvar_meu_perfil` e `publicar_meu_perfil`. Para sistemas originais, a IA usa `orientar_novo_sistema`, `inspecionar_arquivos_sistema`, `planejar_novo_sistema` e `preparar_novo_sistema`, seguidas das ferramentas de revisão, autorização e envio existentes. A plataforma revalida o acesso nas operações remotas. O processo não oferece leitura arbitrária de arquivos, shell, ferramentas empresariais nem publicação de curador. Publicar no feed, comentar, consultar outros membros, agenda e notificações ainda não fazem parte desta versão.
 
 Perfil: a prévia retorna `changes` normalizado, `revision`, `preview_hash` e `audience`. Para salvar, use esse mesmo `changes`, passe a `revision` em `expected_revision` e informe `confirmar: true` apenas após a aprovação do dono. Para publicar, use a revisão da leitura do perfil salvo e uma autorização separada. Os hashes são controles de concorrência e integridade da prévia; não substituem autenticação ou consentimento.
 
-O limite é de 256 KiB por mensagem recebida e 512 KiB por resposta. Arquivos são transferidos pelos serviços de distribuição; o MCP retorna metadados e referências, sem pacote bruto ou credenciais. Endpoints de teste em HTTP local exigem a variável explícita `CEREBRO_COMMUNITY_ALLOW_LOCALHOST=true` no processo de teste. Essa opção não deve ser usada na configuração normal.
+O limite é de 256 KiB por mensagem recebida e 512 KiB por resposta. Na instalação e no acompanhamento, o MCP retorna metadados e referências, sem pacote bruto ou credenciais. Na autoria, a prévia contém integralmente o texto selecionado e os arquivos e contratos gerados em `structuredContent`; `content` aponta para essa revisão, evitando duplicar textos grandes. Uma prévia acima do limite é recusada em vez de truncada. Endpoints de teste em HTTP local exigem a variável explícita `CEREBRO_COMMUNITY_ALLOW_LOCALHOST=true` no processo de teste. Essa opção não deve ser usada na configuração normal.
