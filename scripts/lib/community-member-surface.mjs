@@ -8,10 +8,10 @@ const revision = string(32, 32, { pattern: '^[a-f0-9]{32}$' });
 const confirmation = { type: 'boolean', const: true };
 const choice = values => ({ type: 'string', enum: values });
 const link = object({ label: string(40, 1), url: string(500, 1, { pattern: '^https?://[^\\s]+$' }) });
-const project = object({ name: string(80, 1), description: string(200, 1),
+const project = object({ name: string(80, 1), description: string(200),
   type: choice(['', 'comunidade', 'empresa', 'saas', 'servico', 'projeto', 'iniciativa']),
   role: choice(['', 'founder', 'co_founder', 'operador', 'criador', 'advisor', 'estrategista', 'dev', 'designer', 'freelancer']),
-  stage: string(60) }, ['name', 'description']);
+  stage: string(60) }, ['name']);
 const BLOCK_KEYS = Object.freeze(['installed_systems', 'skills', 'contributions', 'shared_work', 'events', 'missions']);
 const blockVisibility = object(Object.fromEntries(BLOCK_KEYS.map(key => [key, { type: 'boolean' }])), [], { minProperties: 1 });
 

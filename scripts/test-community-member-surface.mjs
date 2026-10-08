@@ -58,6 +58,8 @@ test('surface schemas constrain pagination, exact patches and independent confir
     ['preparar_atualizacao_perfil', { changes: { block_visibility: {} } }],
     ['preparar_atualizacao_perfil', { changes: { links: [{ label: 'Site', url: 'javascript:alert(1)' }] } }],
     ['preparar_atualizacao_perfil', { changes: { projects: [{ name: 'Projeto', description: 'Descrição', private_notes: 'segredo' }] } }],
+    ['preparar_atualizacao_perfil', { changes: { projects: [{ name: '' }] } }],
+    ['preparar_atualizacao_perfil', { changes: { projects: [{ name: 'Projeto', description: 42 }] } }],
     ['preparar_atualizacao_perfil', { changes: { available_for: ['qualquer_coisa'] } }],
     ['preparar_atualizacao_perfil', { changes: { full_name: '' } }],
     ['salvar_meu_perfil', { changes: { company: 'Nova empresa' }, expected_revision: REVISION, preview_hash: HASH }],
@@ -74,6 +76,70 @@ test('surface schemas constrain pagination, exact patches and independent confir
   assert.equal(matchesSchema(2 ** 53, { type: 'integer' }), false);
   assert.equal((await handle(toolRequest('buscar_acervo_comunidade', { query: '', limit: 30, offset: 1000 }))).result.isError, undefined);
   assert.equal(calls, 1);
+});
+
+test('minimum project-only profile previews, saves and publishes over MCP and HTTP without optional fields', { timeout: 15000 }, async () => {
+  const root = mkdtempSync(join(tmpdir(), 'member minimum profile '));
+  mkdirSync(join(root, '.cerebro'));
+  writeFileSync(join(root, '.cerebro/id'), ID);
+  writeFileSync(join(root, '.cerebro/install-credential'), 'x'.repeat(43), { mode: 0o600 });
+  let current = { full_name: 'Pessoa de teste', what_i_do: 'Faço pesquisa.', need_help_text: 'Procuro parceiros.',
+    projects: [], block_visibility: { ...profile.block_visibility }, directory_visible: false, published_at: null };
+  let writes = 0;
+  const revision = () => md5(current);
+  const ready = value => value.full_name && value.what_i_do && value.need_help_text && value.projects?.some(item => item.name);
+  const result = (value = current) => envelope({ profile: value, revision: revision(),
+    audience: value.directory_visible ? 'community_vitrine' : 'private',
+    publication: { ready: !!ready(value), missing_fields: ready(value) ? [] : ['company_or_project'] } });
+  const server = createServer(async (req, res) => {
+    let raw = ''; for await (const chunk of req) raw += chunk;
+    const payload = JSON.parse(raw);
+    res.setHeader('content-type', 'application/json');
+    const send = (status, value) => { res.statusCode = status; res.end(JSON.stringify(value)); };
+    if (payload.action === 'get_my_profile') return send(200, result());
+    if (payload.action === 'preview_profile_update') {
+      const next = { ...current, ...payload.changes,
+        projects: payload.changes.projects?.map(item => ({ ...item, description: item.description ?? '' })) ?? current.projects };
+      return send(200, { ...result(next), changes: payload.changes,
+        preview_hash: md5([ID, revision(), payload.changes]) });
+    }
+    if (payload.action === 'update_my_profile') {
+      if (payload.confirm !== true || payload.expected_revision !== revision()
+        || payload.preview_hash !== md5([ID, revision(), payload.changes])) return send(409, { error: 'profile_preview_mismatch' });
+      current = { ...current, ...payload.changes,
+        projects: payload.changes.projects?.map(item => ({ ...item, description: item.description ?? '' })) ?? current.projects };
+      writes++; return send(200, result());
+    }
+    if (payload.action === 'publish_my_profile') {
+      if (payload.confirm !== true || payload.expected_revision !== revision() || !ready(current)) return send(409, { error: 'profile_incomplete' });
+      current = { ...current, directory_visible: true, published_at: '2026-10-07T20:00:00Z' };
+      writes++; return send(200, result());
+    }
+    return send(400, { error: 'invalid_action' });
+  });
+  await new Promise(accept => server.listen(0, '127.0.0.1', accept));
+  const endpoint = `http://127.0.0.1:${server.address().port}`;
+  const { handle } = await session(createCommunityToolHandler({ root, endpoint, allowLocalhost: true }));
+  const invoke = async (name, args = {}) => (await handle(toolRequest(name, args))).result;
+  try {
+    assert.doesNotThrow(() => validateMemberSurfaceRequest('preview_profile_update', { changes: { projects: [{ name: 'Projeto', description: '' }] } }));
+    const before = (await invoke('meu_perfil_comunidade')).structuredContent;
+    assert.deepEqual(before.publication.missing_fields, ['company_or_project']);
+    const preview = (await invoke('preparar_atualizacao_perfil', { changes: { projects: [{ name: 'Projeto mínimo' }] } })).structuredContent;
+    assert.deepEqual(preview.changes, { projects: [{ name: 'Projeto mínimo' }] });
+    assert.equal(preview.publication.ready, true);
+    assert.equal(preview.profile.projects[0].description, '');
+    assert.equal(writes, 0);
+    const saved = (await invoke('salvar_meu_perfil', { changes: preview.changes,
+      expected_revision: preview.revision, preview_hash: preview.preview_hash, confirmar: true })).structuredContent;
+    assert.equal(saved.profile.projects[0].name, 'Projeto mínimo');
+    assert.equal(writes, 1);
+    const published = (await invoke('publicar_meu_perfil', { expected_revision: saved.revision, confirmar: true })).structuredContent;
+    assert.equal(published.audience, 'community_vitrine');
+    assert.deepEqual(published.publication.missing_fields, []);
+    for (const optional of ['company', 'photo_url', 'city']) assert.equal(Object.hasOwn(published.profile, optional), false);
+    assert.equal(writes, 2);
+  } finally { await new Promise(done => server.close(done)); rmSync(root, { recursive: true, force: true }); }
 });
 
 test('library projection preserves usable sources and text without opening package or storage payloads', () => {
