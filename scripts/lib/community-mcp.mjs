@@ -4,6 +4,7 @@ import { MEMBER_SURFACE_TOOLS, memberSurfaceAction, memberSurfaceArguments, proj
 import { COMMUNITY_AUTHORING_TOOLS, authoringOperation, authoringArguments, projectAuthoringResult } from './community-authoring-tools.mjs';
 import { MEMBER_INTERACTION_TOOLS, memberInteractionAction, memberInteractionArguments, projectMemberInteractionResult, validateMemberInteractionRequest } from './community-member-interaction.mjs';
 import { SKILL_TOOLS, skillAction, projectSkillList, validateSkillBundle, planSkillInstallation, installSkill } from './community-skill.mjs';
+import { MISSION_EVIDENCE_TOOLS, inspectMissionEvidence, projectMissionResult } from './community-mission-evidence.mjs';
 
 const text = (maxLength, extra = {}) => ({ type: 'string', minLength: 1, maxLength, ...extra });
 const slug = text(64, { pattern: '^[a-z0-9][a-z0-9-]{0,63}$' });
@@ -32,6 +33,7 @@ export const COMMUNITY_TOOLS = Object.freeze([
   ...MEMBER_INTERACTION_TOOLS,
   ...COMMUNITY_AUTHORING_TOOLS,
   ...SKILL_TOOLS,
+  ...MISSION_EVIDENCE_TOOLS,
 ]);
 
 // Select metadata instead of serializing arbitrary service payloads. In particular,
@@ -80,6 +82,7 @@ export async function loadCommunityServices({ root, endpoint, allowLocalhost = f
     send: args => contribution.sendContribution({ root, client, ...args }),
     contributions: () => client.listContributions(), contribution: id => client.getContribution({ contribution_id: id }),
     memberSurface: (action, args) => client.request(action, args),
+    missionEvidence: (action, args) => client.request(action, args),
     listSkills: args => client.listSkills(args),
     getSkill: args => client.getSkill(args),
     planSkill: async skillId => planSkillInstallation({ root, skill: await client.getSkill({ skill_id: skillId }) }),
@@ -124,7 +127,7 @@ const ERRORS = new Map([
   ['invalid_member_interaction_arguments', 'Confira o encontro, o texto e a confirmação. Nenhuma publicação foi enviada.'],
   ['profile_preview_mismatch', 'As mudanças não correspondem à prévia aprovada. Prepare outra prévia e confirme o conteúdo exato antes de salvar.'],
   ['profile_not_found', 'Seu perfil ainda não foi criado. Abra a área de perfil na plataforma para iniciá-lo e depois consulte novamente pela IA.'],
-  ['profile_incomplete', 'Ainda faltam campos para publicar. Consulte seu perfil para conferir as pendências; adicione a foto pela plataforma.'],
+  ['profile_incomplete', 'Ainda faltam campos para publicar. Consulte seu perfil e preencha somente as pendências bloqueantes: nome, empresa ou projeto, o que faz e o que procura.'],
   ['invalid_profile_changes', 'As mudanças do perfil contêm campos ou valores inválidos. Confira a prévia e ajuste somente os campos permitidos.'],
   ['profile_confirmation_required', 'O dono precisa aprovar esta ação sobre o perfil antes de continuar.'],
   ['invalid_profile_revision', 'Consulte o perfil atual e use a revisão devolvida para preparar e aprovar a mudança.'],
@@ -155,6 +158,13 @@ const ERRORS = new Map([
   ['skill_file_hash_mismatch', 'Um arquivo da skill mudou desde a seleção. Revise o método e prepare outro candidato.'],
   ['sharing_rights_required', 'Confirme com o dono que criou o método ou tem direito de compartilhá-lo. Nenhum arquivo foi preparado.'],
   ['third_party_skill_source_refused', 'Esta pasta contém conteúdo de terceiro ou acervo da comunidade. Use somente uma skill própria e autorizada em uma pasta de trabalho separada.'],
+  ['mission_receipt_invalid', 'O recibo local, seu grafo ou um arquivo vinculado não passou na verificação. Escolha um recibo canônico concluído e confira seus arquivos no Cérebro. Nenhum conteúdo foi enviado.'],
+  ['mission_source_not_observed', 'Este recibo só declara fontes; ele não registra acesso observado a uma fonte. Escolha um Run Record v2 concluído com acesso e seleção registrados.'],
+  ['mission_evidence_changed', 'O recibo ou um arquivo vinculado mudou desde a prévia. Confira novamente o trabalho e aprove um novo hash. Nenhum vínculo foi enviado.'],
+  ['invalid_mission_arguments', 'Confira a missão, o recibo, o hash e a confirmação. Nenhum vínculo foi enviado.'],
+  ['invalid_mission_evidence', 'Os dados mínimos do recibo não foram aceitos. Confira o recibo local e prepare outra prévia.'],
+  ['invalid_mission_confirmation', 'A confirmação ou o hash da prévia não é válido. Prepare outra prévia antes de vincular.'],
+  ['mission_preview_mismatch', 'A prévia deste recibo venceu ou mudou. Prepare outra prévia antes de vincular.'],
 ]);
 
 export function createCommunityToolHandler({ root, endpoint, allowLocalhost = false, services, serviceLoader = loadCommunityServices }) {
@@ -172,7 +182,17 @@ export function createCommunityToolHandler({ root, endpoint, allowLocalhost = fa
       const interactionAction = memberInteractionAction(name);
       const skillMethod = skillAction(name);
       const authoringMethod = authoringOperation(name);
-      if (authoringMethod) result = await loaded[authoringMethod](authoringArguments(args));
+      let missionAction = null, missionLocal = null;
+      if (name === 'planejar_evidencia_missao' || name === 'registrar_evidencia_missao') {
+        missionAction = name === 'planejar_evidencia_missao' ? 'prepare_mission_evidence' : 'submit_mission_evidence';
+        missionLocal = inspectMissionEvidence({ root: brainRoot, mission: args.mission, receipt_ref: args.receipt_ref });
+        if (missionAction === 'submit_mission_evidence' && missionLocal.evidence_sha256 !== args.evidence_sha256) throw new Error('mission_evidence_changed');
+        const { mission, evidence_sha256, receipt_kind, occurred_at, source_count, output_count, judgment_count } = missionLocal;
+        const fields = { mission, evidence_sha256, receipt_kind, occurred_at, source_count, output_count, judgment_count };
+        result = await loaded.missionEvidence(missionAction, missionAction === 'submit_mission_evidence'
+          ? { ...fields, preview_hash: args.preview_hash, confirmar: true } : fields);
+      }
+      else if (authoringMethod) result = await loaded[authoringMethod](authoringArguments(args));
       else if (skillMethod) {
         if (name === 'listar_skills') result = projectSkillList(await loaded.listSkills(args));
         else if (name === 'obter_skill') result = validateSkillBundle(await loaded.getSkill(args));
@@ -216,7 +236,8 @@ export function createCommunityToolHandler({ root, endpoint, allowLocalhost = fa
       else if (name === 'enviar_contribuicao') result = await loaded.send({ candidateId: args.candidate_id, packageSha256: args.package_sha256, confirm: true });
       else if (name === 'minhas_contribuicoes') result = await loaded.contributions();
       else result = await loaded.contribution(args.contribution_id);
-      const metadata = authoringMethod ? projectAuthoringResult(result) : skillMethod ? result
+      const metadata = missionAction ? projectMissionResult(missionAction, result, missionLocal)
+        : authoringMethod ? projectAuthoringResult(result) : skillMethod ? result
         : name === 'orientar_nova_skill' ? projectSkillGuidance(result)
         : interactionAction ? projectMemberInteractionResult(interactionAction, result)
         : surfaceAction ? projectMemberSurfaceResult(surfaceAction, result) : communityMetadata(result);

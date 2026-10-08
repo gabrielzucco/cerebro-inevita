@@ -39,7 +39,7 @@ async function ready(handler) {
 }
 
 test('seven community interactions keep the original twenty tools and reject unsafe arguments before service calls', async () => {
-  assert.equal(COMMUNITY_TOOLS.length, 33);
+  assert.equal(COMMUNITY_TOOLS.length, 35);
   assert.equal(MEMBER_INTERACTION_TOOLS.length, 7);
   const previousTools = [
     'listar_sistemas_comunidade', 'detalhar_sistema_comunidade', 'planejar_instalacao_sistema',

@@ -2,9 +2,10 @@ import { readCommunityFile, communityAssert, communityHash, hashCommunityPackage
 import { MEMBER_SURFACE_ACTION_SCHEMAS, validateMemberSurfaceRequest } from './community-member-surface.mjs';
 import { MEMBER_INTERACTION_ACTION_SCHEMAS, validateMemberInteractionRequest } from './community-member-interaction.mjs';
 import { SKILL_ACTION_SCHEMAS, validateSkillRequest } from './community-skill.mjs';
+import { MISSION_ACTION_SCHEMAS, validateMissionRequest } from './community-mission-evidence.mjs';
 
 export const DEFAULT_COMMUNITY_ENDPOINT = 'https://inevitasociety.com/supabase/functions/v1/cerebro-system-distribution';
-const ACTIONS = new Set(['list_releases', 'get_release', 'issue_grant', 'redeem_grant', 'installation_receipt', 'submit_contribution', 'list_contributions', 'get_contribution', 'review_contribution', 'publish_contribution', ...Object.keys(MEMBER_SURFACE_ACTION_SCHEMAS), ...Object.keys(MEMBER_INTERACTION_ACTION_SCHEMAS), ...Object.keys(SKILL_ACTION_SCHEMAS)]);
+const ACTIONS = new Set(['list_releases', 'get_release', 'issue_grant', 'redeem_grant', 'installation_receipt', 'submit_contribution', 'list_contributions', 'get_contribution', 'review_contribution', 'publish_contribution', ...Object.keys(MEMBER_SURFACE_ACTION_SCHEMAS), ...Object.keys(MEMBER_INTERACTION_ACTION_SCHEMAS), ...Object.keys(SKILL_ACTION_SCHEMAS), ...Object.keys(MISSION_ACTION_SCHEMAS)]);
 const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 export function readCommunityIdentity(root) {
   let install_id, install_credential;
@@ -44,6 +45,7 @@ export function createCommunityClient({ root, endpoint = DEFAULT_COMMUNITY_ENDPO
     validateMemberSurfaceRequest(action, payload);
     validateMemberInteractionRequest(action, payload);
     validateSkillRequest(action, payload);
+    validateMissionRequest(action, payload);
     const identity = readCommunityIdentity(root);
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {

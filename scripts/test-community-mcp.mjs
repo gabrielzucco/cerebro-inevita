@@ -49,7 +49,10 @@ test('tools list has only member community operations, and enterprise/curator ca
   let calls = 0;
   const handle = await ready(async () => { calls++; return { content: [] }; });
   const result = await handle({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-  assert.equal(result.result.tools.length, 33);
+  assert.equal(result.result.tools.length, 35);
+  for (const name of ['planejar_evidencia_missao', 'registrar_evidencia_missao']) {
+    assert.ok(result.result.tools.some(tool => tool.name === name));
+  }
   for (const name of ['minhas_tarefas', 'buscar', 'ler', 'solicitar_vinculo_trabalho', 'review_contribution', 'publish_contribution', 'publicar_sistema_comunidade']) {
     assert.ok(!result.result.tools.some(tool => tool.name === name));
     assert.equal((await handle(request(3, name))).error.code, -32602);
@@ -164,7 +167,7 @@ test('real subprocess stdio emits protocol only, never global configuration or e
     assert.ok(!result.stdout.includes('never-output-this-fixture'));
     const rows = result.stdout.trim().split('\n').map(line => JSON.parse(line));
     assert.equal(rows.length, 3);
-    assert.equal(rows[1].result.tools.length, 33);
+    assert.equal(rows[1].result.tools.length, 35);
     assert.equal(rows[2].error.code, -32602);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
@@ -194,7 +197,7 @@ test('MCP and config entrypoints run through a symlinked parent directory', () =
     assert.equal(protocol.status, 0, protocol.stderr);
     const rows = protocol.stdout.trim().split('\n').map(line => JSON.parse(line));
     assert.equal(rows.length, 2);
-    assert.equal(rows[1].result.tools.length, 33);
+    assert.equal(rows[1].result.tools.length, 35);
     const configured = spawnSync(process.execPath, [join(alias, 'scripts/community-mcp-config.mjs'), `--root=${ROOT}`], { encoding: 'utf8', timeout: 10000 });
     assert.equal(configured.status, 0, configured.stderr);
     assert.equal(JSON.parse(configured.stdout).mcpServers['inevita-comunidade'].args[0], join(realpathSync(ROOT), 'scripts/community-mcp.mjs'));
