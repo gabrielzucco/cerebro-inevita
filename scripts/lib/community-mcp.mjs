@@ -99,6 +99,8 @@ const ERRORS = new Map([
   ['invalid_comment_content', 'O comentário precisa ser ajustado. Confira o texto e prepare outra prévia.'],
   ['invalid_preview_hash', 'O hash da prévia é inválido. Prepare outra prévia antes de publicar.'],
   ['comments_locked', 'Os comentários deste post estão fechados. Nenhum comentário foi publicado.'],
+  ['post_moderated', 'Esse post foi ocultado ou arquivado pela moderação. A publicação não foi repetida. Confira o estado na plataforma.'],
+  ['comment_moderated', 'Esse comentário foi ocultado pela moderação. A publicação não foi repetida. Confira o estado na plataforma.'],
   ['post_preview_mismatch', 'O texto do post mudou desde a prévia. Prepare outra prévia e aprove o novo hash antes de publicar.'],
   ['comment_preview_mismatch', 'O comentário mudou desde a prévia. Prepare outra prévia e aprove o novo hash antes de publicar.'],
   ['preview_mismatch', 'O texto mudou desde a prévia. Prepare outra prévia e aprove o novo hash antes de publicar.'],

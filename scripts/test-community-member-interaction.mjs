@@ -85,9 +85,13 @@ test('projection retains only event, preview, post and visible comment fields', 
   assert.equal(announcement.post.title, '');
   assert.equal(announcement.post.post_type, 'content_drop');
   assert.equal(projectMemberInteractionResult('prepare_post', {
-    space: 'help', title: post.title, body_markdown: post.body_markdown, audience: 'Society', preview_hash: HASH,
+    space: 'help', title: post.title, body_markdown: post.body_markdown, audience: 'community_rank_200',
+    audience_description: 'Visível a membros ativos com acesso ao espaço help (nível mínimo 200).', preview_hash: HASH,
     private_context: 'PRIVATE_CONTEXT',
   }).preview_hash, HASH);
+  assert.throws(() => projectMemberInteractionResult('prepare_post', {
+    space: 'help', title: post.title, body_markdown: post.body_markdown, audience: 'community_rank_200', preview_hash: HASH,
+  }), /invalid_community_response/);
   for (const result of [eventResult, postResult]) for (const secret of ['PRIVATE_CREDENTIAL', 'PRIVATE_CONTACT', 'PRIVATE_MODERATION', 'PRIVATE_PHONE', 'private@example']) {
     assert.ok(!JSON.stringify(result).includes(secret));
   }
@@ -102,6 +106,7 @@ test('MCP to HTTP fixture covers agenda, exact preview publication, comments, id
   writeFileSync(join(root, '.cerebro/id'), INSTALL_ID);
   writeFileSync(join(root, '.cerebro/install-credential'), credential, { mode: 0o600 });
   let permitted = true, rsvpCount = 0, postCount = 0, commentCount = 0, commentsLocked = false;
+  let postHidden = false, commentHidden = false;
   const received = [];
   const server = createServer(async (req, res) => {
     let raw = ''; for await (const chunk of req) raw += chunk;
@@ -117,10 +122,13 @@ test('MCP to HTTP fixture covers agenda, exact preview publication, comments, id
       rsvpCount = 1; return send(200, { event_id: EVENT_ID, rsvp_status: 'confirmed' });
     }
     if (payload.action === 'prepare_post') return send(200, { space: payload.space, title: payload.title,
-      body_markdown: payload.body_markdown, audience: 'Society', preview_hash: hash([payload.space, payload.title, payload.body_markdown]) });
+      body_markdown: payload.body_markdown, audience: 'community_rank_200',
+      audience_description: 'Visível a membros ativos com acesso ao espaço help (nível mínimo 200).',
+      preview_hash: hash([payload.space, payload.title, payload.body_markdown]) });
     if (payload.action === 'publish_post') {
       if (payload.confirmar !== true) return send(400, { error: 'confirmation_required' });
       if (payload.preview_hash !== hash([payload.space, payload.title, payload.body_markdown])) return send(409, { error: 'preview_mismatch' });
+      if (postHidden) return send(409, { error: 'post_moderated' });
       postCount = 1; return send(200, { post_id: POST_ID });
     }
     if (payload.action === 'read_post') {
@@ -139,6 +147,7 @@ test('MCP to HTTP fixture covers agenda, exact preview publication, comments, id
       if (commentsLocked) return send(409, { error: 'comments_locked' });
       if (payload.confirmar !== true) return send(400, { error: 'confirmation_required' });
       if (payload.preview_hash !== hash([payload.post_id, payload.body_markdown])) return send(409, { error: 'preview_mismatch' });
+      if (commentHidden) return send(409, { error: 'comment_moderated' });
       commentCount = 1; return send(200, { comment_id: COMMENT_ID });
     }
     return send(400, { error: 'invalid_action' });
@@ -157,6 +166,7 @@ test('MCP to HTTP fixture covers agenda, exact preview publication, comments, id
     const draft = { space: 'help', title: post.title, body_markdown: post.body_markdown };
     const preview = (await invoke('preparar_post_comunidade', draft)).structuredContent;
     assert.deepEqual({ space: preview.space, title: preview.title, body_markdown: preview.body_markdown }, draft);
+    assert.match(preview.audience_description, /membros ativos.*help/);
     const mismatch = await invoke('publicar_post_comunidade', { ...draft, body_markdown: 'Outro texto', preview_hash: preview.preview_hash, confirmar: true });
     assert.equal(mismatch.isError, true); assert.match(mismatch.content[0].text, /prévia/);
     assert.equal(postCount, 0);
@@ -164,6 +174,10 @@ test('MCP to HTTP fixture covers agenda, exact preview publication, comments, id
     assert.equal(published.structuredContent.post_id, POST_ID);
     assert.equal((await invoke('publicar_post_comunidade', { ...draft, preview_hash: preview.preview_hash, confirmar: true })).structuredContent.post_id, POST_ID);
     assert.equal(postCount, 1);
+    postHidden = true;
+    const moderatedPost = await invoke('publicar_post_comunidade', { ...draft, preview_hash: preview.preview_hash, confirmar: true });
+    assert.equal(moderatedPost.isError, true); assert.match(moderatedPost.content[0].text, /moderação/);
+    postHidden = false;
     const read = await invoke('ler_post', { post_id: POST_ID });
     assert.equal(read.structuredContent.post.author.display_name, 'Pessoa de teste');
     assert.ok(!JSON.stringify(read).includes('PRIVATE_CONTACT'));
@@ -176,6 +190,10 @@ test('MCP to HTTP fixture covers agenda, exact preview publication, comments, id
     const commentMismatch = await invoke('comentar_post', { ...commentDraft, body_markdown: 'Outro texto', preview_hash: commentPreview.preview_hash, confirmar: true });
     assert.equal(commentMismatch.isError, true); assert.equal(commentCount, 0);
     assert.equal((await invoke('comentar_post', { ...commentDraft, preview_hash: commentPreview.preview_hash, confirmar: true })).structuredContent.comment_id, COMMENT_ID);
+    commentHidden = true;
+    const moderatedComment = await invoke('comentar_post', { ...commentDraft, preview_hash: commentPreview.preview_hash, confirmar: true });
+    assert.equal(moderatedComment.isError, true); assert.match(moderatedComment.content[0].text, /moderação/);
+    commentHidden = false;
     assert.equal((await invoke('ler_post', { post_id: POST_ID })).structuredContent.comments.length, 1);
     commentsLocked = true;
     assert.match((await invoke('preparar_comentario', commentDraft)).content[0].text, /fechados/);
