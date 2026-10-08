@@ -62,6 +62,12 @@ test('surface schemas constrain pagination, exact patches and independent confir
     ['preparar_atualizacao_perfil', { changes: { projects: [{ name: 'Projeto', description: 42 }] } }],
     ['preparar_atualizacao_perfil', { changes: { available_for: ['qualquer_coisa'] } }],
     ['preparar_atualizacao_perfil', { changes: { full_name: '' } }],
+    ['preparar_atualizacao_perfil', { changes: { city: 7 } }],
+    ['preparar_atualizacao_perfil', { changes: { city: 'x'.repeat(121) } }],
+    ['preparar_atualizacao_perfil', { changes: { offer_text: false } }],
+    ['preparar_atualizacao_perfil', { changes: { offer_text: 'x'.repeat(501) } }],
+    ['preparar_atualizacao_perfil', { changes: { current_intent: null } }],
+    ['preparar_atualizacao_perfil', { changes: { current_intent: 'x'.repeat(121) } }],
     ['salvar_meu_perfil', { changes: { company: 'Nova empresa' }, expected_revision: REVISION, preview_hash: HASH }],
     ['salvar_meu_perfil', { changes: { company: 'Nova empresa' }, expected_revision: REVISION, preview_hash: HASH, confirmar: false }],
     ['salvar_meu_perfil', { changes: { company: 'Nova empresa' }, expected_revision: REVISION, preview_hash: 'invalid', confirmar: true }],
@@ -316,6 +322,14 @@ test('real HTTP client reads sources, previews, saves exact approved patch, publ
     const publicSave = await invoke('salvar_meu_perfil', { changes: publicPreview.changes, expected_revision: publicPreview.revision, preview_hash: publicPreview.preview_hash, confirmar: true });
     assert.equal(publicSave.structuredContent.audience, 'community_vitrine');
     assert.equal(current.company, 'Empresa visível atualizada');
+    const clearChanges = { city: '', offer_text: '', current_intent: '' };
+    const clearPreview = (await invoke('preparar_atualizacao_perfil', { changes: clearChanges })).structuredContent;
+    assert.deepEqual(clearPreview.changes, clearChanges);
+    assert.deepEqual(clearPreview.publication.missing_fields, []);
+    const cleared = await invoke('salvar_meu_perfil', { changes: clearPreview.changes, expected_revision: clearPreview.revision,
+      preview_hash: clearPreview.preview_hash, confirmar: true });
+    assert.equal(cleared.structuredContent.audience, 'community_vitrine');
+    for (const key of Object.keys(clearChanges)) assert.equal(cleared.structuredContent.profile[key], '');
     const hidePreview = (await invoke('preparar_atualizacao_perfil', { changes: { block_visibility: { installed_systems: false } } })).structuredContent;
     assert.deepEqual(hidePreview.automatic_blocks.installed_systems, []);
     assert.equal(hidePreview.profile.block_visibility.installed_systems, false);
@@ -327,7 +341,7 @@ test('real HTTP client reads sources, previews, saves exact approved patch, publ
     for (const [name, args] of [['buscar_acervo_comunidade', {}], ['meu_perfil_comunidade', {}], ['publicar_meu_perfil', { expected_revision: currentRevision(), confirmar: true }]]) {
       const denied = await invoke(name, args); assert.equal(denied.isError, true); assert.match(denied.content[0].text, /Society/);
     }
-    assert.equal(writes, 4);
+    assert.equal(writes, 5);
     permitted = true; echoSecret = true;
     const secret = await invoke('meu_perfil_comunidade');
     assert.equal(secret.isError, true);

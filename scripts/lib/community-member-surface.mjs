@@ -16,12 +16,12 @@ const BLOCK_KEYS = Object.freeze(['installed_systems', 'skills', 'contributions'
 const blockVisibility = object(Object.fromEntries(BLOCK_KEYS.map(key => [key, { type: 'boolean' }])), [], { minProperties: 1 });
 
 export const PROFILE_CHANGE_FIELDS = Object.freeze({
-  full_name: string(200, 2), city: string(120, 2), company: string(200),
+  full_name: string(200, 2), city: string(120), company: string(200),
   links: array(link, 8), projects: array(project, 6), capabilities: array(string(40, 1), 12),
   available_for: array(choice(['consultoria', 'parceria', 'advisory', 'sprint', 'projeto', 'mentoria', 'co_construcao']), 8),
   what_i_do: string(200), focus_tags: array(string(40, 1), 8), working_on: string(500),
-  need_tags: array(string(40, 1), 8), need_help_text: string(500), offer_text: string(500, 10),
-  current_intent: string(120, 10), main_bottleneck: string(500), building_next_12_months: string(500),
+  need_tags: array(string(40, 1), 8), need_help_text: string(500), offer_text: string(500),
+  current_intent: string(120), main_bottleneck: string(500), building_next_12_months: string(500),
   building_this_decade: string(500), refuses_to_outsource_to_ai: string(500),
   block_visibility: blockVisibility,
 });
