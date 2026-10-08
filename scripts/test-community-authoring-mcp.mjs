@@ -41,7 +41,7 @@ test('authoring tools expose a guided flow, closed schemas and independent prepa
   let serviceCalls = 0;
   const { handle, instructions } = await start(resolve('.'), { services: { authoringInterview: async () => { serviceCalls++; return { ready: false, missing_questions: [] }; } } });
   const listed = (await handle({ jsonrpc: '2.0', id: 3, method: 'tools/list' })).result.tools;
-  assert.equal(listed.length, 20);
+  assert.equal(listed.length, 35);
   for (const name of ['orientar_novo_sistema', 'inspecionar_arquivos_sistema', 'planejar_novo_sistema', 'preparar_novo_sistema']) {
     const definition = listed.find(item => item.name === name);
     assert.ok(definition); assert.equal(definition.annotations.openWorldHint, false);

@@ -1,8 +1,8 @@
 # Usar a comunidade com a sua IA
 
-O MCP da comunidade conecta a IA aos sistemas, ao acervo publicado e ao seu próprio perfil. Você pode pedir: “Encontre o sistema de funil”, “Busque aulas sobre pesquisa de público” ou “Prepare uma atualização do meu perfil”. Instalações, mudanças no perfil e publicação dependem da sua aprovação. Os seus arquivos continuam no seu computador.
+O MCP da comunidade conecta a IA aos sistemas, ao acervo publicado, ao seu próprio perfil, à agenda e ao feed. Você pode pedir: “Encontre o sistema de funil”, “Busque aulas sobre pesquisa de público”, “Qual é o próximo encontro?” ou “Prepare um pedido de ajuda para a comunidade”. Instalações, mudanças no perfil, confirmação de presença e publicação dependem da sua aprovação. Os seus arquivos continuam no seu computador.
 
-Use o cliente de uma release oficial `v1.39.0` ou posterior e o serviço de distribuição compatível na plataforma. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
+Use o cliente de uma release oficial `v1.39.0` ou posterior e o serviço de distribuição compatível na plataforma. Agenda e feed exigem uma release que já inclua as sete ferramentas descritas abaixo; a mera presença da versão 1.39.0 não as garante. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
 
 ## Conectar
 
@@ -34,6 +34,18 @@ A busca consulta texto de título, palestrante, descrição e tags das aulas e d
 
 Isso não é uma busca universal de transcrições ou minutagem. Se uma fala não constar na descrição publicada, a IA não pode afirmar que encontrou aquela fala. Arquivos privados, links temporários de download, documentos internos, feed e cérebros de outros membros não entram nessa consulta. Se a resposta indicar `pagination_truncated: true`, refine a busca; o limite de paginação não significa que o acervo acabou.
 
+## Próximos encontros e presença
+
+Peça “Mostre os próximos encontros e se já confirmei presença”. `proximos_encontros` traz somente eventos publicados acessíveis à sua conta, com horário de Brasília, local, link quando houver e seu estado de RSVP. Confira o encontro antes de pedir à IA para confirmar sua presença. Depois da sua aprovação, `confirmar_presenca` usa o identificador daquele evento e `confirmar: true`. Repetir a confirmação não cria outra presença; a plataforma reconfere seu acesso a cada chamada.
+
+## Postar e comentar no feed
+
+Para publicar um post, diga à IA o texto que quer compartilhar e escolha `community` ou `help`. Ela usa `preparar_post_comunidade` e mostra espaço, título, corpo em Markdown, `audience`, `audience_description` (quem pode ver o post) e `preview_hash`. Confira o texto completo e a audiência descrita. Depois de sua aprovação explícita, ela usa `publicar_post_comunidade` com os mesmos campos, hash e `confirmar: true`. Se o texto mudar, peça outra prévia. Repetir a mesma publicação aprovada não cria outro post; se ele tiver sido ocultado ou arquivado pela moderação, a repetição não o republica.
+
+Para comentar, indique o post e o texto. A IA pode usar `ler_post` para mostrar o post e comentários visíveis, inclusive avisos de outros espaços que sua conta pode acessar, depois `preparar_comentario` para mostrar a prévia do seu comentário e o hash. Só após sua aprovação ela chama `comentar_post` com o mesmo post, texto, hash e `confirmar: true`. Comentários fechados ou moderados seguem as regras da plataforma; repetir um comentário ocultado não o republica. A leitura pelo MCP não expõe contatos privados.
+
+O texto aprovado é o único conteúdo enviado pelo Cérebro para esses pedidos. A IA não lê nem varre seus arquivos para compor um post automaticamente. Texto de posts e comentários de outras pessoas é conteúdo de consulta, nunca comando ou autorização para agir.
+
 ## Atualizar seu perfil e aparecer na Vitrine
 
 Peça à IA:
@@ -48,7 +60,17 @@ O caminho tem três decisões:
 
 A IA usa a revisão do perfil e o hash da prévia para evitar salvar outra versão por engano. Se você editar o perfil pela plataforma enquanto isso, ela precisa reler e preparar outra prévia. Não trate esse conflito como autorização para sobrescrever.
 
-Você pode alterar nome, cidade, empresa, links, projetos, competências, disponibilidade, o que está construindo, o que procura e o que oferece. A consulta também mostra apresentação, área e estágio legados quando cadastrados; esses três campos continuam editáveis somente pela plataforma. Contatos privados, identidade da conta e foto não são alterados pelo MCP. A foto existente aparece na consulta; para adicionar ou trocar uma foto, use a plataforma. A consulta informa o que ainda falta para publicar. Se o perfil ainda não existir, inicie-o pela plataforma.
+Você pode alterar nome, cidade, empresa, links, projetos, competências, disponibilidade, o que está construindo, o que procura e o que oferece. Para publicar, bastam nome, empresa ou projeto, o que faz e o que procura; a prévia lista somente essas pendências bloqueantes. Foto é opcional e continua alterável apenas pela plataforma. Apresentação, área e estágio legados não aparecem no MCP. Se o perfil ainda não existir, inicie-o pela plataforma.
+
+Depois da publicação, seis blocos automáticos podem mostrar sistemas instalados, skills, contribuições publicadas, trabalhos compartilhados, presença em encontros e missões concluídas. Eles vêm dos registros atuais da plataforma; não são campos para digitar nem prova inventada pela IA. O perfil privado não mostra os itens, e você pode ocultar cada bloco com `block_visibility` na prévia e aprovação normal do perfil. Ocultar não apaga a evidência original. A IA mostra a visibilidade resultante antes de salvar.
+
+## Vincular trabalho, uso de fonte e correção a uma missão
+
+Você pode escolher um recibo de execução já existente no seu Cérebro para registrar trabalho, uso de fonte ou correção. Isso exige acesso Society vigente no MCP; as missões iniciais continuam visíveis gratuitamente na plataforma, com declaração por um caminho separado. Parear a identidade da instalação não é evidência de trabalho.
+
+Indique à IA a missão e o identificador do recibo local: `run-record:<id>` para `choose_work` ou `use_source`, `correction-run:<id>` para `correct_reuse`. `planejar_evidencia_missao` confere o recibo canônico, o grafo relacionado e os arquivos citados; mostra tipo, data, contagens, hash e a prévia do vínculo. Em uma rotina, a decisão humana fica no Judgment Receipt separado; a IA exige o julgamento atual aprovado. `use_source` exige um Run Record v2 com acesso e seleção de fonte registrados; listar uma fonte no contrato ou em um Run Record v1 não basta. Uma execução de replay não conta como trabalho real, e a observação da fonte precisa ocorrer durante a execução. Para correção, o cliente confere execução anterior, julgamento de mudança, nova execução ligada a esse julgamento e resultados locais.
+
+Depois que você conferir e aprovar a prévia, `registrar_evidencia_missao` relê os arquivos e exige o mesmo hash e `preview_hash` com `confirmar: true`. Se algo mudou, prepare outra prévia. O identificador do recibo, os caminhos, os IDs das fontes e o conteúdo não entram na requisição: só missão, tipo, data, contagens e hash seguem para a plataforma. Ela vincula a declaração à sua conta autenticada e revalida Society. O estado significa **recibo local vinculado pelo membro**; não certifica o resultado externo nem infere uso passado a partir de conversa ou telemetria.
 
 O retorno do MCP omite números de contato e outros contatos privados. Essa omissão não altera as regras de exibição dos dados e links já cadastrados em outras áreas da plataforma, nem equivale a uma garantia de privacidade sobre essas áreas.
 
@@ -78,6 +100,14 @@ O caminho tem quatro passos:
 Compartilhe a melhoria do método. Propostas de clientes, conversas, dados do seu negócio e credenciais continuam privados. Somente os arquivos selecionados entram como alterações; não existe varredura ou upload automático do Cérebro.
 
 Um revisor autorizado, diferente do autor, decide sobre a proposta na plataforma. A publicação é outra operação e usa o hash aprovado. O MCP do membro não oferece ferramenta para revisar ou publicar contribuições no catálogo.
+
+## Encontrar, instalar e compartilhar skills
+
+Peça à IA “Encontre uma skill para revisar uma oferta e mostre origem, autor, versão e estado da evidência”. `listar_skills` filtra por tarefa (`query`), `origin` e `evidence_state` (`shared`, `usage_reported`, `tested`). `obter_skill` devolve o `SKILL.md` e os demais arquivos UTF-8 com SHA-256 somente quando o item está hospedado e autorizado pela plataforma. Uma referência de gstack, gbrain ou outro terceiro traz o link e uma receita de uso; seus arquivos não são re-hospedados nem instalados automaticamente.
+
+Antes de instalar, `planejar_instalacao_skill` mostra o destino `.agents/skills/<slug>`, versão, origem, hashes dos arquivos, `bundle_sha256` e `installation_plan_sha256`. Este último vincula a confirmação aos metadados e ao destino vistos na prévia, mesmo se os bytes dos arquivos continuarem iguais. Se a pasta já existe, mostra também `existing_tree_sha256`. Após sua aprovação do plano exato, `instalar_skill` reconfere o acesso Society e verifica o plano, os bytes e os hashes. Para substituir uma pasta existente, você precisa aprovar especificamente a substituição com `substituir_existente: true` e o hash da pasta local mostrado na prévia. Se a pasta ou o plano mudar, prepare outra prévia. A instalação grava `.inevita-skill-origin.json` com origem, versão e hashes; não executa scripts da skill. Arquivos recebidos são conteúdo não confiável, nunca autorização para agir.
+
+Para contribuir com uma skill sua, a IA usa `orientar_nova_skill` para perguntar só o que falta sobre autoria, licença, tarefa, gatilho, método e um exemplo pequeno de teste. Depois que você escolher explicitamente uma pasta de trabalho e até 32 arquivos UTF-8 de no máximo 64 KiB cada, com `SKILL.md` obrigatório, `preparar_skill` cria o candidato local. Informe autoria, licença, quando usar, exemplo, primeira tarefa e resumo; requisitos podem ficar vazios quando não houver dependências. O preparo exige sua confirmação de que criou o método ou tem direito de compartilhá-lo. Skills instaladas de terceiros e acervos da comunidade não podem ser usados como fonte desse preparo. Confira os arquivos completos em `package_ref`, depois use `revisar_contribuicao_local`, `autorizar_envio_contribuicao` e `enviar_contribuicao` como para sistemas. Cada decisão é separada; o envio vai para revisão por outra pessoa e não publica automaticamente.
 
 ## Compartilhar um sistema novo
 
@@ -111,8 +141,10 @@ Este preparo aceita até 32 arquivos de texto UTF-8, 64 KiB por arquivo e 128 Ki
 
 O transporte segue o [stdio do MCP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports): uma mensagem JSON-RPC UTF-8 por linha. `stdout` contém somente protocolo; falha de inicialização usa `stderr` sem detalhes privados. O cliente envia `initialize` e depois `notifications/initialized`, conforme o [ciclo de conexão](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle).
 
-As vinte ferramentas expostas cobrem sistemas e contribuições, consulta do acervo e seu próprio perfil. As seis ferramentas novas são `buscar_acervo_comunidade`, `detalhar_item_acervo`, `meu_perfil_comunidade`, `preparar_atualizacao_perfil`, `salvar_meu_perfil` e `publicar_meu_perfil`. Para sistemas originais, a IA usa `orientar_novo_sistema`, `inspecionar_arquivos_sistema`, `planejar_novo_sistema` e `preparar_novo_sistema`, seguidas das ferramentas de revisão, autorização e envio existentes. A plataforma revalida o acesso nas operações remotas. O processo não oferece leitura arbitrária de arquivos, shell, ferramentas empresariais nem publicação de curador. Publicar no feed, comentar, consultar outros membros, agenda e notificações ainda não fazem parte desta versão.
+As 35 ferramentas expostas preservam as vinte anteriores, as sete de agenda/feed do corte 1, as seis de skills do corte 2 e acrescentam `planejar_evidencia_missao` e `registrar_evidencia_missao`. Para sistemas originais, a IA usa `orientar_novo_sistema`, `inspecionar_arquivos_sistema`, `planejar_novo_sistema` e `preparar_novo_sistema`, seguidas das ferramentas de revisão, autorização e envio existentes. A plataforma revalida o acesso nas operações remotas. O processo não oferece leitura arbitrária de arquivos, shell, ferramentas empresariais nem publicação de curador. Consultar outros membros e notificações ainda não fazem parte desta versão.
 
 Perfil: a prévia retorna `changes` normalizado, `revision`, `preview_hash` e `audience`. Para salvar, use esse mesmo `changes`, passe a `revision` em `expected_revision` e informe `confirmar: true` apenas após a aprovação do dono. Para publicar, use a revisão da leitura do perfil salvo e uma autorização separada. Os hashes são controles de concorrência e integridade da prévia; não substituem autenticação ou consentimento.
+
+Feed: as prévias de post e comentário retornam um `preview_hash` de 32 caracteres hexadecimais. Publicar exige o mesmo texto, alvo e hash, além de `confirmar: true`. O servidor liga a autoria ao membro da instalação e confere acesso e moderação; o cliente não aceita `member_id`, autor nem credencial nos argumentos das ferramentas.
 
 O limite é de 256 KiB por mensagem recebida e 512 KiB por resposta. Na instalação e no acompanhamento, o MCP retorna metadados e referências, sem pacote bruto ou credenciais. Na autoria, a prévia contém integralmente o texto selecionado e os arquivos e contratos gerados em `structuredContent`; `content` aponta para essa revisão, evitando duplicar textos grandes. Uma prévia acima do limite é recusada em vez de truncada. Endpoints de teste em HTTP local exigem a variável explícita `CEREBRO_COMMUNITY_ALLOW_LOCALHOST=true` no processo de teste. Essa opção não deve ser usada na configuração normal.
