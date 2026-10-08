@@ -2,6 +2,7 @@ import { isAbsolute, resolve } from 'node:path';
 import { matchesSchema } from './community-mcp-protocol.mjs';
 import { MEMBER_SURFACE_TOOLS, memberSurfaceAction, memberSurfaceArguments, projectMemberSurfaceResult, validateMemberSurfaceRequest } from './community-member-surface.mjs';
 import { COMMUNITY_AUTHORING_TOOLS, authoringOperation, authoringArguments, projectAuthoringResult } from './community-authoring-tools.mjs';
+import { MEMBER_INTERACTION_TOOLS, memberInteractionAction, memberInteractionArguments, projectMemberInteractionResult, validateMemberInteractionRequest } from './community-member-interaction.mjs';
 
 const text = (maxLength, extra = {}) => ({ type: 'string', minLength: 1, maxLength, ...extra });
 const slug = text(64, { pattern: '^[a-z0-9][a-z0-9-]{0,63}$' });
@@ -25,6 +26,7 @@ export const COMMUNITY_TOOLS = Object.freeze([
   tool('minhas_contribuicoes', 'Acompanhar contribuições', 'Consulta as contribuições que a plataforma autoriza esta instalação a consultar. O estado é consultado agora; candidato enviado não significa publicado.', schema()),
   tool('status_contribuicao', 'Ver estado da contribuição', 'Consulta o estado de uma contribuição autorizada, sem trazer o pacote bruto. Revisão e publicação são feitas pelo revisor autorizado na plataforma, nunca por esta ferramenta.', schema({ contribution_id: identifier })),
   ...MEMBER_SURFACE_TOOLS,
+  ...MEMBER_INTERACTION_TOOLS,
   ...COMMUNITY_AUTHORING_TOOLS,
 ]);
 
@@ -90,6 +92,17 @@ const ERRORS = new Map([
   ['sensitive_content_requires_redaction', 'Um dos arquivos selecionados pode conter informação privada. Remova esse conteúdo antes de preparar a contribuição.'],
   ['private_selection_refused', 'Esta seleção contém uma pasta privada. Selecione somente a melhoria do método que deseja compartilhar.'],
   ['profile_revision_conflict', 'Seu perfil mudou desde a leitura. Consulte o perfil atual, prepare outra prévia e confirme as mudanças novamente.'],
+  ['event_not_found', 'Este encontro não está disponível para sua conta agora. Consulte os próximos encontros novamente.'],
+  ['post_not_found', 'Este post não está disponível para sua conta agora. Consulte a comunidade novamente.'],
+  ['space_not_available', 'Este espaço não está disponível para sua conta agora. Confira o espaço na plataforma.'],
+  ['invalid_post_content', 'O título ou o corpo do post precisa ser ajustado. Confira o texto e prepare outra prévia.'],
+  ['invalid_comment_content', 'O comentário precisa ser ajustado. Confira o texto e prepare outra prévia.'],
+  ['invalid_preview_hash', 'O hash da prévia é inválido. Prepare outra prévia antes de publicar.'],
+  ['comments_locked', 'Os comentários deste post estão fechados. Nenhum comentário foi publicado.'],
+  ['post_preview_mismatch', 'O texto do post mudou desde a prévia. Prepare outra prévia e aprove o novo hash antes de publicar.'],
+  ['comment_preview_mismatch', 'O comentário mudou desde a prévia. Prepare outra prévia e aprove o novo hash antes de publicar.'],
+  ['preview_mismatch', 'O texto mudou desde a prévia. Prepare outra prévia e aprove o novo hash antes de publicar.'],
+  ['invalid_member_interaction_arguments', 'Confira o encontro, o texto e a confirmação. Nenhuma publicação foi enviada.'],
   ['profile_preview_mismatch', 'As mudanças não correspondem à prévia aprovada. Prepare outra prévia e confirme o conteúdo exato antes de salvar.'],
   ['profile_not_found', 'Seu perfil ainda não foi criado. Abra a área de perfil na plataforma para iniciá-lo e depois consulte novamente pela IA.'],
   ['profile_incomplete', 'Ainda faltam campos para publicar. Consulte seu perfil para conferir as pendências; adicione a foto pela plataforma.'],
@@ -124,8 +137,14 @@ export function createCommunityToolHandler({ root, endpoint, allowLocalhost = fa
       loaded ||= await serviceLoader({ root: brainRoot, endpoint, allowLocalhost });
       let result;
       const surfaceAction = memberSurfaceAction(name);
+      const interactionAction = memberInteractionAction(name);
       const authoringMethod = authoringOperation(name);
       if (authoringMethod) result = await loaded[authoringMethod](authoringArguments(args));
+      else if (interactionAction) {
+        const fields = memberInteractionArguments(args);
+        validateMemberInteractionRequest(interactionAction, fields);
+        result = await loaded.memberSurface(interactionAction, fields);
+      }
       else if (surfaceAction) {
         const fields = memberSurfaceArguments(args);
         validateMemberSurfaceRequest(surfaceAction, fields);
@@ -141,7 +160,7 @@ export function createCommunityToolHandler({ root, endpoint, allowLocalhost = fa
       else if (name === 'enviar_contribuicao') result = await loaded.send({ candidateId: args.candidate_id, packageSha256: args.package_sha256, confirm: true });
       else if (name === 'minhas_contribuicoes') result = await loaded.contributions();
       else result = await loaded.contribution(args.contribution_id);
-      const metadata = authoringMethod ? projectAuthoringResult(result) : surfaceAction ? projectMemberSurfaceResult(surfaceAction, result) : communityMetadata(result);
+      const metadata = authoringMethod ? projectAuthoringResult(result) : interactionAction ? projectMemberInteractionResult(interactionAction, result) : surfaceAction ? projectMemberSurfaceResult(surfaceAction, result) : communityMetadata(result);
       const data = metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : { items: metadata };
       if (authoringMethod) {
         // Keep the full review once, in structuredContent, so large legal text

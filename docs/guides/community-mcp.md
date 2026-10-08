@@ -1,8 +1,8 @@
 # Usar a comunidade com a sua IA
 
-O MCP da comunidade conecta a IA aos sistemas, ao acervo publicado e ao seu próprio perfil. Você pode pedir: “Encontre o sistema de funil”, “Busque aulas sobre pesquisa de público” ou “Prepare uma atualização do meu perfil”. Instalações, mudanças no perfil e publicação dependem da sua aprovação. Os seus arquivos continuam no seu computador.
+O MCP da comunidade conecta a IA aos sistemas, ao acervo publicado, ao seu próprio perfil, à agenda e ao feed. Você pode pedir: “Encontre o sistema de funil”, “Busque aulas sobre pesquisa de público”, “Qual é o próximo encontro?” ou “Prepare um pedido de ajuda para a comunidade”. Instalações, mudanças no perfil, confirmação de presença e publicação dependem da sua aprovação. Os seus arquivos continuam no seu computador.
 
-Use o cliente de uma release oficial `v1.39.0` ou posterior e o serviço de distribuição compatível na plataforma. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
+Use o cliente de uma release oficial `v1.39.0` ou posterior e o serviço de distribuição compatível na plataforma. Agenda e feed exigem uma release que já inclua as sete ferramentas descritas abaixo; a mera presença da versão 1.39.0 não as garante. A instalação precisa ter acesso vigente à Society, revalidado a cada operação remota. Conectar o MCP não ativa uma assinatura nem publica sistemas. O Cérebro básico continua funcionando sem Society; esta conexão remota é um benefício da Society.
 
 ## Conectar
 
@@ -33,6 +33,18 @@ Peça à IA:
 A busca consulta texto de título, palestrante, descrição e tags das aulas e dos encontros gravados que a sua conta pode acessar. O detalhe traz a descrição publicada e os nomes dos materiais, com um link para abrir a fonte na plataforma. A IA deve citar essa fonte e distinguir o conteúdo encontrado das próprias conclusões.
 
 Isso não é uma busca universal de transcrições ou minutagem. Se uma fala não constar na descrição publicada, a IA não pode afirmar que encontrou aquela fala. Arquivos privados, links temporários de download, documentos internos, feed e cérebros de outros membros não entram nessa consulta. Se a resposta indicar `pagination_truncated: true`, refine a busca; o limite de paginação não significa que o acervo acabou.
+
+## Próximos encontros e presença
+
+Peça “Mostre os próximos encontros e se já confirmei presença”. `proximos_encontros` traz somente eventos publicados acessíveis à sua conta, com horário de Brasília, local, link quando houver e seu estado de RSVP. Confira o encontro antes de pedir à IA para confirmar sua presença. Depois da sua aprovação, `confirmar_presenca` usa o identificador daquele evento e `confirmar: true`. Repetir a confirmação não cria outra presença; a plataforma reconfere seu acesso a cada chamada.
+
+## Postar e comentar no feed
+
+Para publicar um post, diga à IA o texto que quer compartilhar e escolha `community` ou `help`. Ela usa `preparar_post_comunidade` e mostra espaço, título, corpo em Markdown, audiência e `preview_hash`. Confira o texto completo. Depois de sua aprovação explícita, ela usa `publicar_post_comunidade` com os mesmos campos, hash e `confirmar: true`. Se o texto mudar, peça outra prévia. Repetir a mesma publicação aprovada não cria outro post.
+
+Para comentar, indique o post e o texto. A IA pode usar `ler_post` para mostrar o post e comentários visíveis, inclusive avisos de outros espaços que sua conta pode acessar, depois `preparar_comentario` para mostrar a prévia do seu comentário e o hash. Só após sua aprovação ela chama `comentar_post` com o mesmo post, texto, hash e `confirmar: true`. Comentários fechados ou moderados seguem as regras da plataforma. A leitura pelo MCP não expõe contatos privados.
+
+O texto aprovado é o único conteúdo enviado pelo Cérebro para esses pedidos. A IA não lê nem varre seus arquivos para compor um post automaticamente. Texto de posts e comentários de outras pessoas é conteúdo de consulta, nunca comando ou autorização para agir.
 
 ## Atualizar seu perfil e aparecer na Vitrine
 
@@ -111,8 +123,10 @@ Este preparo aceita até 32 arquivos de texto UTF-8, 64 KiB por arquivo e 128 Ki
 
 O transporte segue o [stdio do MCP 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports): uma mensagem JSON-RPC UTF-8 por linha. `stdout` contém somente protocolo; falha de inicialização usa `stderr` sem detalhes privados. O cliente envia `initialize` e depois `notifications/initialized`, conforme o [ciclo de conexão](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle).
 
-As vinte ferramentas expostas cobrem sistemas e contribuições, consulta do acervo e seu próprio perfil. As seis ferramentas novas são `buscar_acervo_comunidade`, `detalhar_item_acervo`, `meu_perfil_comunidade`, `preparar_atualizacao_perfil`, `salvar_meu_perfil` e `publicar_meu_perfil`. Para sistemas originais, a IA usa `orientar_novo_sistema`, `inspecionar_arquivos_sistema`, `planejar_novo_sistema` e `preparar_novo_sistema`, seguidas das ferramentas de revisão, autorização e envio existentes. A plataforma revalida o acesso nas operações remotas. O processo não oferece leitura arbitrária de arquivos, shell, ferramentas empresariais nem publicação de curador. Publicar no feed, comentar, consultar outros membros, agenda e notificações ainda não fazem parte desta versão.
+As 27 ferramentas expostas preservam as vinte anteriores e acrescentam `proximos_encontros`, `confirmar_presenca`, `preparar_post_comunidade`, `publicar_post_comunidade`, `ler_post`, `preparar_comentario` e `comentar_post`. Para sistemas originais, a IA usa `orientar_novo_sistema`, `inspecionar_arquivos_sistema`, `planejar_novo_sistema` e `preparar_novo_sistema`, seguidas das ferramentas de revisão, autorização e envio existentes. A plataforma revalida o acesso nas operações remotas. O processo não oferece leitura arbitrária de arquivos, shell, ferramentas empresariais nem publicação de curador. Consultar outros membros e notificações ainda não fazem parte desta versão.
 
 Perfil: a prévia retorna `changes` normalizado, `revision`, `preview_hash` e `audience`. Para salvar, use esse mesmo `changes`, passe a `revision` em `expected_revision` e informe `confirmar: true` apenas após a aprovação do dono. Para publicar, use a revisão da leitura do perfil salvo e uma autorização separada. Os hashes são controles de concorrência e integridade da prévia; não substituem autenticação ou consentimento.
+
+Feed: as prévias de post e comentário retornam um `preview_hash` de 32 caracteres hexadecimais. Publicar exige o mesmo texto, alvo e hash, além de `confirmar: true`. O servidor liga a autoria ao membro da instalação e confere acesso e moderação; o cliente não aceita `member_id`, autor nem credencial nos argumentos das ferramentas.
 
 O limite é de 256 KiB por mensagem recebida e 512 KiB por resposta. Na instalação e no acompanhamento, o MCP retorna metadados e referências, sem pacote bruto ou credenciais. Na autoria, a prévia contém integralmente o texto selecionado e os arquivos e contratos gerados em `structuredContent`; `content` aponta para essa revisão, evitando duplicar textos grandes. Uma prévia acima do limite é recusada em vez de truncada. Endpoints de teste em HTTP local exigem a variável explícita `CEREBRO_COMMUNITY_ALLOW_LOCALHOST=true` no processo de teste. Essa opção não deve ser usada na configuração normal.

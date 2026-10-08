@@ -5,6 +5,11 @@ description: Sincroniza e apresenta o acervo exclusivo da INEVITA Society (conte
 
 # Society — o acervo exclusivo de membro
 
+Para agenda, RSVP, posts e comentários pela IA conectada à comunidade, siga
+`docs/guides/community-mcp.md`. Mostre o encontro ou a prévia do texto e peça a aprovação do dono
+antes de confirmar presença ou publicar. Essas ações remotas não precisam da sincronização local
+do acervo descrita abaixo.
+
 O conteúdo da INEVITA Society não vive neste repositório: ele desce do servidor, só pra
 instalações de membros pagantes, e mora em `comunidade/society/` (fora do Git da sua cópia,
 como toda configuração pessoal).
