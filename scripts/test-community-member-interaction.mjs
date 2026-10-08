@@ -39,7 +39,7 @@ async function ready(handler) {
 }
 
 test('seven community interactions keep the original twenty tools and reject unsafe arguments before service calls', async () => {
-  assert.equal(COMMUNITY_TOOLS.length, 27);
+  assert.equal(COMMUNITY_TOOLS.length, 33);
   assert.equal(MEMBER_INTERACTION_TOOLS.length, 7);
   const previousTools = [
     'listar_sistemas_comunidade', 'detalhar_sistema_comunidade', 'planejar_instalacao_sistema',
@@ -49,7 +49,7 @@ test('seven community interactions keep the original twenty tools and reject uns
     'preparar_atualizacao_perfil', 'salvar_meu_perfil', 'publicar_meu_perfil',
     'orientar_novo_sistema', 'inspecionar_arquivos_sistema', 'planejar_novo_sistema', 'preparar_novo_sistema',
   ];
-  assert.deepEqual(COMMUNITY_TOOLS.filter(item => !MEMBER_INTERACTION_TOOLS.some(next => next.name === item.name)).map(item => item.name), previousTools);
+  assert.deepEqual(COMMUNITY_TOOLS.filter(item => previousTools.includes(item.name)).map(item => item.name), previousTools);
   let requests = 0;
   const handle = await ready(async () => { requests++; return { content: [] }; });
   const invalid = [

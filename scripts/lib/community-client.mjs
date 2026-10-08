@@ -1,9 +1,10 @@
 import { readCommunityFile, communityAssert, communityHash, hashCommunityPackage, validateCommunityPackage, COMMUNITY_LIMITS, COMMUNITY_SHA_RE } from './community-package.mjs';
 import { MEMBER_SURFACE_ACTION_SCHEMAS, validateMemberSurfaceRequest } from './community-member-surface.mjs';
 import { MEMBER_INTERACTION_ACTION_SCHEMAS, validateMemberInteractionRequest } from './community-member-interaction.mjs';
+import { SKILL_ACTION_SCHEMAS, validateSkillRequest } from './community-skill.mjs';
 
 export const DEFAULT_COMMUNITY_ENDPOINT = 'https://inevitasociety.com/supabase/functions/v1/cerebro-system-distribution';
-const ACTIONS = new Set(['list_releases', 'get_release', 'issue_grant', 'redeem_grant', 'installation_receipt', 'submit_contribution', 'list_contributions', 'get_contribution', 'review_contribution', 'publish_contribution', ...Object.keys(MEMBER_SURFACE_ACTION_SCHEMAS), ...Object.keys(MEMBER_INTERACTION_ACTION_SCHEMAS)]);
+const ACTIONS = new Set(['list_releases', 'get_release', 'issue_grant', 'redeem_grant', 'installation_receipt', 'submit_contribution', 'list_contributions', 'get_contribution', 'review_contribution', 'publish_contribution', ...Object.keys(MEMBER_SURFACE_ACTION_SCHEMAS), ...Object.keys(MEMBER_INTERACTION_ACTION_SCHEMAS), ...Object.keys(SKILL_ACTION_SCHEMAS)]);
 const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 export function readCommunityIdentity(root) {
   let install_id, install_credential;
@@ -42,6 +43,7 @@ export function createCommunityClient({ root, endpoint = DEFAULT_COMMUNITY_ENDPO
     communityAssert(ACTIONS.has(action), 'invalid_community_action');
     validateMemberSurfaceRequest(action, payload);
     validateMemberInteractionRequest(action, payload);
+    validateSkillRequest(action, payload);
     const identity = readCommunityIdentity(root);
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -98,6 +100,8 @@ export function createCommunityClient({ root, endpoint = DEFAULT_COMMUNITY_ENDPO
     getContribution: (args) => request('get_contribution', args),
     reviewContribution: (args) => request('review_contribution', args),
     publishContribution: (args) => request('publish_contribution', args),
+    listSkills: (args = {}) => request('list_skills', args),
+    getSkill: (args) => request('get_skill', args),
     searchLibrary: (args = {}) => request('search_library', args),
     getLibraryItem: (args) => request('get_library_item', args),
     getMyProfile: () => request('get_my_profile'),

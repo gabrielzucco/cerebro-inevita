@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
-import { COMMUNITY_LIMITS, COMMUNITY_SHA_RE, communityPrivacyIgnore, communityAssert, safeCommunityName, safeCommunityPath, readCommunityFile, encodeCommunityFile, validateCommunityPackage, hashCommunityPackage, stableStringify, verifyInstalledCommunityPackage } from './community-package.mjs';
+import { COMMUNITY_LIMITS, COMMUNITY_SHA_RE, COMMUNITY_ID_RE, communityHash, communityPrivacyIgnore, communityAssert, safeCommunityName, safeCommunityPath, readCommunityFile, encodeCommunityFile, validateCommunityPackage, hashCommunityPackage, stableStringify, verifyInstalledCommunityPackage } from './community-package.mjs';
 
 const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const PREFIX = 'comunidade/minhas-contribuicoes/propostas';
 const GENERATED = new Set(['manifest.json', 'INVENTARIO.json', 'PROVENIENCIA.json']);
+const SKILL_VERSION_RE = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/;
 function candidateRoot(root, id) { communityAssert(UUID_RE.test(id || ''), 'invalid_candidate_id'); return safeCommunityPath(root, `${PREFIX}/${id}`); }
 function jsonBytes(value) { return Buffer.from(`${JSON.stringify(value, null, 2)}\n`); }
 function recordAtomic(path, data) {
@@ -53,6 +54,70 @@ export function assertCommunityShareablePath(path, { textOnly = false } = {}) {
     || /\.(?:pem|key|p12|pfx)$/i.test(part)), 'private_selection_refused');
   if (textOnly) communityAssert(!/\.(?:zip|tar|gz|tgz|bz2|xz|7z|rar|pdf|xlsx?|xlsm|xlsb|docx?|pptx?|png|jpe?g|gif|webp|mp[34]|wav|ogg|exe|dll|so|dylib|wasm|bin|sqlite3?|db)$/i.test(path), 'binary_content_not_supported');
   return path;
+}
+export function validateSkillContributionPackage(bundle) {
+  communityAssert(bundle && typeof bundle === 'object' && !Array.isArray(bundle) &&
+    Object.keys(bundle).every(key => ['schema_version', 'kind', 'slug', 'version', 'title', 'first_task', 'author', 'license', 'when_to_use', 'requirements', 'example', 'files'].includes(key)) &&
+    bundle.schema_version === 1 && bundle.kind === 'skill' && COMMUNITY_ID_RE.test(bundle.slug || '') &&
+    SKILL_VERSION_RE.test(bundle.version || ''), 'invalid_skill_package');
+  for (const key of ['title', 'first_task', 'author', 'license', 'when_to_use', 'requirements', 'example']) {
+    const max = key === 'title' || key === 'author' ? 200 : key === 'license' ? 120 : 2000;
+    communityAssert(typeof bundle[key] === 'string' && (key === 'requirements' || bundle[key].trim()) && bundle[key].length <= max, 'invalid_skill_package');
+    inspectShareableCommunityText(Buffer.from(bundle[key]));
+  }
+  communityAssert(bundle.files && typeof bundle.files === 'object' && !Array.isArray(bundle.files), 'invalid_skill_package');
+  const paths = Object.keys(bundle.files);
+  communityAssert(paths.length > 0 && paths.length <= 32 && paths.includes('SKILL.md'), 'invalid_skill_package');
+  const folded = paths.map(path => path.toLowerCase());
+  communityAssert(new Set(folded).size === paths.length &&
+    !folded.some((path, index) => folded.some((other, otherIndex) => index !== otherIndex && other.startsWith(`${path}/`))),
+  'invalid_skill_package');
+  let total = 0;
+  for (const path of paths) {
+    assertCommunityShareablePath(path, { textOnly: true });
+    communityAssert(path.length <= 240 && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(path) && !/(^|\/)[._-]/.test(path), 'invalid_skill_package');
+    const entry = bundle.files[path];
+    communityAssert(entry && typeof entry === 'object' && !Array.isArray(entry) &&
+      Object.keys(entry).every(key => ['content', 'sha256', 'size_bytes'].includes(key)) &&
+      typeof entry.content === 'string' && COMMUNITY_SHA_RE.test(entry.sha256 || '') &&
+      Number.isSafeInteger(entry.size_bytes) && entry.size_bytes >= 0 && entry.size_bytes <= 64 * 1024,
+    'invalid_skill_package');
+    const bytes = Buffer.from(entry.content, 'utf8');
+    communityAssert(bytes.toString('utf8') === entry.content && bytes.length === entry.size_bytes &&
+      communityHash(bytes) === entry.sha256, 'skill_file_hash_mismatch');
+    inspectShareableCommunityText(bytes);
+    total += bytes.length;
+  }
+  communityAssert(Buffer.byteLength(stableStringify(bundle)) <= COMMUNITY_LIMITS.jsonBytes, 'invalid_skill_package');
+  return { packageSha256: hashCommunityPackage(bundle), fileCount: paths.length, totalBytes: total };
+}
+export function prepareSkillContribution({ root, slug, sourceDir, selectedPaths, version, title, firstTask, author, license, whenToUse, requirements = '', example, summary, sharingRights, confirm = false }) {
+  communityAssert(typeof confirm === 'boolean', 'invalid_confirmation');
+  communityAssert(sharingRights === 'own_or_authorized', 'sharing_rights_required');
+  communityAssert(COMMUNITY_ID_RE.test(slug || '') && SKILL_VERSION_RE.test(version || ''), 'invalid_skill_package');
+  communityAssert(Array.isArray(selectedPaths) && selectedPaths.length > 0 && selectedPaths.length <= 32 &&
+    selectedPaths.includes('SKILL.md') && new Set(selectedPaths).size === selectedPaths.length, 'explicit_selection_required');
+  communityAssert(typeof summary === 'string' && summary.trim() && summary.length <= 2000, 'invalid_or_sensitive_summary');
+  inspectShareableCommunityText(Buffer.from(summary));
+  const source = selectedSource(root, sourceDir), files = {};
+  const sourceRef = relative(resolve(root), source).split('\\').join('/');
+  communityAssert(!/^(?:\.agents\/skills|\.claude\/skills|comunidade\/|conhecimento\/|capturas\/|privado\/|meu-negocio\/)/.test(`${sourceRef}/`), 'third_party_skill_source_refused');
+  for (const path of selectedPaths) {
+    assertCommunityShareablePath(path, { textOnly: true });
+    const bytes = readCommunityFile(source, path, 64 * 1024);
+    const content = inspectShareableCommunityText(bytes);
+    files[path] = { content, sha256: communityHash(bytes), size_bytes: bytes.length };
+  }
+  const bundle = { schema_version: 1, kind: 'skill', slug, version, title, first_task: firstTask,
+    author, license, when_to_use: whenToUse, requirements, example, files };
+  const checked = validateSkillContributionPackage(bundle);
+  const metadata = { schema_version: 1, kind: 'skill', candidate_id: randomUUID(), status: 'prepared', slug, version,
+    title, author, license, when_to_use: whenToUse, requirements, example, summary: summary.trim(),
+    package_sha256: checked.packageSha256, base_package_sha256: null,
+    selected_paths: [...selectedPaths].sort(), generated_paths: [], changes: [],
+    file_count: checked.fileCount, total_bytes: checked.totalBytes, created_at: new Date().toISOString(),
+    content_review_required: true, sharing_rights: sharingRights };
+  return stageCandidate({ root, bundle, metadata, confirm });
 }
 function scanOriginalRelease(bundle) {
   for (const value of [bundle.title, bundle.first_task, ...Object.values(bundle.provenance || {}), ...Object.values(bundle.contracts)]) inspectShareableCommunityText(Buffer.from(value));
@@ -206,8 +271,9 @@ export function getPreparedContribution({ root, candidateId }) {
   const dir = candidateRoot(root, candidateId);
   const metadata = JSON.parse(readCommunityFile(dir, 'candidate.json', COMMUNITY_LIMITS.jsonBytes));
   const bundle = JSON.parse(readCommunityFile(dir, 'package.json', COMMUNITY_LIMITS.jsonBytes));
-  const checked = validateCommunityPackage(bundle);
-  requireSubmissionPolicy(checked);
+  const checked = bundle.kind === 'skill' ? validateSkillContributionPackage(bundle) : validateCommunityPackage(bundle);
+  if (bundle.kind !== 'skill') requireSubmissionPolicy(checked);
+  communityAssert((metadata.kind === 'skill') === (bundle.kind === 'skill'), 'candidate_hash_mismatch');
   if (metadata.kind === 'original-release') scanOriginalRelease(bundle);
   communityAssert(metadata.candidate_id === candidateId && metadata.package_sha256 === checked.packageSha256 && metadata.slug === bundle.slug && metadata.version === bundle.version, 'candidate_hash_mismatch');
   communityAssert(typeof metadata.summary === 'string' && metadata.summary.length <= 2000 && !obviousSensitive(metadata.summary), 'invalid_or_sensitive_summary');
@@ -250,7 +316,7 @@ export function reviewContributionCandidate({ root, candidateId }) {
   const { metadata, package: bundle } = candidate;
   const approved = readCandidateApproval(candidate);
   const sent = readCandidateSubmission(candidate, approved);
-  return { ...metadata, status: sent ? 'submitted' : approved ? 'approved_for_submission' : 'prepared', files: Object.entries(bundle.files).map(([path, entry]) => ({ path, sha256: entry.sha256, bytes: entry.bytes })), contracts: Object.keys(bundle.contracts), package_ref: `${PREFIX}/${candidateId}/package.json`, risks: ['Revise o conteúdo completo do payload local; detecção automática não garante ausência de informação privada.', 'Aprovação local autoriza este hash para envio, não publicação nem validação de mercado.'], writes: false };
+  return { ...metadata, status: sent ? 'submitted' : approved ? 'approved_for_submission' : 'prepared', files: Object.entries(bundle.files).map(([path, entry]) => ({ path, sha256: entry.sha256, bytes: entry.bytes ?? entry.size_bytes })), contracts: Object.keys(bundle.contracts || {}), package_ref: `${PREFIX}/${candidateId}/package.json`, risks: ['Revise o conteúdo completo do payload local; detecção automática não garante ausência de informação privada.', 'Aprovação local autoriza este hash para envio, não publicação nem validação de mercado.'], writes: false };
 }
 export function approveContribution({ root, candidateId, packageSha256, confirm = false }) {
   communityAssert(typeof confirm === 'boolean', 'invalid_confirmation');
@@ -267,7 +333,7 @@ export async function sendContribution({ root, candidateId, packageSha256, clien
   communityAssert(COMMUNITY_SHA_RE.test(packageSha256 || '') && candidate.metadata.package_sha256 === packageSha256, 'candidate_hash_mismatch');
   readCandidateApproval(candidate, true);
   if (!confirm) return { candidate_id: candidateId, package_sha256: packageSha256, status: 'send_preview', sent: false, writes: false };
-  const response = await client.submitContribution({ package: candidate.package, package_sha256: packageSha256, idempotency_key: candidateId, summary: candidate.metadata.summary, share_confirmed: true });
+  const response = await client.submitContribution({ ...(candidate.metadata.kind === 'skill' ? { kind: 'skill' } : {}), package: candidate.package, package_sha256: packageSha256, idempotency_key: candidateId, summary: candidate.metadata.summary, share_confirmed: true });
   communityAssert(response.contribution?.package_sha256 === packageSha256, 'submission_hash_mismatch');
   const receipt = { candidate_id: candidateId, package_sha256: packageSha256, contribution: response.contribution, submitted_at: new Date().toISOString() };
   recordAtomic(safeCommunityPath(candidate.directory, 'submission.json'), receipt);
